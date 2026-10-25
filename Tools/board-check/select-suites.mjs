@@ -39,6 +39,8 @@
 //      selecting schedule's own suite and not schedule-visualizer's, although
 //      035-schedule-visualizer.html imports from Tools/schedule/, and an edit
 //      to Tools/seating-chart/ was skipping the store suite that opens 005.
+//      (Tools/schedule/ has been folded into Tools/schedule-visualizer/ since
+//      v324; the case is pinned there now.)
 //
 //   3. PAGE       — a changed .html selects every suite whose source names it
 //      (raw, with %20, or encodeURIComponent'd — the three spellings the suites

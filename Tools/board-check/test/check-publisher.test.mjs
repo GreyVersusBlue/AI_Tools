@@ -12,7 +12,7 @@ import path from 'node:path';
 import { check, readPublisher, moduleSources, assemble, freeNames, ROOT, PAGE_035, PAGE_034, LEDGER }
   from '../check-publisher.mjs';
 import { FORMAT, DATA_KEYS, PUBLISHED_KEYS, formatOf, validate, upgrade, readEmbedded, shapeOf }
-  from '../../schedule/test/published-contract.mjs';
+  from '../../schedule-visualizer/test/published-contract.mjs';
 
 let passed = 0, failed = 0;
 const ok = (cond, label) => {
@@ -322,7 +322,7 @@ warnCase('a teacher with no day at all', d => { d.teachers['Mr. Lund'].A = []; }
 {
   // Northwind as v61 published it (taken from the baseline before v62), the
   // file a later reader must still read (Devon, P11-5).
-  const f0 = JSON.parse(fs.readFileSync(path.join(ROOT, 'Tools/schedule/test/fixture-published-format0.json'), 'utf8'));
+  const f0 = JSON.parse(fs.readFileSync(path.join(ROOT, 'Tools/schedule-visualizer/test/fixture-published-format0.json'), 'utf8'));
   const r = validate(f0);
   ok(r.ok && r.format === 0 && r.warnings.length === 0, 'fixture-published-format0.json is valid format 0 with no warnings: ' + JSON.stringify(shapeOf(f0)));
   ok(!('format' in f0) && !('tool' in f0), 'and carries neither format nor tool');

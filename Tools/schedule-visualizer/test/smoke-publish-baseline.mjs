@@ -1,7 +1,7 @@
 // smoke-publish-baseline.mjs — 035's Publish, regenerated and diffed (Path 11 P1).
 //
-//   node Tools/schedule/test/smoke-publish-baseline.mjs            (or: npm run test:schedule-publish)
-//   node Tools/schedule/test/smoke-publish-baseline.mjs --update   rewrite the baseline; its diff is the review
+//   node Tools/schedule-visualizer/test/smoke-publish-baseline.mjs            (or: npm run test:schedule-publish)
+//   node Tools/schedule-visualizer/test/smoke-publish-baseline.mjs --update   rewrite the baseline; its diff is the review
 //
 // Imports the Northwind fixture into 035 with the page's clock pinned to
 // 2026-01-15 17:00 UTC (noon on the east coast, the same date in every US zone

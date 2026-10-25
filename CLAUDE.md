@@ -184,7 +184,7 @@ every edit. The deduplication work that established them is summarised in
 - **`npm run check:publisher` guards 035's publisher (Path 11 P1, 2026-10-25).** Publish
   builds 034-style browsers by `.toString()`-ing live functions, so a refactor of 035
   silently changes what staff are emailed. The guard reads the publisher statically and
-  holds 034's copies of the published pieces to `Tools/schedule/test/publisher-ledger.json`
+  holds 034's copies of the published pieces to `Tools/schedule-visualizer/test/publisher-ledger.json`
   (034 is its own page for good, Devon 2026-10-07; a fix to a `same` piece goes into both
   files). Its browser half, `npm run test:schedule-publish`, diffs a pinned-clock publish
   against the committed `baseline-northwind.html`; a change you meant is `--update` and the

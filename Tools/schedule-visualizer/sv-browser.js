@@ -1395,7 +1395,7 @@ function brBuildPublishedHTML() {
   const iso     = brLocalISODate(now);
 
   /* format and tool: the published data's contract (Path 11 P1,
-     Tools/schedule/test/published-contract.mjs). A file with no format is
+     Tools/schedule-visualizer/test/published-contract.mjs). A file with no format is
      format 0, which is every file published up to v61. */
   const data = {
     format: 1, tool: TOOL_VERSION,
@@ -1457,14 +1457,14 @@ function brBuildPublishedHTML() {
      next to it, so a relative path is impossible, and a hotlink means it
      renders in Times New Roman on any machine behind a filter that blocks
      Google Fonts — which is most school wifi. Roughly 100 KB, from
-     schedule/fonts/published-fonts.js.
+     schedule-visualizer/fonts/published-fonts.js.
 
      If that script did not load, fall back to a system stack. Never fall back
      to a hotlink: the whole point is that a published file reaches for
      nothing. */
   const fontCss = (typeof window.BR_PUBLISHED_FONT_CSS === 'string' && window.BR_PUBLISHED_FONT_CSS)
     ? window.BR_PUBLISHED_FONT_CSS
-    : '/* schedule/fonts/published-fonts.js did not load; using system fonts */\n'
+    : '/* schedule-visualizer/fonts/published-fonts.js did not load; using system fonts */\n'
       + "#app-browser{font-family:system-ui,-apple-system,'Segoe UI',sans-serif}\n"
       + "#app-browser .mast h1,#app-browser .idhead h2,#app-browser .block-title,"
       + "#app-browser .tcard .nm,#app-browser .maptop h2{font-family:Georgia,'Times New Roman',serif}\n";

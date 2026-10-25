@@ -22,7 +22,7 @@ CSS endpoint returned for
 `css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap`
 (with a Chrome user agent, so the response was the woff2 build with
 per-subset `unicode-range`). Named `<family>-<subset>-<weight>-normal.woff2`
-to match `Tools/schedule/fonts/` and `Tools/name-picker/fonts/`.
+to match `Tools/schedule-visualizer/fonts/` and `Tools/name-picker/fonts/`.
 
 | File | Bytes | SHA-256 |
 | --- | --- | --- |

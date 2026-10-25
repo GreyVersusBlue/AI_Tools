@@ -2,7 +2,7 @@
 // fixture, and run the tool's own Publish button. Writes the resulting HTML to
 // a path you give it.
 //
-//   node Tools/schedule/test/publish.mjs out.html
+//   node Tools/schedule-visualizer/test/publish.mjs out.html
 //
 // This exists because the generator has no way to be driven from Node: the
 // publish path reads AppState, which only exists in a page. The committed

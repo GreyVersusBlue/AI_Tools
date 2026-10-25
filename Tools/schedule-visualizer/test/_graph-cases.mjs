@@ -12,7 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const NW = () => JSON.parse(fs.readFileSync(path.join(HERE, '../../schedule/test/fixture-northwind.json'), 'utf8'));
+const NW = () => JSON.parse(fs.readFileSync(path.join(HERE, 'fixture-northwind.json'), 'utf8'));
 
 export function floor(id, rows, legend = {}) {
   const gridRows = rows.length, gridCols = Math.max(...rows.map(r => r.length));

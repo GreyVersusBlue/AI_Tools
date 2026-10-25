@@ -14,7 +14,7 @@
 // Keep an entry to the one or two actions a teacher would take, by id. A prep
 // that needs more than that is a per-tool suite's job.
 
-import { fixtureProject } from '../schedule/test/fixture-northwind.mjs';
+import { fixtureProject } from '../schedule-visualizer/test/fixture-northwind.mjs';
 
 export const PRINT_PREP = {
   // 008 — the per-student summary prints nothing until a student is chosen.

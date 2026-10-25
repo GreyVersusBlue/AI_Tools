@@ -5,7 +5,7 @@
    stylesheet, so the five live tools that link it (005, 011, 029, 031, 036)
    made an offsite request on every load and lost their typeface offline —
    the one thing CLAUDE.md says the site must never do. This is the same
-   self-hosting pattern as Tools/schedule/fonts/fonts.css.
+   self-hosting pattern as Tools/schedule-visualizer/fonts/fonts.css.
 
    Exactly the faces the old URL asked for (Barlow wght 400;500;600;700,
    Barlow Condensed wght 600;700), in the latin and latin-ext subsets. Google

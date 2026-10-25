@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { floor } from './_graph-cases.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const NW = () => JSON.parse(fs.readFileSync(path.join(HERE, '../../schedule/test/fixture-northwind.json'), 'utf8'));
+const NW = () => JSON.parse(fs.readFileSync(path.join(HERE, 'fixture-northwind.json'), 'utf8'));
 const pair = (fa, ca, ra, fb, cb, rb) => ({ a: { floorId: fa, col: ca, row: ra }, b: { floorId: fb, col: cb, row: rb } });
 
 /** Two floors: 204 and 116 on f1, 301 on f2; exits E (f1, by 116) and F (f2);

@@ -25,7 +25,7 @@
 
 /* global applyFullProject, roomRegistry, AppState, getPathfindingGraph, printEvacuationDoorCards -- page globals read inside page.evaluate() */
 import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
-import { fixtureProject } from '../../schedule/test/fixture-northwind.mjs';
+import { fixtureProject } from './fixture-northwind.mjs';
 
 const PORT = 8155;
 const BASE = `http://127.0.0.1:${PORT}`;

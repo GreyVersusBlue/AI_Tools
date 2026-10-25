@@ -12,7 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const NW = () => JSON.parse(fs.readFileSync(path.join(HERE, '../../schedule/test/fixture-northwind.json'), 'utf8'));
+const NW = () => JSON.parse(fs.readFileSync(path.join(HERE, 'fixture-northwind.json'), 'utf8'));
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const tryIt = (f) => { try { const v = f(); return { ok: v === undefined ? null : v }; } catch (e) { return { error: e.message }; } };

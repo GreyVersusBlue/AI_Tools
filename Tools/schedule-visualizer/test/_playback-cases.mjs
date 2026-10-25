@@ -17,7 +17,7 @@ import { building, northwind } from './_routes-cases.mjs';
 import { floor } from './_graph-cases.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const NW = () => JSON.parse(fs.readFileSync(path.join(HERE, '../../schedule/test/fixture-northwind.json'), 'utf8'));
+const NW = () => JSON.parse(fs.readFileSync(path.join(HERE, 'fixture-northwind.json'), 'utf8'));
 const r6 = (v) => typeof v === 'number' ? Math.round(v * 1e6) / 1e6 : v;
 
 /** A fake CanvasRenderingContext2D: `log` holds every call and property set. */

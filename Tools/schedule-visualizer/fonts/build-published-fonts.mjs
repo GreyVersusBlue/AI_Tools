@@ -1,7 +1,7 @@
 // build-published-fonts.mjs — regenerate published-fonts.js from the woff2
 // files in this folder.
 //
-//   node Tools/schedule/fonts/build-published-fonts.mjs
+//   node Tools/schedule-visualizer/fonts/build-published-fonts.mjs
 //
 // Why a generated file rather than a link tag: a published Schedule Browser
 // is a single HTML file a teacher downloads and emails to staff. It has no

@@ -254,15 +254,18 @@ console.log('select-suites: real tree (' + SUITES.length + ' suites)');
   has(s, 'Tools/a11y-sweep/test/smoke-a11y-sweep.mjs', '005 page edit runs the a11y sweep');
   has(s, 'Tools/theme/test/smoke-theme.mjs', '005 page edit runs the theme sweep');
   lacks(s, 'Tools/name-picker/test/smoke.mjs', '005 page edit');
-  lacks(s, 'Tools/schedule/test/smoke.mjs', '005 page edit');
+  lacks(s, 'Tools/schedule-visualizer/test/smoke.mjs', '005 page edit');
   lacks(s, 'Tools/seating-chart/test/smoke-seating.mjs', '005 page edit (pure-logic suite never opens the page)');
   ok(s.length < SUITES.length / 2, `005 page edit selects a minority of suites (${s.length} of ${SUITES.length})`);
 }
 {
-  const s = real(['Tools/schedule/schedule-core.js']);
-  has(s, 'Tools/schedule/test/smoke.mjs', 'schedule folder edit');
-  has(s, 'Tools/schedule-visualizer/test/smoke-recovery.mjs', 'schedule folder edit reaches 035, which imports Tools/schedule/');
-  lacks(s, 'Tools/seating-chart/test/drive-seating.mjs', 'schedule folder edit');
+  // Tools/schedule/ was folded into Tools/schedule-visualizer/ at v324 (Path 11
+  // P2), so the rule-2 example is now an edit to one of 035's own modules.
+  const s = real(['Tools/schedule-visualizer/sv-graph.js']);
+  has(s, 'Tools/schedule-visualizer/test/smoke.mjs', 'schedule-visualizer folder edit');
+  has(s, 'Tools/schedule-visualizer/test/smoke-recovery.mjs', 'schedule-visualizer folder edit runs its own suites');
+  has(s, 'Tools/a11y-sweep/test/smoke-a11y-sweep.mjs', 'schedule-visualizer folder edit reaches 035, which imports it, and so the page sweeps');
+  lacks(s, 'Tools/seating-chart/test/drive-seating.mjs', 'schedule-visualizer folder edit');
 }
 {
   const s = real(['Tools/name-picker/picker.js']);

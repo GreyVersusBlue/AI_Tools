@@ -1,31 +1,79 @@
-# `Tools/schedule/`
+# `Tools/schedule-visualizer/`
 
-Everything the School Layout Visualizer needs that is not the HTML file itself.
+Everything the School Layout Visualizer (035) needs that is not the HTML file
+itself. Until v324 this was two folders, `Tools/schedule/` (the fonts, the
+publish suite and its fixture) and `Tools/schedule-visualizer/` (the modules);
+Path 11 P2 folded the first into the second, last, as its design said.
 
 ```
-Tools/035-schedule-visualizer.html   the tool
-Tools/034-schedule-browser.html      a published snapshot, committed and served
-Tools/schedule/fonts/            vendored woff2 + the embedded-font build
-Tools/schedule/test/             the smoke suite and its fixture
-_shared/vendor/jspdf/            jsPDF, one site-wide copy (035 loads it from there)
+Tools/035-schedule-visualizer.html   the tool: markup, settings, storage pairs, the BRIDGE
+Tools/034-schedule-browser.html      a published snapshot, committed and served (its own page)
+Tools/schedule-visualizer/           the modules below, sv.css, this README
+Tools/schedule-visualizer/fonts/     vendored woff2 + the embedded-font build
+Tools/schedule-visualizer/test/      every 035 suite, the Northwind fixture, P1's contract,
+                                     ledger and baseline, P2's goldens and size ledger
+_shared/vendor/jspdf/                jsPDF, one site-wide copy (035 loads it from there)
 ```
 
 Neither HTML file makes an offsite request. Both used to.
 
-## Running the suite
+## The modules
 
-```bash
-node Tools/schedule/test/smoke.mjs
-```
+Path 11 P2 (`BACKLOG.md`, "Path 11", the P2 bullet) took the page from
+974,675 bytes to under 300 KB in eleven increments; `test/size-ledger.json`
+holds the page's size and records each module's. The page's one
+`<script type="module">` imports every module and puts it on `window`. Two
+shapes:
 
-42 assertions, exit code 1 on any failure. It boots the generator in headless
-Chromium, imports a fake school, publishes a Schedule Browser, opens that file
-from `file://` with no server, and uses it. It also checks the committed
-`034-schedule-browser.html` and the generator as the site serves them.
+- **Engines**, pure: they take their inputs and touch neither `AppState` nor
+  the DOM. The page reaches them through one thin wrapper per old name in its
+  `BRIDGE` section, so the bare-name call sites did not change.
+  `sv-model.js` (settings, labels, bell, weights, conflicts, the blueprint's
+  serialise/migrate/validate), `sv-graph.js` (the multi-floor graph, A*, the
+  graph cache), `sv-routes.js` (group day paths, congestion, evacuation),
+  `sv-congestion.js` (congestion data, travel times, the what-if arithmetic),
+  `sv-playback.js` (a playback frame, the collision simulation).
+- **Views**, moved verbatim: they own a tab's DOM and read the page's
+  classic-script globals at call time (listed in each file's `/* global */`
+  comments), and the module script copies their exports onto `window`
+  (`Object.assign(window, …)`), which is the global surface the classic script
+  had. `sv-browser.js` (the Schedule Browser and the publisher; see below),
+  `sv-viz.js` (the Visualize tab and the playback bar), `sv-editor.js` (the
+  blueprint editor and the evacuation door cards), `sv-schedules-tab.js` (the
+  groups list and editor, CSV import, the bulk editor), `sv-whatif.js` (room
+  search and the what-if lab's controls).
 
-It borrows the static server and browser launch from
-`Tools/board-check/harness.mjs`, which belongs to another thread and is only
-ever read.
+Older and separate: `sv-recovery.js` (recovery points), `sv-handoff.js`
+(WebRTC hand-off), `sv-trace-image.js` (a classic `defer` script, the trace
+image underlay). `sv.css` is the page's main stylesheet.
+
+**The parse-time rule.** The classic script runs while the page parses and
+the modules after it, before `DOMContentLoaded`. So nothing in the classic
+script may call, or hand out a reference to, a module's function at parse time.
+`test/bridge.test.mjs` follows every top-level statement's synchronous calls
+and fails on a path that reaches one. It does not see a bare reference (an
+`addEventListener('click', fn)` at top level); increment 10 found three of
+those by hand and moved them into the module beside their functions.
+
+**What stays on the page,** because other code assigns or reads it as a
+binding (a classic script cannot see a module's `let`): `AppState` and its
+`viz` and `whatif` parts, `let canvas, ctx` and the viz canvas lets (the door
+cards and the what-if lab swap `ctx` and `vizCtx` to draw off screen),
+`FloorManager`, the heat-zone id counter, `GROUP_COLOR_PRESETS`, the storage
+pairs, and the settings, bell and subjects editors.
+
+## The suites
+
+`npm run test:schedule` (`test/smoke.mjs`: import, publish, open the published
+file from `file://`), `test:schedule-publish` (the baseline below),
+`test:schedule-visualizer` (recovery, evacuation), `-trace`, `-print`,
+`-editor` (`smoke-editor.mjs`, port 8552: paints a plan with real mouse
+events, pairs stairs, undoes, reloads), `test:layout-bell-from-calendar`, and
+the pure-Node `-size`, `-model`, `-graph`, `-routes`, `-congestion`,
+`-playback`, `-bridge`. `node Tools/board-check/run-suites.mjs --only schedule`
+runs them all, with 034's `Tools/schedule-browser/` suites. The engine suites
+compare each module with a golden file written by running the same cases
+through the page's own functions before the move.
 
 ## The regression baseline
 
@@ -35,7 +83,7 @@ held by two checks, one with a browser and one without.
 
 ```bash
 npm run test:schedule-publish            # publish Northwind, diff against the baseline
-node Tools/schedule/test/smoke-publish-baseline.mjs --update   # after a change you meant
+node Tools/schedule-visualizer/test/smoke-publish-baseline.mjs --update   # after a change you meant
 npm run check:publisher                  # the static guard, no browser (runs in CI)
 ```
 
@@ -71,7 +119,7 @@ head, and 034's copy of a published piece against `test/publisher-ledger.json`.
 Its header lists the codes. `--explain <name>` shows where 034's copy of a
 piece parts from 035's.
 
-`node Tools/schedule/test/publish.mjs out.html` still writes a publish to a
+`node Tools/schedule-visualizer/test/publish.mjs out.html` still writes a publish to a
 path you give it, today's date and all.
 
 ## The fixture
@@ -86,7 +134,7 @@ dropped into the tool's own **Import Full Project** button by hand. Regenerate
 it after editing the module, or the suite fails:
 
 ```bash
-node Tools/schedule/test/fixture-northwind.mjs
+node Tools/schedule-visualizer/test/fixture-northwind.mjs
 ```
 
 ## 034 is a snapshot, not a copy — the two files have drifted
@@ -148,6 +196,10 @@ node Tools/board-check/check-social.mjs     # validates, prints the drift
 
 ## What is not covered
 
-The suite drives one path: import, publish, use. The blueprint editor, the
-pathfinding engine, the congestion heatmap, the travel-time playback and the
-What-If lab have no tests. That is roughly two thirds of the file.
+The modules moved without changing a rule; the doubtful ones (a heat-exclude
+zone checked against the floor the editor is showing for a cell with no
+`floorId`; a room with no subject publishing as `ELA`) are named in the engine
+suites and left for P5. A*'s reopen branch is reached by no fixture. The
+what-if lab and the schedules tab are held by their arithmetic's goldens and by
+`test:csv-adopters` (the groups template) only; nothing drives their controls.
+No module has been checked on a real phone or with a real school's file.

@@ -111,7 +111,7 @@ export default [
   },
   {
     // Browser files: _shared/*.js and the per-tool modules (and the odd nested
-    // folder such as Tools/schedule/fonts/). There was an `assets/js/*.js`
+    // folder such as Tools/schedule-visualizer/fonts/). There was an `assets/js/*.js`
     // pattern here too, for the one file that lived there; gvb-save.js moved
     // into _shared/ and assets/ now holds only icons and screenshots.
     files: ['_shared/*.js', 'Tools/*/*.js', 'Tools/*/*.mjs', 'Tools/*/*/*.js'],

@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { building, northwind } from './_routes-cases.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const NW = () => JSON.parse(fs.readFileSync(path.join(HERE, '../../schedule/test/fixture-northwind.json'), 'utf8'));
+const NW = () => JSON.parse(fs.readFileSync(path.join(HERE, 'fixture-northwind.json'), 'utf8'));
 
 const digest = (a) => `${a.length} cells, ${crypto.createHash('sha256').update(JSON.stringify(a)).digest('hex').slice(0, 12)}`;
 const tag = (x) => Object.prototype.toString.call(x);

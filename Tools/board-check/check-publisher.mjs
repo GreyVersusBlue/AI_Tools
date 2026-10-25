@@ -45,7 +45,7 @@
 //            the published script), or 034's embedded data has a contract
 //            error at its own format
 //   FORK     034's copy of a published piece against the ledger
-//            (Tools/schedule/test/publisher-ledger.json): a `same` piece that
+//            (Tools/schedule-visualizer/test/publisher-ledger.json): a `same` piece that
 //            differs, a `forked` one that became the same, a name in no group
 //
 // A failure about 034's data prints shapes and positions only, never a value:
@@ -62,20 +62,20 @@
 // BR_CSS's selectors (a class with no rule is common and harmless, and a guard
 // that guesses is worse than none); 035's 400-odd unpublished functions.
 // Its browser half, which holds assemble() to the real published bytes, is
-// Tools/schedule/test/smoke-publish-baseline.mjs (npm run test:schedule-publish).
+// Tools/schedule-visualizer/test/smoke-publish-baseline.mjs (npm run test:schedule-publish).
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Linter } from 'eslint';
 import globals from 'globals';
-import { FORMAT, PUBLISHED_KEYS, readEmbedded, validate, shapeOf, formatOf } from '../schedule/test/published-contract.mjs';
+import { FORMAT, PUBLISHED_KEYS, readEmbedded, validate, shapeOf, formatOf } from '../schedule-visualizer/test/published-contract.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, '..', '..');
 export const PAGE_035 = 'Tools/035-schedule-visualizer.html';
 export const PAGE_034 = 'Tools/034-schedule-browser.html';
-export const LEDGER = 'Tools/schedule/test/publisher-ledger.json';
+export const LEDGER = 'Tools/schedule-visualizer/test/publisher-ledger.json';
 
 /** Outside names a published script may read. Seeded with what it reads
  *  today. ESLint's whole browser set would wave through a bare `name`,
