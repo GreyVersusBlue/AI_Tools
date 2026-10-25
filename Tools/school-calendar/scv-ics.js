@@ -7,6 +7,7 @@
 //   writeIcs(cal, { periods, lessons, stamp })  -> the file, CRLF lines folded at 75 octets
 //   readIcs(text, { timeZone })                 -> { ok, error } | { ok, events, skipped }
 //   planIcsImport(cal, read)                    -> { cal, rows, skipped, same }
+//   readTable(text, { start, end })             -> readIcs's shape, from a pasted date table
 //
 // WHAT A FILE HOLDS (BACKLOG.md, Path 9 P4, "What an export holds"). One all-day event per
 // run of consecutive dates whose types, label, note and lesson are the same; one per grading
@@ -342,7 +343,7 @@ export function readIcs(text, opts = {}) {
    legend knows. Each names one of the seed's type ids and, for a legend without that id,
    a pattern its label may match. */
 const GUESSES = [
-  { id: "halfday",   title: /early (dismissal|release)|half[- ]?day|early closing/i, label: /half|early/i },
+  { id: "halfday",   title: /early (dismissal|release)|half[- ]?day|1\/2[- ]?day|½[- ]?day|early closing/i, label: /half|early/i },
   { id: "workday",   title: /teacher work ?day|work ?day|no students|staff development|professional (development|learning) day/i, label: /workday|no students/i },
   { id: "holiday",   title: /\b(no school|schools? closed|closed|holiday|break|recess|vacation)\b/i, label: /holiday|no school/i },
   { id: "testing",   title: /\btest(ing)?\b|assessment|\bexams?\b/i, label: /test/i },
@@ -431,4 +432,173 @@ export function planIcsImport(cal, read) {
     rows.push({ date: d, before, after: entryOf(after), types: after.types.filter((t) => !before.types.includes(t)) });
   });
   return { cal: { ...cal, days }, rows, skipped, same: named.size - rows.length };
+}
+
+/* ---- a pasted table (Path 9 P4, the rest) ----
+   A district's calendar is often a PDF whose date table copies out as text: one line a
+   row, the cells split by tabs or by runs of spaces, the date first or last. readTable()
+   reads that text into the same { ok, events, skipped } readIcs() gives, so planIcsImport()
+   maps it onto the calendar exactly as it maps a file: types added and never removed, a
+   label kept. It never guesses a date. A line is read only when it has exactly one date or
+   one range of dates; a line with none, with two, with a weekday that does not match its
+   date, with a date that is not real, or with no name beside it is skipped and listed with
+   its line number and the reason. A date without a year takes the year that puts it inside
+   the school year (`start` to `end`), and is skipped when no year does or when two do. */
+
+export const MAX_TABLE_LINES = 2000;
+const MONTH_NAMES = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+const MONTH_RE = "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\.?";
+const WEEKDAY_RE = "(?:sun(?:day)?|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?)\\.?";
+const ORD = "(?:st|nd|rd|th)?";
+// one date: an optional weekday, then ISO, M/D[/Y] or Month D[, Y]
+const DATE_RE = new RegExp(
+  "(?<![\\w/])(?:(" + WEEKDAY_RE + "),?\\s+)?(?:" +
+    "(\\d{4})-(\\d{1,2})-(\\d{1,2})" +
+    "|(\\d{1,2})/(\\d{1,2})(?:/(\\d{4}|\\d{2}))?" +
+    "|(" + MONTH_RE + ")\\s+(\\d{1,2})" + ORD + "(?:,?\\s+(\\d{4}))?" +
+  ")(?![\\w/])", "gi");
+const RANGE_SEP = /^\s*(?:-|–|—|to|through|thru)\s*$/i;
+// what may end a range after its separator when the second half is a bare day: "Nov 25-27"
+const BARE_END = new RegExp("^(\\s*(?:-|–|—|to|through|thru)\\s*)(?:(" + WEEKDAY_RE + "),?\\s+)?(\\d{1,2})" + ORD + "(?:,?\\s+(\\d{4}))?(?![\\w/:])", "i");
+
+function weekdayOf(word) {
+  if (!word) return null;
+  const w = word.replace(/\.$/, "").toLowerCase();
+  const i = DAY_NAMES.findIndex((d) => d.startsWith(w.slice(0, 3)) && d.startsWith(w));
+  return i < 0 ? null : i;
+}
+
+function partsOf(m) {
+  // -> { y|null, mo, d, wd|null } from one DATE_RE match
+  const g = m;
+  const wd = weekdayOf(g[1]);
+  if (g[2]) return { y: +g[2], mo: +g[3], d: +g[4], wd };
+  if (g[5]) {
+    let y = g[7] ? +g[7] : null;
+    if (y !== null && g[7].length === 2) y += 2000;
+    return { y, mo: +g[5], d: +g[6], wd };
+  }
+  return { y: g[10] ? +g[10] : null, mo: MONTH_NAMES.indexOf(g[8].slice(0, 3).toLowerCase()) + 1, d: +g[9], wd };
+}
+
+const iso = (y, mo, d) => String(y).padStart(4, "0") + "-" + String(mo).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+const say = (date) => {
+  const [y, m, d] = date.split("-").map(Number);
+  return MONTH_NAMES[m - 1][0].toUpperCase() + MONTH_NAMES[m - 1].slice(1) + " " + d + ", " + y;
+};
+
+/* The date `p` names: its own year, or the one year that puts it inside start..end, or,
+   for the end of a range (`after` given), the first year that is not before `after`. */
+function resolve(p, start, end, after) {
+  const real = (y) => (isValidIso(iso(y, p.mo, p.d)) ? iso(y, p.mo, p.d) : null);
+  if (p.mo < 1 || p.mo > 12 || p.d < 1 || p.d > 31) return { why: "its date is not a real date" };
+  if (p.y !== null) {
+    const date = real(p.y);
+    return date ? { date } : { why: "its date is not a real date" };
+  }
+  const label = MONTH_NAMES[p.mo - 1][0].toUpperCase() + MONTH_NAMES[p.mo - 1].slice(1) + " " + p.d;
+  const y0 = +(after || start).slice(0, 4);
+  if (after) {
+    // "Dec 21 – Jan 1" crosses into the next year; "Oct 12 – 2" and "Oct 12 – Oct 2" do not
+    const date = real(y0);
+    if (date && date >= after) return { date };
+    const next = p.mo < +after.slice(5, 7) && !p.bare ? real(y0 + 1) : null;
+    return next ? { date: next } : { why: date ? "it ends before it starts" : "its date is not a real date" };
+  }
+  const fits = [];
+  for (let y = +start.slice(0, 4); y <= +end.slice(0, 4); y++) {
+    const date = real(y);
+    if (date && date >= start && date <= end) fits.push(date);
+  }
+  if (fits.length === 1) return { date: fits[0] };
+  if (fits.length > 1) return { why: label + " has no year, and this school year has it twice (" + fits.map(say).join(" and ") + ")" };
+  if (![+start.slice(0, 4), +end.slice(0, 4)].some(real)) return { why: "its date is not a real date" };
+  return { why: label + " has no year, and it is not in this school year (" + start + " to " + end + ")" };
+}
+
+function wrongWeekday(p, date) {
+  if (p.wd === null) return "";
+  const real = new Date(isoToMs(date)).getUTCDay();
+  if (real === p.wd) return "";
+  const cap = (s) => s[0].toUpperCase() + s.slice(1);
+  return "it says " + cap(DAY_NAMES[p.wd]) + ", but " + say(date) + " is a " + cap(DAY_NAMES[real]);
+}
+
+/**
+ * Read a pasted table into { ok, events, skipped } (readIcs's shape), or { ok: false, error }.
+ * `opts.start` and `opts.end` are the school year ("YYYY-MM-DD"); a date without a year needs them.
+ */
+export function readTable(text, opts = {}) {
+  const start = opts.start, end = opts.end;
+  if (typeof text !== "string" || !text.trim()) return { ok: false, error: "There is nothing pasted to read." };
+  if (text.length > MAX_BYTES) return { ok: false, error: "That is too much text to be a school calendar's table." };
+  if (!isValidIso(start) || !isValidIso(end) || end < start) return { ok: false, error: "Set the school year's first and last day before pasting a table." };
+  const lines = text.split(/\r\n|\r|\n/);
+  if (lines.length > MAX_TABLE_LINES) return { ok: false, error: "That is more than " + MAX_TABLE_LINES + " lines; paste the calendar's date table only." };
+  const events = [], skipped = [];
+  lines.forEach((raw, i) => {
+    const line = raw.replace(/\u00a0/g, " ").trim();
+    if (!line) return;
+    // "1/2 Day" is a half day, not January 2: hidden from the date search, kept in the name
+    const scan = line.replace(/(?<![\w/])1\/2(?=[\s-]*days?\b)/gi, "½  ");
+    const shown = raw.trim().replace(/\s+/g, " ");
+    const skip = (reason, date) => skipped.push({ summary: "Line " + (i + 1) + " (“" + (shown.length > 70 ? shown.slice(0, 69) + "…" : shown) + "”)", date: date || "", reason });
+    const found = [...scan.matchAll(DATE_RE)];
+    if (!found.length) return skip("it has no date this page can read");
+    let first = found[0], last = null, from = first.index, to = first.index + first[0].length;
+    if (found.length === 2 && RANGE_SEP.test(scan.slice(to, found[1].index))) {
+      last = { p: partsOf(found[1]) };
+      to = found[1].index + found[1][0].length;
+    } else if (found.length > 1) {
+      return skip("it has more than one date, so it is not clear which the name belongs to");
+    } else {
+      const bare = BARE_END.exec(scan.slice(to));
+      if (bare) {
+        const p0 = partsOf(first);
+        last = { p: { y: bare[4] ? +bare[4] : p0.y, mo: p0.mo, d: +bare[3], wd: weekdayOf(bare[2]), bare: true } };
+        to += bare[0].length;
+      }
+    }
+    const p = partsOf(first);
+    // a date without a year in a range whose end has one takes the end's year
+    if (p.y === null && last && last.p.y !== null && !(last.p.mo < p.mo)) p.y = last.p.y;
+    else if (p.y === null && last && last.p.y !== null) p.y = last.p.y - 1;
+    // the rest of the line, its cells split on tabs, runs of spaces and bars, is the name
+    const rest = (line.slice(0, from) + "\t" + line.slice(to)).split(/\t|\s{2,}|\s*\|\s*/)
+      .map((c) => c.replace(/^[\s\-–—:,;]+|[\s\-–—:,;]+$/g, "").trim()).filter(Boolean);
+    const cells = [];
+    rest.forEach((c) => {
+      const wd = new RegExp("^" + WEEKDAY_RE + "$", "i").test(c) ? weekdayOf(c) : null;
+      if (wd !== null && !last && p.wd === null) p.wd = wd;   // a weekday column, held to the date
+      else if (wd === null) cells.push(c);
+    });
+    const a = resolve(p, start, end);
+    if (a.why) return skip(a.why);
+    const bad = wrongWeekday(p, a.date);
+    if (bad) return skip(bad, a.date);
+    let b = a.date;
+    if (last) {
+      const r = resolve(last.p, start, end, last.p.y === null ? a.date : null);
+      if (r.why) return skip(r.why, a.date);
+      const bad2 = wrongWeekday(last.p, r.date);
+      if (bad2) return skip(bad2, a.date);
+      if (r.date < a.date) return skip("it ends before it starts", a.date);
+      b = r.date;
+    }
+    const span = Math.round((isoToMs(b) - isoToMs(a.date)) / DAY_MS) + 1;
+    if (span > MAX_EVENT_DAYS) return skip("it runs for " + span + " days", a.date);
+    const summary = cells.join(" — ");
+    if (!summary) return skip("it has a date but no name beside it", a.date);
+    const dates = [];
+    for (let d = a.date; d <= b; d = addDays(d, 1)) dates.push(d);
+    events.push({ uid: "", summary, description: "", categories: [], scvTypes: null, scvLabel: null, scvLesson: "", kind: "", dates, allDay: true, line: i + 1 });
+  });
+  if (!events.length) {
+    const n = skipped.length;
+    const first = skipped[0].summary.replace(/^Line \d+ \((.*)\)$/, "$1");
+    return { ok: false, error: n === 1 ? "That line could not be read: " + skipped[0].reason + "."
+      : "None of those " + n + " lines could be read (the first, " + first + ": " + skipped[0].reason + ")." };
+  }
+  return { ok: true, events, skipped };
 }

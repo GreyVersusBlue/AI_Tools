@@ -406,6 +406,8 @@
   .wall-foot .wk.woff { background-image: repeating-linear-gradient(135deg, transparent 0 2.5pt, var(--line-strong) 2.5pt 3.2pt); }
   .ics-opt { display: inline-flex; align-items: center; gap: 4px; font-size: 0.82rem; color: var(--muted); }
   .ics-skips { font-size: 0.78rem; }
+  #pastePanel label { display: block; font-size: 0.8rem; font-weight: 600; margin-top: 6px; }
+  #pasteText { width: 100%; box-sizing: border-box; font: 0.8rem/1.4 ui-monospace, Consolas, monospace; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 6px; }
   @media print {
     body.view-wall { padding: 0; }
     body.view-wall .wrap { padding: 0; margin: 0; max-width: none; }
@@ -448,6 +450,7 @@
     <label class="ics-opt"><input type="checkbox" id="icsLessons"> with paced lessons</label>
     <button id="btnImportIcs">Import Calendar (.ics)</button>
     <input type="file" id="fileImportIcs" accept=".ics,text/calendar" hidden>
+    <button id="btnPasteTable" aria-expanded="false" aria-controls="pastePanel">Paste a Date Table…</button>
     <select id="jumpMonth" aria-label="Jump to month" title="Jump to month"></select>
     <button id="btnJumpToday">Jump to Today</button>
     <select id="viewCols" aria-label="Months across" title="Months across">
@@ -474,6 +477,19 @@
     <button id="btnPrint" class="primary">Print / Save PDF</button>
   </div>
   <div id="icsPreview" class="no-print"></div>
+  <div id="pastePanel" class="plan-preview no-print" role="region" aria-labelledby="pasteTitle" hidden>
+    <h3 id="pasteTitle">Paste a district calendar's date table</h3>
+    <p id="pasteHelp">Copy the table of dates out of the district's PDF or web page and paste it here, one date or range a line, with its name beside it
+      (“Nov 25-27  Thanksgiving Break”, “12/21/2026 - 1/1/2027  Winter Break”). A date without a year takes the one that puts it in this school year.
+      You see every date that would change before anything is stored; types are added, never taken off, and a line that cannot be read is listed, never guessed.</p>
+    <label for="pasteText">Date table</label>
+    <textarea id="pasteText" rows="8" spellcheck="false" aria-describedby="pasteHelp"></textarea>
+    <div class="unit-actions">
+      <button type="button" class="primary small" id="pasteRead">Read this table</button>
+      <button type="button" class="small" id="pasteClose">Close</button>
+    </div>
+    <div id="pastePreview"></div>
+  </div>
 
   <div class="card meta-card no-print">
     <h2>Year</h2>
@@ -665,7 +681,7 @@ import {
   setBaseline, wantsBaseline, slip, describeSlip,
   splitPreview, carryForward,
 } from './school-calendar/scv-plan.js';
-import { writeIcs, readIcs, planIcsImport } from './school-calendar/scv-ics.js';
+import { writeIcs, readIcs, planIcsImport, readTable } from './school-calendar/scv-ics.js';
 
 Store.configure({ toolName: 'School Calendar Visualizer' });
 
@@ -2706,18 +2722,21 @@ function entryWords(e) {
   return parts.join("; ") || "nothing";
 }
 
-/** The plan for an imported file, shown in #icsPreview; nothing is stored until "Add these days". */
-function renderIcsPreview(result, fileName) {
-  const wrap = document.getElementById("icsPreview");
-  wrap.textContent = "";
+/** The plan for an imported file, shown in #icsPreview, or for a pasted table (`pasted`),
+    shown under the paste box; nothing is stored until "Add these days". */
+function renderIcsPreview(result, fileName, pasted) {
+  document.getElementById("icsPreview").textContent = "";
+  document.getElementById("pastePreview").textContent = "";
+  const wrap = document.getElementById(pasted ? "pastePreview" : "icsPreview");
   if (!result) return;
+  const where = pasted ? "table" : "file";
   const box = document.createElement("div");
   box.className = "plan-preview"; box.id = "icsBox";
   box.setAttribute("role", "region"); box.setAttribute("aria-labelledby", "icsTitle");
-  const h = document.createElement("h3"); h.id = "icsTitle"; h.textContent = "Import “" + fileName + "”"; box.appendChild(h);
+  const h = document.createElement("h3"); h.id = "icsTitle"; h.textContent = pasted ? "Add the pasted table's dates" : "Import “" + fileName + "”"; box.appendChild(h);
   const row = document.createElement("div"); row.className = "unit-actions";
   const cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "small"; cancel.id = "icsCancel";
-  cancel.addEventListener("click", () => renderIcsPreview(null));
+  cancel.addEventListener("click", () => { renderIcsPreview(null); if (pasted) document.getElementById("pasteText").focus(); });
   if (!result.ok) {
     const p = document.createElement("p"); p.className = "refused"; p.setAttribute("role", "alert");
     p.textContent = result.error + " Nothing was imported.";
@@ -2729,9 +2748,9 @@ function renderIcsPreview(result, fileName) {
   const plan = planIcsImport(cal, result);
   const p = document.createElement("p");
   p.textContent = plan.rows.length
-    ? `${plan.rows.length === 1 ? "1 date" : plan.rows.length + " dates"} would change. Types are added, never taken off; a label already here stays, and the file's title goes into the note.` +
-      (plan.same ? ` ${plan.same === 1 ? "1 date" : plan.same + " dates"} in the file already say${plan.same === 1 ? "s" : ""} what it says.` : "")
-    : "Nothing would change: every date in this file already says what it says." ;
+    ? `${plan.rows.length === 1 ? "1 date" : plan.rows.length + " dates"} would change. Types are added, never taken off; a label already here stays, and the ${where}'s ${pasted ? "name" : "title"} goes into the note.` +
+      (plan.same ? ` ${plan.same === 1 ? "1 date" : plan.same + " dates"} in the ${where} already say${plan.same === 1 ? "s" : ""} what it says.` : "")
+    : `Nothing would change: every date in this ${where} already says what it says.`;
   p.id = "icsSummary";
   box.appendChild(p);
   if (plan.rows.length) {
@@ -2751,7 +2770,8 @@ function renderIcsPreview(result, fileName) {
   if (plan.skipped.length) {
     const det = document.createElement("details"); det.className = "ics-skips";
     const sum = document.createElement("summary");
-    sum.textContent = (plan.skipped.length === 1 ? "1 event is" : plan.skipped.length + " events are") + " not imported";
+    const noun = pasted ? "line" : "event";
+    sum.textContent = (plan.skipped.length === 1 ? "1 " + noun + " is" : plan.skipped.length + " " + noun + "s are") + " not imported";
     det.appendChild(sum);
     const ul = document.createElement("ul");
     plan.skipped.forEach(k => { const li = document.createElement("li"); li.textContent = (k.date ? fmtShort(k.date) + ", " : "") + k.summary + ": " + k.reason + "."; ul.appendChild(li); });
@@ -2765,7 +2785,13 @@ function renderIcsPreview(result, fileName) {
       const n = plan.rows.length;
       cal = plan.cal;
       renderIcsPreview(null);
-      save("Importing “" + fileName + "”", `Imported ${n === 1 ? "1 date" : n + " dates"} from “${fileName}”.`);
+      if (pasted) {
+        showPastePanel(false);
+        document.getElementById("pasteText").value = "";
+        save("Adding the pasted table", `Added ${n === 1 ? "1 date" : n + " dates"} from the pasted table.`);
+      } else {
+        save("Importing “" + fileName + "”", `Imported ${n === 1 ? "1 date" : n + " dates"} from “${fileName}”.`);
+      }
       render();
     });
     row.appendChild(ok);
@@ -2776,6 +2802,23 @@ function renderIcsPreview(result, fileName) {
 }
 
 document.getElementById("btnImportIcs").addEventListener("click", () => document.getElementById("fileImportIcs").click());
+
+/* --- a pasted table (Path 9 P4, the rest): a district PDF's date table, read by readTable()
+   into the events a file gives and previewed and added through the same planIcsImport(). --- */
+function showPastePanel(open) {
+  const panel = document.getElementById("pastePanel"), btn = document.getElementById("btnPasteTable");
+  panel.hidden = !open;
+  btn.setAttribute("aria-expanded", String(open));
+  if (open) { renderIcsPreview(null); document.getElementById("pasteText").focus(); }
+  else { document.getElementById("pastePreview").textContent = ""; btn.focus(); }
+}
+document.getElementById("btnPasteTable").addEventListener("click", () => showPastePanel(document.getElementById("pastePanel").hidden));
+document.getElementById("pasteClose").addEventListener("click", () => showPastePanel(false));
+document.getElementById("pasteRead").addEventListener("click", () => {
+  renderIcsPreview(readTable(document.getElementById("pasteText").value, { start: (cal.meta || {}).start, end: (cal.meta || {}).end }), "", true);
+  const b = document.getElementById("icsApply") || document.getElementById("icsCancel");
+  if (b) b.focus();
+});
 document.getElementById("fileImportIcs").addEventListener("change", e => {
   const file = e.target.files[0];
   if (!file) return;

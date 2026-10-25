@@ -105,6 +105,8 @@
     "test:school-day-sub-plans": "node Tools/school-calendar/test/smoke-consumers-sub-plans.mjs",
     "test:school-calendar-ics": "node Tools/school-calendar/test/ics.test.mjs",
     "test:school-calendar-ics-wall": "node Tools/school-calendar/test/smoke-ics-wall.mjs",
+    "test:school-calendar-table": "node Tools/school-calendar/test/table.test.mjs",
+    "test:school-calendar-table-page": "node Tools/school-calendar/test/smoke-ics-table.mjs",
     "test:layout-bell-from-calendar": "node Tools/schedule-visualizer/test/smoke-bell-from-calendar.mjs",
     "test:image-to-pdf": "node Tools/image-to-pdf/test/smoke.mjs && node Tools/image-to-pdf/test/smoke-enhance.mjs && node Tools/image-to-pdf/test/smoke-portfolio.mjs",
     "test:manipulatives": "node Tools/virtual-manipulatives-board/test/smoke-boards.mjs && node Tools/virtual-manipulatives-board/test/smoke-snap-grid.mjs && node Tools/virtual-manipulatives-board/test/smoke-rendered-pieces.mjs",
