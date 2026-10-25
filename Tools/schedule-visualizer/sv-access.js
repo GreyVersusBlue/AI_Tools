@@ -28,7 +28,7 @@ const STATUS_WORDS = {
 };
 const ACCESS_WORDS = { stairs: 'Stairs', elevator: 'Elevator', ramp: 'Ramp' };
 
-function el(doc, tag, cls, text) {
+export function el(doc, tag, cls, text) {
   const e = doc.createElement(tag);
   if (cls) e.className = cls;
   if (text != null) e.textContent = text;
@@ -189,7 +189,8 @@ export function buildRouteSheets() {
 
 /* ---- the page glue: build, preview, print ---- */
 
-function asking(on) {
+/** Puts #sf-print-sheet on paper alone (on) or gives the page back (off); sv-safety.js uses it too. */
+export function asking(on) {
   document.body.classList.toggle('sf-printing', on);
   if (on) PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.5in' });
   else { const s = document.getElementById('pk-page-style'); if (s) s.remove(); }
@@ -210,7 +211,7 @@ export function buildStepFreeSheet() {
   return report;
 }
 
-function printSheet() {
+export function printSheet() {
   asking(true);
   const done = () => { window.removeEventListener('afterprint', done); asking(false); };
   window.addEventListener('afterprint', done);

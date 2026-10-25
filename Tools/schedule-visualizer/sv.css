@@ -2855,6 +2855,25 @@
 #sf-print-sheet .sf-move { margin: 0 0 6pt; break-inside: avoid; }
 #sf-print-sheet .sf-move-head { font-weight: 600; margin: 0 0 2pt; }
 #sf-print-sheet .sf-steps { margin: 0; padding-left: 16pt; list-style: lower-alpha; }
+/* Path 11 P4: evacuation cards (sv-safety.js), one room to a page; a long card runs on, never clipped */
+#sf-print-sheet .ev-card + .ev-card { break-before: page; }
+#sf-print-sheet .ev-head { display: flex; justify-content: space-between; gap: 8pt; font-size: 9.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 0.75pt solid #000; padding-bottom: 3pt; margin-bottom: 8pt; }
+#sf-print-sheet .ev-room { font-size: 30pt; line-height: 1.1; margin: 0; }
+#sf-print-sheet .ev-floor { font-size: 12pt; margin: 0 0 8pt; }
+#sf-print-sheet .ev-map { margin: 0 0 8pt; text-align: center; break-inside: avoid; }
+#sf-print-sheet .ev-map img { max-width: 100%; max-height: 3.4in; border: 0.75pt solid #000; }
+#sf-print-sheet .ev-key { font-size: 9pt; margin-top: 2pt; }
+#sf-print-sheet .ev-way { margin: 0 0 8pt; break-inside: avoid; }
+#sf-print-sheet .ev-h2 { font-size: 13pt; margin: 0 0 3pt; break-after: avoid; }
+#sf-print-sheet .ev-steps { margin: 0 0 4pt; padding-left: 18pt; }
+#sf-print-sheet .ev-assembly { border: 1.5pt solid #000; padding: 4pt 6pt; font-size: 12pt; }
+#sf-print-sheet .ev-assembly-label { font-weight: 700; }
+#sf-print-sheet .ev-none, #sf-print-sheet .ev-warning { border: 1.5pt solid #000; padding: 4pt 6pt; font-weight: 700; margin: 0 0 6pt; }
+#sf-print-sheet .ev-none-2, #sf-print-sheet .ev-note { margin: 0 0 6pt; }
+#sf-print-sheet .ev-writein-label { font-weight: 700; margin: 4pt 0 2pt; }
+#sf-print-sheet .ev-plan { margin: 0 0 4pt; white-space: pre-line; }
+#sf-print-sheet .ev-line { border-bottom: 0.75pt solid #000; min-height: 18pt; }
+#sf-print-sheet .ev-foot { margin-top: 10pt; font-size: 8.5pt; }
 .rp-door-item { flex-wrap: wrap; }
 .rp-door-step { display: flex; align-items: center; gap: 4px; flex-basis: 100%; font-size: 11px; color: var(--slate-500); cursor: pointer; margin-top: 2px; }
 .group-card-step-free { background: var(--slate-100); color: var(--slate-700); font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; font-family: var(--font-mono); margin-left: 4px; }

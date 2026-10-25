@@ -43,7 +43,7 @@ try {
 
   const surface = await page.evaluate(() => ({
     ns: typeof window.SVEditor === 'object',
-    fns: ['renderCanvas', 'drawTile', 'applyTool', 'undoBlueprint', 'completePairing', 'printEvacuationDoorCards']
+    fns: ['renderCanvas', 'drawTile', 'applyTool', 'undoBlueprint', 'completePairing', 'renderEvacuationMapCrop']
       .filter(n => typeof window[n] !== 'function'),
     ctx: typeof renderCanvas === 'function' && typeof drawTile === 'function',
   }));

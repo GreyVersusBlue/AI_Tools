@@ -88,6 +88,8 @@
     Object.assign(window, SVWhatIf);
     import * as SVAccess from './schedule-visualizer/sv-access.js';
     window.SVAccess = SVAccess;
+    import * as SVSafety from './schedule-visualizer/sv-safety.js';
+    window.SVSafety = SVSafety;
     import * as SVRecovery from './schedule-visualizer/sv-recovery.js';
     window.SVRecovery = SVRecovery;
     window.dispatchEvent(new Event('sv-recovery-ready'));
@@ -404,18 +406,18 @@
             </div>
           </div>
 
-          <!-- Evacuation door cards -->
+          <!-- Path 11 P4: evacuation cards, built by sv-safety.js -->
           <div class="bp-sidebar-section">
             <div class="bp-sidebar-label">Evacuation</div>
-            <button class="bp-icon-btn" id="btn-print-evacuation-cards" style="width:100%;justify-content:flex-start;padding:8px var(--sp-3);" title="Print one evacuation-route door card per room on this floor, routed to the nearest marked exterior exit.">
+            <button class="bp-icon-btn" id="btn-print-evacuation-cards" style="width:100%;justify-content:flex-start;padding:8px var(--sp-3);" title="One evacuation card per room on every floor: the first and second way out, the step-free way out and each exit's assembly point.">
               <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                 <polyline points="14 2 14 8 20 8"/>
                 <path d="M9 15l2 2 4-4"/>
-              </svg>Print Door Cards
+              </svg>Evacuation Cards
             </button>
             <div style="font-size:11px;color:var(--slate-400);line-height:1.5;margin-top:var(--sp-2);">
-              Mark a hallway tile as an <strong>Exterior exit</strong> (Select tool → click a perimeter hallway) first. One card per room on this floor, batched into a single PDF.
+              Mark a hallway tile as an <strong>Exterior exit</strong> (Select tool → click a perimeter hallway) first, with its name and assembly point. One card per room on every floor, to post by its door. Routes never use an elevator.
             </div>
           </div>
 
@@ -1859,6 +1861,23 @@
           <p class="form-hint" style="margin-top:var(--sp-2);">Congestion delay is added automatically when multiple groups share the same hallway tile during the same transition.</p>
         </div>
 
+        <!-- Path 11 P4: the school's own words on the safety sheets -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">
+            <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
+            Safety printing
+          </h3>
+          <div class="form-row">
+            <div class="form-label-group">
+              <label class="form-label" for="setting-evac-no-step-free">Plan for anyone who cannot use stairs or steps</label>
+              <p class="form-hint">Printed, in your words, on each evacuation card for a room with no step-free way out. Left blank, those cards print blank lines under this heading to fill in by hand. The tool writes no procedure of its own.</p>
+            </div>
+            <div>
+              <textarea id="setting-evac-no-step-free" class="form-control" rows="3" maxlength="600" style="width:100%;"></textarea>
+            </div>
+          </div>
+        </div>
+
         <!-- R59: Subjects / Departments editor -->
         <div class="settings-section">
           <h3 class="settings-section-title">
@@ -2690,7 +2709,7 @@ function getStepFreeGraph() {
   return _svStepFreeCache.get(AppState.blueprint);
 }
 function routeGraph() { return AppState.viz.stepFree ? getStepFreeGraph() : getPathfindingGraph(); }
-/* The evacuation door cards route on a graph with no elevators: one is not used in a fire. */
+/* The evacuation graph has no elevators (Path 11 P3); P4's cards build their own from sv-routes.js. */
 let _svEvacuationCache = null;
 function getEvacuationGraph() { return (_svEvacuationCache || (_svEvacuationCache = svGraph().createCache({ evacuation: true }))).get(AppState.blueprint); }
 function rebuildPathfindingGraph() { return graphCache().rebuild(AppState.blueprint); }
@@ -3761,6 +3780,7 @@ const els = {
   staircaseDisplay: document.getElementById('staircase-time-display'),        // R30
   defaultGroupSizeInput: document.getElementById('setting-default-group-size'), // R59
   elevatorWaitInput: document.getElementById('setting-elevator-wait'),          // Path 11 P3
+  evacPlanInput:    document.getElementById('setting-evac-no-step-free'),       // Path 11 P4
   modPreviewChips:  document.getElementById('mod-preview-chips'),
   headerSchoolName: document.getElementById('header-school-name'),
   headerModCount:   document.getElementById('header-mod-count'),
@@ -3796,6 +3816,7 @@ function populateSettingsForm() {
   // R59: default group size + bell schedule + subjects
   if (els.defaultGroupSizeInput) els.defaultGroupSizeInput.value = AppState.settings.defaultGroupSize ?? 25;
   if (els.elevatorWaitInput) els.elevatorWaitInput.value = svGraph().settingsElevatorWait(AppState.settings);
+  if (els.evacPlanInput) els.evacPlanInput.value = typeof AppState.settings.evacNoStepFreePlan === 'string' ? AppState.settings.evacNoStepFreePlan : '';
   renderBellScheduleEditor();
   renderSubjectsEditor();
 
@@ -3951,6 +3972,13 @@ els.btnSave.addEventListener('click', () => {
     if (Number.isFinite(ew) && ew >= 0 && ew <= 999) AppState.settings.elevatorWait = Math.round(ew);
     else delete AppState.settings.elevatorWait;
     els.elevatorWaitInput.value = svGraph().settingsElevatorWait(AppState.settings);
+  }
+  // Path 11 P4: the school's plan for a room with no step-free way out; blank removes the key.
+  if (els.evacPlanInput) {
+    const plan = els.evacPlanInput.value.trim().slice(0, 600);
+    if (plan) AppState.settings.evacNoStepFreePlan = plan;
+    else delete AppState.settings.evacNoStepFreePlan;
+    els.evacPlanInput.value = plan;
   }
   saveSettings();
   saveLastSavedTime();
@@ -5461,11 +5489,11 @@ window.wiComputeDiff    = wiComputeDiff;
 <button id="btn-toggle-app"
   onclick="toggleApp()"
   style="display:none;"
->
+></button>
 
 <!-- The Schedule Browser script and its publisher are schedule-visualizer/sv-browser.js (Path 11 P2 increment 7), loaded by the module script in <head>. -->
 <script src="../_shared/sw-register.js" defer></script>
-<!-- Path 11 P3: the step-free report, built by sv-access.js; on paper only while body.sf-printing. -->
-<section id="sf-print-sheet" class="pk-page pk-paper" aria-label="Step-free access report"></section>
+<!-- Path 11 P3/P4: the step-free report and route sheets (sv-access.js) and the evacuation cards (sv-safety.js); on paper only while body.sf-printing. -->
+<section id="sf-print-sheet" class="pk-page pk-paper" aria-label="Printed sheet"></section>
 </body>
 </html>

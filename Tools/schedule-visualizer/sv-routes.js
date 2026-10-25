@@ -420,3 +420,133 @@ export function stepFreeRouteSheets({ blueprint, groups, settings, elevatorWait,
     return { group: group.name, groupId: group.id, days, counts };
   });
 }
+
+
+/* ==============================================================
+   EVACUATION CARDS (Path 11 P4 increment 1)
+   ──────────────────────────────────────────────────────────────
+   One card per room, every floor: the first way out (the cheapest
+   route to any marked exit), the second way out (the cheapest to a
+   different door) and the step-free way out (ramps and level
+   hallways only). Every route is on a graph with no elevator, as the
+   door cards' always were (Path 11 P3). Exits are grouped into doors
+   first, so the two tiles of a double door are one way out, not two.
+   What a card says beyond the routes is the school's own: the exit
+   names and assembly points typed on the blueprint. The step-free way
+   out is a way already on the card when one has no stairs or steps.
+   A card is one of
+     { status: 'route', first, second, stepFree }
+     { status: 'none' }       no route from the room reaches an exit
+   beside { room, floorId }, where first/second are a way out
+     { door, exitLabel, assemblyPoint, path, steps, cost, crossesFloor, floors }
+   second is null when no other door is reached, and stepFree is
+     { same: 'first' | 'second' }, { route: <a way out> }, or null.
+=============================================================== */
+
+/**
+ * Group exits (collectExitPoints()'s list) into doors: exit tiles that touch
+ * on one floor, or that carry the same name, are one door. Each door is
+ * { id, label, assemblyPoint, exits }, its label and assembly point the
+ * first non-empty ones among its tiles, in the order the exits came.
+ */
+export function exitDoors(exits) {
+  const parent = exits.map((_, i) => i);
+  const find = i => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  const join = (a, b) => { const ra = find(a), rb = find(b); if (ra !== rb) parent[Math.max(ra, rb)] = Math.min(ra, rb); };
+  for (let i = 0; i < exits.length; i++) {
+    for (let j = i + 1; j < exits.length; j++) {
+      const a = exits[i], b = exits[j];
+      const touch = a.floorId === b.floorId && Math.abs(a.col - b.col) + Math.abs(a.row - b.row) === 1;
+      const named = a.label && a.label.trim() && a.label.trim() === (b.label || '').trim();
+      if (touch || named) join(i, j);
+    }
+  }
+  const doors = new Map();
+  exits.forEach((e, i) => {
+    const root = find(i);
+    if (!doors.has(root)) doors.set(root, { id: doors.size, label: '', assemblyPoint: '', exits: [] });
+    const d = doors.get(root);
+    d.exits.push(e);
+    if (!d.label && e.label && e.label.trim()) d.label = e.label.trim();
+    if (!d.assemblyPoint && e.assemblyPoint && e.assemblyPoint.trim()) d.assemblyPoint = e.assemblyPoint.trim();
+  });
+  return [...doors.values()];
+}
+
+/** True when every step of a key path is an edge of the graph (a route the graph allows as it stands). */
+export function pathInGraph(graph, path) {
+  if (!path || !path.length || !graph.adjacency.has(path[0])) return false;
+  for (let i = 1; i < path.length; i++) {
+    if (!(graph.adjacency.get(path[i - 1]) || []).some(e => e.key === path[i])) return false;
+  }
+  return true;
+}
+
+/** The cheapest route from a room to each door it reaches, cheapest first (ties: door order). */
+function routesToDoors(roomKey, doors, graph) {
+  if (!graph.adjacency.has(roomKey)) return [];
+  const out = [];
+  for (const door of doors) {
+    let best = null;
+    for (const exit of door.exits) {
+      if (!graph.adjacency.has(exit.key)) continue;
+      const path = astar(graph, roomKey, exit.key);
+      if (!path) continue;
+      const cost = evacPathCost(graph, path);
+      if (!best || cost < best.cost) best = { path, exit, cost };
+    }
+    if (best) out.push({ door, ...best });
+  }
+  return out.sort((a, b) => (a.cost - b.cost) || (a.door.id - b.door.id));
+}
+
+function wayOut(r, graph, name) {
+  const startFloor = parseKey(r.path[0]).floorId;
+  const floors = [];
+  for (const k of r.path) { const f = parseKey(k).floorId; if (floors[floors.length - 1] !== f) floors.push(f); }
+  return {
+    door: r.door.id, exitLabel: r.door.label, assemblyPoint: r.door.assemblyPoint,
+    path: r.path, cost: r.cost,
+    steps: buildEvacuationSteps(r.path, { label: r.door.label }, graph, name),
+    crossesFloor: floors.some(f => f !== startFloor), floors: floors.map(name),
+  };
+}
+
+/**
+ * evacuationCards({ blueprint, floorLabel? }) →
+ *   { exitCount, doorCount, cards: [...] }   (see the header above)
+ * Cards are sorted by floor order, then by room number as text. With no
+ * exit marked there are no cards (exitCount 0): nothing can be judged.
+ * floorLabel(id) names a floor in the steps (default: the id).
+ */
+export function evacuationCards({ blueprint, floorLabel }) {
+  const name = floorLabel || (id => id);
+  const evac = buildGraph(blueprint, { evacuation: true });
+  const free = buildGraph(blueprint, { evacuation: true, stepFree: true });
+  const exits = collectExitPoints(blueprint, evac);
+  const doors = exitDoors(exits);
+  if (!exits.length) return { exitCount: 0, doorCount: 0, cards: [] };
+  const floorOrder = new Map((blueprint.floors || []).map((f, i) => [f.id, i]));
+  const cards = [];
+  for (const [room, key] of evac.roomToKey) {
+    const floorId = parseKey(key).floorId;
+    const routes = routesToDoors(key, doors, evac);
+    if (!routes.length) { cards.push({ room, floorId, status: 'none' }); continue; }
+    const first = wayOut(routes[0], evac, name);
+    const second = routes[1] ? wayOut(routes[1], evac, name) : null;
+    // A way out already on the card that has no stairs or steps is the
+    // step-free one; only when neither is does the card get a route of its own.
+    // The second counts only when no step-free route is shorter than it.
+    let stepFree = null;
+    if (pathInGraph(free, first.path)) stepFree = { same: 'first' };
+    else {
+      const best = routesToDoors(key, doors, free)[0];
+      if (best && second && pathInGraph(free, second.path) && second.cost <= best.cost) stepFree = { same: 'second' };
+      else if (best) stepFree = { route: wayOut(best, free, name) };
+    }
+    cards.push({ room, floorId, status: 'route', first, second, stepFree });
+  }
+  cards.sort((a, b) => ((floorOrder.get(a.floorId) || 0) - (floorOrder.get(b.floorId) || 0)) ||
+    a.room.localeCompare(b.room, undefined, { numeric: true }));
+  return { exitCount: exits.length, doorCount: doors.length, cards };
+}

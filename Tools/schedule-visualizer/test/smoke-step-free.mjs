@@ -126,6 +126,23 @@ try {
     pageRule: !!document.getElementById('pk-page-style'),
   }));
   ok(!closed.dialog && !closed.printing && !closed.pageRule, 'closing the preview takes the print state away (the Blueprint sheet is untouched)');
+  // On paper: until v327 the sheet sat inside an unclosed hidden <button>, so
+  // the preview (which copies it into a frame) looked right and every print was
+  // one blank page. The preview's Print (print() stubbed) leaves the page as a
+  // print dialog finds it; the PDF is that print.
+  await page.evaluate(() => { window.__printCalls = 0; window.print = () => { window.__printCalls++; }; });
+  await page.click('#btn-step-free-report');
+  await page.waitForSelector('dialog.pk-preview[data-pk-pages]', { timeout: 15000 });
+  const reportPages = Number(await page.getAttribute('dialog.pk-preview', 'data-pk-pages'));
+  await page.click('.pk-preview-print');
+  await page.waitForFunction(() => window.__printCalls > 0, null, { timeout: 15000 }).catch(() => {});
+  await page.emulateMedia({ media: null });
+  const pdfText = (await page.pdf({ preferCSSPageSize: true })).toString('latin1');
+  const reportPdf = (pdfText.match(/\/Type\s*\/Page[^s]/g) || []).length;
+  ok(reportPages >= 1 && reportPdf === reportPages, `the report prints the pages the preview shows (${reportPdf} PDF, ${reportPages} preview)`);
+  ok(await page.evaluate(() => document.getElementById('sf-print-sheet').parentElement === document.body), 'the sheet is a direct child of <body>');
+  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+  await settle(page, 150);
 
   /* ── 4. marked as an elevator, then out of service ──────────────────────── */
   await page.evaluate(() => selectCell(0, 4));

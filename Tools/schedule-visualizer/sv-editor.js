@@ -1,7 +1,7 @@
 // sv-editor.js — the School Layout Visualizer's Blueprint tab: the floor
 // data helpers, staircase pairing, undo and redo, the canvas and its
 // rendering, the plain floor-plan export and Ctrl+P sheet, the evacuation
-// door cards (which draw with the same tile helpers), tool placement,
+// cards' maps (which draw with the same tile helpers), tool placement,
 // selection, the right-hand panel's room, doorway, staircase, dummy-room and
 // hallway editors, the corridor-label tool, the status bar, the canvas's
 // mouse and keyboard wiring, heat-exclude zones, zoom, the tool palette,
@@ -23,9 +23,9 @@
 // before DOMContentLoaded, and still before init() adds the page's own
 // document keydown listeners, so their order is unchanged.
 
-/* global AppState, FloorManager, TOOL_VERSION, ZOOM_MIN, ZOOM_MAX, ZOOM_STEP, TILE_COLORS, DUMMY_COLOR_PRESETS, GRID_LINE_COLOR, PAIR_COLORS -- 035's classic-script state and constants */
-/* global canvas:writable, ctx:writable, _heatExcludeIdCounter:writable, activeDummyColor:writable -- lets the page declares (the door cards and the what-if lab swap ctx; loading a blueprint resets the counter) */
-/* global deriveSameFloorPairs, invalidatePathfindingGraph, rebuildRoomRegistry, parseKey, getEvacuationGraph, collectExitPoints, computeEvacuationRouteForRoom, buildEvacuationSteps, getPairLabel -- 035's BRIDGE wrappers */
+/* global AppState, FloorManager, ZOOM_MIN, ZOOM_MAX, ZOOM_STEP, TILE_COLORS, DUMMY_COLOR_PRESETS, GRID_LINE_COLOR, PAIR_COLORS -- 035's classic-script state and constants */
+/* global canvas:writable, ctx:writable, _heatExcludeIdCounter:writable, activeDummyColor:writable -- lets the page declares (the card maps and the what-if lab swap ctx; loading a blueprint resets the counter) */
+/* global deriveSameFloorPairs, invalidatePathfindingGraph, rebuildRoomRegistry, parseKey, getPairLabel -- 035's BRIDGE wrappers */
 /* global PlaybackController, showToast, scheduleBlueprintAutosave, openModal, closeModal, populateDeptDropdown, saveSnapshot -- 035's page helpers and sv-viz.js */
 
 /* ==============================================
@@ -450,8 +450,10 @@ function drawTraceImage() {
   ctx.restore();
 }
 
-function renderCanvas() {
-  if (!ctx) return;
+/** The floor plan alone (trace image, tiles, grid, room labels) for the
+ *  ACTIVE floor: renderCanvas() draws the editor's highlights on top, and the
+ *  evacuation cards' map (Path 11 P4) draws this alone. */
+function renderPlainFloor() {
   const { gridCols, gridRows } = AppState.blueprint;
   const cellSize = getEffectiveCellSize();
   const W = gridCols * cellSize;
@@ -479,6 +481,12 @@ function renderCanvas() {
   // R56: Stamp grouped-classroom labels on top of all tiles so a sibling cell's
   // fill can't clip the centered label (solo rooms are labelled inline above).
   stampAllGroupLabels(cellSize);
+}
+
+function renderCanvas() {
+  if (!ctx) return;
+  const cellSize = getEffectiveCellSize();
+  renderPlainFloor();
 
   // R39: Search highlight ring
   drawSearchHighlight(cellSize);
@@ -506,7 +514,6 @@ function renderCanvas() {
 =============================================== */
 document.getElementById('btn-export-blueprint-png').addEventListener('click', exportBlueprintAsPNG);
 document.getElementById('btn-export-blueprint-pdf').addEventListener('click', exportBlueprintAsPDF);
-document.getElementById('btn-print-evacuation-cards')?.addEventListener('click', printEvacuationDoorCards);
 
 /* ==============================================
    BLUEPRINT EXPORT (plain floor plan — PNG/PDF)
@@ -702,27 +709,54 @@ window.addEventListener('beforeprint', () => {
 });
 
 /* ==============================================
-   EVACUATION DOOR CARDS
+   EVACUATION CARD MAPS (Path 11 P4)
    ──────────────────────────────────────────────────────────────
-   One postable card per room on the active floor: a cropped,
-   route-highlighted floor-plan image plus numbered turn-by-turn
-   text and the assigned assembly point, batched into a single
-   multi-page PDF. Reuses the exact ctx-swap → renderCanvas() →
-   restore technique renderBlueprintExportCanvas() uses just above,
-   then crops the result to the route's bounding box and draws the
-   path on top before cropping — no changes to renderCanvas() or
-   any tile-drawing helper were needed.
+   The map on each evacuation card (sv-safety.js lays the cards out):
+   the room's floor drawn plain, by the same ctx-swap → renderPlainFloor()
+   → restore technique renderBlueprintExportCanvas() uses, with the
+   first way out solid and the second dashed, cropped to both. The
+   floor need not be the one on screen: withFloorShown() points the
+   legacy mirror at it for the draw and puts everything back after.
 =============================================== */
 
+/** Run fn() with `floor` as the active floor for drawing only (no graph, canvas or history change). */
+function withFloorShown(floor, fn) {
+  const bp = AppState.blueprint;
+  const idx = bp.floors.indexOf(floor);
+  if (idx < 0 || idx === bp.activeFloorIdx) return fn();
+  const saved = {
+    idx: bp.activeFloorIdx, gridData: bp.gridData, gridCols: bp.gridCols, gridRows: bp.gridRows,
+    heatExcludeZones: bp.heatExcludeZones, staircasePairs: bp.staircasePairs,
+    sCols: AppState.settings.gridCols, sRows: AppState.settings.gridRows,
+  };
+  bp.activeFloorIdx = idx;
+  syncLegacyMirror(floor);
+  try { return fn(); } finally {
+    bp.activeFloorIdx = saved.idx;
+    bp.gridData = saved.gridData; bp.gridCols = saved.gridCols; bp.gridRows = saved.gridRows;
+    bp.heatExcludeZones = saved.heatExcludeZones; bp.staircasePairs = saved.staircasePairs;
+    AppState.settings.gridCols = saved.sCols; AppState.settings.gridRows = saved.sRows;
+  }
+}
+
+/** The leading run of a key path on its first floor (up to the first floor change). */
+function firstFloorRun(path) {
+  const run = [];
+  const floorId = parseKey(path[0]).floorId;
+  for (const k of path) { if (parseKey(k).floorId !== floorId) break; run.push(k); }
+  return run;
+}
+
 /**
- * Render a cropped PNG of the active floor with one evacuation route
- * highlighted, or null when there is nothing to draw: no path, or the
- * route leaves the active floor via a staircase (a single floor's canvas
- * can't depict a different floor's plan, so those cards fall back to the
- * numbered text steps alone — see drawEvacuationDoorCard()).
+ * Render a cropped PNG of a card's floor with its ways out drawn, or null
+ * when there is nothing to draw. `card` is one of evacuationCards()'s
+ * (sv-routes.js): card.first.path solid, card.second.path dashed, each only
+ * as far as it stays on the room's floor.
  */
-function renderEvacuationMapCrop(result, floor) {
-  if (!result || !result.path || result.path.length < 2 || result.crossesFloor) return null;
+function renderEvacuationMapCrop(card, floor) {
+  if (!card || !card.first || !floor) return null;
+  const runs = [card.first, card.second].filter(Boolean).map(w => firstFloorRun(w.path));
+  if (!runs[0] || runs[0].length < 2) return null;
 
   const EXPORT_SCALE = 3;
   const cellSize = getEffectiveCellSize();
@@ -739,35 +773,39 @@ function renderEvacuationMapCrop(result, floor) {
   const savedCtx = ctx;
   ctx = offCtx;
   let minC = Infinity, minR = Infinity, maxC = -1, maxR = -1;
+  const centre = k => { const { x, y } = parseKey(k); return [x * cellSize + cellSize / 2, y * cellSize + cellSize / 2]; };
   try {
-    renderCanvas(); // draws the plain floor plan for the ACTIVE floor, unmodified
+    withFloorShown(floor, renderPlainFloor);
 
     offCtx.save();
-    offCtx.lineWidth = 3.2;
-    offCtx.strokeStyle = '#dc2626';
     offCtx.lineCap = 'round';
     offCtx.lineJoin = 'round';
-    offCtx.beginPath();
-    let started = false;
-    for (const key of result.path) {
-      const { x: c, y: r } = parseKey(key);
-      if (c < minC) minC = c; if (r < minR) minR = r;
-      if (c > maxC) maxC = c; if (r > maxR) maxR = r;
-      const cx = c * cellSize + cellSize / 2, cy = r * cellSize + cellSize / 2;
-      if (!started) { offCtx.moveTo(cx, cy); started = true; } else offCtx.lineTo(cx, cy);
+    // The second way out first, so the first is drawn over it where they share a corridor.
+    for (let i = runs.length - 1; i >= 0; i--) {
+      const run = runs[i];
+      if (run.length < 2) continue;
+      offCtx.lineWidth = i === 0 ? 3.2 : 2.4;
+      offCtx.strokeStyle = i === 0 ? '#b91c1c' : '#1e3a8a';
+      offCtx.setLineDash(i === 0 ? [] : [cellSize * 0.45, cellSize * 0.3]);
+      offCtx.beginPath();
+      run.forEach((key, j) => {
+        const { x: c, y: r } = parseKey(key);
+        if (c < minC) minC = c; if (r < minR) minR = r;
+        if (c > maxC) maxC = c; if (r > maxR) maxR = r;
+        const [cx, cy] = centre(key);
+        if (j === 0) offCtx.moveTo(cx, cy); else offCtx.lineTo(cx, cy);
+      });
+      offCtx.stroke();
     }
+    offCtx.setLineDash([]);
+    const [sx0, sy0] = centre(runs[0][0]);
+    offCtx.lineWidth = 2;
+    offCtx.strokeStyle = '#000';
+    offCtx.fillStyle = '#fff';
+    offCtx.beginPath();
+    offCtx.arc(sx0, sy0, cellSize * 0.32, 0, Math.PI * 2);
+    offCtx.fill();
     offCtx.stroke();
-
-    const startPt = parseKey(result.path[0]);
-    const endPt   = parseKey(result.path[result.path.length - 1]);
-    offCtx.fillStyle = '#16a34a';
-    offCtx.beginPath();
-    offCtx.arc(startPt.x * cellSize + cellSize / 2, startPt.y * cellSize + cellSize / 2, cellSize * 0.3, 0, Math.PI * 2);
-    offCtx.fill();
-    offCtx.fillStyle = '#dc2626';
-    offCtx.beginPath();
-    offCtx.arc(endPt.x * cellSize + cellSize / 2, endPt.y * cellSize + cellSize / 2, cellSize * 0.3, 0, Math.PI * 2);
-    offCtx.fill();
     offCtx.restore();
   } finally {
     ctx = savedCtx; // guaranteed restore even if a drawing call above throws
@@ -785,166 +823,6 @@ function renderEvacuationMapCrop(result, floor) {
   crop.width = sw; crop.height = sh;
   crop.getContext('2d').drawImage(off, sx, sy, sw, sh, 0, 0, sw, sh);
   return { dataURL: crop.toDataURL('image/png'), w: sw, h: sh };
-}
-
-/** Draw one room's door card onto the current jsPDF page. */
-function drawEvacuationDoorCard(doc, opts) {
-  const { pageW, pageH, margin, schoolName, floorLabel, roomNumber, result, graph, floor } = opts;
-  const contentW = pageW - margin * 2;
-  let y = margin;
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(90, 100, 110);
-  doc.text(String(schoolName).toUpperCase(), margin, y + 0.18);
-  doc.text('EVACUATION ROUTE', pageW - margin, y + 0.18, { align: 'right' });
-  y += 0.32;
-  doc.setDrawColor(210, 214, 220);
-  doc.setLineWidth(0.01);
-  doc.line(margin, y, pageW - margin, y);
-  y += 0.38;
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(32);
-  doc.setTextColor(20, 25, 35);
-  doc.text(`Room ${roomNumber}`, margin, y);
-  y += 0.26;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(12);
-  doc.setTextColor(90, 100, 110);
-  doc.text(floorLabel || 'Floor 1', margin, y);
-  y += 0.4;
-
-  if (!result) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.setTextColor(185, 28, 28);
-    const msg = doc.splitTextToSize(
-      'No evacuation route found for this room. Mark at least one exterior exit ' +
-      '(select a hallway tile → check "Exterior exit") that this room can reach.', contentW);
-    doc.text(msg, margin, y);
-    y += msg.length * 0.24;
-    drawDoorCardFooter(doc, { pageW, pageH, margin });
-    return;
-  }
-
-  const mapImg = renderEvacuationMapCrop(result, floor);
-  if (mapImg) {
-    const maxImgW = contentW, maxImgH = 4.3;
-    const aspect = mapImg.w / mapImg.h;
-    let imgW = maxImgW, imgH = imgW / aspect;
-    if (imgH > maxImgH) { imgH = maxImgH; imgW = imgH * aspect; }
-    const imgX = margin + (contentW - imgW) / 2;
-    doc.setDrawColor(225, 228, 232);
-    doc.rect(imgX, y, imgW, imgH);
-    doc.addImage(mapImg.dataURL, 'PNG', imgX, y, imgW, imgH);
-    y += imgH + 0.28;
-  }
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(20, 25, 35);
-  doc.text('Route', margin, y);
-  y += 0.22;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
-  doc.setTextColor(40, 46, 56);
-  const steps = buildEvacuationSteps(result.path, result.exit, graph);
-  steps.forEach((step, idx) => {
-    const wrapped = doc.splitTextToSize(`${idx + 1}. ${step}`, contentW);
-    doc.text(wrapped, margin, y);
-    y += wrapped.length * 0.19;
-  });
-  y += 0.22;
-
-  const boxH = 0.62;
-  doc.setFillColor(236, 253, 245);
-  doc.setDrawColor(5, 150, 105);
-  doc.setLineWidth(0.012);
-  doc.roundedRect(margin, y, contentW, boxH, 0.06, 0.06, 'FD');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9.5);
-  doc.setTextColor(6, 95, 70);
-  doc.text('ASSEMBLY POINT', margin + 0.16, y + 0.22);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(12);
-  doc.setTextColor(15, 60, 45);
-  const assemblyText = result.exit.assemblyPoint || result.exit.label || 'Not set — see building evacuation plan';
-  doc.text(assemblyText, margin + 0.16, y + 0.46);
-  y += boxH + 0.18;
-
-  if (result.crossesFloor) {
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(9);
-    doc.setTextColor(120, 125, 135);
-    const note = doc.splitTextToSize(
-      'This route continues on another floor via a staircase — the map above shows only ' +
-      (floorLabel || 'this floor') + '; follow the numbered steps the rest of the way.', contentW);
-    doc.text(note, margin, y);
-  }
-
-  drawDoorCardFooter(doc, { pageW, pageH, margin });
-}
-
-function drawDoorCardFooter(doc, opts) {
-  const { pageH, margin } = opts;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(150, 155, 165);
-  doc.text(
-    `Generated ${new Date().toLocaleDateString()} · School Layout Visualizer ${TOOL_VERSION} · Post next to classroom door`,
-    margin, pageH - margin + 0.12);
-}
-
-/**
- * Entry point for the "Print Door Cards" button: one door card per room
- * on the currently active floor, batched into a single downloadable PDF.
- */
-function printEvacuationDoorCards() {
-  if (!canvas) { showToast('Canvas not ready.', 'warn'); return; }
-
-  // Path 11 P3: no elevator on a door card's route (see sv-graph.js).
-  const graph = getEvacuationGraph();
-  const exits = collectExitPoints();
-  if (!exits.length) {
-    showToast('Mark at least one exterior exit first — select a hallway tile and check "Exterior exit".', 'warn');
-    return;
-  }
-
-  const floor = getActiveFloorData();
-  const rooms = [...graph.roomToKey.entries()]
-    .filter(([, key]) => key.startsWith(floor.id + ':'))
-    .sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }));
-  if (!rooms.length) {
-    showToast('No rooms on this floor to route yet.', 'warn');
-    return;
-  }
-  if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
-    showToast('PDF export unavailable in this browser.', 'warn');
-    return;
-  }
-
-  showToast('Building evacuation door cards…', 'info');
-  try {
-    const jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'in', format: 'letter' });
-    const pageOpts = { pageW: 8.5, pageH: 11, margin: 0.55,
-                        schoolName: AppState.settings.schoolName || 'School', floorLabel: floor.label, floor, graph };
-
-    rooms.forEach(([roomNumber, roomKey], idx) => {
-      if (idx > 0) doc.addPage();
-      const result = computeEvacuationRouteForRoom(roomKey, exits, graph);
-      drawEvacuationDoorCard(doc, { ...pageOpts, roomNumber, result });
-    });
-
-    const safeSchool = (AppState.settings.schoolName || 'School').replace(/[^\w\s-]/g, '').trim() || 'School';
-    const safeFloor   = (floor.label || 'Floor').replace(/[^\w\s-]/g, '').trim() || 'Floor';
-    doc.save(`Evacuation Door Cards — ${safeSchool} — ${safeFloor}.pdf`);
-    showToast(`Saved ${rooms.length} door card${rooms.length === 1 ? '' : 's'} as PDF`, 'success');
-  } catch (err) {
-    showToast('Door card export failed.', 'error');
-    console.warn('[STVIZ] Evacuation door card export error:', err);
-  }
 }
 
 function drawGrid(cols, rows, cellSize, W, H) {
@@ -4074,9 +3952,8 @@ export {
   getPairIndex, getPairPartner, floorLabelById, pairStaircases, unpairStaircaseOn, unpairStaircase, HISTORY_LIMIT,
   _snapGrid, _restoreGrid, beginAction, commitAction, runAction, undoBlueprint, redoBlueprint, afterHistoryRestore,
   clearHistory, updateUndoRedoButtons, initCanvas, getEffectiveCellSize, applyZoom, resizeCanvas, _traceImageCache,
-  traceImageSrc, getTraceImageEl, drawTraceImage, renderCanvas, renderBlueprintExportCanvas, exportBlueprintAsPNG,
-  exportBlueprintAsPDF, renderBlueprintPrintSheet, renderEvacuationMapCrop, drawEvacuationDoorCard,
-  drawDoorCardFooter, printEvacuationDoorCards, drawGrid, drawSearchHighlight, drawCorridorLabelHighlights,
+  traceImageSrc, getTraceImageEl, drawTraceImage, renderPlainFloor, renderCanvas, renderBlueprintExportCanvas, exportBlueprintAsPNG,
+  exportBlueprintAsPDF, renderBlueprintPrintSheet, withFloorShown, firstFloorRun, renderEvacuationMapCrop, drawGrid, drawSearchHighlight, drawCorridorLabelHighlights,
   drawSelectionHighlight, drawMoveSourceHighlight, drawPairingSourceHighlight, roundRectStroke, drawTile,
   drawClassroomTile, isSameGroup, isGroupAnchor, getGroupBounds, getGroupCenterX, getGroupCenterY,
   getGroupPixelWidth, getGroupPixelHeight, getGroupBottomY, stampGroupLabel, stampAllGroupLabels, getClassroomDoors,
