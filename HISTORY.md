@@ -9,6 +9,65 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 9 P4: `.ics` export and import, and the one-page wall calendar (2026-10-25, AI-18, `CACHE_VERSION` v317)
+
+BACKLOG rank 15 kept and rewritten (now ¼): `.ics` and the wall calendar are built; the pasted-table import the P4 bullet
+also names is what the row holds now. With that, every Path 9 row the audit's AI-18 entry named has shipped.
+
+- **What changed for a teacher.** In 032, *Export Calendar (.ics)* writes one event per run of days (Winter Break is one
+  event, not eight), one per grading period ("Quarter 1", Aug 31 to Nov 4) and, while the new "with paced lessons" box is
+  ticked (ticked by default once a course has something planned), each course's lesson on the date saved for it ("Math
+  7: U1-01-A Integers"). *Import Calendar (.ics)* no longer replaces a date's label behind a `confirm()`: it shows a
+  table of every date that would change, what it has now and what it would get, and a list of what it skips and why (a
+  repeating event, a cancelled one, a date outside the school year, this page's own grading-period and lesson events),
+  and stores only on "Add these days", with Undo on the notice bar. Types are added, never removed; a label already there
+  stays and the file's title goes into the note ("Also: Labor Day Holiday"). A file that is not a calendar is refused in
+  words. The print choices gained *Wall calendar (one page)*: the year on one landscape Letter page, every day its number
+  and its types' abbreviations, a no-school weekday hatched, each month's named days under it, the legend and the
+  grading periods with their school days, with a "Preview pages" button (the print kit's preview).
+- **`Tools/school-calendar/scv-ics.js`** (new, pure, precached in both tiers): `writeIcs`, `readIcs`, `planIcsImport`,
+  `dayRuns`, `guessTypes` and the text, folding and date helpers. The page's old inline `buildIcs`/`parseIcs` are gone.
+  The wall sheet is built from elements in 032 (`renderWallSheet()`), kept current by `render()` so Ctrl+P prints it.
+- **Calls made.** (1) *A file this page wrote comes back exactly*: each day event carries `X-SCV-KIND`, `X-SCV-TYPES` and
+  `X-SCV-LABEL`, so a title made up for a label-less day ("Testing Window") never becomes a label, and an untyped day
+  called "Staff holiday party" is not guessed into a closure. The suite holds the round trip both ways. (2) *A timed
+  event is the date it starts on*: in its own `TZID` the date as written, and a UTC time (`…Z`) in the browser's zone;
+  `RRULE` is skipped, not expanded (a district's closure list is single events). (3) *Title guesses* only when the file
+  names no type the legend knows, and "before"/"after", an early dismissal or a workday stop a break being read as a
+  closure ("Early Dismissal — Last Day Before Winter Break" is a half day). (4) *Lessons come from the stamped dates*
+  (`SchoolDay.lessonsOn`), as 044 and 045 read them, not from the placer: the file says what was saved. The first `.ics`
+  export used the active course's placement and its raw text; `smoke-plan.mjs`'s two assertions about it were rewritten to
+  the new shape (each lesson on its old date, named by its course, code and title; one event per run of days), not
+  loosened. (5) *The wall calendar does not link `print-area.css`* and has no `#printArea`: 032 has five print views and
+  its own `@media print`, which print-area.css would break. It links `print-kit.css`/`print-kit.js`, writes its landscape
+  `@page` with `PrintKit.setPage()` only while it is the print choice (and removes the kit's style element after, so the
+  other views keep `size: auto`), and previews with `PrintKit.preview({ area })`. So it is **not** in
+  `smoke-preview-adopters.mjs`, which is built around `#printArea`; its own suite holds the preview to Chromium's PDF.
+  (6) *Caps, not heights*, keep it to one page: at most five named days a month (each one line, an ellipsis past the
+  width), "+N more", eight grading periods, twelve months (a longer year says "The first 12 months of 14 are shown").
+  Pasted-table import was left for a later row rather than squeezed in.
+- **Checks.** New `npm run test:school-calendar-ics` (`ics.test.mjs`, pure Node, 81 checks, 17 breaks caught, again under
+  `TZ=Pacific/Kiritimati`): escaping, folding at 75 octets on a code-point boundary, the seed's file (CRLF, runs, DTSTAMP
+  handed in, a golden SHA-256), the round trip onto the same and a blank calendar, a Google-shaped district file
+  (VTIMEZONE, multi-day, TZID, a UTC time that is the day before in New York, RRULE, CANCELLED, a folded title,
+  DURATION, a known category, a date outside the year) imported twice with nothing changing the second time, ten files
+  refused, the guesses. New `npm run test:school-calendar-ics-wall` (`smoke-ics-wall.mjs`, Chromium, port 8549, 41
+  checks, 7 breaks caught; green in America/New_York and `TZ=UTC`): the export read back with the module's reader, the
+  import preview, Add, Undo and a refusal, the wall sheet, its `@page`, Chromium's PDF at one page for the seed, a
+  calendar with a long name on every school day and a 14-month year, the preview's "Page 1 of 1", axe on both.
+  `run-suites --only school-calendar` 17 green (20.2 min, `smoke-weeks` golden included), `--only service-worker` 3,
+  `--only tool-registry` 1; the a11y sweep on 032 (and seeded) clean; `test:theme` 966; `path7:next --only 032` 0;
+  lint; every guard, `check:precache --base origin/main`, `check:adoption --check` (`print-kit.css`/`.js` 14).
+- **What did not work.** The first wall sheet was two pages for the dense calendar: the footer listed a grading period
+  for every third day (the fixture tags `mpend` that often), and long names wrapped. Hence the period cap and one-line
+  names. The first test fixture wrote a plan with no stamped dates, which no 032 save leaves, and so exported no lessons;
+  it is stamped with `scv-plan.js` now. The out-of-year cells printed borders (a print rule's `!important` beat
+  `.wempty`).
+- **Not verified.** No district's real `.ics` was imported (the fixture is written in Google Calendar's shape, not
+  downloaded: no network); no file was opened in Google Calendar, Outlook or Apple Calendar; the wall calendar was read in
+  Chromium's PDF and a screenshot, never printed; `audit-print.mjs` does not reach the wall view (a radio, not a "print"
+  tab), so only its own suite covers it.
+
 ## Path 9 P3 increment 3: 044 and 045 read the school-year spine (2026-10-25, AI-18, `CACHE_VERSION` v316)
 
 BACKLOG rank 14 deleted (a gap, ranks not renumbered): Path 9 P3 is whole. Rank 15 (P4, `.ics` and the wall calendar) is next.

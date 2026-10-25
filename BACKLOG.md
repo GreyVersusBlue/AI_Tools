@@ -87,10 +87,15 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-18 (v317), rank 15 (kept, rewritten, now ¼), Path 9 P4: `.ics` export and import, and the wall calendar.** 032's
+  `.ics` goes through the new pure `scv-ics.js` (runs of days, grading periods, optional paced lessons; an import shown
+  before it is stored that adds and never overwrites, with Undo) and prints a one-page landscape wall calendar through the
+  print kit. New `npm run test:school-calendar-ics`, `npm run test:school-calendar-ics-wall` (port 8549). **Left of P4:
+  pasted-table import. Next free suite port: 8550.**
 - **AI-18 (v316), rank 14 (DELETED: Path 9 P3 is whole; a gap, ranks not renumbered), increment 3: 044 and 045 read the
   school-year spine.** Both name the day out, its grading deadline and each course's paced lesson through new
   `SchoolDay.lessonsOn()`/`gradingDeadline()`; 044 fills the title from a lone lesson. New `npm run test:school-day-sub-plans`
-  (port 8548). **Path 9 P4 (rank 15) is next. Next free suite port: 8549.**
+  (port 8548).
 - **AI-18 (v315), rank 14 (kept, rewritten, now ½), Path 9 P3 increment 2: 001 and 036 read the school-year spine.** 001
   names each trip's period at display time (history, printed log, today's log, export detail) and its long-range report
   groups by period; 036's need tab names today's quarter and its school days left and marks it open. 037 counted done
@@ -458,7 +463,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **220 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 15 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `tool-registry.js` 11 · `qr-scan.js` 10 · `school-day.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `student-flags.js` 5 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 15 · `print-kit.css` 14 · `print-kit.js` 14 · `stage.js` 11 · `tool-registry.js` 11 · `qr-scan.js` 10 · `school-day.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `student-flags.js` 5 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **169**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -596,7 +601,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 11 | Path 8 P4 — device-to-device project transfer through the share sheet | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
-| 15 | Path 9 P4 — `.ics` import/export and a one-page year wall calendar print | 032 | 1 | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
+| 15 | Path 9 P4, the rest — pasted-table import in 032 (a district PDF's date table pasted in, previewed and added through `planIcsImport()` as the `.ics` import is; `.ics` and the wall calendar shipped in v317) | 032 | ¼ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 16 | Path 10 P1 — Packet Builder `087` with the section-provider registry | 087 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 17 | Path 10 P2 — 045 re-based on the providers; its raw key reads go away (the calendar's has gone through `SchoolDay` since v316). **Then give 045 the share sheet** — the last tool Path 6 P3 left, held back only so its payload is not re-shaped the week after it ships; follow the P3 working notes in the Path 6 section | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 18 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
@@ -3355,6 +3360,42 @@ fixed unit dates; the valuable half (a unit defined by instructional days that
 - **P4 — Calendar import/export.** `.ics` import (district calendars are published
   as ICS) and pasted-table import replacing the hard-coded 2026–27 preset that
   expires; `.ics` export of the pacing. A one-page year wall calendar print.
+  **`.ics` and the wall calendar built in v317 (AI-18, 2026-10-25), as designed below; `HISTORY.md` has the story.
+  Pasted-table import is left (rank 15).**
+  *Design (AI-18, 2026-10-25), before the build.* 032 had a first `.ics` export and import inline since
+  before Path 9 (one event a date, a label-replacing import behind a `confirm()`, no folding). P4 moves both
+  into a pure module, `Tools/school-calendar/scv-ics.js`, and replaces the page's copies.
+  - *What an export holds.* One all-day event per run of consecutive dates with the same types, label and
+    note (Winter Break is one event, not eight), its day types as `CATEGORIES` (their labels) and as
+    `X-SCV-TYPES` (their ids, for an exact way back); one all-day event per grading period
+    (`SchoolDay.gradingPeriods()`, "Quarter 1", `X-SCV-KIND:grading-period`); and, only while "with paced
+    lessons" is ticked (the default when a course is planned), one event per course per date from the
+    *stamped* dates (`SchoolDay.lessonsOn()`, `X-SCV-KIND:lesson`), so the file says what was saved, as
+    044 and 045 do. UIDs come from the date and kind, so a re-export updates a subscribed calendar instead
+    of doubling it. Lines are folded at 75 octets on a UTF-8 boundary, CRLF, text escaped; `DTSTAMP` is the
+    moment of export, which a test pins.
+  - *How an import maps back, without overwriting.* The reader takes all-day events (`VALUE=DATE`, a
+    multi-day one expanded to each date) and timed ones (the date it starts on, in its `TZID` or, for a UTC
+    time, in the browser's zone, which the suite pins to America/New_York and to UTC); it refuses a file that
+    is not one `VCALENDAR` with balanced components, and lists what it skips with the reason (`RRULE`
+    repeats, `STATUS:CANCELLED`, an unreadable date, a date outside the school year, this page's own
+    grading-period and lesson events). Each date gets types *added*, never removed: `X-SCV-TYPES` ids the
+    legend has, then `CATEGORIES` matched to a type's label or abbreviation, then a short keyword guess on
+    the title (holiday/break/closed, early dismissal/half day, workday/no students, testing, end of a
+    marking period, first/last day) against the legend's own types. An empty label takes the title; a
+    different label stays and the title goes into the note ("Also: …"), as does a description, never twice.
+    So importing a file this page exported changes nothing, which the suite holds. The page shows the plan
+    first (a table of every date that would change, what it has and what it would get, and the skipped
+    list) and stores only on "Add these days", through `save()`, so the notice bar's Undo takes it back.
+  - *The wall calendar.* A fifth print choice, "Wall calendar (one page)": the school year on one landscape
+    Letter page through the print kit (`PrintKit.setPage`, `.pk-page.pk-paper`, `PrintKit.preview` behind a
+    "Preview pages" button), up to twelve months four across, every day cell its number and its types'
+    abbreviations (a no-school weekday hatched, so it reads in black and white), each month's named days
+    under it (a run as one line, at most five and "+N more", one line each), the legend, and the grading periods with their
+    school days. Its suite holds Chromium's PDF to one page for the seed and for a calendar with a name on
+    every school day, and the preview to the same count.
+  - *Left out on purpose.* Pasted-table import (a district PDF's table) is not in this increment; `RRULE`
+    expansion is not done (a district's closure list is single events), and nothing is fetched from a URL.
 
 **Model.** Fable for P2; Opus otherwise.
 
