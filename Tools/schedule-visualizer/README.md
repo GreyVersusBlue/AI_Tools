@@ -56,7 +56,10 @@ shapes:
   Constraint Checks panel and Publish's warning; it keeps `stviz_checks`,
   the accepted findings, `{ v: 1, acks }`; Path 11 P5), and `sv-reports.js`
   (the printed checks report and congestion report, through the print kit,
-  and the what-if lab's "Compare with a Project File…"; Path 11 P5).
+  and the what-if lab's "Compare with a Project File…"; Path 11 P5), and
+  `sv-suggest.js` (pure: the changes to one group's day that would clear a
+  finding, never giving a group to another teacher; the banner's "Fix…" lists
+  them and "Try in What-If" loads one into the lab; Path 11 P5).
 
 Older and separate: `sv-recovery.js` (recovery points), `sv-handoff.js`
 (WebRTC hand-off), `sv-trace-image.js` (a classic `defer` script, the trace

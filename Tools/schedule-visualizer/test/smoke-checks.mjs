@@ -14,11 +14,15 @@
 // tile and gives over-capacity, with the room panel's "This room" line; the
 // Publish button warns with the count and publishes nothing when cancelled;
 // and the what-if lab's Constraint Checks panel says Resolved for a scenario
-// that moves 6-1 back. No console error, no offsite request.
+// that moves 6-1 back. Since increment 3 (v331): the problem's Fix… lists the
+// changes sv-suggest.js finds, none giving a group to another teacher, and
+// "Try in What-If" lands the first as the lab's overrides with the checks panel
+// saying Resolved and the live schedule untouched; a second Try asks first.
+// No console error, no offsite request.
 //
 // Exits 1 on any failure.
 
-/* global applyFullProject, serializeFullProject, AppState, switchTab, selectCell, roomRegistry, wiSetOverride, wiRenderAll, publishWarning -- page globals read inside page.evaluate() */
+/* global applyFullProject, serializeFullProject, AppState, switchTab, selectCell, roomRegistry, wiSetOverride, wiRenderAll, publishWarning, wiOverrideCount -- page globals read inside page.evaluate() */
 import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
 import { fixtureProject } from './fixture-northwind.mjs';
 
@@ -151,8 +155,60 @@ try {
   eq(downloads, 0, 'and Cancel publishes nothing');
   ok(await page.evaluate(() => document.getElementById('sch-conflict-table-wrap').classList.contains('open')), 'Cancel opens the list');
 
-  /* ── 6. the what-if lab ──────────────────────────────────────────────── */
+  /* ── 5b. Path 11 P5 increment 3: Fix… and Try in What-If ─────────────── */
   Object.assign(ids, await page.evaluate(() => Object.fromEntries(AppState.schedules.groups.map(g => [g.name, g.id]))));   // the import made new ids
+  await page.evaluate(() => { AppState.whatif.overrides = {}; });
+  // Section 4's Save Room starts the blueprint autosave (800 ms), which
+  // rebuilds the registry and redraws the banner, closing an open list: the
+  // right thing after an edit, since the suggestions were for the old schedule.
+  await settle(page, 1200);
+  await openList();
+  const fixRow = page.locator('#sch-check-list > .chk-list .chk-row[data-kind="room-double"]');
+  const fixBtn = fixRow.locator('button', { hasText: 'Fix…' });
+  eq(await fixBtn.getAttribute('aria-expanded'), 'false', 'the problem has a Fix… button, closed');
+  await fixBtn.click();
+  await settle(page, 200);
+  eq(await fixBtn.getAttribute('aria-expanded'), 'true', 'Fix… opens its list');
+  const head = await fixRow.locator('.chk-fix-head').textContent();
+  ok(/^(\d+ of the \d+ changes that|One change|Two changes|Three changes|Four changes|Five changes) would clear this/.test(head), 'its headline counts the changes: ' + head);
+  const items = await fixRow.locator('.chk-fix-item').evaluateAll(els => els.map(e => ({ move: e.dataset.move, text: e.querySelector('.chk-fix-text').textContent })));
+  ok(items.length >= 1 && items.length <= 5, 'it lists one to five changes: ' + items.length);
+  ok(items.every(i => i.move === 'M1' || i.move === 'M2'), 'only swaps and same-teacher or teacherless rooms (P11-15): ' + items.map(i => i.move).join());
+  ok(items.every(i => /^(Swap|Move|Put) /.test(i.text) && / It adds /.test(i.text)), 'each says what it changes and what it adds: ' + items[0].text);
+  const cands = await page.evaluate(() => {
+    const f = window.runChecks(AppState.schedules.groups, { travel: true }).findings.find(x => x.kind === 'room-double' && !x.ack);
+    return window.SVChecksView.suggestionsFor(f).candidates;
+  });
+  ok(cands.every(c => c.fixes.includes(c.target) && !c.changesTeacher), 'every candidate on the page clears the finding and gives no group to another teacher');
+  const axeFix = await a11yScan(page, { include: '#sch-conflict-banner' });
+  eq(axeFix.map(v => v.id + ' ' + v.nodes.join(',')).join('; '), '', 'the open Fix… list has no serious axe finding');
+  const first = cands[0];
+  await fixRow.locator('.chk-fix-item').first().locator('button', { hasText: 'Try in What-If' }).click();
+  await settle(page, 500);
+  eq(await page.getAttribute('#tab-whatif', 'aria-selected'), 'true', 'Try in What-If opens the lab');
+  const tried = await page.evaluate(() => ({ ov: AppState.whatif.overrides, day: AppState.whatif.day, n: wiOverrideCount(),
+    sel: AppState.whatif.selectedGroupId, live: AppState.schedules.groups.find(g => g.name === '6-1').modsA[0] }));
+  const want = {};
+  for (const ch of first.changes) want[ch.modIdx] = ch.to;
+  eq(JSON.stringify(tried.ov), JSON.stringify({ [first.groupId]: want }), "the lab's overrides are the candidate's changes");
+  eq(tried.n, first.changes.length, 'one override chip per slot changed');
+  eq(tried.sel, first.groupId, "the lab shows that group's day");
+  eq(tried.live, '106', 'the live schedule is not changed');
+  const labFix = await page.textContent('#wi-conflicts');
+  ok(labFix.includes('Resolved') && labFix.includes(DOUBLE), "the lab's checks panel says Resolved: " + labFix.slice(0, 160));
+  // A second Try asks before it replaces the lab's changes.
+  await page.evaluate(() => switchTab('schedules'));
+  await openList();
+  if (!(await fixRow.locator('.chk-fix').count())) await fixBtn.click();
+  let asked = null;
+  page.once('dialog', d => { asked = d.message(); d.dismiss(); });
+  await fixRow.locator('.chk-fix-item').last().locator('button', { hasText: 'Try in What-If' }).click();
+  await settle(page, 200);
+  ok(asked && asked.startsWith('The what-if lab already has ' + first.changes.length), 'a second Try asks first: ' + asked);
+  eq(JSON.stringify(await page.evaluate(() => AppState.whatif.overrides)), JSON.stringify({ [first.groupId]: want }), 'and Cancel keeps the lab as it was');
+  await page.evaluate(() => { AppState.whatif.overrides = {}; window.saveWhatIf(); });
+
+  /* ── 6. the what-if lab ──────────────────────────────────────────────── */
   await page.evaluate(id => { switchTab('whatif'); AppState.whatif.day = 'A'; wiSetOverride(id, 0, '101'); wiRenderAll(); }, ids['6-1']);
   await settle(page, 400);
   const lab = await page.textContent('#wi-conflicts');

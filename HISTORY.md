@@ -9,6 +9,64 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P5 increment 3: 035's suggestions, Fix… and "Try in What-If" (2026-10-25, AI-20, `CACHE_VERSION` v331)
+
+BACKLOG rank 25 kept and cut to ½: only increment 2 is left, and it waits on Devon (the P5 bullet's "A question for
+Devon, increment 2"; nothing here touches the publisher, `check:publisher` printed the same output). `TOOL_VERSION`
+stays v62: nothing published changed.
+
+- **What shipped.** Pure `Tools/schedule-visualizer/sv-suggest.js`. `suggestFor(finding, { groups, registry, settings,
+  acks, kinds, max, blueprint, graph, pathCache, resolve, travelDays, now })` returns `{ candidates, tried, found,
+  stoppedBy }`. The moves are the design's: **M1** swaps two of the group's own slots that day; **M2** moves the slot to
+  another room of the same teacher, or to a room with no teacher named, free that mod (or shared, `excludeFromConflict`);
+  **M3** (another teacher's room in the same department) exists only when `kinds` names it, carries `changesTeacher`,
+  and the page never asks for it (Devon's P11-15). Stage 1 runs `checkSchedule()` on a copy of the groups for every
+  candidate (with the teacher's walk, without the groups' travel) and drops a candidate after which the finding's
+  fingerprint is still there; stage 2 measures the first `max` (5) with `whatIfMetrics()` for each day that has bell
+  times, through a path cache, drops any whose finding is still there with travel counted, and orders by problems,
+  warnings and notes left, then the school's added travel and delay. A 500 ms stop around stage 2 says `'time'`.
+  `suggestionSentence()` and `suggestionHeadline()` are the one wording ("Swap 7-3's Block 2 (204) and Block 3
+  (nothing): same rooms, same teachers, another order. It adds 1 problem: …"; "No change to one group's day clears this
+  (16 tried). The tool does not offer a move that gives a group to another teacher."). In `sv-checks-view.js` every
+  open problem and warning with a day has "Fix…" (`aria-expanded`), which lists the candidates, each with "Try in
+  What-If": `tryInWhatIf()` asks before replacing changes already in the lab, sets the lab's day and group, writes each
+  change with the lab's own `wiSetOverride`, and opens the lab, whose checks panel then says Resolved. The live schedule
+  is untouched until the lab's Apply. `whatIfMetrics` gained an optional `resolve(fromRoom, toRoom)`; without it nothing
+  changes (`test:schedule-visualizer-congestion`'s golden passes unedited).
+- **Calls made without Devon, so they can be reversed cheaply.** (1) **Order among equal counts is M1, M2, M3, not
+  slots changed.** The design asked for `[error, warn, note, changes.length]` and also for "the reorder first among
+  equals"; a swap always changes two slots, so with both rules a swap could never come first. The suite holds the M1
+  rule. (2) A finding about a teacher with no cell of its own (`teacher-no-planning`) is tried on every cell that teacher
+  teaches that day; without that, "no planning" could never be fixed. (3) The sentence names only problems and
+  warnings cleared or added; `fixes` and `breaks` keep notes too (a swap with an empty slot moves a `group-gap` note,
+  which read as "it also clears 1 other finding" and meant nothing to a reader). (4) Stage 2 measures the changed copy
+  of the groups day by day rather than passing overrides, because a group with no B list changes on both days when its
+  A day changes (that is what the lab's Apply writes) and an override covers one day. (5) The path cache is the view's,
+  one `Map` per graph object in a `WeakMap`: the page's graph cache hands out a new object after any blueprint edit, so
+  a stale path cannot be served and no `invalidate()` call had to be added. (6) A second "Try in What-If" with changes
+  already in the lab is a `confirm()`; Cancel keeps the lab as it was. (7) A candidate that clears the finding but
+  leaves another problem is still listed, last, with the problem it makes (moving a group into the teacher's other
+  room while she teaches in the first gives `teacher-double`); hiding it would hide why the obvious move does not work.
+- **Found.** The banner is redrawn by the blueprint autosave 800 ms after a room is saved, which closes an open Fix…
+  list. That is right after an edit (the suggestions were for the old schedule), so it was left; the smoke suite waits it
+  out before opening the list and says why.
+- **Tests.** New pure `Tools/schedule-visualizer/test/suggest.test.mjs` (`npm run test:schedule-suggest`, 60 checks):
+  a double booking on the invented building gives swaps, the teacher's other room and the Library, never 210 or 116;
+  P11-15 held on every candidate; M3 only when asked, same department only, with `changesTeacher`; `max`, `found` and
+  `'max'`; a swap that moves the double booking lists the one it makes; a long run nothing can fix returns none with
+  `tried` above 0; `teacher-rooms` is `'none'`; no planning is fixed through the teacher's cells; a B day read from an A
+  list; Northwind with a graph: travel deltas, every room pair to the pathfinder once (a counting stub), a second run
+  with no pathfinder call, the 500 ms stop on a fake clock, the `resolve` hook changing no number; nothing mutated;
+  every sentence form held to its text. `smoke-checks.mjs` 66 → 82: Fix… on 035 lists one to five M1/M2 changes with no
+  serious axe finding, Try in What-If lands the first as the lab's overrides with Resolved and the live slot unchanged,
+  and a second Try asks. **Broken on purpose first, each seen failing:** no discard in stage 1, another teacher's room
+  in M2, M3 on by default, no cache write, M2 ranked before M1, no time stop, groups mutated in place, no B fallback;
+  in the view, no `confirm()` and a Try that writes the live schedule.
+- **Not verified.** A real building or a counsellor reading the sentences; a schedule big enough to reach the 500 ms
+  stop for real (Northwind answers in about 12 ms, 8 tried, 29 paths; the stop was tested on a fake clock); 035's dark
+  palettes with the list open; full `npm test`. `offline:build` + `offline:verify` pass 035 with the new module (046 still
+  fails with `Invalid URL`, unchanged and not this diff's; the build reads tracked files, so it must run after `git add`).
+
 ## Path 11 P5 increment 4: 035's printed checks and congestion reports, and the comparison loader (2026-10-25, AI-20, `CACHE_VERSION` v330)
 
 BACKLOG rank 25 kept (2+) and rewritten: increments 2 and 3 left. **Increment 2 was skipped on purpose, and increment 4

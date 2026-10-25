@@ -1602,6 +1602,11 @@
     .chk-accept-form { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
     .chk-accept-label { font-size: 10.5px; color: var(--slate-500); }
     .chk-accept-input { flex: 1 1 140px; font-size: 11.5px; padding: 2px 6px; border: 1px solid var(--slate-300); border-radius: 4px; }
+    .chk-fix { flex-basis: 100%; margin: 4px 0 2px; padding: 6px 8px; border-left: 3px solid var(--accent); background: var(--slate-50, #f8fafc); }
+    .chk-fix-head { margin: 0 0 4px; font-weight: 600; color: var(--slate-700); }
+    .chk-fix-list { margin: 0; padding-left: 18px; }
+    .chk-fix-item { margin: 3px 0; line-height: 1.4; }
+    .chk-fix-item .chk-btn { margin-left: 6px; }
     .chk-fold { margin-top: 6px; }
     .chk-fold > summary { cursor: pointer; font-weight: 600; color: var(--slate-600); }
     .chk-dropped { margin: 6px 0 0; color: var(--slate-500); }

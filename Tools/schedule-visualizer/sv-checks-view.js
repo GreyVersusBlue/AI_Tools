@@ -3,6 +3,10 @@
 // banner), the group cards' marks, the bulk editor's cells, the room panel's
 // "This room" list, the what-if lab's Constraint Checks panel and the line the
 // Publish button shows before it publishes a schedule with a known problem.
+// Since increment 3 a problem or warning has "Fix…": the changes to one
+// group's day that sv-suggest.js finds would clear it, each with "Try in
+// What-If", which writes the change as lab overrides and opens the lab. The
+// lab's own Apply is still the only way a suggestion reaches the schedule.
 //
 // Path 11 P5 increment 1 (BACKLOG.md, "Path 11", the P5 bullet). The checks
 // themselves are sv-check.js; this file only shows them and keeps the one
@@ -14,6 +18,7 @@
 
 /* global AppState, roomRegistry -- 035's classic-script state */
 /* global getAllModLabels, wiComputeMetrics, resolveRoomPath, wiEffectiveMods, brPublish -- 035's BRIDGE wrappers and page helpers */
+/* global getPathfindingGraph, wiOverrideCount, wiSetOverride, switchTab -- the graph cache and the what-if lab's own setters */
 
 export const CHECKS_KEY = 'stviz_checks';
 
@@ -187,6 +192,14 @@ function row(f, r) {
       show.addEventListener('click', () => showFinding(f));
       act.appendChild(show);
     }
+    if (f.severity !== 'note' && f.day) {
+      const fix = el('button', 'chk-btn chk-fix-btn', 'Fix…');
+      fix.type = 'button';
+      fix.title = "Changes to one group's day that would clear this";
+      fix.setAttribute('aria-expanded', 'false');
+      fix.addEventListener('click', () => toggleFix(f, li, fix));
+      act.appendChild(fix);
+    }
     const accept = el('button', 'chk-btn', 'Accept');
     accept.type = 'button';
     accept.title = 'I know, it is fine: stop counting this one';
@@ -210,6 +223,73 @@ function row(f, r) {
   }
   li.appendChild(act);
   return li;
+}
+
+/* ── Fix… and Try in What-If (increment 3) ─────────────────────────── */
+
+// One path cache per graph: a new graph (after any blueprint edit) starts empty.
+const pathCaches = new WeakMap();
+
+/** sv-suggest.js's answer for a finding on the live schedule. */
+export function suggestionsFor(f) {
+  const S = window.SVSuggest;
+  if (!S) throw new Error('SVSuggest is not loaded');
+  let graph = null;
+  try { graph = getPathfindingGraph(); } catch (e) { graph = null; }
+  let pathCache;
+  if (graph) {
+    pathCache = pathCaches.get(graph);
+    if (!pathCache) { pathCache = new Map(); pathCaches.set(graph, pathCache); }
+  }
+  const groups = AppState.schedules.groups;
+  return S.suggestFor(f, { groups, registry: roomRegistry, settings: AppState.settings, acks: acks(),
+    graph, blueprint: graph ? AppState.blueprint : null, pathCache,
+    travelDays: svCheck().daysOf(groups).filter(hasBell) });
+}
+
+/** Write a candidate's changes as what-if overrides and open the lab. False if the teacher cancels. */
+export function tryInWhatIf(c) {
+  const n = wiOverrideCount();
+  if (n && !window.confirm('The what-if lab already has ' + n + (n === 1 ? ' change' : ' changes') +
+    '. Replace ' + (n === 1 ? 'it' : 'them') + ' with this suggestion? The live schedule is unaffected either way.')) return false;
+  AppState.whatif.overrides = {};
+  if (AppState.whatif.day !== c.day) {
+    const btn = document.querySelector('.wi-day-btn[data-wi-day="' + c.day + '"]');
+    if (btn) btn.click();
+  }
+  AppState.whatif.selectedGroupId = c.groupId;
+  for (const ch of c.changes) wiSetOverride(c.groupId, ch.modIdx, ch.to);
+  switchTab('whatif');
+  return true;
+}
+
+function toggleFix(f, li, btn) {
+  const open = li.querySelector('.chk-fix');
+  if (open) { open.remove(); btn.setAttribute('aria-expanded', 'false'); return; }
+  const S = window.SVSuggest;
+  const res = suggestionsFor(f);
+  const box = el('div', 'chk-fix');
+  box.setAttribute('role', 'group');
+  box.setAttribute('aria-label', 'Changes that would clear this');
+  box.appendChild(el('p', 'chk-fix-head', S.suggestionHeadline(res)));
+  if (res.candidates.length) {
+    const ol = el('ol', 'chk-fix-list');
+    const groups = AppState.schedules.groups;
+    const oneDay = svCheck().daysOf(groups).length < 2;
+    for (const c of res.candidates) {
+      const item = el('li', 'chk-fix-item');
+      item.dataset.move = c.move;
+      item.appendChild(el('span', 'chk-fix-text', S.suggestionSentence(c, { labels: getAllModLabels(), groups, oneDay })));
+      const tryBtn = el('button', 'chk-btn chk-try', 'Try in What-If');
+      tryBtn.type = 'button';
+      tryBtn.addEventListener('click', () => tryInWhatIf(c));
+      item.appendChild(tryBtn);
+      ol.appendChild(item);
+    }
+    box.appendChild(ol);
+  }
+  li.appendChild(box);
+  btn.setAttribute('aria-expanded', 'true');
 }
 
 function fold(title, items, r, cls) {

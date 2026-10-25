@@ -214,11 +214,13 @@ export function effectiveMods(group, day, overrides, modCount) {
 /**
  * whatIfMetrics(groups, day, overridesOrNull, { settings, blueprint, graph, registry })
  * Full schedule evaluation against the blueprint's graph.
- * Pass overrides = null for the live baseline. Returns:
+ * Pass overrides = null for the live baseline. `resolve(fromRoom, toRoom)`,
+ * optional, answers in place of resolveRoomPath on this graph: sv-suggest.js
+ * hands in one that caches by room pair (Path 11 P5 increment 3). Returns:
  *   { day, perGroup, congPerT, congAll, totals:{travelSec,delaySec},
  *     peak:{load,cellKey,transition}, conflicts, routingErrors, unassigned }
  */
-export function whatIfMetrics(groups, day, overrides, { settings, blueprint, graph, registry }) {
+export function whatIfMetrics(groups, day, overrides, { settings, blueprint, graph, registry, resolve }) {
   const modCount = settings.modCount;
   const labels   = modLabels(settings);
   const walkSec  = (settings.tileWalkTime  != null) ? settings.tileWalkTime  : 3;
@@ -241,7 +243,8 @@ export function whatIfMetrics(groups, day, overrides, { settings, blueprint, gra
         fromRoom: mods[i] || null, toRoom: mods[i + 1] || null,
         path: null, pathLength: 0, usesStaircase: false, staircasePairsUsed: [], hallwayCells: [],
       };
-      Object.assign(seg, resolveRoomPath(graph, mods[i], mods[i + 1], blueprint.crossFloorPairs));
+      Object.assign(seg, resolve ? resolve(mods[i], mods[i + 1])
+        : resolveRoomPath(graph, mods[i], mods[i + 1], blueprint.crossFloorPairs));
       if (seg.error) seg.path = null;
       segments.push(seg);
     }

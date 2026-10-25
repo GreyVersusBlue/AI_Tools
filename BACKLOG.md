@@ -87,11 +87,16 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-20 (v331), rank 25 (kept, cut to ½, rewritten), Path 11 P5 increment 3 of 4: 035's suggestions.** New pure
+  `sv-suggest.js` (`suggestFor()`: swaps of a group's own slots, the teacher's other room or a teacherless room, in two
+  stages, the second through a path cache; never a move that gives a group to another teacher) and the banner's "Fix…"
+  list with "Try in What-If", which writes the change as the lab's overrides. New pure suite `test:schedule-suggest`;
+  `smoke-checks.mjs` 66 → 82; no new port (**next free 8555**). **Only increment 2 is left, and it waits on Devon.**
 - **AI-20 (v330), rank 25 (kept, 2+, rewritten), Path 11 P5 increment 4 of 4: 035's printed checks report (findings
   and the teacher day grid), printed congestion report and "Compare with a Project File…"** (new view `sv-reports.js`;
   pure `checksReport()`, `congestionReport()`, `compareProject()`). New pure suite `test:schedule-reports`; no new port
-  (**next free 8555**). **Increment 2 waits on Devon** (P5 bullet, "A question for Devon, increment 2"); **next: increment 3**
-  (`sv-suggest.js`), which does not need it.
+  (**next free 8555**). **Increment 2 waits on Devon** (P5 bullet, "A question for Devon, increment 2"); increment 3 has since
+  shipped (v331).
 - **AI-20 (v329), rank 25 (kept, 2+, rewritten), Path 11 P5 increment 1 of 4: 035's schedule checks.** New pure
   `sv-check.js` (fourteen kinds: two errors, six warnings, six notes; fingerprints of names, never ids; one sentence per
   kind) and view `sv-checks-view.js`: the Schedules tab's banner is the checks banner ("1 problem on A days", Notes and
@@ -685,7 +690,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 18 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 25 | Path 11 P5 — master-schedule assistance. **Increments 1 and 4 of 4 built (v329, v330, AI-20):** the fourteen checks (`sv-check.js`), the checks banner with Accept, the bulk editor's marked cells, Capacity, the lab's checks diff and Publish's warning; the printed checks report with the teacher day grid, the printed congestion report, and "Compare with a Project File…" (`sv-reports.js`). Left, in the P5 bullet's order: **(2)** `teacherDays` into the publisher's `deriveScheduleData`, which **waits on Devon** (the P5 bullet's "A question for Devon, increment 2": unifying the two rules changes the published teacher day in five measured cases, though not on Northwind); **(3)** `sv-suggest.js`, the Fix… list and "Try in What-If", which does not depend on (2). Devon's P11-12..19 are settled on the defaults | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 25 | Path 11 P5 — master-schedule assistance. **Increments 1, 3 and 4 of 4 built (v329, v331, v330, AI-20):** the fourteen checks (`sv-check.js`), the checks banner with Accept, the bulk editor's marked cells, Capacity, the lab's checks diff and Publish's warning; the suggestions (`sv-suggest.js`: the banner's Fix… and "Try in What-If", never a teacher's class changed); the printed checks and congestion reports and "Compare with a Project File…" (`sv-reports.js`). **Left: only (2)**, `teacherDays` into the publisher's `deriveScheduleData`, which **waits on Devon** (the P5 bullet's "A question for Devon, increment 2": unifying the two rules changes the published teacher day in five measured cases, though not on Northwind). Devon's P11-12..19 are settled on the defaults | 035 | ½ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Increment 5 (AI-14, v300): named sets on 030, an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section, and its storage design under it): made from ticked questions of the bank or a built-in set, a question in a set more than once if wanted; reordered, trimmed, renamed, deleted, printed and pulled into a board whole from “Questions from”; carried in the bank file and imported beside a set already here, never over it; and a Tag filter on 030's list (the chosen source's tags).** **Left:** 018 and 019 pull station questions from it. 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -4418,6 +4423,21 @@ a real pathfinder that the published browser never exposes.
   printing; the comparison is for the lab's current day only (the note says to switch day and load again), uses this
   schedule's bell times, matches names trimmed and exactly, does not compare a name two groups share, and replaces an
   existing scenario only after a `confirm()`.
+  **P5 increment 3 is built (AI-20, 2026-10-25, v331; `HISTORY.md`, "Path 11 P5 increment 3").** Pure `sv-suggest.js`
+  (`suggestFor`, `suggestionSentence`, `suggestionHeadline`, `cachedResolver`) and, in `sv-checks-view.js`, a "Fix…" on
+  every open problem and warning that lists up to five changes, each with "Try in What-If" (`tryInWhatIf()`: the lab's
+  overrides through `wiSetOverride`, the lab's day and group set, a `confirm()` before it replaces changes already in the
+  lab). `whatIfMetrics` takes an optional `resolve`, which is how the path cache reaches it. Suites
+  `test:schedule-suggest` (60, pure) and `test:schedule-check-smoke` (82). Where it departs from the design: candidates
+  among equal counts are ordered M1, M2, M3 and **not** by slots changed (the design asked for both, and a swap always
+  changes two slots, so "the reorder first among equals" could never happen); a finding about a teacher with no cell of
+  its own (no planning, a long run) is tried on every cell that teacher teaches that day; the sentence names only the
+  problems and warnings a change clears or adds (notes are counted nowhere else); stage 2 measures travel by running
+  `whatIfMetrics` on the changed copy of the groups for each day with bell times, not by override, because a group with no
+  B list changes on both days when its A day changes, as the lab's Apply writes it; the result carries `found` (stage 1's
+  survivors) so a cut list says "5 of the 8"; the cache is the view's, one `Map` per graph object in a `WeakMap`, so a new
+  graph after an edit starts empty without a call to `invalidate()`. M3 exists behind `kinds` and the page never asks for
+  it (P11-15).
   **A question for Devon, increment 2 (2026-10-25, not answered).** Should the published browser (034's data, what staff
   are emailed) show a teacher's day by the checks' rule? The two rules agree on Northwind, so P1's committed baseline and
   the 034 ledger would not move, but they differ on five built cases (a probe of `brDeriveScheduleData` against
