@@ -11,8 +11,8 @@
 //
 // Its suite is test/routes.test.mjs (npm run test:schedule-visualizer-routes).
 
-import { modLabels, groupWeight } from './sv-model.js';
-import { astar, floorCellKey, parseKey, resolveRoomPath } from './sv-graph.js';
+import { modLabels, groupWeight, pairLabel } from './sv-model.js';
+import { astar, buildGraph, floorCellKey, pairAccess, pairInService, parseKey, resolveRoomPath } from './sv-graph.js';
 
 /**
  * Check if a cell is inside any heat-exclude zone of a blueprint.
@@ -243,7 +243,8 @@ export function buildEvacuationSteps(path, exit, graph, floorLabel) {
     const edge  = edges.find(e => e.key === path[i + 1]);
     if (edge && edge.teleport) {
       const toFloorId = parseKey(path[i + 1]).floorId;
-      steps.push(`Take the stairs to ${floorLabel(toFloorId)}.`);
+      const by = edge.access === 'elevator' ? 'the elevator' : edge.access === 'ramp' ? 'the ramp' : 'the stairs';
+      steps.push(`Take ${by} to ${floorLabel(toFloorId)}.`);
       i++;
       continue;
     }
@@ -264,4 +265,84 @@ export function buildEvacuationSteps(path, exit, graph, floorLabel) {
   }
   steps.push(`Exit at ${(exit && exit.label) ? exit.label : 'the marked exit'}.`);
   return steps;
+}
+
+
+/* ==============================================================
+   STEP-FREE REPORT (Path 11 P3)
+   ──────────────────────────────────────────────────────────────
+   Which rooms cannot be reached without stairs, and which of the
+   schedule's moves have no step-free route. A room is judged against
+   the marked exterior exits, the way people come into the building:
+   it is 'step-free' when the step-free graph reaches one of them,
+   'stairs-only' when only the ordinary graph does, and 'unreachable'
+   when neither does (walled off: a blueprint problem, not an access
+   one). With no exit marked a room cannot be judged, and the report
+   says so rather than guessing a front door. A move is listed when
+   the ordinary graph routes it and the step-free graph cannot;
+   moves the ordinary graph cannot route are another check's.
+=============================================================== */
+
+/** The days a group has: A always, B when it has its own B-day mods. */
+function groupDays(group) {
+  return (group.modsB && group.modsB.length > 0) ? ['A', 'B'] : ['A'];
+}
+
+/**
+ * stepFreeReport({ blueprint, groups, settings, elevatorWait? }) →
+ *   { exitCount, connectors: [{ label, access, outOfService, floors: [a, b] }],
+ *     rooms: [{ room, floorId, status }], moves: [{ group, day, fromModLabel,
+ *     toModLabel, fromRoom, toRoom }], movesChecked, counts: { stepFree,
+ *     stairsOnly, unreachable, unjudged } }
+ * Rooms are sorted by floor order, then by room number as text.
+ */
+export function stepFreeReport({ blueprint, groups, settings, elevatorWait }) {
+  const plain = buildGraph(blueprint);
+  const free  = buildGraph(blueprint, { stepFree: true, elevatorWait });
+  const pairs = blueprint.crossFloorPairs || [];
+
+  const connectors = [];
+  pairs.forEach((p, idx) => {
+    if (!p || !p.a || !p.b) return;
+    connectors.push({
+      label: pairLabel(idx), access: pairAccess(p),
+      outOfService: !pairInService(p), floors: [p.a.floorId, p.b.floorId],
+    });
+  });
+
+  const exitsPlain = collectExitPoints(blueprint, plain);
+  const exitsFree  = collectExitPoints(blueprint, free);
+  const floorOrder = new Map((blueprint.floors || []).map((f, i) => [f.id, i]));
+  const rooms = [];
+  const counts = { stepFree: 0, stairsOnly: 0, unreachable: 0, unjudged: 0 };
+  for (const [room, key] of plain.roomToKey) {
+    const floorId = parseKey(key).floorId;
+    let status;
+    if (!exitsPlain.length) status = 'unjudged';
+    else if (computeEvacuationRouteForRoom(key, exitsFree, free)) status = 'step-free';
+    else if (computeEvacuationRouteForRoom(key, exitsPlain, plain)) status = 'stairs-only';
+    else status = 'unreachable';
+    counts[{ 'step-free': 'stepFree', 'stairs-only': 'stairsOnly', unreachable: 'unreachable', unjudged: 'unjudged' }[status]]++;
+    rooms.push({ room, floorId, status });
+  }
+  rooms.sort((a, b) => ((floorOrder.get(a.floorId) || 0) - (floorOrder.get(b.floorId) || 0)) ||
+    a.room.localeCompare(b.room, undefined, { numeric: true }));
+
+  const moves = [];
+  let movesChecked = 0;
+  for (const group of (groups || [])) {
+    for (const day of groupDays(group)) {
+      const a = groupDayPath(group, day, { graph: plain, settings, pairs }) || [];
+      const b = groupDayPath(group, day, { graph: free,  settings, pairs }) || [];
+      a.forEach((seg, i) => {
+        if (seg.error || seg.noTravel) return;
+        movesChecked++;
+        if (b[i] && b[i].error) {
+          moves.push({ group: group.name, day, fromModLabel: seg.fromModLabel, toModLabel: seg.toModLabel,
+            fromRoom: seg.fromRoom, toRoom: seg.toRoom });
+        }
+      });
+    }
+  }
+  return { exitCount: exitsPlain.length, connectors, rooms, moves, movesChecked, counts };
 }

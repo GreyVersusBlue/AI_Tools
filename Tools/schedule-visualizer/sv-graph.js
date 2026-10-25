@@ -15,6 +15,18 @@
 // string "x,y" on one floor and "floorId:x,y" in the shared graph.
 //
 // Its suite is test/graph.test.mjs (npm run test:schedule-visualizer-graph).
+//
+// STEP-FREE ROUTING (Path 11 P3). A staircase pair may say what it is:
+// `pair.access` is 'elevator' or 'ramp' (absent, or anything else, is
+// stairs), and an elevator may carry `outOfService: true` and its own
+// `wait` in cells. buildGraph(blueprint, { stepFree: true }) is the graph a
+// wheelchair user walks: a stairs pair joins nothing, every staircase tile
+// that is not an end of an in-service elevator or ramp is taken out of the
+// graph (it is a flight of steps, not a corridor), and an elevator costs its
+// wait. An elevator out of service joins nothing in either graph. A blueprint
+// that marks nothing builds the same graph it always did, in both fields the
+// golden files hold. tests: test/step-free.test.mjs
+// (npm run test:schedule-visualizer-step-free).
 
 import { pairLabel } from './sv-model.js';
 
@@ -43,15 +55,15 @@ export const ORTHO = [ [0, -1], [0, 1], [-1, 0], [1, 0] ]; // up, down, left, ri
  * calls invalidate() on every grid mutation (the Round 27 dirty flag, which
  * was a page `let` until Path 11 P2). rebuild(blueprint) forces a fresh build.
  */
-export function createCache() {
+export function createCache(opts) {
   let graph = null;
   let dirty = true;
   return {
     get(blueprint) {
-      if (!graph || dirty) { graph = buildGraph(blueprint); dirty = false; }
+      if (!graph || dirty) { graph = buildGraph(blueprint, opts); dirty = false; }
       return graph;
     },
-    rebuild(blueprint) { graph = buildGraph(blueprint); dirty = false; return graph; },
+    rebuild(blueprint) { graph = buildGraph(blueprint, opts); dirty = false; return graph; },
     invalidate() { dirty = true; },
   };
 }
@@ -253,9 +265,31 @@ function buildFloorEdges(floor, adjacency, types, roomToKey) {
   }
 }
 
+/* ---- Path 11 P3: what a staircase pair is ---- */
+export const ACCESS_KINDS = ['stairs', 'elevator', 'ramp'];
+/** What an elevator ride costs a step-free route, in cells, when the pair names no `wait`. */
+export const ELEVATOR_WAIT = 10;
+/** 'elevator', 'ramp' or 'stairs' (the default, and what any other value means). */
+export function pairAccess(pair) {
+  return pair && (pair.access === 'elevator' || pair.access === 'ramp') ? pair.access : 'stairs';
+}
+/** False only for an elevator marked out of service. */
+export function pairInService(pair) {
+  return !(pairAccess(pair) === 'elevator' && pair.outOfService === true);
+}
+/** An elevator's wait in cells: its own `wait` when that is a number from 0 to 999. */
+export function elevatorWait(pair, fallback = ELEVATOR_WAIT) {
+  const w = pair && pair.wait;
+  return (typeof w === 'number' && isFinite(w) && w >= 0 && w <= 999) ? w : fallback;
+}
+
 /** Build the unified multi-floor navigation graph for a blueprint
- *  ({ floors: [{ id, gridData, gridCols, gridRows }], crossFloorPairs }). */
-export function buildGraph(blueprint) {
+ *  ({ floors: [{ id, gridData, gridCols, gridRows }], crossFloorPairs }).
+ *  opts.stepFree builds the step-free graph (see the header);
+ *  opts.elevatorWait replaces ELEVATOR_WAIT for pairs naming no wait. */
+export function buildGraph(blueprint, opts = {}) {
+  const stepFree = !!(opts && opts.stepFree);
+  const waitDefault = (opts && typeof opts.elevatorWait === 'number') ? opts.elevatorWait : ELEVATOR_WAIT;
   const adjacency = new Map();
   const types     = new Map();
   const roomToKey = new Map();
@@ -267,16 +301,42 @@ export function buildGraph(blueprint) {
   }
 
   // Pass 2: zero-cost teleport edges for every cross-floor pair (same-floor or cross-floor).
+  // Path 11 P3: an elevator out of service joins nothing; on the step-free
+  // graph a stairs pair joins nothing either, and an elevator costs its wait.
+  // An edge names its access only when it is not stairs, so a blueprint that
+  // marks nothing builds the edges it always built.
+  const stepFreeEnds = new Set();   // tile keys of in-service elevator/ramp ends
   for (const pair of (blueprint.crossFloorPairs || [])) {
     const a = floorCellKey(pair.a.floorId, pair.a.col, pair.a.row);
     const b = floorCellKey(pair.b.floorId, pair.b.col, pair.b.row);
     if (types.get(a) === 'staircase' && types.get(b) === 'staircase') {
+      const access = pairAccess(pair);
+      if (!pairInService(pair)) continue;
+      if (access !== 'stairs') { stepFreeEnds.add(a); stepFreeEnds.add(b); }
+      if (stepFree && access === 'stairs') continue;
+      const cost = (stepFree && access === 'elevator') ? elevatorWait(pair, waitDefault) : 0;
+      const ea = { key: b, cost, teleport: true }, eb = { key: a, cost, teleport: true };
+      if (access !== 'stairs') { ea.access = access; eb.access = access; }
       if (!adjacency.has(a)) adjacency.set(a, []);
       if (!adjacency.has(b)) adjacency.set(b, []);
-      adjacency.get(a).push({ key: b, cost: 0, teleport: true });
-      adjacency.get(b).push({ key: a, cost: 0, teleport: true });
+      adjacency.get(a).push(ea);
+      adjacency.get(b).push(eb);
       portals.push({ key: a, partnerKey: b });
       portals.push({ key: b, partnerKey: a });
+    }
+  }
+
+  // Pass 3 (step-free only): every other staircase tile is a flight of steps.
+  // It keeps its type, loses every edge in and out, and is named in `steps`;
+  // a cell that lost an edge to one is named in `cutByStairs`, which is how
+  // resolveRoomPath() tells "only stairs reach this room" from "walled off".
+  const steps = new Set(), cutByStairs = new Set();
+  if (stepFree) {
+    for (const [k, ty] of types) if (ty === 'staircase' && !stepFreeEnds.has(k)) steps.add(k);
+    for (const [k, edges] of adjacency) {
+      if (steps.has(k)) { adjacency.set(k, []); continue; }
+      const kept = edges.filter(e => !steps.has(e.key));
+      if (kept.length !== edges.length) { cutByStairs.add(k); adjacency.set(k, kept); }
     }
   }
 
@@ -285,15 +345,18 @@ export function buildGraph(blueprint) {
   const totalRows = blueprint.floors.reduce((a, f) => a + f.gridRows, 0);
   const maxCols   = Math.max(...blueprint.floors.map(f => f.gridCols), 0);
 
-  return {
+  const graph = {
     adjacency, types, roomToKey, portals,
     cols: maxCols, rows: totalRows,
-    walkableCount:  [...types.values()].filter(t => t === 'hallway' || t === 'staircase').length,
+    walkableCount:  [...types.entries()].filter(([k, t]) => (t === 'hallway' || t === 'staircase') && !steps.has(k)).length,
     classroomCount: [...types.values()].filter(t => t === 'classroom').length,
     edgeCount: edgeCount / 2 | 0,
     portalCount: portals.length / 2 | 0,
-    isWalkable: (key) => { const ty = types.get(key); return ty === 'hallway' || ty === 'staircase'; },
+    isWalkable: (key) => { const ty = types.get(key); return (ty === 'hallway' || ty === 'staircase') && !steps.has(key); },
   };
+  // Only the step-free graph carries these, so the ordinary graph's shape is unchanged.
+  if (stepFree) { graph.stepFree = true; graph.steps = steps; graph.cutByStairs = cutByStairs; }
+  return graph;
 }
 
 /* --------------------------------------------------------------
@@ -549,19 +612,36 @@ export function buildPathMetadata(cellKeys, graph, crossFloorPairs) {
     .sort((x, y) => x - y)
     .map(idx => pairLabel(idx));
 
-  return {
+  const meta = {
     path,
     pathLength: path.length, // cells traversed (inclusive of both endpoints)
     usesStaircase,
     staircasePairsUsed,
     hallwayCells,
   };
+  // Path 11 P3: a step-free route names what carried it between floors and
+  // what it cost, an elevator's wait included.
+  if (graph.stepFree) {
+    meta.stepFree = true;
+    meta.connectorsUsed = [...usedPairIdx].sort((x, y) => x - y)
+      .map(idx => ({ label: pairLabel(idx), access: pairAccess((crossFloorPairs || [])[idx]) }));
+    let cost = 0;
+    for (let i = 1; i < cellKeys.length; i++) {
+      const e = (graph.adjacency.get(cellKeys[i - 1]) || []).find(ed => ed.key === cellKeys[i]);
+      cost += e ? e.cost : 1;
+    }
+    meta.pathCost = cost;
+  }
+  return meta;
 }
 
 /**
  * resolveRoomPath(graph, fromRoom, toRoom, crossFloorPairs) → richly-typed
  * result (see header above). Used by findGroupDayPath and validation.
  */
+/** The one sentence a step-free route that does not exist is given (Path 11 P3). */
+export const STEP_FREE_NONE = 'No step-free route between these rooms';
+
 export function resolveRoomPath(graph, fromRoom, toRoom, crossFloorPairs) {
   const from = (fromRoom || '').trim();
   const to   = (toRoom   || '').trim();
@@ -590,6 +670,11 @@ export function resolveRoomPath(graph, fromRoom, toRoom, crossFloorPairs) {
   // A classroom with no edges at all is walled off from every corridor.
   const fromIsolated = (graph.adjacency.get(fromKey) || []).length === 0;
   const toIsolated   = (graph.adjacency.get(toKey)   || []).length === 0;
+  // Path 11 P3: on the step-free graph, say plainly that stairs are the
+  // reason; never fall back to a route with steps in it.
+  if (graph.stepFree && ((fromIsolated && graph.cutByStairs.has(fromKey)) || (toIsolated && graph.cutByStairs.has(toKey)))) {
+    return { error: STEP_FREE_NONE, severity: 'error', stepFree: true };
+  }
   if (fromIsolated || toIsolated) {
     return { error: 'Room unreachable — not connected to any hallway', severity: 'error' };
   }
@@ -597,6 +682,7 @@ export function resolveRoomPath(graph, fromRoom, toRoom, crossFloorPairs) {
   // Both endpoints touch a corridor but live in disconnected components.
   const keys = astar(graph, fromKey, toKey);
   if (!keys) {
+    if (graph.stepFree) return { error: STEP_FREE_NONE, severity: 'error', stepFree: true };
     return { error: 'No valid path between rooms', severity: 'error' };
   }
 
