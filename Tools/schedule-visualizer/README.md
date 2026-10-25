@@ -40,10 +40,12 @@ shapes:
   (`Object.assign(window, …)`), which is the global surface the classic script
   had. `sv-browser.js` (the Schedule Browser and the publisher; see below),
   `sv-viz.js` (the Visualize tab and the playback bar), `sv-editor.js` (the
-  blueprint editor and the evacuation door cards), `sv-schedules-tab.js` (the
+  blueprint editor and the evacuation cards' maps), `sv-schedules-tab.js` (the
   groups list and editor, CSV import, the bulk editor), `sv-whatif.js` (room
   search and the what-if lab's controls), `sv-access.js` (the step-free report
-  and route sheets as printed sheets, through the print kit; Path 11 P3).
+  and route sheets as printed sheets, through the print kit; Path 11 P3),
+  `sv-safety.js` (the evacuation cards, one per room, through the print kit;
+  Path 11 P4).
 
 Older and separate: `sv-recovery.js` (recovery points), `sv-handoff.js`
 (WebRTC hand-off), `sv-trace-image.js` (a classic `defer` script, the trace
@@ -68,11 +70,11 @@ pairs, and the settings, bell and subjects editors.
 
 `npm run test:schedule` (`test/smoke.mjs`: import, publish, open the published
 file from `file://`), `test:schedule-publish` (the baseline below),
-`test:schedule-visualizer` (recovery, evacuation), `-trace`, `-print`,
+`test:schedule-visualizer` (recovery, evacuation cards), `-trace`, `-print`,
 `-editor` (`smoke-editor.mjs`, port 8552: paints a plan with real mouse
 events, pairs stairs, undoes, reloads), `test:layout-bell-from-calendar`, and
 the pure-Node `-size`, `-model`, `-graph`, `-routes`, `-congestion`,
-`-playback`, `-bridge`. `node Tools/board-check/run-suites.mjs --only schedule`
+`-playback`, `-bridge`, `-step-free`, `-evac-cards`. `node Tools/board-check/run-suites.mjs --only schedule`
 runs them all, with 034's `Tools/schedule-browser/` suites. The engine suites
 compare each module with a golden file written by running the same cases
 through the page's own functions before the move.

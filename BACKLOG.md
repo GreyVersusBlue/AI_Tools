@@ -87,6 +87,14 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-20 (v327), rank 24 (kept, rewritten, now 1), Path 11 P4 designed and increment 1 built: evacuation cards.** One
+  card per room on every floor through the print kit (`sv-safety.js`, pure `evacuationCards()`/`exitDoors()` in
+  `sv-routes.js`): first and second way out (to different doors), the step-free way out (no stairs, no elevator), the
+  school's exit names and assembly points, and Settings → Safety printing's plan for a room with no step-free way out
+  (blank: write-in lines). It replaces the jsPDF door cards. **Found: since v325 `#sf-print-sheet` sat inside an
+  unclosed hidden `<button>`, so the step-free report and route sheets printed blank (the preview looked right);
+  fixed, and `smoke-step-free.mjs` now holds it.** Suite `test:schedule-visualizer-evac-cards` (29, pure); no new port,
+  **next free still 8554**. Left of P4: lockdown maps and door-sign sets (rank 24); four P4 questions for Devon.
 - **AI-20 (v325–v326), rank 23 (DELETED: Path 11 P3 is whole; a gap, ranks not renumbered).** A staircase pair can be
   an elevator (maybe out of service) or a ramp, a hallway tile a step and a door a stepped one; `sv-graph.js` builds a
   step-free graph (none of those, an elevator costs Settings' "Elevator wait") and an evacuation graph (no elevators,
@@ -658,7 +666,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 18 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 24 | Path 11 P4 — safety printing. **Designed; evacuation cards built (v327).** Left: increment 2, lockdown maps (a floor plan per floor, each room's number, the school's own building and per-room notes, no shelter marks), and increment 3, per-teacher door-sign sets through `PrintKit.renderCards`, both as the P4 bullet says | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Increment 5 (AI-14, v300): named sets on 030, an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section, and its storage design under it): made from ticked questions of the bank or a built-in set, a question in a set more than once if wanted; reordered, trimmed, renamed, deleted, printed and pulled into a board whole from “Questions from”; carried in the bank file and imported beside a set already here, never over it; and a Tag filter on 030's list (the chosen source's tags).** **Left:** 018 and 019 pull station questions from it. 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
@@ -4297,6 +4305,49 @@ a real pathfinder that the published browser never exposes.
     directions are compass directions on the blueprint, north at the top, which the sheet says).
 - **P4 — Safety printing.** Multi-floor batch evacuation cards, lockdown maps,
   per-teacher door-sign sets, published map packs as PDFs.
+  **P4 is designed (AI-20, 2026-10-25) and increment 1 is built (v327).** The design, written before the build:
+  - **The rule for every sheet: the tool states nothing of its own beyond labels.** It lays out what the school entered
+    on the blueprint (exit names, assembly points) and the routes the engine works out, and says plainly what it cannot
+    work out. Anything that would be safety procedure (what someone who cannot use stairs does, what a lockdown means
+    for a room) is a field the school fills in, printed as their words or as a blank write-in line, never a default.
+  - **Evacuation card, one per room, every floor (increment 1).** For the room's door, for staff and students in the
+    room. Routes come from the engine as the old door cards' did, on the evacuation graph (`buildGraph(bp, { evacuation:
+    true })`: no elevator). Exits are grouped into *doors* first (`exitDoors()`, pure, `sv-routes.js`): exit tiles
+    touching on one floor, or sharing a name, are one door, so a double door is not a "second way out". The card holds
+    the **first way out** (the cheapest route to any door), the **second way out** (the cheapest to a different door,
+    or "No second marked exit can be reached from this room."), and the **step-free way out**, routed on the graph with
+    neither stairs nor elevators (`{ evacuation: true, stepFree: true }`, so ramps and level hallways only): "The first
+    (or second) way out has no stairs or steps." when it is one of those, its own steps when it differs, and when there
+    is none, "No step-free way out of this room: every route to a marked exit has stairs or a step. Routes on this card
+    never use an elevator." followed by the school's own "Plan for anyone who cannot use stairs or steps" (Settings →
+    Safety printing, `settings.evacNoStepFreePlan`, blank removes the key) or blank write-in lines under that label.
+    Each route ends at its door's name and its assembly point; an assembly point nobody entered prints "Assembly point:
+    not entered" with a write-in line. A room no route reaches prints "No route from this room reaches a marked exit."
+    and nothing else under it. The map is the room's floor with the first way out solid and the second dashed (told
+    apart without colour), cropped to both; a route that changes floor is drawn up to the stairs and the card says it
+    continues on the named floor. Laid out as HTML (`sv-safety.js`, a view; `renderEvacuationCards()` takes a `mapFor`
+    callback so the content is tested without a canvas), one card to a letter page, through `PrintKit.preview()` on the
+    P3 sheet (`#sf-print-sheet`, `body.sf-printing`). It replaces the jsPDF door cards (active floor only, first way
+    out only); a teacher who wants a PDF prints to one.
+  - **Lockdown map (increment 2).** One page per floor (the plan, no routes) with each room's number large, the
+    school's lockdown note for the building and, per room, the school's own note if any (`lockdownNote` on the room's
+    tile set, typed in the room panel). No "safe corner", "hide here" or door-locking mark is drawn: where to shelter is
+    the school's call and lands only as their note. Questions for Devon below.
+  - **Door-sign set (increment 3).** Per teacher, a sign for each room they teach in (from the schedule's groups): room
+    number, teacher, and each mod's group and subject, through `PrintKit.renderCards` on a half sheet. No safety wording.
+  - **Published map packs as PDFs** stay a later row: 034 is its own page (P1), so a pack is a print-to-PDF of the
+    sheets above, not a new publisher.
+  - **Questions for Devon, on the smallest safe default meanwhile.** (1) Is the step-free way out right to ignore
+    elevators entirely, or should an elevator a school marks "for evacuation" count (default: never)? (2) The wording of
+    "Plan for anyone who cannot use stairs or steps", and whether the school's note goes on every card or only on cards
+    with no step-free way out (default: only those). (3) Lockdown map: is a per-room note enough, or does a school want
+    marked shelter areas drawn? (4) Should a card print the room's teacher (default: no, cards outlive a schedule)?
+  - **Increment 1 as built (v327).** `sv-routes.js`: `exitDoors()`, `evacuationCards()` (cards sorted by floor then
+    room, each `status` `route`, `none` or `unjudged`), `samePath()`. `sv-safety.js` (new): `renderEvacuationCards()`
+    and `openEvacuationCards()`; `sv-editor.js`'s map crop now draws a floor that is not on screen, both routes, and no
+    editor highlight (`renderPlainFloor()`, shared with `renderCanvas()`); the jsPDF card code is deleted. Settings →
+    Safety printing. `npm run test:schedule-visualizer-evac-cards` (pure Node) and `smoke-evacuation.mjs` (port 8155,
+    in `test:schedule-visualizer`) drive the preview. Not verified: a card on paper; a real building.
 - **P5 — Master-schedule assistance.** Constraint checks (a teacher with three
   rooms in three consecutive periods, a room double-booked), congestion as a printed
   argument (top-ten pinch points with what-if deltas), multi-year comparison.

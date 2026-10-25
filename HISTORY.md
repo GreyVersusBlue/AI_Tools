@@ -9,6 +9,46 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P4 designed, increment 1: evacuation cards (2026-10-25, AI-20, `CACHE_VERSION` v327)
+
+BACKLOG rank 24 kept and rewritten (lockdown maps and door-sign sets left). P4 had no design; it is in the P4 bullet now,
+written before the build, with four questions for Devon left on their defaults.
+
+- **What shipped.** The Blueprint sidebar's "Evacuation Cards" opens `PrintKit.preview()` of one card per room on every
+  floor (floor order, then room number), one to a letter page. Each card has the first way out (cheapest route to any
+  door), the second way out (cheapest to a *different* door, or "No second marked exit can be reached from this room."),
+  and the step-free way out on a graph with neither stairs nor elevators: the first or second way out named when it is
+  one, its own steps when not, else "No step-free way out of this room…" and the school's plan. Every route ends at the
+  door's name and its assembly point as typed; a blank one prints "not entered" with a write-in line. The map is the
+  room's floor (it need not be the one on screen) with the first way out solid and the second dashed, cut where a
+  route leaves the floor, which the card says. Pure `exitDoors()`, `pathInGraph()` and `evacuationCards()` in
+  `sv-routes.js`; the view is the new `sv-safety.js`; `sv-editor.js` gained `renderPlainFloor()` (renderCanvas()'s
+  first half, shared) and `withFloorShown()`, and lost the jsPDF card code (`drawEvacuationDoorCard`,
+  `drawDoorCardFooter`, `printEvacuationDoorCards`). Settings → Safety printing: "Plan for anyone who cannot use stairs
+  or steps" (`settings.evacNoStepFreePlan`, 600 characters, blank removes the key).
+- **Found and fixed: P3's sheets printed blank.** `<button id="btn-toggle-app" style="display:none">` near the end of
+  035 was never closed, so `#sf-print-sheet`, added after it in v325, was the hidden button's child: in print it had
+  height 0 and every step-free report and route sheet was one blank page. The print kit's preview copies the sheet into
+  a frame, so it looked right there, and P3's suite never took a PDF. Closed the button; `smoke-step-free.mjs` now
+  checks the sheet is `<body>`'s child (which fails with the button open again; its PDF count alone would not, since
+  the report is one page either way) and that the report's PDF has the preview's page count.
+- **Calls made, cheap to reverse.** (1) Exit tiles touching on one floor, or sharing a name, are one door, so a double
+  door is never a "second way out". (2) The step-free way out never uses an elevator, as the door cards already did.
+  (3) The school's plan is printed only on cards with no step-free way out. (4) The cards replace the jsPDF download
+  (active floor only, first way out only): print to PDF for a file. (5) No card names a teacher. (6) The tool's own
+  words are labels and plain statements of what it could not route; nothing reads as procedure.
+- **Checked.** `npm run test:schedule-visualizer-evac-cards` (29, pure Node; each of eight rules broken on purpose and
+  seen to fail), `smoke-evacuation.mjs` (37, port 8155: the preview, both floors, a map of the floor not on screen, the
+  plan as text with a `<b>` in it, the preview's count against Chromium's PDF, nothing marked), `smoke-step-free.mjs`
+  (67), `run-suites --only` schedule-visualizer (18), schedule (22), schedule-browser (4), theme (3); a11y and print
+  audit for 035, clean; lint and every guard, `check:publisher` unchanged, `check:precache --base origin/main`;
+  `offline:verify` passes 035 (046 still fails, `Invalid URL`, unchanged). The size ledger's line rose 287,319 →
+  289,290 bytes for the Settings section. **What did not work first:** the PDF comparison read 1 page twice, first
+  because my test reopened the preview before the old dialog's async close had run (a test race, fixed by settling),
+  and then because of the button above, which was the real bug.
+- **Not verified.** A card on paper; a real building; the wording read by staff; the offline copy's cards under
+  `file://` (only that 035 loads there); the full `npm test`.
+
 ## Path 11 P3 increments 2 and 3: route sheets, elevator wait, steps that are not stairs; P3 is whole (2026-10-25, AI-20, `CACHE_VERSION` v326)
 
 BACKLOG rank 23 deleted (a gap, ranks not renumbered); the P3 bullet records both increments as built. Built to the
