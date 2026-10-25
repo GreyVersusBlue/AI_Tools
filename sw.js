@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v316';
+const CACHE_VERSION = 'v317';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -134,6 +134,7 @@ const SHELL_URLS = [
   "Tools/name-picker/np-pick.js",
   "Tools/name-picker/np-seat-equity.js",
   "Tools/name-picker/np-store.js",
+  "Tools/school-calendar/scv-ics.js",
   "Tools/school-calendar/scv-pacing.js",
   "Tools/school-calendar/scv-plan.js",
   "Tools/school-calendar/scv-seed.js",
@@ -426,6 +427,7 @@ const PRECACHE_URLS = [
   "Tools/schedule/fonts/public-sans-latin-600-normal.woff2",
   "Tools/schedule/fonts/public-sans-latin-700-normal.woff2",
   "Tools/schedule/fonts/published-fonts.js",
+  "Tools/school-calendar/scv-ics.js",
   "Tools/school-calendar/scv-pacing.js",
   "Tools/school-calendar/scv-plan.js",
   "Tools/school-calendar/scv-seed.js",
