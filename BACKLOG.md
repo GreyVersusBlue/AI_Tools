@@ -87,11 +87,15 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-18 (v313), rank 13 (DELETED: Path 9 P2 is whole; a gap, ranks not renumbered): unit bands for every course.**
+  032's month grid draws each other course's units as a lane of thin bands under the shown course's (which draws as
+  before), "+N" when several units start on a day, and the day editor lists every other course's day in words. New `npm
+  run test:school-calendar-plan-bands` (port 8545). **Path 9 P3 (rank 14) and P4 (rank 15) are next. Next free suite
+  port: 8546.**
 - **AI-18 (v312), rank 13 (kept, rewritten, now ¼), Path 9 P2 increment 4: buffers, the A/B split, the new year, and the
   printed unit table per course.** "Buffer days take a lost day" per course (off), a Buffer column, "Split into A and B…"
   (previewed, Undo), "Start New Year" through `carryForward()`, and "Unit pacing calendar" prints a table per course with
-  Short. New `npm run test:school-calendar-plan-buffers` (port 8544). **Left: bands for every course (rank 13). Next free
-  suite port: 8545.**
+  Short. New `npm run test:school-calendar-plan-buffers` (port 8544). **Left then: bands for every course (built in v313).**
 - **AI-18 (v311), rank 13 (kept, rewritten), Path 9 P2 increment 3: the baseline and "behind".** Each course with
   something planned has a line in the Courses card: on the plan, or N class days behind or ahead of it, with the lesson,
   its two dates and the causes (lost days, bumps, lessons added, open days used); "Make this the plan" re-bases it, with
@@ -579,7 +583,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 11 | Path 8 P4 — device-to-device project transfer through the share sheet | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
-| 13 | Path 9 P2 — pacing that recomputes around lost days. **Increments 1–4 are built (AI-18: `scv-plan.js` and 032's page in v309; typed units, pins and open days, "Count for pacing", the dated-unit conversion and "Let these flow" in v310; the baseline, the behind line with its causes, `slip()` and "Make this the plan" in v311; buffers, "Split into A and B", `carryForward()` for the new year and the printed unit table per course with Short in v312).** **Left: one piece of the design's page list**, bands for every course rather than the active one (today the month grid draws bands only for the active course, and only when it has no lessons; `typedUnitSpans()` in 032). When it lands, P2 is whole: delete this row. The P2 bullet has the design and Devon's ten answers (all defaults) | 032 | ¼ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 14 | Path 9 P3 — consumers: 004, 010, 001, 036/037, 044/045, 032 itself | site | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 15 | Path 9 P4 — `.ics` import/export and a one-page year wall calendar print | 032 | 1 | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 16 | Path 10 P1 — Packet Builder `087` with the section-provider registry | 087 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
@@ -3038,7 +3041,10 @@ fixed unit dates; the valuable half (a unit defined by instructional days that
   `stored()` tells buffer lessons from overflow by the same rule; "Make this the plan" while a buffer is in use gives it
   back, since the new baseline already lacks the lost day; the A half of a split keeps the course's id, both halves start
   with no baseline and no stamped unit dates, lost dates go to both, and the page refuses the split with the A/B cycle off;
-  `carryForward` also drops start dates and keeps `pace` and `absorb`; and bands for every course are not built (rank 13).
+  `carryForward` also drops start dates and keeps `pace` and `absorb`. **Bands for every course are built (AI-18, v313,
+  `npm run test:school-calendar-plan-bands`), and P2 is whole.** Where they differ from the text below, on purpose: the
+  shown course draws as before, every other course (lesson courses too) has a lane of bands in the plan's order with gaps
+  so lanes line up, one name a cell with "+N", and the day editor lists the other courses' day in words (`HISTORY.md`).
   Everything below is the design.
   Read from the tree at v245: 032's page, `scv-pacing.js`, `scv-store.js`, `scv-seed.js`, both suites, and the
   two readers (010, 045). Figures marked *measured* came from two pure-Node probes over the shipped 2026-27 seed

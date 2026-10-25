@@ -9,6 +9,39 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 9 P2 finished: unit bands for every course (2026-10-24, AI-18, `CACHE_VERSION` v313)
+
+BACKLOG rank 13 deleted: Path 9 P2 is whole (increments 1–4 in v309–v312, this piece in v313). A gap, ranks not renumbered,
+as the table has done since rank 12.
+
+- **What changed for a teacher.** 032's month grid draws every other course's units as thin bands along the bottom of each
+  day, one row a course in the order of the tabs, under the shown course's own (which draws as before). A band's hover
+  title names its course and unit; one unit name fits on a cell, with "+N" when more units start that day. The day editor
+  has an **Other courses** list saying, in words, what each other course has that day ("Science: Cells — class day 2 of
+  6", a lesson code with its unit, "didn't meet", "nothing planned", "no class"). The Courses card's help says so.
+- **Calls made.** (1) *The shown course draws exactly as before* (its lessons in the cells; its bands only when it is
+  planned in units), so a one-course calendar is unchanged, as the design asked. (2) *A lesson course that is not shown
+  gets bands too*, each unit from its first placed lesson to its last: the cells can show one course's lessons, and a
+  band is all the other courses get. (3) *A lane a course, in the plan's order, with an empty gap* (`.unit-gap`, not a
+  `.unit-bar`) where it has nothing, so a course's band is at the same height all week; with four or more other courses
+  the lanes are 2 px, not 3, and six courses stay in the lower half of the cell. (4) *One name a cell*: the shown
+  course's first, then dated units, then the lanes in order, with "+N" and every name in the title; names on top of
+  each other were unreadable. (5) *The words are in the day editor, not in the bands*: a title is hover-only, so a
+  keyboard or screen-reader user gets the same facts from the drawer. (6) *The week strip, the year grid and `.ics` still
+  show the shown course only*, as the design says; colours are each course's own, so two courses' "Unit 1" can share the
+  default blue and are told apart by their row.
+- **Checks.** New `npm run test:school-calendar-plan-bands` (`smoke-plan-bands.mjs`, Chromium, port 8545): 21 checks
+  (three courses, lanes, gaps, titles, +1 and +4, a lost day, switching the shown course, one typed and one lesson course
+  as before, six courses' geometry, the drawer, axe on the grid and the drawer) and 5 breaks of the page altered on the
+  wire, each caught; also green under `TZ=UTC`. `run-suites --only school-calendar` 12 green (the `smoke-weeks` golden
+  included), `--only service-worker` 3 green, the a11y sweep on 032 (seeded) clean, `test:theme` 966, `path7:next --only
+  032` 0 findings, lint, every guard and `check:precache --base origin/main`.
+- **Not verified.** No teacher with several preps has looked at it; no month was printed on paper with lanes; the
+  drawer list was not read by a screen reader; colours were not checked for colour-blind distinctness (row position is
+  what tells courses apart).
+
+---
+
 ## Path 9 P2 increment 4: buffers, "Split into A and B", the new year, and the printed unit table per course (2026-10-24, AI-18, `CACHE_VERSION` v312)
 
 BACKLOG rank 13 kept and rewritten (now ¼): increments 1–4 and the printed unit table are built; bands for every course are left.
