@@ -22,7 +22,7 @@
 
 const STATUS_WORDS = {
   'step-free':   'Step-free',
-  'stairs-only': 'Stairs only',
+  'stairs-only': 'Stairs or a step',
   unreachable:   'Not connected',
   unjudged:      'Not judged',
 };
@@ -59,7 +59,7 @@ export function stepFreeSummary(report) {
   const parts = [];
   parts.push(c.stairsOnly === 0
     ? `Every room reached from an exit can be reached without stairs (${c.stepFree} of ${total}).`
-    : `${c.stairsOnly} of ${total} room${total === 1 ? '' : 's'} can be reached from an exit only by stairs.`);
+    : `${c.stairsOnly} of ${total} room${total === 1 ? '' : 's'} can be reached from an exit only by stairs or over a step.`);
   if (c.unreachable) parts.push(`${c.unreachable} room${c.unreachable === 1 ? ' is' : 's are'} not connected to any exit by any route, stairs included (a blueprint problem, or an elevator out of service), listed separately.`);
   return parts.join(' ');
 }
@@ -81,7 +81,7 @@ export function renderStepFreeSheet(sheet, report, opts = {}) {
 
   const stairsOnly = report.rooms.filter(r => r.status === 'stairs-only');
   const unreachable = report.rooms.filter(r => r.status === 'unreachable');
-  sheet.appendChild(el(doc, 'h2', 'sf-h2', 'Rooms that cannot be reached without stairs'));
+  sheet.appendChild(el(doc, 'h2', 'sf-h2', 'Rooms that cannot be reached without stairs or a step'));
   if (!report.exitCount) sheet.appendChild(el(doc, 'p', 'sf-none', 'Not judged: no exterior exit is marked.'));
   else if (!stairsOnly.length) sheet.appendChild(el(doc, 'p', 'sf-none', 'None.'));
   else sheet.appendChild(table(doc, ['Room', 'Floor'], stairsOnly.map(r => [r.room, floorLabel(r.floorId)])));
@@ -94,10 +94,10 @@ export function renderStepFreeSheet(sheet, report, opts = {}) {
   sheet.appendChild(el(doc, 'h2', 'sf-h2', 'Moves in the schedule with no step-free route'));
   if (!report.moves.length) {
     sheet.appendChild(el(doc, 'p', 'sf-none', report.movesChecked
-      ? `None of the schedule's ${report.movesChecked} room-to-room moves needs stairs.`
+      ? `None of the schedule's ${report.movesChecked} room-to-room moves needs stairs or a step.`
       : 'The schedule has no room-to-room moves to check.'));
   } else {
-    sheet.appendChild(el(doc, 'p', 'sf-note', `${report.moves.length} of ${report.movesChecked} moves. A student who cannot use stairs could not make these.`));
+    sheet.appendChild(el(doc, 'p', 'sf-note', `${report.moves.length} of ${report.movesChecked} moves. A student who cannot use stairs or steps could not make these.`));
     sheet.appendChild(table(doc, ['Group', 'Day', 'From', 'To'], report.moves.map(m =>
       [m.group, m.day, `${m.fromRoom} (${m.fromModLabel})`, `${m.toRoom} (${m.toModLabel})`])));
   }
@@ -113,7 +113,7 @@ export function renderStepFreeSheet(sheet, report, opts = {}) {
      c.floors[0] === c.floors[1] ? floorLabel(c.floors[0]) : `${floorLabel(c.floors[0])} and ${floorLabel(c.floors[1])}`])));
 
   sheet.appendChild(el(doc, 'p', 'sf-foot',
-    'Step-free means a route from the room to a marked exterior exit using hallways, ramps and elevators, never a stair tile. ' +
+    'Step-free means a route from the room to a marked exterior exit using hallways, ramps and elevators, never a stair tile, a hallway marked as a step or a door marked as having one. ' +
     'An elevator ride is counted as ' + (opts.wait != null ? opts.wait : 10) + ' cells of walking. Mark a pair as an elevator or ramp on the Blueprint tab (select a paired staircase).'));
 }
 
@@ -160,14 +160,14 @@ export function renderRouteSheets(sheet, sheets, opts = {}) {
           li.appendChild(ol);
         } else if (m.status === 'none') {
           li.appendChild(el(doc, 'p', 'sf-warning', 'No step-free route between these rooms.' +
-            (m.problem && m.problem !== 'No step-free route between these rooms' ? ` (${m.problem}.)` : ' Only stairs connect them.')));
+            (m.problem && m.problem !== 'No step-free route between these rooms' ? ` (${m.problem}.)` : ' Every route between them has stairs or a step.')));
         } else li.appendChild(el(doc, 'p', 'sf-note', `Not routed: ${m.problem}.`));
         list.appendChild(li);
       }
       box.appendChild(list);
     }
     box.appendChild(el(doc, 'p', 'sf-foot',
-      'Routes use hallways, ramps and elevators only, never a stair tile. Directions are compass directions on the blueprint ' +
+      'Routes use hallways, ramps and elevators only, never a stair tile or a marked step. Directions are compass directions on the blueprint ' +
       '(north is the top of the map). Check a route on foot before relying on it.'));
     sheet.appendChild(box);
   }

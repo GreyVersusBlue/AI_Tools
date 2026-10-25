@@ -21,6 +21,8 @@
 // sheets give a flagged group's move up to 201 by the elevator, say plainly
 // when only stairs would do, and start each group on a new page; and the
 // staircase tile's picture changes with what the pair is and comes back.
+// Increment 3: "A step here" on a hallway tile and "Step at this door" on a
+// room's door cut step-free routes (and only those), the door with undo.
 // No console error, no offsite request.
 //
 // Exits 1 on any failure.
@@ -226,7 +228,7 @@ try {
   await page.evaluate(() => { AppState.schedules.groups.find(g => g.name === '6-1').stepFree = true; });
   const sheets = await page.evaluate(() => window.SVAccess.buildRouteSheets());
   text = await page.textContent('#sf-print-sheet');
-  ok(sheets.length === 2 && /No step-free route between these rooms\. Only stairs connect them\./.test(text),
+  ok(sheets.length === 2 && /No step-free route between these rooms\. Every route between them has stairs or a step\./.test(text),
     'as stairs, the move to 201 has no step-free route, said plainly');
   await page.emulateMedia({ media: 'print' });
   const brk = await page.evaluate(() => [...document.querySelectorAll('#sf-print-sheet .sf-route-group')].map(g => getComputedStyle(g).breakBefore));
@@ -253,6 +255,45 @@ try {
   const again = await shot();
   ok(new Set([asStairs, asLift, asOut, asRamp]).size === 4, 'stairs, elevator, elevator out of service and ramp each draw a different tile');
   ok(again === asStairs, 'and stairs again draws exactly what it drew before');
+
+
+  /* ── 10. increment 3: a step in a corridor, a step at a door ────────────── */
+  const sfErr = (a, b) => page.evaluate(([x, y]) => window.SVGraph.resolveRoomPath(window.getStepFreeGraph(), x, y, AppState.blueprint.crossFloorPairs).error || null, [a, b]);
+  const plainErr = (a, b) => page.evaluate(([x, y]) => window.SVGraph.resolveRoomPath(window.getPathfindingGraph(), x, y, AppState.blueprint.crossFloorPairs).error || null, [a, b]);
+  eq(await sfErr('106', '108'), null, '106 to 108 is step-free along the corridor');
+  await page.evaluate(() => selectCell(5, 4));
+  await settle(page, 150);
+  ok(await page.isVisible('#rp-hallway-step'), 'a hallway tile has "A step here"');
+  await page.check('#rp-hallway-step');
+  await page.click('#rp-btn-save-corridor');
+  await settle(page, 150);
+  eq(await page.evaluate(() => AppState.blueprint.floors[0].gridData[4][5].step), true, 'Apply writes step: true on the tile');
+  eq(await sfErr('106', '108'), NONE, 'the step cuts the corridor for step-free routes');
+  eq(await plainErr('106', '108'), null, 'and only for them');
+  const stepShot = await shot();
+  await page.evaluate(() => selectCell(5, 4));
+  await settle(page, 100);
+  await page.uncheck('#rp-hallway-step');
+  await page.click('#rp-btn-save-corridor');
+  await settle(page, 150);
+  ok(await page.evaluate(() => !('step' in AppState.blueprint.floors[0].gridData[4][5])), 'clearing it and Apply take the key off');
+  eq(await sfErr('106', '108'), null, 'and the corridor is step-free again');
+  ok(stepShot !== await shot(), 'the tile shows the step while it is marked');
+
+  await page.evaluate(() => { AppState.blueprint.floors[0].gridData[5][5].doors = [{ col: 5, row: 5, side: 'top' }]; window.invalidatePathfindingGraph(); });
+  await page.evaluate(() => selectCell(5, 5));
+  await settle(page, 150);
+  const doorBox = page.locator('#rp-door-list .rp-door-step input');
+  eq(await doorBox.count(), 1, 'the room\'s door has "Step at this door"');
+  await doorBox.check();
+  await settle(page, 150);
+  eq(await page.evaluate(() => AppState.blueprint.floors[0].gridData[5][5].doors[0].stepFree), false, 'ticking it writes stepFree: false on the door');
+  eq(await sfErr('106', '107'), NONE, 'and 107 has no step-free route in');
+  eq(await plainErr('106', '107'), null, 'while the ordinary route still uses the door');
+  await page.click('#btn-undo');
+  await settle(page, 150);
+  ok(await page.evaluate(() => !('stepFree' in AppState.blueprint.floors[0].gridData[5][5].doors[0])), 'Undo takes the step off the door');
+  eq(await sfErr('106', '107'), null, 'and 107 is step-free again');
 
   eq(page.__errs.length, 0, 'no page or console errors: ' + JSON.stringify(page.__errs.slice(0, 4)));
   eq(page.__blocked.length, 0, 'nothing tried to leave the site: ' + JSON.stringify(page.__blocked.slice(0, 4)));

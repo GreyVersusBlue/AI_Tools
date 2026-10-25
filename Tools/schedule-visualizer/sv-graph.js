@@ -291,6 +291,32 @@ export function elevatorWait(pair, fallback = ELEVATOR_WAIT) {
   return (typeof w === 'number' && isFinite(w) && w >= 0 && w <= 999) ? w : fallback;
 }
 
+/** Increment 3: the steps a blueprint marks outside its staircases, as graph
+ *  keys: `hallways` (tiles with `step: true`) and `doors`, [doorCell,
+ *  corridorCell] for each classroom door with `stepFree: false`. */
+export function markedSteps(blueprint) {
+  const hallways = [], doors = [];
+  const DELTA = { top: [0, -1], bottom: [0, 1], left: [-1, 0], right: [1, 0] };
+  for (const floor of (blueprint.floors || [])) {
+    const g = floor.gridData;
+    if (!g) continue;
+    for (let r = 0; r < floor.gridRows; r++) {
+      for (let c = 0; c < floor.gridCols; c++) {
+        const t = g[r] && g[r][c];
+        if (!t) continue;
+        if (t.type === 'hallway' && t.step === true) hallways.push(floorCellKey(floor.id, c, r));
+        if (t.type === 'classroom' && Array.isArray(t.doors)) {
+          for (const d of t.doors) {
+            const dl = d && d.stepFree === false && DELTA[d.side];
+            if (dl) doors.push([floorCellKey(floor.id, d.col, d.row), floorCellKey(floor.id, d.col + dl[0], d.row + dl[1])]);
+          }
+        }
+      }
+    }
+  }
+  return { hallways, doors };
+}
+
 /** Build the unified multi-floor navigation graph for a blueprint
  *  ({ floors: [{ id, gridData, gridCols, gridRows }], crossFloorPairs }).
  *  opts.stepFree builds the step-free graph, opts.evacuation the one with
@@ -341,13 +367,28 @@ export function buildGraph(blueprint, opts = {}) {
   // It keeps its type, loses every edge in and out, and is named in `steps`;
   // a cell that lost an edge to one is named in `cutByStairs`, which is how
   // resolveRoomPath() tells "only stairs reach this room" from "walled off".
+  // Increment 3: steps that are not staircases. A hallway tile marked
+  // `step: true` (a kerb, two steps in a corridor) is cut the same way, and a
+  // classroom door marked `stepFree: false` (on the room's `doors` entry) loses
+  // the one edge between its cell and the corridor it opens onto; its cell is
+  // then named in `cutByStairs` too ("stairs" there means any step). Neither
+  // mark changes the ordinary or the evacuation graph.
   const steps = new Set(), cutByStairs = new Set();
   if (stepFree) {
+    const marked = markedSteps(blueprint);
     for (const [k, ty] of types) if (ty === 'staircase' && !stepFreeEnds.has(k)) steps.add(k);
+    for (const k of marked.hallways) if (types.get(k) === 'hallway') steps.add(k);
     for (const [k, edges] of adjacency) {
       if (steps.has(k)) { adjacency.set(k, []); continue; }
       const kept = edges.filter(e => !steps.has(e.key));
       if (kept.length !== edges.length) { cutByStairs.add(k); adjacency.set(k, kept); }
+    }
+    for (const [a, b] of marked.doors) {
+      const ea = adjacency.get(a), eb = adjacency.get(b);
+      if (!ea || !ea.some(e => e.key === b)) continue;
+      adjacency.set(a, ea.filter(e => e.key !== b));
+      if (eb) adjacency.set(b, eb.filter(e => e.key !== a));
+      cutByStairs.add(a);
     }
   }
 

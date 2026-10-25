@@ -1124,6 +1124,18 @@ function drawTile(col, row, tile, cellSize, skipRoomLabel) {
     ctx.fillText('🚪', x + cellSize / 2, y + cellSize / 2 + 1);
     ctx.restore();
   }
+  // Path 11 P3 increment 3: a step in the corridor, two treads in the corner.
+  if (tile.step === true) {
+    ctx.save();
+    ctx.strokeStyle = '#b45309';
+    ctx.lineWidth = Math.max(1.5, cellSize * 0.06);
+    const u = Math.max(3, cellSize * 0.14), bx = tx + tw - 3 * u - 2, by = ty + th - 2;
+    ctx.beginPath();
+    ctx.moveTo(bx, by); ctx.lineTo(bx + u, by); ctx.lineTo(bx + u, by - u);
+    ctx.lineTo(bx + 2 * u, by - u); ctx.lineTo(bx + 2 * u, by - 2 * u); ctx.lineTo(bx + 3 * u, by - 2 * u);
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 /**
@@ -2085,6 +2097,9 @@ function showHallwayEditor(col, row, tile) {
       if (exitFields) exitFields.style.display = newChk.checked ? '' : 'none';
     });
   }
+  // Path 11 P3 increment 3: a step in the corridor (saved by Apply).
+  const stepChk = document.getElementById('rp-hallway-step');
+  if (stepChk) stepChk.checked = !!(tile && tile.step === true);
   if (exitLabel)    exitLabel.value    = (tile && tile.exitLabel)    ? tile.exitLabel    : '';
   if (exitAssembly) exitAssembly.value = (tile && tile.assemblyPoint) ? tile.assemblyPoint : '';
 
@@ -2119,6 +2134,12 @@ function showHallwayEditor(col, row, tile) {
         delete t.isExit;
         delete t.exitLabel;
         delete t.assemblyPoint;
+      }
+      // Path 11 P3 increment 3: a step here cuts this tile from step-free routes.
+      const stepNow = !!document.getElementById('rp-hallway-step')?.checked;
+      if (stepNow !== (t.step === true)) {
+        if (stepNow) t.step = true; else delete t.step;
+        invalidatePathfindingGraph();
       }
       scheduleBlueprintAutosave();
       renderCanvas();
@@ -2434,6 +2455,15 @@ function renderDoorList(col, row, tile) {
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       </button>`;
+    // Path 11 P3 increment 3: a door with a step at it (stepFree: false).
+    const stepLbl = document.createElement('label');
+    stepLbl.className = 'rp-door-step';
+    const stepBox = document.createElement('input');
+    stepBox.type = 'checkbox';
+    stepBox.checked = door.stepFree === false;
+    stepBox.addEventListener('change', () => setDoorStep(i, stepBox.checked));
+    stepLbl.append(stepBox, 'Step at this door');
+    item.appendChild(stepLbl);
     listEl.appendChild(item);
   });
 
@@ -2443,6 +2473,24 @@ function renderDoorList(col, row, tile) {
       removeDoor(idx);
     });
   });
+}
+
+/* Path 11 P3 increment 3: mark door `index` of the selected room as having a
+   step (stepFree: false) or not (the key removed), with undo. */
+function setDoorStep(index, hasStep) {
+  const target = AppState.ui.editorTarget;
+  if (!target) return;
+  const tile = getTile(target.col, target.row);
+  if (!tile) return;
+  const anchorTile = getAnchorTile(target.col, target.row, tile.groupId);
+  const door = anchorTile && anchorTile.doors && anchorTile.doors[index];
+  if (!door) return;
+  beginAction();
+  if (hasStep) door.stepFree = false; else delete door.stepFree;
+  commitAction();
+  invalidatePathfindingGraph();
+  redrawGroupOrCell(target.col, target.row, tile.groupId);
+  scheduleBlueprintAutosave();
 }
 
 function removeDoor(index) {

@@ -623,7 +623,7 @@
                 </label>
               </div>
               <div style="font-size:11px;color:var(--slate-500);line-height:1.5;">
-                Step-free routes (Visualize → Options, and the step-free report) use elevators and ramps only, and never cross a stair tile. An elevator out of service is used by no route.
+                Step-free routes (Visualize → Options, the step-free report and the route sheets) use elevators and ramps only, and never cross a stair tile, a hallway marked as a step or a door with a step. An elevator out of service is used by no route.
               </div>
             </div>
 
@@ -712,6 +712,19 @@
                   <label class="rp-label" for="rp-exit-assembly">Assembly point <span class="rp-label-opt">(optional)</span></label>
                   <input type="text" id="rp-exit-assembly" class="rp-input" placeholder="e.g. Front lawn near flagpole" maxlength="60" />
                 </div>
+              </div>
+            </div>
+
+            <!-- Path 11 P3 increment 3: a step that is not a staircase -->
+            <div class="rp-section" style="margin-top:var(--sp-3);border-top:1px solid var(--slate-100);padding-top:var(--sp-3);">
+              <div class="rp-field">
+                <label style="display:flex;align-items:flex-start;gap:var(--sp-2);cursor:pointer;user-select:none;">
+                  <input type="checkbox" id="rp-hallway-step" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent);" />
+                  <span>
+                    <span style="font-size:12px;font-weight:600;color:var(--slate-700);display:block;">A step here</span>
+                    <span style="font-size:11px;color:var(--slate-400);line-height:1.4;display:block;margin-top:2px;">A kerb or a few steps in this corridor, with no ramp. Step-free routes go round it; ordinary routes and the door cards walk over it.</span>
+                  </span>
+                </label>
               </div>
             </div>
 
@@ -1294,7 +1307,7 @@
               <label class="viz-switch" title="Draws a dot at each classroom endpoint and labels it with the mod number — useful for tracing individual group routes"><input type="checkbox" id="viz-opt-markers" checked /><span class="viz-switch-track"></span></label>
             </div>
             <div class="viz-toggle-row">
-              <span>Step-free routes<span class="viz-info-icon" data-tip="Routes a wheelchair user could take: elevators and ramps only, never a stair tile. A move with no such route is shown as an error, not drawn up the stairs.">i</span></span>
+              <span>Step-free routes<span class="viz-info-icon" data-tip="Routes a wheelchair user could take: elevators and ramps only, never a stair tile or a marked step. A move with no such route is shown as an error, not drawn up the stairs.">i</span></span>
               <label class="viz-switch" title="Routes a wheelchair user could take: elevators and ramps only, never a stair tile"><input type="checkbox" id="viz-opt-step-free" aria-label="Step-free routes" /><span class="viz-switch-track"></span></label>
             </div>
             <div class="viz-toggle-row">

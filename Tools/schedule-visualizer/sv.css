@@ -2855,6 +2855,8 @@
 #sf-print-sheet .sf-move { margin: 0 0 6pt; break-inside: avoid; }
 #sf-print-sheet .sf-move-head { font-weight: 600; margin: 0 0 2pt; }
 #sf-print-sheet .sf-steps { margin: 0; padding-left: 16pt; list-style: lower-alpha; }
+.rp-door-item { flex-wrap: wrap; }
+.rp-door-step { display: flex; align-items: center; gap: 4px; flex-basis: 100%; font-size: 11px; color: var(--slate-500); cursor: pointer; margin-top: 2px; }
 .group-card-step-free { background: var(--slate-100); color: var(--slate-700); font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; font-family: var(--font-mono); margin-left: 4px; }
 @media print {
   body.sf-printing > :not(#sf-print-sheet) { display: none !important; }

@@ -1,5 +1,5 @@
 // Path 11 P3: step-free routing in sv-graph.js and the step-free report and
-// route sheets in sv-routes.js (increments 1 and 2). Pure Node, no browser.
+// route sheets in sv-routes.js (increments 1 to 3). Pure Node, no browser.
 //
 // One invented two-floor building, drawn below, joined by three pairs: stairs
 // at column 1 (pair A), an elevator at column 4 (B) and a ramp at column 12
@@ -246,6 +246,61 @@ check(G.settingsElevatorWait({ elevatorWait: 4 }) === 4 && G.settingsElevatorWai
   const evSteps = R.buildEvacuationSteps(ev.path, ev.exit, g, fl);
   check(JSON.stringify(evSteps) === JSON.stringify([...R.routeSteps(ev.path, g, fl), 'Exit at Front door.']),
     'buildEvacuationSteps() is routeSteps() plus the exit line');
+}
+
+/* -- Increment 3: steps that are not staircases. (Broken on purpose: a
+      truthy test let step: 'yes' cut a corridor; cutting the step in every
+      graph changed the ordinary one; cutting a door's edge one way only left
+      a route out of 204; a door cut without naming its cell in cutByStairs
+      gave "Room unreachable" instead of the step-free sentence.) -- */
+{
+  const adj = g => JSON.stringify([...g.adjacency].sort());
+  const plainOf = bp => adj(G.buildGraph(bp));
+  const tile = (bp, f, c, r) => bp.floors[f].gridData[r][c];
+
+  // A step in the corridor at column 6 on floor 1.
+  const bp = building({ ramp: null });
+  const before = plainOf(bp), beforeEvac = adj(G.buildGraph(bp, { evacuation: true }));
+  tile(bp, 0, 6, 1).step = true;
+  check(plainOf(bp) === before && adj(G.buildGraph(bp, { evacuation: true })) === beforeEvac, 'a marked step changes neither the ordinary nor the evacuation graph');
+  check(!route(bp, '204', '301', SF).error, 'a step east of the elevator does not stop 204 reaching 301 by it');
+  const noLift = building({ elevator: null });
+  tile(noLift, 0, 6, 1).step = true;
+  check(route(noLift, '204', '301', SF).error === G.STEP_FREE_NONE && !route(noLift, '204', '301').error,
+    'with only the ramp, behind the step, 204 has no step-free route to 301 (the ordinary route is still there)');
+  check(G.buildGraph(noLift, SF).steps.has('f1:6,1') && !G.buildGraph(noLift, SF).isWalkable('f1:6,1'), 'the step is named and not walkable on the step-free graph');
+  const yes = building({ elevator: null });
+  tile(yes, 0, 6, 1).step = 'yes';
+  check(!route(yes, '204', '301', SF).error && G.markedSteps(yes).hallways.length === 0, "step: 'yes' is not a step (only true is)");
+
+  // A step at the front door cuts the exit off: every room is then stairs-or-a-step.
+  const front = building();
+  tile(front, 0, 2, 1).step = true;
+  const rep = R.stepFreeReport({ blueprint: front, groups: [], settings: { modCount: 1, modLabel: 'mod' } });
+  check(rep.counts.stepFree === 0 && rep.counts.stairsOnly === 4 && rep.counts.unreachable === 1,
+    'a step in front of the only exit leaves no room step-free: ' + JSON.stringify(rep.counts));
+
+  // A door with a step.
+  const doorBp = () => { const b = building(); tile(b, 0, 0, 1).doors = [{ col: 0, row: 1, side: 'right' }]; return b; };
+  const d0 = doorBp();
+  check(!route(d0, '204', '301', SF).error, 'a door with no mark is step-free');
+  const d1 = doorBp();
+  tile(d1, 0, 0, 1).doors[0].stepFree = false;
+  check(plainOf(d1) === plainOf(d0), 'a stepped door changes nothing on the ordinary graph');
+  const r1 = route(d1, '204', '301', SF), r2 = route(d1, '301', '204', SF);
+  check(r1.error === G.STEP_FREE_NONE && r2.error === G.STEP_FREE_NONE, 'from 204 or to it, a stepped door is "' + G.STEP_FREE_NONE + '": ' + r1.error + ' / ' + r2.error);
+  check(!route(d1, '204', '301').error, 'and the ordinary route still goes through it');
+  check(!(G.buildGraph(d1, SF).adjacency.get('f1:1,1') || []).some(e => e.key === 'f1:0,1'), 'the door is cut both ways (no edge back in from the corridor)');
+  const st = Object.fromEntries(R.stepFreeReport({ blueprint: d1, groups: [], settings: { modCount: 1, modLabel: 'mod' } }).rooms.map(r => [r.room, r.status]));
+  check(st['204'] === 'stairs-only' && st['301'] === 'step-free', 'the report lists 204 as needing a step, and 301 still step-free');
+  const d2 = doorBp();
+  tile(d2, 0, 0, 1).doors[0].stepFree = 0;
+  check(G.markedSteps(d2).doors.length === 0 && !route(d2, '204', '301', SF).error, 'only stepFree: false marks a door (0 is not false)');
+  check(JSON.stringify(G.markedSteps(d1)) === '{"hallways":[],"doors":[["f1:0,1","f1:1,1"]]}', 'markedSteps() names the door cell and the corridor cell it opens onto');
+
+  // The route sheet says it plainly.
+  const sheets = R.stepFreeRouteSheets({ blueprint: d1, groups: [{ name: 'g', stepFree: true, modsA: ['301', '204'] }], settings: { modCount: 2, modLabel: 'mod' } });
+  check(sheets[0].days[0].moves[0].status === 'none' && sheets[0].days[0].moves[0].problem === G.STEP_FREE_NONE, 'the route sheet has no route into 204 through a stepped door');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);
