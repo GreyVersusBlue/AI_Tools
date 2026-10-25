@@ -149,18 +149,30 @@ async function pickTeacher(page, name) {
 async function republish(page, { rewrite = null, project = fixtureProject() } = {}) {
   const url = new URL(page.url());
   const target = url.origin + generatorPath();
+  // Since Path 11 P2 increment 7 the publisher is schedule-visualizer/sv-browser.js,
+  // which the page imports: a rewrite goes to whichever of the two holds its text
+  // (rewrite returns null for a file without it), and must land exactly once.
+  const routed = [target, new URL('schedule-visualizer/sv-browser.js', target).href];
+  let hits = 0;
   if (rewrite) {
-    await page.route(target, async route => {
-      const resp = await route.fetch();
-      await route.fulfill({ response: resp, body: rewrite(await resp.text()) });
-    });
+    for (const u of routed) {
+      await page.route(u, async route => {
+        const resp = await route.fetch();
+        const body = await resp.text();
+        const out = rewrite(body);
+        if (out !== null) hits++;
+        await route.fulfill({ response: resp, body: out === null ? body : out });
+      });
+    }
   }
   try {
     await page.goto(target, { waitUntil: 'load' });
-    await page.waitForFunction(() => typeof window.applyFullProject === 'function', { timeout: 20000 });
+    await page.waitForFunction(() => typeof window.applyFullProject === 'function'
+      && typeof window.brBuildPublishedHTML === 'function', { timeout: 20000 });
+    if (rewrite && hits !== 1) throw new Error(`a 035 edit landed in ${hits} files, not one`);
     return await page.evaluate(p => { window.confirm = () => true; window.applyFullProject(p); return window.brBuildPublishedHTML(); }, project);
   } finally {
-    if (rewrite) await page.unroute(target);
+    if (rewrite) for (const u of routed) await page.unroute(u);
   }
 }
 
@@ -274,7 +286,7 @@ async function increment2(run, pub, html) {
   {
     const base = fs.readFileSync(BASELINE, 'utf8');
     const cssStart = pub.css.split('\n')[0];
-    const sub = (a, b) => t => { if (!t.includes(a)) throw new Error('035 edit not found: ' + a); return t.replace(a, b); };
+    const sub = (a, b) => t => t.includes(a) ? t.replace(a, b) : null;
     const breaks = [
       ['a property dropped from every teacher record', sub('    t.co = [...co].sort();', '    delete t.co;'), 'data'],
       ['two functions swapped in brPublishFnList()', sub('brChoose, brJumpTeacher, brJumpGroup,', 'brChoose, brJumpGroup, brJumpTeacher,'), 'order'],

@@ -83,9 +83,10 @@ function cssOf034() {
   return end < 0 ? '' : style.slice(0, end);
 }
 
-/** 035's BR_CSS, the single source brPublish() copies verbatim. */
+/** 035's BR_CSS, the single source brPublish() copies verbatim. Since Path 11
+ *  P2 increment 7 it is in the browser module 035 imports, not the page. */
 function cssOf035() {
-  const src = read('Tools/035-schedule-visualizer.html');
+  const src = read('Tools/schedule-visualizer/sv-browser.js');
   const a = src.indexOf('const BR_CSS = `') + 'const BR_CSS = `'.length;
   return src.slice(a, src.indexOf('\n`;\n', a));
 }

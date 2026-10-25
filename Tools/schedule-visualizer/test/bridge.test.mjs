@@ -12,6 +12,11 @@
 // path that reaches a wrapper, naming the path. On increment 2 it found one:
 // a bare populateDeptDropdown() under its declaration, which init() repeats.
 //
+// Since increment 7 a module's exports may also be copied onto window
+// (`Object.assign(window, SVBrowser)`: the old global surface of the browser
+// script, which onclick handlers and the classic script call by bare name).
+// Those names exist only after the module runs, so they count as wrappers.
+//
 // It also walks the import graph from the module script and fails on a
 // module missing from sw.js's PRECACHE_URLS, or on a namespace a wrapper
 // reads that the module script never sets. check:precache reads the page's
@@ -55,6 +60,29 @@ function callsIn(node, out = new Set(), top = true) {
   return out;
 }
 
+/** Names the module script copies onto window with Object.assign(window, NS),
+ *  read off each such module's export list and exported declarations. */
+export function windowExports(html) {
+  const m = html.match(/<script type="module">([\s\S]*?)<\/script>/);
+  if (!m) return new Set();
+  const pageDir = path.dirname(path.join(ROOT, PAGE));
+  const names = new Set();
+  for (const a of m[1].matchAll(/Object\.assign\(\s*window\s*,\s*(\w+)\s*\)/g)) {
+    const im = new RegExp(`import\\s*\\*\\s*as\\s+${a[1]}\\s+from\\s*['"]([^'"]+)['"]`).exec(m[1]);
+    if (!im) throw new Error(`Object.assign(window, ${a[1]}) with no import * as ${a[1]}`);
+    const p = parse(fs.readFileSync(path.resolve(pageDir, im[1]), 'utf8'), 'module');
+    if (p.error) throw new Error(`${im[1]} does not parse: ${p.error.message}`);
+    for (const n of p.ast.body) {
+      if (n.type !== 'ExportNamedDeclaration') continue;
+      for (const s of n.specifiers) names.add(s.exported.name);
+      const d = n.declaration;
+      if (d && d.id) names.add(d.id.name);
+      if (d && d.declarations) d.declarations.forEach(x => x.id.name && names.add(x.id.name));
+    }
+  }
+  return names;
+}
+
 export function parseTimeReaches(html) {
   const fns = new Map();      // name → Set of names it calls (synchronously, approximately)
   const roots = [];           // { line, calls }
@@ -69,6 +97,8 @@ export function parseTimeReaches(html) {
   }
   const wrappers = new Set([...fns].filter(([, c]) => Object.keys(GETTERS).some(g => c.has(g))).map(([n]) => n));
   Object.keys(GETTERS).forEach(g => wrappers.add(g));
+  const onWindow = windowExports(html);
+  onWindow.forEach(n => wrappers.add(n));
   const bad = [];
   for (const r of roots) {
     for (const start of r.calls) {
@@ -82,7 +112,7 @@ export function parseTimeReaches(html) {
       }
     }
   }
-  return { bad, wrappers, roots: roots.length, fns: fns.size };
+  return { bad, wrappers, onWindow, roots: roots.length, fns: fns.size };
 }
 
 export function moduleGraph(html) {
@@ -104,6 +134,8 @@ export function moduleGraph(html) {
 const html = fs.readFileSync(path.join(ROOT, PAGE), 'utf8');
 const r = parseTimeReaches(html);
 check(r.wrappers.size > Object.keys(GETTERS).length, `the page has bridge wrappers (${r.wrappers.size - Object.keys(GETTERS).length} found through ${Object.keys(GETTERS).join(', ')})`);
+check(r.onWindow.has('brBuildPublishedHTML') && r.onWindow.has('toggleApp'),
+  `the module script copies sv-browser.js's ${r.onWindow.size} exports onto window, and they count as wrappers`);
 check(r.roots > 0 && r.fns > 100, `read ${r.fns} top-level functions and ${r.roots} top-level statements that call something`);
 check(r.bad.length === 0, 'no top-level statement reaches a bridge wrapper at parse time'
   + r.bad.map(b => `\n         line ${b.line}: ${b.path.join(' → ')}`).join(''));
@@ -113,7 +145,7 @@ const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 for (const f of g.files) {
   check(sw.includes(`"${f}"`), `${f} (imported by the page's module script) is in sw.js's PRECACHE_URLS`);
 }
-for (const ns of Object.values(GETTERS)) check(g.sets.includes(ns), `the module script sets window.${ns}`);
+for (const ns of [...Object.values(GETTERS), 'SVBrowser']) check(g.sets.includes(ns), `the module script sets window.${ns}`);
 
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

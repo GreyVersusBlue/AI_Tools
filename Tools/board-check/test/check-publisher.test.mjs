@@ -9,7 +9,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { check, readPublisher, assemble, freeNames, ROOT, PAGE_035, PAGE_034, LEDGER }
+import { check, readPublisher, moduleSources, assemble, freeNames, ROOT, PAGE_035, PAGE_034, LEDGER }
   from '../check-publisher.mjs';
 import { FORMAT, DATA_KEYS, PUBLISHED_KEYS, formatOf, validate, upgrade, readEmbedded, shapeOf }
   from '../../schedule/test/published-contract.mjs';
@@ -22,6 +22,12 @@ const ok = (cond, label) => {
 
 const html035 = fs.readFileSync(path.join(ROOT, PAGE_035), 'utf8').replace(/\r/g, '');
 const html034 = fs.readFileSync(path.join(ROOT, PAGE_034), 'utf8').replace(/\r/g, '');
+// Since Path 11 P2 increment 7 the publisher is a module the page imports;
+// every break below edits it (b35) and hands the guard the edited copy.
+const BROWSER = 'Tools/schedule-visualizer/sv-browser.js';
+const modules035 = moduleSources(html035);
+const browser035 = modules035.find(m => m.file === BROWSER).code;
+const withBrowser = code => modules035.map(m => m.file === BROWSER ? { file: m.file, code } : m);
 const ledger = JSON.parse(fs.readFileSync(path.join(ROOT, LEDGER), 'utf8'));
 const clone = o => JSON.parse(JSON.stringify(o));
 
@@ -56,8 +62,8 @@ function edit(text, from, to, label) {
   if (!text.includes(from)) throw new Error(`fixture edit not found (${label}): ${from.slice(0, 60)}`);
   return text.replace(from, to);
 }
-function expect(label, codes, { h35 = html035, h34 = html034, led = ledger, mention } = {}) {
-  const r = check({ html035: h35, html034: h34, ledger: led });
+function expect(label, codes, { h35 = html035, b35 = browser035, mods, h34 = html034, led = ledger, mention } = {}) {
+  const r = check({ html035: h35, modules035: mods || withBrowser(b35), html034: h34, ledger: led });
   const got = [...new Set(r.failures.map(f => f.code))].sort();
   const want = [...codes].sort();
   const same = JSON.stringify(got) === JSON.stringify(want);
@@ -77,79 +83,95 @@ const ledgerWithout = name => {
   return l;
 };
 
+// Path 11 P2 increment 7: the publisher lives in a module the page imports.
+ok(modules035.some(m => m.file === BROWSER), 'moduleSources() follows the page\'s module script to ' + BROWSER);
+ok(pub.fns.every(f => f.file === BROWSER), 'every listed function is declared in ' + BROWSER);
+expect('the page read without its modules', ['SHAPE'], { mods: [] });
+expect('export in front of a listed function', [], {
+  b35: edit(browser035, 'function brSetGrpDay(', 'export function brSetGrpDay(', 'export')
+    .replace('brGroupMapHTML, brSetGrpDay, ', 'brGroupMapHTML, '),
+});
+expect('a listed function also declared in the page', ['LIST'], {
+  h35: edit(html035, '</head>', '<script>function brJumpGroup() {}</script>\n</head>', 'page'), mention: 'brJumpGroup',
+});
+
 // The Round 7 bug: escHtml left out of the published constants.
 expect('escHtml taken out of consts', ['FREE'], {
-  h35: edit(html035, "    'const escHtml = '   + escHtml.toString()   + ';',\n", '', 'escHtml'),
+  b35: edit(browser035, "    'const escHtml = '   + escHtml.toString()   + ';',\n", '', 'escHtml'),
   led: ledgerWithout('escHtml'), mention: 'escHtml',
 });
 expect('a listed function renamed at its declaration', ['LIST'], {
-  h35: edit(html035, 'function brSetGrpDay(', 'function brSetGrpDayRenamed(', 'rename'), mention: 'brSetGrpDay',
+  // (renamed in the module's export list too, or the module would not parse)
+  b35: edit(browser035, 'function brSetGrpDay(', 'function brSetGrpDayRenamed(', 'rename')
+    .replace('brGroupMapHTML, brSetGrpDay, ', 'brGroupMapHTML, brSetGrpDayRenamed, '), mention: 'brSetGrpDay',
 });
 {
   // brFormatDateLong(d) { … } turned into an arrow constant.
-  const m = /function brFormatDateLong\(([^)]*)\) \{/.exec(html035);
+  const m = /function brFormatDateLong\(([^)]*)\) \{/.exec(browser035);
   expect('a listed function turned into const f = () =>', ['LIST'], {
-    h35: html035.replace(m[0], `const brFormatDateLong = (${m[1]}) => {`), mention: 'brFormatDateLong',
+    b35: browser035.replace(m[0], `const brFormatDateLong = (${m[1]}) => {`), mention: 'brFormatDateLong',
   });
 }
-expect('a listed function declared twice', ['LIST'], {
-  h35: edit(html035, 'function brJumpGroup(', 'function brJumpGroup() {}\nfunction brJumpGroup(', 'dup'), mention: 'brJumpGroup',
+// In a module a second declaration is a syntax error, so this is PARSE now;
+// LIST still catches the page declaring a name the module also declares (above).
+expect('a listed function declared twice in the module', ['PARSE'], {
+  b35: edit(browser035, 'function brJumpGroup(', 'function brJumpGroup() {}\nfunction brJumpGroup(', 'dup'), mention: 'brJumpGroup',
 });
 expect("'const brDColor = ' + brDeptInk.toString()", ['CONST'], {
-  h35: edit(html035, "'const brDColor = '  + brDColor.toString()", "'const brDColor = '  + brDeptInk.toString()", 'const'),
+  b35: edit(browser035, "'const brDColor = '  + brDColor.toString()", "'const brDColor = '  + brDeptInk.toString()", 'const'),
   mention: 'brDColor',
 });
 expect('AppState.settings read inside brRenderTeacher', ['LIVE'], {
-  h35: edit(html035, 'function brRenderTeacher(n) {', 'function brRenderTeacher(n) {\n  void AppState.settings;', 'appstate'),
+  b35: edit(browser035, 'function brRenderTeacher(n) {', 'function brRenderTeacher(n) {\n  void AppState.settings;', 'appstate'),
   mention: 'AppState',
 });
 expect('a localStorage read in a published function', ['LIVE'], {
-  h35: edit(html035, 'function brRenderGroup(sec) {', "function brRenderGroup(sec) {\n  void localStorage.getItem('x');", 'ls'),
+  b35: edit(browser035, 'function brRenderGroup(sec) {', "function brRenderGroup(sec) {\n  void localStorage.getItem('x');", 'ls'),
   mention: 'localStorage',
 });
 expect('a URL in BR_CSS', ['LIVE'], {
-  h35: edit(html035, 'const BR_CSS = `#app-browser {', 'const BR_CSS = `@import url(https://fonts.example.com/a.css);\n#app-browser {', 'url'),
+  b35: edit(browser035, 'const BR_CSS = `#app-browser {', 'const BR_CSS = `@import url(https://fonts.example.com/a.css);\n#app-browser {', 'url'),
 });
 expect('onclick="brNope()" in the markup template', ['HANDLER'], {
-  h35: edit(html035, '<p class="sub">Teacher Schedule Browser</p>', '<p class="sub" onclick="brNope()">Teacher Schedule Browser</p>', 'handler'),
+  b35: edit(browser035, '<p class="sub">Teacher Schedule Browser</p>', '<p class="sub" onclick="brNope()">Teacher Schedule Browser</p>', 'handler'),
   mention: 'brNope',
 });
 expect('br-view renamed in the markup', ['ID'], {
-  // The second copy is the publisher's template; the first is 035's own embedded browser.
-  h35: html035.slice(0, html035.lastIndexOf('<div id="br-view"'))
-    + html035.slice(html035.lastIndexOf('<div id="br-view"')).replace('<div id="br-view"', '<div id="br-viewport"'),
+  // The publisher's template, in the module; 035's own embedded browser keeps its copy in the page.
+  b35: edit(browser035, '<div id="br-view"', '<div id="br-viewport"', 'id'),
   mention: 'br-view',
 });
 expect("brGrpDay = 'B' in the preamble only", ['STATE'], {
-  h35: edit(html035, `"let brGrpDay = 'A', brMapFloorIdx = 0;",`, `"let brGrpDay = 'B', brMapFloorIdx = 0;",`, 'state'),
+  b35: edit(browser035, `"let brGrpDay = 'A', brMapFloorIdx = 0;",`, `"let brGrpDay = 'B', brMapFloorIdx = 0;",`, 'state'),
   mention: 'brGrpDay',
 });
 expect('an undeclared assignment in a published function', ['STRICT'], {
-  h35: edit(html035, 'function brSetGrpDay(', 'function brSetGrpDay__unused() { brStrayGlobal = 1; }\nfunction brSetGrpDay(', 'x')
+  b35: edit(browser035, 'function brSetGrpDay(', 'function brSetGrpDay__unused() { brStrayGlobal = 1; }\nfunction brSetGrpDay(', 'x')
     .replace("brOpenMapFloorIdx, brSetMapFloorIdx,", "brOpenMapFloorIdx, brSetMapFloorIdx, brSetGrpDay__unused,"),
   led: ledgerWith('absent', 'brSetGrpDay__unused'), mention: 'brStrayGlobal',
 });
-expect('a duplicate parameter in a published function', ['STRICT'], {
-  h35: edit(html035, 'function brJumpGroup(', 'function brJumpGroup__unused(a, a) { return a; }\nfunction brJumpGroup(', 'x')
+// The module is strict code itself, so a duplicate parameter no longer parses there.
+expect('a duplicate parameter in a published function', ['PARSE'], {
+  b35: edit(browser035, 'function brJumpGroup(', 'function brJumpGroup__unused(a, a) { return a; }\nfunction brJumpGroup(', 'x')
     .replace("brOpenMapFloorIdx, brSetMapFloorIdx,", "brOpenMapFloorIdx, brSetMapFloorIdx, brJumpGroup__unused,"),
   led: ledgerWith('absent', 'brJumpGroup__unused'),
 });
 expect('a <link> in the published head', ['HEAD'], {
-  h35: edit(html035, `+ '<meta charset="UTF-8">\\n'`, `+ '<meta charset="UTF-8">\\n<link rel="icon" href="x.png">\\n'`, 'head'),
+  b35: edit(browser035, `+ '<meta charset="UTF-8">\\n'`, `+ '<meta charset="UTF-8">\\n<link rel="icon" href="x.png">\\n'`, 'head'),
 });
 expect('a spread in the function list', ['SHAPE'], {
-  h35: edit(html035, 'brFormatDateLong, brCheckStaleness\n  ];', 'brFormatDateLong, brCheckStaleness, ...[]\n  ];', 'spread'),
+  b35: edit(browser035, 'brFormatDateLong, brCheckStaleness\n  ];', 'brFormatDateLong, brCheckStaleness, ...[]\n  ];', 'spread'),
 });
 expect('a ternary in consts', ['SHAPE'], {
-  h35: edit(html035, "    'const BR_STALE_DAYS = ' + BR_STALE_DAYS + ';'", "    (1 ? 'const BR_STALE_DAYS = ' + BR_STALE_DAYS + ';' : '')", 'ternary'),
+  b35: edit(browser035, "    'const BR_STALE_DAYS = ' + BR_STALE_DAYS + ';'", "    (1 ? 'const BR_STALE_DAYS = ' + BR_STALE_DAYS + ';' : '')", 'ternary'),
 });
 expect('a backtick in a BR_CSS comment', ['PARSE'], {
-  h35: edit(html035, 'const BR_CSS = `#app-browser {', 'const BR_CSS = `/* a `tick` */\n#app-browser {', 'tick'),
+  b35: edit(browser035, 'const BR_CSS = `#app-browser {', 'const BR_CSS = `/* a `tick` */\n#app-browser {', 'tick'),
 });
 {
-  const m = /function brOverviewHTML\([^)]*\) \{\n/.exec(html035);
+  const m = /function brOverviewHTML\([^)]*\) \{\n/.exec(browser035);
   expect('one character changed in brOverviewHTML in 035 only', ['FORK'], {
-    h35: html035.replace(m[0], m[0] + ' '), mention: 'brOverviewHTML',
+    b35: browser035.replace(m[0], m[0] + ' '), mention: 'brOverviewHTML',
   });
   const m34 = /function brOverviewHTML\([^)]*\) \{\n/.exec(html034);
   expect('one character changed in brOverviewHTML in 034 only', ['FORK'], {
@@ -165,7 +187,7 @@ expect('a backtick in a BR_CSS comment', ['PARSE'], {
   });
 }
 expect('a new name in the list and in no ledger group', ['FORK'], {
-  h35: edit(html035, 'function brJumpGroup(', 'function brExtraPiece() { return 1; }\nfunction brJumpGroup(', 'x')
+  b35: edit(browser035, 'function brJumpGroup(', 'function brExtraPiece() { return 1; }\nfunction brJumpGroup(', 'x')
     .replace("brOpenMapFloorIdx, brSetMapFloorIdx,", "brOpenMapFloorIdx, brSetMapFloorIdx, brExtraPiece,"),
   mention: 'brExtraPiece',
 });
@@ -174,26 +196,26 @@ expect('a new name in the list and in no ledger group', ['FORK'], {
 // that the KNOWN_FREE entry is reported as expired.
 expect('brRenderMapLegacy published after all (KNOWN_FREE expired)', ['FREE', 'HANDLER'], {
   // It is declared in 035 already, behind the dead door; listing it is enough.
-  h35: edit(html035, "brOpenMapFloorIdx, brSetMapFloorIdx,", "brOpenMapFloorIdx, brSetMapFloorIdx, brRenderMapLegacy,", 'x'),
+  b35: edit(browser035, "brOpenMapFloorIdx, brSetMapFloorIdx,", "brOpenMapFloorIdx, brSetMapFloorIdx, brRenderMapLegacy,", 'x'),
   led: ledgerWith('absent', 'brRenderMapLegacy'), mention: 'KNOWN_FREE',
 });
 expect('the publisher writes a data key the contract does not have', ['DATA'], {
-  h35: edit(html035, 'bell: BR_BELL, geometry: BR_GEOM\n  };', 'bell: BR_BELL, geometry: BR_GEOM, extra: 1\n  };', 'data'),
+  b35: edit(browser035, 'bell: BR_BELL, geometry: BR_GEOM\n  };', 'bell: BR_BELL, geometry: BR_GEOM, extra: 1\n  };', 'data'),
 });
 expect('the publisher drops format from its data', ['DATA'], {
-  h35: edit(html035, '    format: 1, tool: TOOL_VERSION,\n', '    tool: TOOL_VERSION,\n', 'format'),
+  b35: edit(browser035, '    format: 1, tool: TOOL_VERSION,\n', '    tool: TOOL_VERSION,\n', 'format'),
 });
 expect('the publisher writes format 2, past the contract', ['DATA'], {
-  h35: edit(html035, '    format: 1, tool: TOOL_VERSION,', '    format: 2, tool: TOOL_VERSION,', 'format'), mention: 'FORMAT is 1',
+  b35: edit(browser035, '    format: 1, tool: TOOL_VERSION,', '    format: 2, tool: TOOL_VERSION,', 'format'), mention: 'FORMAT is 1',
 });
 expect('PUBLISHED_DATA written without escaping <', ['DATA'], {
-  h35: edit(html035, "JSON.stringify(data).replace(/</g, '\\\\u003c')", 'JSON.stringify(data)', 'escape'), mention: 'u003c',
+  b35: edit(browser035, "JSON.stringify(data).replace(/</g, '\\\\u003c')", 'JSON.stringify(data)', 'escape'), mention: 'u003c',
 });
 expect('PUBLISHED_DATA escaped with some other replacement', ['SHAPE'], {
-  h35: edit(html035, "JSON.stringify(data).replace(/</g, '\\\\u003c')", "JSON.stringify(data).replace(/</g, '&lt;')", 'escape'),
+  b35: edit(browser035, "JSON.stringify(data).replace(/</g, '\\\\u003c')", "JSON.stringify(data).replace(/</g, '&lt;')", 'escape'),
 });
 expect('a constant in consts written escaped', ['SHAPE'], {
-  h35: edit(html035, "'const BR_LEGACY_SHORT = ' + JSON.stringify(BR_LEGACY_SHORT) + ';'",
+  b35: edit(browser035, "'const BR_LEGACY_SHORT = ' + JSON.stringify(BR_LEGACY_SHORT) + ';'",
     "'const BR_LEGACY_SHORT = ' + JSON.stringify(BR_LEGACY_SHORT).replace(/</g, '\\\\u003c') + ';'", 'consts'),
 });
 {

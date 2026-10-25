@@ -51,12 +51,16 @@
 // A failure about 034's data prints shapes and positions only, never a value:
 // 034 holds a real staff list and CI's log is public.
 //
+// Where it reads: 035's classic inline scripts and, since Path 11 P2 increment
+// 7, every module the page's `<script type="module">` imports, followed through
+// their own relative imports (moduleSources()). A module's top-level
+// declarations count as the page's: the publisher, now in
+// schedule-visualizer/sv-browser.js, .toString()s them the same way, and an
+// `export` in front of a declaration is not part of the text it gives.
+//
 // What this does not check, on purpose: CSS classes a function emits against
 // BR_CSS's selectors (a class with no rule is common and harmless, and a guard
-// that guesses is worse than none); 035's 400-odd unpublished functions; ES
-// modules (035's `<script type="module">` is skipped; its bindings are not page
-// globals). P2 will move published functions into modules, and the first one it
-// moves fails LIST: that is the prompt to teach readPublisher() a sources list.
+// that guesses is worse than none); 035's 400-odd unpublished functions.
 // Its browser half, which holds assemble() to the real published bytes, is
 // Tools/schedule/test/smoke-publish-baseline.mjs (npm run test:schedule-publish).
 
@@ -90,11 +94,12 @@ const BUILTINS = new Set(Object.keys(globals.builtin));
 /* ── parsing ─────────────────────────────────────────────────────────── */
 
 const linter = new Linter({ configType: 'flat' });
-const LANG = [{ languageOptions: { ecmaVersion: 'latest', sourceType: 'script' } }];
+const LANG = { script: [{ languageOptions: { ecmaVersion: 'latest', sourceType: 'script' } }],
+  module: [{ languageOptions: { ecmaVersion: 'latest', sourceType: 'module' } }] };
 
 /** { ast, scopeManager, text } or { error: { line, message } }. */
-export function parse(code) {
-  const msgs = linter.verify(code, LANG);
+export function parse(code, sourceType = 'script') {
+  const msgs = linter.verify(code, LANG[sourceType]);
   const fatal = msgs.find(m => m.fatal);
   if (fatal) return { error: { line: fatal.line, message: fatal.message } };
   const sc = linter.getSourceCode();
@@ -117,15 +122,47 @@ export function inlineScripts(html) {
 
 const src = (text, node) => text.slice(node.range[0], node.range[1]);
 
-/** Every top-level declaration across a page's classic inline scripts. */
-function topLevel(html, label) {
+/** The modules a page's `<script type="module">` blocks import, followed
+ *  through each module's own relative imports, in first-seen order:
+ *  [{ file (repo-relative), code }]. `page` is the page's repo path. */
+export function moduleSources(html, { root = ROOT, page = PAGE_035 } = {}) {
+  const out = [];
+  const seen = new Set();
+  const imports = code => [...code.matchAll(/^\s*(?:import|export)\b[^'"]*?from\s*['"](\.{1,2}\/[^'"]+)['"]/gm)].map(m => m[1]);
+  const visit = abs => {
+    const rel = path.relative(root, abs).split(path.sep).join('/');
+    if (seen.has(rel)) return;
+    seen.add(rel);
+    const code = fs.readFileSync(abs, 'utf8').replace(/\r/g, '');
+    out.push({ file: rel, code });
+    for (const im of imports(code)) visit(path.resolve(path.dirname(abs), im));
+  };
+  const re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+  let m;
+  while ((m = re.exec(html))) {
+    if (!/type\s*=\s*["']?module/i.test(m[1])) continue;
+    for (const im of imports(m[2])) visit(path.resolve(root, path.dirname(page), im));
+  }
+  return out;
+}
+
+/** Every top-level declaration across a page's classic inline scripts and
+ *  the modules it imports (`modules`: moduleSources()'s shape). */
+function topLevel(html, label, modules = []) {
   const decls = new Map();
   const nested = new Set();
-  for (const s of inlineScripts(html.replace(/\r/g, ''))) {
-    const p = parse(s.code);
-    if (p.error) return { error: { line: s.line + p.error.line - 1, message: `${label}'s script does not parse: ${p.error.message}` } };
-    const add = (name, d) => { if (!decls.has(name)) decls.set(name, []); decls.get(name).push(d); };
-    for (const node of p.ast.body) {
+  const sources = inlineScripts(html.replace(/\r/g, '')).map(s => ({ ...s, type: 'script' }))
+    .concat(modules.map(m => ({ code: m.code.replace(/\r/g, ''), line: 1, type: 'module', file: m.file })));
+  for (const s of sources) {
+    const p = parse(s.code, s.type);
+    if (p.error) {
+      return { error: { line: s.line + p.error.line - 1, message: s.file
+        ? `${s.file} does not parse: ${p.error.message}` : `${label}'s script does not parse: ${p.error.message}` } };
+    }
+    const add = (name, d) => { if (!decls.has(name)) decls.set(name, []); decls.get(name).push(s.file ? { ...d, file: s.file } : d); };
+    for (const top of p.ast.body) {
+      // `export function f` and `export const X` declare as the bare forms do.
+      const node = top.type === 'ExportNamedDeclaration' && top.declaration ? top.declaration : top;
       const line = s.line + node.loc.start.line - 1;
       if (node.type === 'FunctionDeclaration' && node.id) {
         add(node.id.name, { kind: 'function', node, text: src(s.code, node), line, code: s.code });
@@ -249,13 +286,14 @@ function arrayOfJoin(decl) {
  * markup, css, template, dataKeys, problems, plan } — `plan` is what
  * assemble() walks; `problems` are failures found while reading.
  */
-export function readPublisher(html) {
+export function readPublisher(html, { modules } = {}) {
   html = html.replace(/\r/g, '');
   const problems = [];
   const fail = (code, message) => problems.push({ code, message });
   // Names already failing LIST or CONST: not reported again under FREE or FORK.
   const broken = new Set();
-  const top = topLevel(html, '035');
+  if (!modules) modules = moduleSources(html);
+  const top = topLevel(html, '035', modules);
   const empty = { fns: [], consts: [], json: [], preamble: [], boot: [], state: [], markup: '', css: '', template: '',
     dataKeys: [], problems, broken, plan: null, decls: new Map() };
   if (top.error) { fail('PARSE', `line ${top.error.line}: ${top.error.message}`); return empty; }
@@ -333,8 +371,8 @@ export function readPublisher(html) {
     else if (!fd.length) {
       fail('LIST', ds.length ? `${name} is a top-level ${ds[0].kind}, not a function declaration (line ${ds[0].line}); .toString() of it would define nothing`
         : nested.has(name) ? `${name} is declared inside a block or function, so it is not a page global`
-          : `${name} is listed but has no top-level function declaration in 035's classic scripts`);
-    } else fns.push({ name, text: fd[0].text, line: fd[0].line });
+          : `${name} is listed but has no top-level function declaration in 035's classic scripts or the modules it imports`);
+    } else fns.push({ name, text: fd[0].text, line: fd[0].line, file: fd[0].file || PAGE_035 });
   }
 
   // Constants.
@@ -446,15 +484,16 @@ export function forkState(pub, html034) {
 
 /* ── the check ───────────────────────────────────────────────────────── */
 
-export function check({ root = ROOT, html035, html034, ledger } = {}) {
+export function check({ root = ROOT, html035, modules035, html034, ledger } = {}) {
   html035 = (html035 ?? fs.readFileSync(path.join(root, PAGE_035), 'utf8')).replace(/\r/g, '');
+  modules035 = modules035 ?? moduleSources(html035, { root });
   html034 = (html034 ?? fs.readFileSync(path.join(root, PAGE_034), 'utf8')).replace(/\r/g, '');
   ledger = ledger ?? JSON.parse(fs.readFileSync(path.join(root, LEDGER), 'utf8'));
   const failures = [];
   const notes = [];
   const fail = (code, message) => failures.push({ code, message });
 
-  const pub = readPublisher(html035);
+  const pub = readPublisher(html035, { modules: modules035 });
   failures.push(...pub.problems);
   // Not understood is the whole answer: nothing below can be judged on a
   // publisher this guard could not read.
@@ -608,7 +647,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     process.exit(r.failures.length ? 1 : 0);
   }
   if (args.includes('--list')) {
-    for (const f of r.pub.fns) console.log(`  function  ${f.name.padEnd(22)} line ${f.line}`);
+    for (const f of r.pub.fns) console.log(`  function  ${f.name.padEnd(22)} ${f.file}:${f.line}`);
     for (const c of r.pub.consts) console.log(`  const     ${c.name.padEnd(22)} line ${c.line} (.toString())`);
     for (const j of r.pub.json) console.log(`  value     ${j.name}`);
     console.log(`  state     ${r.pub.state.map(s => s.name).join(', ')}`);

@@ -188,8 +188,10 @@ every edit. The deduplication work that established them is summarised in
   (034 is its own page for good, Devon 2026-10-07; a fix to a `same` piece goes into both
   files). Its browser half, `npm run test:schedule-publish`, diffs a pinned-clock publish
   against the committed `baseline-northwind.html`; a change you meant is `--update` and the
-  baseline's diff in the same commit. Moving a published function into a module fails
-  LIST until `readPublisher()` learns to follow modules (Path 11 P2). It runs in CI.
+  baseline's diff in the same commit. Since v323 the publisher is a module,
+  `Tools/schedule-visualizer/sv-browser.js`, and the guard reads every module 035's module
+  script imports (`moduleSources()`); its exports are copied onto `window`, which is the
+  global surface the old classic script had. It runs in CI.
 - **`npm run lint`** (ESLint, Path 2 P5) covers `_shared/*.js`, the per-tool
   modules, `sw.js`, the tooling and every suite — not inline `<script>` in the
   tool pages. Rules that matter: `no-undef`, `no-unused-vars`, `eqeqeq`. A new
