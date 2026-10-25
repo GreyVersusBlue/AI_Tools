@@ -1937,6 +1937,23 @@
           </div>
         </div>
 
+        <!-- Path 11 P6: what a published Schedule Browser copy can do beyond its default view -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">
+            <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            Publishing
+          </h3>
+          <div class="form-row">
+            <label style="display:flex;align-items:flex-start;gap:var(--sp-2);cursor:pointer;user-select:none;">
+              <input type="checkbox" id="setting-publish-can-open" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent);" />
+              <span>
+                <span class="form-label" style="display:block;">Published copies can open a newer schedule file</span>
+                <span class="form-hint" style="display:block;">Adds an "Open a newer schedule…" button to the files Publish for Teachers makes from now on. A teacher can then open a file you publish later (or another building's) in the copy they already have, until they close it. Off, a published copy looks exactly as before. Copies already sent do not change.</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
         <!-- R59: Subjects / Departments editor -->
         <div class="settings-section">
           <h3 class="settings-section-title">
@@ -3840,6 +3857,7 @@ const els = {
   elevatorWaitInput: document.getElementById('setting-elevator-wait'),          // Path 11 P3
   evacPlanInput:    document.getElementById('setting-evac-no-step-free'),       // Path 11 P4
   lockdownNoteInput: document.getElementById('setting-lockdown-note'),         // Path 11 P4
+  publishCanOpenInput: document.getElementById('setting-publish-can-open'),    // Path 11 P6
   modPreviewChips:  document.getElementById('mod-preview-chips'),
   headerSchoolName: document.getElementById('header-school-name'),
   headerModCount:   document.getElementById('header-mod-count'),
@@ -3877,6 +3895,7 @@ function populateSettingsForm() {
   if (els.elevatorWaitInput) els.elevatorWaitInput.value = svGraph().settingsElevatorWait(AppState.settings);
   if (els.evacPlanInput) els.evacPlanInput.value = typeof AppState.settings.evacNoStepFreePlan === 'string' ? AppState.settings.evacNoStepFreePlan : '';
   if (els.lockdownNoteInput) els.lockdownNoteInput.value = typeof AppState.settings.lockdownNote === 'string' ? AppState.settings.lockdownNote : '';
+  if (els.publishCanOpenInput) els.publishCanOpenInput.checked = AppState.settings.publishCanOpen === true;
   renderBellScheduleEditor();
   renderSubjectsEditor();
 
@@ -4046,6 +4065,11 @@ els.btnSave.addEventListener('click', () => {
     if (note) AppState.settings.lockdownNote = note;
     else delete AppState.settings.lockdownNote;
     els.lockdownNoteInput.value = note;
+  }
+  // Path 11 P6: off removes the key, so a published copy is unchanged by default.
+  if (els.publishCanOpenInput) {
+    if (els.publishCanOpenInput.checked) AppState.settings.publishCanOpen = true;
+    else delete AppState.settings.publishCanOpen;
   }
   saveSettings();
   saveLastSavedTime();

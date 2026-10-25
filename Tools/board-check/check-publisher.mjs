@@ -42,7 +42,8 @@
 //   DATA     the publisher's data keys are not the contract's, its `format`
 //            is not the contract's FORMAT, PUBLISHED_DATA is not written with
 //            every < escaped (a name holding a closing script tag would end
-//            the published script), or 034's embedded data has a contract
+//            the published script), the published reader's BR_READS_FORMAT
+//            (Path 11 P6) is not FORMAT, or 034's embedded data has a contract
 //            error at its own format
 //   FORK     034's copy of a published piece against the ledger
 //            (Tools/schedule-visualizer/test/publisher-ledger.json): a `same` piece that
@@ -394,7 +395,7 @@ export function readPublisher(html, { modules } = {}) {
       const v = ds.length === 1 ? literalValue(ds[0].init, ds[0].code) : { ok: false };
       if (c.name !== c.from) fail('CONST', `'const ${c.name} = ' + … ${c.from}: the value would publish under another name`);
       if (!v.ok) { fail('SHAPE', `publisher not understood: ${c.from} is not one top-level literal`); continue; }
-      json.push({ name: c.name, from: c.from });
+      json.push({ name: c.name, from: c.from, value: v.value });
       constsPlan.push({ ...c, value: v.value });
     } else fail('SHAPE', `publisher not understood: \`consts\` holds a ${c.kind}`);
   }
@@ -593,6 +594,10 @@ export function check({ root = ROOT, html035, modules035, html034, ledger } = {}
   } else if (pub.dataFormat !== FORMAT) {
     fail('DATA', `the publisher writes format ${JSON.stringify(pub.dataFormat)}; the contract's FORMAT is ${FORMAT}`);
   }
+  // Path 11 P6: a published file opens other files' data, up to BR_READS_FORMAT.
+  const reads = pub.json.find(j => j.name === 'BR_READS_FORMAT');
+  if (!reads) fail('DATA', 'the publisher writes no BR_READS_FORMAT: its reader would open data of any format');
+  else if (reads.value !== FORMAT) fail('DATA', `the published reader opens data up to format ${JSON.stringify(reads.value)}; the contract's FORMAT is ${FORMAT}`);
   let d034 = null;
   try { d034 = readEmbedded(html034); } catch (e) { fail('DATA', `034's PUBLISHED_DATA: ${e.message}`); }
   if (d034) {

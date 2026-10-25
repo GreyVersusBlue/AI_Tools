@@ -31,6 +31,8 @@
 // own section of the baseline. A published file it opens is written under
 // os.tmpdir() and removed after.
 
+/* global brPickScheduleFile -- a published file's own function, called inside page.evaluate() */
+/* global AppState -- 035's state, read inside page.evaluate() */
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -135,6 +137,20 @@ async function openPublished(browser, html, { at, coverage = false } = {}) {
 
 const viewText = page => page.evaluate(() => document.getElementById('br-view').innerText);
 
+/* Path 11 P6: files to open, in a scratch folder the run deletes at the end. */
+const FILES = fs.mkdtempSync(path.join(os.tmpdir(), 'sv-open-'));
+process.on('exit', () => fs.rmSync(FILES, { recursive: true, force: true }));
+function dataFile(content, name) {
+  const f = path.join(FILES, name);
+  fs.writeFileSync(f, typeof content === 'string' ? content : JSON.stringify(content));
+  return f;
+}
+/** Press what opens the file picker (`press` returns a promise) and pick `file`. */
+async function openFile(page, press, file) {
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), press()]);
+  await chooser.setFiles(file);
+}
+
 /** Pick a teacher the way a person does: type, arrow down, Enter. */
 async function pickTeacher(page, name) {
   await page.click('#br-search');
@@ -186,7 +202,7 @@ async function increment2(run, pub, html) {
   //    clock 90 days past publishing so the out-of-date banner shows too.
   {
     const pieces = pub.fns.map(f => f.name).concat(pub.consts.map(c => c.name));
-    ok(pieces.length === 35, `35 published pieces to cover (got ${pieces.length})`);
+    ok(pieces.length === 40, `40 published pieces to cover (got ${pieces.length})`);
     const o = await openPublished(browser, html, { at: '2026-04-15T17:00:00Z', coverage: true });
     const p = o.page;
     try {
@@ -211,6 +227,14 @@ async function increment2(run, pub, html) {
       await p.click('#br-view .lnk');                         // a teacher in the group
       await p.focus('#br-mTeacher');
       for (const k of ['ArrowRight', 'ArrowLeft', 'End', 'Home', 'ArrowDown', 'ArrowUp']) await p.keyboard.press(k);
+      // Path 11 P6: the opener is in every file, its button hidden unless the
+      // publisher ticked the box, so it is driven by name here and by its
+      // button in section 6.
+      const other = { ...data, school: 'Southgate Middle' };
+      await openFile(p, () => p.evaluate(() => brPickScheduleFile()), dataFile(other, 'southgate.json'));
+      await p.waitForFunction(() => document.getElementById('br-mast-school').textContent === 'Southgate Middle');
+      await p.click('#br-open-back');
+      await p.waitForFunction(() => document.getElementById('br-open-note').hidden);
       const cov = await p.coverage.stopJSCoverage();
       const ran = new Map();
       for (const entry of cov) for (const f of entry.functions) {
@@ -301,6 +325,114 @@ async function increment2(run, pub, html) {
     const again = await republish(run.page);
     ok(compare(base, stripFonts(again, cssStart)).length === 0, 'and 035 as it is, loaded again, matches the baseline');
   }
+
+  await increment6(run, pub, html);
+}
+
+/* Path 11 P6 increment 1: a published copy opens a newer schedule file, but
+   only one whose publisher ticked Settings → Publishing. */
+async function increment6(run, pub, html) {
+  const browser = run.browser;
+  const data = readEmbedded(html);
+  const note = page => page.evaluate(() => ({ hidden: document.getElementById('br-open-note').hidden,
+    text: document.getElementById('br-open-text').textContent, back: !document.getElementById('br-open-back').hidden,
+    school: document.getElementById('br-mast-school').textContent, initial: document.getElementById('br-mast-initial').textContent,
+    title: document.title, stale: document.getElementById('br-stale-banner').classList.contains('show'),
+    staleText: document.getElementById('br-stale-banner').textContent }));
+
+  // The default publish: the button and the note are there and hidden.
+  {
+    const o = await openPublished(browser, html, { at: NOW });
+    try {
+      const shown = await o.page.evaluate(() => ({ btn: document.getElementById('br-open-btn').hidden,
+        input: document.getElementById('br-open-file').hidden, note: document.getElementById('br-open-note').hidden,
+        visible: !!document.getElementById('br-open-btn').offsetParent }));
+      ok(shown.btn && shown.input && shown.note && !shown.visible, 'a default publish shows no opener and no note: ' + JSON.stringify(shown));
+    } finally { await o.close(); }
+  }
+
+  // Ticked: the same file but for the button's hidden attribute.
+  const project = fixtureProject();
+  project.settings.publishCanOpen = true;
+  const h = await republish(run.page, { project });
+  const cssStart = pub.css.split('\n')[0];
+  const d = compare(stripFonts(html, cssStart), stripFonts(h, cssStart));
+  ok(JSON.stringify(d.map(x => x.section)) === '["markup"]' && /br-open-btn/.test(d[0].now) && !/ hidden/.test(d[0].now),
+    'ticking the box changes only the button\'s hidden attribute: ' + JSON.stringify(d));
+  const saved = await run.page.evaluate(() => {
+    const el = document.getElementById('setting-publish-can-open');
+    return { box: !!el, key: AppState.settings.publishCanOpen };
+  });
+  ok(saved.box && saved.key === true, 'Settings → Publishing has the box, and the project carries the setting: ' + JSON.stringify(saved));
+
+  const o = await openPublished(browser, h, { at: NOW });
+  const p = o.page;
+  try {
+    ok(await p.isVisible('#br-open-btn'), 'the ticked copy shows "Open a newer schedule…"');
+    const before = await note(p);
+    const press = () => p.click('#br-open-btn');
+
+    // Refusals: the schedule showing does not change.
+    const refused = [
+      ['a format above the reader', dataFile({ ...data, format: 2 }, 'newer.json'), 'newer version'],
+      ['a file that is no schedule', dataFile('<p>hello</p>', 'hello.html'), 'not a schedule browser'],
+      ['a page with two data lines', dataFile('const PUBLISHED_DATA = {};\nconst PUBLISHED_DATA = {};\n', 'two.html'), 'not a schedule browser'],
+      ['data that does not parse', dataFile('{"school":', 'broken.json'), 'could not be read'],
+      ['a teacher with no B day', dataFile({ ...data, teachers: { ...data.teachers, Fernwood: { ...data.teachers.Fernwood, B: null } } }, 'nob.json'), 'teacher\'s day'],
+      ['a name holding markup', dataFile({ ...data, teachers: { ...data.teachers, '<img src=x onerror=alert(1)>': data.teachers.Fernwood } }, 'markup.json'), '< or >'],
+      ['no mod count', dataFile({ ...data, modCount: 0 }, 'mods.json'), 'number of mods'],
+    ];
+    for (const [label, file, want] of refused) {
+      await openFile(p, press, file);
+      await p.waitForFunction(() => !document.getElementById('br-open-note').hidden && document.getElementById('br-open-text').textContent);
+      const n = await note(p);
+      ok(n.text.includes(want) && !n.back && n.school === before.school && n.title === before.title,
+        `refused, ${label}: "${n.text.slice(0, 90)}"`);
+      await p.evaluate(() => { document.getElementById('br-open-note').hidden = true; document.getElementById('br-open-text').textContent = ''; });
+    }
+
+    // Another published file: an older one from another school.
+    const southgate = fixtureProject();
+    southgate.settings.schoolName = 'Southgate Middle';
+    for (const f of southgate.blueprint && southgate.blueprint.settings ? [southgate.blueprint.settings] : []) f.schoolName = 'Southgate Middle';
+    const sh = await republish(run.page, { project: southgate });
+    const line = sh.split('\n').find(l => l.startsWith('const PUBLISHED_DATA = '));
+    const shOld = sh.replace(line, () => line.replace('"publishedOn":"2026-01-15"', '"publishedOn":"2025-08-01"'));
+    ok(shOld !== sh, 'the Southgate file is dated 2025-08-01');
+    await pickTeacher(p, 'Fernwood');
+    await openFile(p, press, dataFile(shOld, 'Schedule_Browser_Southgate.html'));
+    await p.waitForFunction(() => document.getElementById('br-mast-school').textContent === 'Southgate Middle');
+    let n = await note(p);
+    ok(n.title === 'Southgate Middle — Schedule Browser' && n.initial === 'S' && !n.hidden && n.back
+      && n.text.includes('Showing Southgate Middle, published August 1, 2025, from the file Schedule_Browser_Southgate.html'),
+      'a published file opens: masthead, title and the note: ' + JSON.stringify(n));
+    ok(n.stale && n.staleText.includes('published on August 1, 2025'), 'its own date drives the stale banner: ' + n.staleText.slice(0, 80));
+    const reset = await p.evaluate(() => ({ view: document.getElementById('br-view').classList.contains('show'),
+      empty: document.getElementById('br-empty').style.display, search: document.getElementById('br-search').value,
+      tab: document.getElementById('br-mTeacher').getAttribute('aria-selected') }));
+    ok(!reset.view && reset.empty === '' && reset.search === '' && reset.tab === 'true', 'and the view goes back to By Teacher, empty: ' + JSON.stringify(reset));
+    await pickTeacher(p, 'Fernwood');
+    const southDay = await viewText(p);
+    await p.click('#br-mMap');
+    await p.waitForSelector('#br-view svg');
+
+    // Back to the file's own schedule.
+    await p.click('#br-open-back');
+    await p.waitForFunction(() => document.getElementById('br-open-note').hidden);
+    n = await note(p);
+    ok(n.school === before.school && n.title === before.title && !n.back && !n.stale, 'Back shows the file\'s own schedule again: ' + JSON.stringify(n));
+    await pickTeacher(p, 'Fernwood');
+    const ownDay = await viewText(p);
+    ok(ownDay === southDay && ownDay.includes('Class 7-1'), 'the same teacher\'s day in both (one fixture, two names)');
+
+    // A format 0 data file (v61's Northwind) and a bare .json both open.
+    const f0 = fs.readFileSync(path.join(HERE, 'fixture-published-format0.json'), 'utf8');
+    await openFile(p, press, dataFile(f0, 'northwind-v61.json'));
+    await p.waitForFunction(() => !document.getElementById('br-open-back').hidden);
+    await pickTeacher(p, 'Fernwood');
+    ok(await viewText(p) === ownDay, 'a format 0 data file shows the same day');
+    ok(p.__errs.length === 0, 'no page errors while opening files: ' + JSON.stringify(p.__errs));
+  } finally { await o.close(); }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

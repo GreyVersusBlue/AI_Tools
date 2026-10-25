@@ -150,6 +150,11 @@
 #app-browser .stale-banner{display:none;margin:0 0 16px;padding:14px 20px;border-radius:0 0 10px 10px;
   background:var(--br-warn-bg);border:2px solid var(--br-warn-line);border-top:none;color:var(--br-warn-ink);font-size:14.5px;font-weight:700;line-height:1.5;text-align:center}
 #app-browser .stale-banner.show{display:block}
+/* Path 11 P6: which file a published copy is showing, when it is not its own */
+#app-browser .br-open-note{margin:0 0 16px;padding:12px 20px;border:1px solid var(--br-gold-line);border-radius:10px;
+  background:var(--br-card);color:var(--br-forest-ink);font-size:14px;line-height:1.5;text-align:center}
+#app-browser .br-open-note .lnk{font:inherit;font-weight:700;background:none;border:none;padding:0;margin-left:6px;
+  color:var(--br-forest-ink);text-decoration:underline;cursor:pointer}
 #app-browser .stale-banner::before{content:"⚠ "}
 #app-browser .stage{padding:34px 34px 30px}
 #app-browser .br-empty{text-align:center;color:var(--br-muted);padding:40px 20px}
@@ -482,7 +487,11 @@ html,body{margin:0;padding:0}
           </div>
         </div>
         <button class="btn-print" onclick="window.print()">Print / Save PDF</button>
+        <button class="btn-print" id="br-open-btn" type="button" onclick="brPickScheduleFile()" hidden>Open a newer schedule…</button>
+        <input id="br-open-file" type="file" accept=".html,.htm,.json,text/html,application/json" hidden onchange="brOpenScheduleFile(this)">
       </div>
+      <div id="br-open-note" class="br-open-note" role="status" hidden><span id="br-open-text"></span>
+        <button class="lnk" id="br-open-back" type="button" hidden onclick="brUseSchedule(PUBLISHED_DATA, '')">Back to this file's own schedule</button></div>
       <div class="stage" id="br-stage" role="tabpanel" tabindex="0" aria-labelledby="br-mTeacher">
         <div id="br-empty" class="br-empty">
           <div class="big" id="br-empty-title">Pick a name to see a schedule.</div>
@@ -547,6 +556,7 @@ const escJsAttr = function escJsAttr(str) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 };
 const BR_STALE_DAYS = 60;
+const BR_READS_FORMAT = 1;
 let BR_TEACHERS = PUBLISHED_DATA.teachers, BR_SECTIONS = PUBLISHED_DATA.sections,
     BR_ROOM2TEACHER = PUBLISHED_DATA.room2teacher, BR_MODCOUNT = PUBLISHED_DATA.modCount,
     BR_MOD_LABEL = PUBLISHED_DATA.modLabel;
@@ -554,6 +564,7 @@ let BR_GROUPROOMS = PUBLISHED_DATA.groupRooms || {}, BR_BELL = PUBLISHED_DATA.be
     BR_GEOM = PUBLISHED_DATA.geometry;
 let brMode = 'teacher', brCurrent = null, brActiveIdx = -1, brOpts = [];
 let brGrpDay = 'A', brMapFloorIdx = 0;
+let brData = PUBLISHED_DATA;
 function brBuildOpts() {
   if (brMode === 'teacher') {
     brOpts = Object.keys(BR_TEACHERS).map(n => ({
@@ -934,8 +945,9 @@ function brFormatDateLong(d) {
 function brCheckStaleness() {
   const el = document.getElementById('br-stale-banner');
   if (!el) return;
-  if (typeof PUBLISHED_DATA === 'undefined') return;
-  const raw = PUBLISHED_DATA && PUBLISHED_DATA.publishedOn;
+  el.classList.remove('show');
+  el.textContent = '';
+  const raw = brData && brData.publishedOn;
   if (!raw) return;
   const pub = new Date(/^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw + 'T00:00:00' : raw);
   if (isNaN(pub.getTime())) return;
@@ -944,6 +956,100 @@ function brCheckStaleness() {
   el.textContent = 'This schedule was published on ' + brFormatDateLong(pub) + ' — ' + days + ' days ago. '
     + 'It may be out of date — check with the office or ask for a fresh export if anything looks off.';
   el.classList.add('show');
+}
+
+function brCheckSchedule(data) {
+  const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  const strs = a => Array.isArray(a) && a.every(x => typeof x === 'string');
+  if (!isObj(data)) return 'it holds no schedule';
+  if ('format' in data && !(Number.isInteger(data.format) && data.format >= 0)) return 'its format is not a number';
+  if (typeof data.school !== 'string') return 'it has no school name';
+  if (!Number.isInteger(data.modCount) || data.modCount < 1) return 'its number of mods is not a whole number';
+  for (const k of ['dept', 'teachers', 'sections', 'room2teacher']) {
+    if (!isObj(data[k])) return 'it has no ' + k + ' table';
+  }
+  for (const k of ['order', 'groupRooms']) {
+    if (k in data && !isObj(data[k])) return 'its ' + k + ' table is not a table';
+  }
+  if ('modLabel' in data && typeof data.modLabel !== 'string') return 'its mod label is not text';
+  if (data.bell != null && !(isObj(data.bell) && strs(data.bell.A) && strs(data.bell.B))) return 'its bell times are not lists of text';
+  if (data.geometry != null && !(isObj(data.geometry) && Array.isArray(data.geometry.floors))) return 'its building map has no floors';
+  for (const n of Object.keys(data.teachers)) {
+    const t = data.teachers[n];
+    if (!isObj(t) || !strs(t.A) || !strs(t.B) || !strs(t.sec) || ('co' in t && !strs(t.co))) return 'a teacher\'s day is not lists of text';
+  }
+  for (const g of Object.keys(data.sections)) {
+    if (!strs(data.sections[g])) return 'a group\'s teachers are not a list of names';
+  }
+  if (/[<>]/.test(JSON.stringify(data))) return 'some of its text holds a < or > character';
+  return '';
+}
+
+function brReadSchedule(text) {
+  const raw = String(text == null ? '' : text);
+  let json = raw.trim().charAt(0) === '{' ? raw.trim() : '';
+  if (!json) {
+    const lines = raw.replace(/\r/g, '').split('\n').filter(l => l.indexOf('const PUBLISHED' + '_DATA = ') === 0);
+    if (lines.length === 1) json = lines[0].slice(('const PUBLISHED' + '_DATA = ').length).replace(/;\s*$/, '');
+  }
+  if (!json) return { error: 'That file is not a schedule browser this tool published, or its data.' };
+  let data;
+  try { data = JSON.parse(json); } catch (e) { return { error: 'That file\'s schedule could not be read.' }; }
+  if (data && Number.isInteger(data.format) && data.format > BR_READS_FORMAT) {
+    return { error: 'That schedule was made by a newer version of the School Layout Visualizer than this copy can read. Ask for a new copy of the schedule browser.' };
+  }
+  const why = brCheckSchedule(data);
+  if (why) return { error: 'That file could not be opened: ' + why + '.' };
+  return { data };
+}
+
+function brUseSchedule(data, from) {
+  brData = data;
+  BR_DEPT = data.dept; BR_ORDER = data.order || {};
+  BR_TEACHERS = data.teachers; BR_SECTIONS = data.sections; BR_ROOM2TEACHER = data.room2teacher;
+  BR_MODCOUNT = data.modCount; BR_MOD_LABEL = typeof data.modLabel === 'string' ? data.modLabel : 'Mod';
+  BR_GROUPROOMS = data.groupRooms || {}; BR_BELL = data.bell || null; BR_GEOM = data.geometry || null;
+  brGrpDay = 'A'; brMapFloorIdx = 0;
+  const school = data.school || 'Schedule Browser';
+  document.getElementById('br-mast-school').textContent = school;
+  document.getElementById('br-mast-initial').textContent = school.charAt(0) || 'S';
+  document.title = school + ' — Schedule Browser';
+  brCheckStaleness();
+  brSetMode('teacher');
+  const none = !Object.keys(BR_TEACHERS).length;
+  document.getElementById('br-empty-title').textContent = none ? 'No schedule data in this file.' : 'Pick a name to see a schedule.';
+  const sub = document.getElementById('br-empty-sub');
+  if (none) sub.textContent = 'Ask the publisher to re-export after adding rooms and groups.';
+  else sub.innerHTML = 'Or switch to <b>By Student Group</b> to see every teacher a class shares.';
+  const note = document.getElementById('br-open-note');
+  const back = document.getElementById('br-open-back');
+  if (from) {
+    const pub = /^\d{4}-\d{2}-\d{2}$/.test(data.publishedOn || '') ? brFormatDateLong(new Date(data.publishedOn + 'T00:00:00')) : 'on a date it does not give';
+    document.getElementById('br-open-text').textContent = 'Showing ' + school + ', published ' + pub + ', from the file ' + from + '. Closing this page forgets it.';
+    note.hidden = false; back.hidden = false;
+  } else {
+    note.hidden = true; back.hidden = true;
+  }
+}
+
+function brPickScheduleFile() {
+  const input = document.getElementById('br-open-file');
+  input.value = '';
+  input.click();
+}
+
+function brOpenScheduleFile(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const say = msg => {
+    document.getElementById('br-open-text').textContent = msg;
+    document.getElementById('br-open-note').hidden = false;
+  };
+  file.text().then(text => {
+    const r = brReadSchedule(text);
+    if (r.error) { say(r.error); return; }
+    brUseSchedule(r.data, file.name || 'you opened');
+  }, () => say('That file could not be read.'));
 }
 brWireDocClick();
 brWireTabKeys();

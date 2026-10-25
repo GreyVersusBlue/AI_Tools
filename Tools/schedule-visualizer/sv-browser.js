@@ -24,7 +24,6 @@
 // that is after the page is parsed and before DOMContentLoaded.
 
 /* global AppState, getSubjects, formatModTime, escHtml, escJsAttr, TOOL_VERSION, showToast -- 035's classic-script globals, read at call time */
-/* global PUBLISHED_DATA -- defined only in a published file; brCheckStaleness() tests typeof first */
 
 /* ===== ROUND 41: SCHEDULE BROWSER JS ===== */
 
@@ -174,6 +173,11 @@ const BR_CSS = `#app-browser {
 #app-browser .stale-banner{display:none;margin:0 0 16px;padding:14px 20px;border-radius:0 0 10px 10px;
   background:var(--br-warn-bg);border:2px solid var(--br-warn-line);border-top:none;color:var(--br-warn-ink);font-size:14.5px;font-weight:700;line-height:1.5;text-align:center}
 #app-browser .stale-banner.show{display:block}
+/* Path 11 P6: which file a published copy is showing, when it is not its own */
+#app-browser .br-open-note{margin:0 0 16px;padding:12px 20px;border:1px solid var(--br-gold-line);border-radius:10px;
+  background:var(--br-card);color:var(--br-forest-ink);font-size:14px;line-height:1.5;text-align:center}
+#app-browser .br-open-note .lnk{font:inherit;font-weight:700;background:none;border:none;padding:0;margin-left:6px;
+  color:var(--br-forest-ink);text-decoration:underline;cursor:pointer}
 #app-browser .stale-banner::before{content:"⚠ "}
 #app-browser .stage{padding:34px 34px 30px}
 #app-browser .br-empty{text-align:center;color:var(--br-muted);padding:40px 20px}
@@ -597,6 +601,13 @@ let BR_GROUPROOMS = {}, BR_BELL = null, BR_GEOM = null;
 let brMode = 'teacher', brCurrent = null, brActiveIdx = -1, brOpts = [];
 let brMapFloor = 'f2';
 let brGrpDay = 'A', brMapFloorIdx = 0;
+/* Path 11 P6: the schedule a published file is showing. The preamble starts it
+   at PUBLISHED_DATA; brUseSchedule() changes it when someone opens a newer
+   file. Never set in the live app, where the stale banner has nothing to read. */
+let brData = null;
+/* The newest data format a published reader opens (brReadSchedule refuses a
+   higher one). check:publisher holds it equal to the contract's FORMAT. */
+const BR_READS_FORMAT = 1;
 
 function brDeriveScheduleData(settings, blueprint, groups) {
   brSyncDeptFromSettings();   // R59: dept palette follows settings.subjects
@@ -797,8 +808,9 @@ function brFormatDateLong(d) {
 function brCheckStaleness() {
   const el = document.getElementById('br-stale-banner');
   if (!el) return;
-  if (typeof PUBLISHED_DATA === 'undefined') return;
-  const raw = PUBLISHED_DATA && PUBLISHED_DATA.publishedOn;
+  el.classList.remove('show');
+  el.textContent = '';
+  const raw = brData && brData.publishedOn;
   if (!raw) return;
   const pub = new Date(/^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw + 'T00:00:00' : raw);
   if (isNaN(pub.getTime())) return;
@@ -807,6 +819,114 @@ function brCheckStaleness() {
   el.textContent = 'This schedule was published on ' + brFormatDateLong(pub) + ' — ' + days + ' days ago. '
     + 'It may be out of date — check with the office or ask for a fresh export if anything looks off.';
   el.classList.add('show');
+}
+
+/* === Path 11 P6 increment 1: open a newer schedule file ===
+   A published copy whose publisher ticked Settings → "Published copies can open
+   a newer schedule file" shows "Open a newer schedule…". It reads the data out
+   of another published file (its one PUBLISHED_DATA line) or a bare data .json,
+   refuses a format newer than BR_READS_FORMAT, checks the shapes the views
+   read, and swaps every BR_* table. Nothing is stored: closing the tab goes
+   back to the file's own schedule, and so does the Back button. */
+
+/* '' when data is a schedule this reader can show, else why not. Names no
+   value from the file. A loaded file is refused if any of its text holds < or
+   >: the views write names into markup, and a schedule never needs either. */
+function brCheckSchedule(data) {
+  const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  const strs = a => Array.isArray(a) && a.every(x => typeof x === 'string');
+  if (!isObj(data)) return 'it holds no schedule';
+  if ('format' in data && !(Number.isInteger(data.format) && data.format >= 0)) return 'its format is not a number';
+  if (typeof data.school !== 'string') return 'it has no school name';
+  if (!Number.isInteger(data.modCount) || data.modCount < 1) return 'its number of mods is not a whole number';
+  for (const k of ['dept', 'teachers', 'sections', 'room2teacher']) {
+    if (!isObj(data[k])) return 'it has no ' + k + ' table';
+  }
+  for (const k of ['order', 'groupRooms']) {
+    if (k in data && !isObj(data[k])) return 'its ' + k + ' table is not a table';
+  }
+  if ('modLabel' in data && typeof data.modLabel !== 'string') return 'its mod label is not text';
+  if (data.bell != null && !(isObj(data.bell) && strs(data.bell.A) && strs(data.bell.B))) return 'its bell times are not lists of text';
+  if (data.geometry != null && !(isObj(data.geometry) && Array.isArray(data.geometry.floors))) return 'its building map has no floors';
+  for (const n of Object.keys(data.teachers)) {
+    const t = data.teachers[n];
+    if (!isObj(t) || !strs(t.A) || !strs(t.B) || !strs(t.sec) || ('co' in t && !strs(t.co))) return 'a teacher\'s day is not lists of text';
+  }
+  for (const g of Object.keys(data.sections)) {
+    if (!strs(data.sections[g])) return 'a group\'s teachers are not a list of names';
+  }
+  if (/[<>]/.test(JSON.stringify(data))) return 'some of its text holds a < or > character';
+  return '';
+}
+
+/* { data } or { error } from the text of a file someone picked. */
+function brReadSchedule(text) {
+  const raw = String(text == null ? '' : text);
+  let json = raw.trim().charAt(0) === '{' ? raw.trim() : '';
+  if (!json) {
+    const lines = raw.replace(/\r/g, '').split('\n').filter(l => l.indexOf('const PUBLISHED' + '_DATA = ') === 0);
+    if (lines.length === 1) json = lines[0].slice(('const PUBLISHED' + '_DATA = ').length).replace(/;\s*$/, '');
+  }
+  if (!json) return { error: 'That file is not a schedule browser this tool published, or its data.' };
+  let data;
+  try { data = JSON.parse(json); } catch (e) { return { error: 'That file\'s schedule could not be read.' }; }
+  if (data && Number.isInteger(data.format) && data.format > BR_READS_FORMAT) {
+    return { error: 'That schedule was made by a newer version of the School Layout Visualizer than this copy can read. Ask for a new copy of the schedule browser.' };
+  }
+  const why = brCheckSchedule(data);
+  if (why) return { error: 'That file could not be opened: ' + why + '.' };
+  return { data };
+}
+
+/* Show data in place of the schedule showing. from: the file's name, or ''
+   for this file's own schedule. */
+function brUseSchedule(data, from) {
+  brData = data;
+  BR_DEPT = data.dept; BR_ORDER = data.order || {};
+  BR_TEACHERS = data.teachers; BR_SECTIONS = data.sections; BR_ROOM2TEACHER = data.room2teacher;
+  BR_MODCOUNT = data.modCount; BR_MOD_LABEL = typeof data.modLabel === 'string' ? data.modLabel : 'Mod';
+  BR_GROUPROOMS = data.groupRooms || {}; BR_BELL = data.bell || null; BR_GEOM = data.geometry || null;
+  brGrpDay = 'A'; brMapFloorIdx = 0;
+  const school = data.school || 'Schedule Browser';
+  document.getElementById('br-mast-school').textContent = school;
+  document.getElementById('br-mast-initial').textContent = school.charAt(0) || 'S';
+  document.title = school + ' — Schedule Browser';
+  brCheckStaleness();
+  brSetMode('teacher');
+  const none = !Object.keys(BR_TEACHERS).length;
+  document.getElementById('br-empty-title').textContent = none ? 'No schedule data in this file.' : 'Pick a name to see a schedule.';
+  const sub = document.getElementById('br-empty-sub');
+  if (none) sub.textContent = 'Ask the publisher to re-export after adding rooms and groups.';
+  else sub.innerHTML = 'Or switch to <b>By Student Group</b> to see every teacher a class shares.';
+  const note = document.getElementById('br-open-note');
+  const back = document.getElementById('br-open-back');
+  if (from) {
+    const pub = /^\d{4}-\d{2}-\d{2}$/.test(data.publishedOn || '') ? brFormatDateLong(new Date(data.publishedOn + 'T00:00:00')) : 'on a date it does not give';
+    document.getElementById('br-open-text').textContent = 'Showing ' + school + ', published ' + pub + ', from the file ' + from + '. Closing this page forgets it.';
+    note.hidden = false; back.hidden = false;
+  } else {
+    note.hidden = true; back.hidden = true;
+  }
+}
+
+function brPickScheduleFile() {
+  const input = document.getElementById('br-open-file');
+  input.value = '';
+  input.click();
+}
+
+function brOpenScheduleFile(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const say = msg => {
+    document.getElementById('br-open-text').textContent = msg;
+    document.getElementById('br-open-note').hidden = false;
+  };
+  file.text().then(text => {
+    const r = brReadSchedule(text);
+    if (r.error) { say(r.error); return; }
+    brUseSchedule(r.data, file.name || 'you opened');
+  }, () => say('That file could not be read.'));
 }
 
 /* === Search menu === */
@@ -1332,12 +1452,16 @@ function brPublishFnList() {
     brDayRows, brRenderTeacher, brRenderGroup, brOverviewHTML,
     brGeoFindRoom, brGeoFloorSVG, brMiniMapHTML, brGroupMapHTML, brSetGrpDay,
     brOpenMapFloorIdx, brSetMapFloorIdx, brRenderMap, brRenderMapDyn,
-    brFormatDateLong, brCheckStaleness
+    brFormatDateLong, brCheckStaleness,
+    brCheckSchedule, brReadSchedule, brUseSchedule, brPickScheduleFile, brOpenScheduleFile
   ];
 }
 
-function brBuildPublishedMarkup(school, dateStr) {
+/* opts.canOpen (Settings → Publishing, Path 11 P6): show "Open a newer
+   schedule…". Off, the button is in the file but hidden. */
+function brBuildPublishedMarkup(school, dateStr, opts) {
   const esc = brEscHTML(school);
+  const canOpen = !!(opts && opts.canOpen);
   return `<div id="app-browser">
   <div class="br-wrap">
     <header class="mast">
@@ -1364,7 +1488,11 @@ function brBuildPublishedMarkup(school, dateStr) {
           </div>
         </div>
         <button class="btn-print" onclick="window.print()">Print / Save PDF</button>
+        <button class="btn-print" id="br-open-btn" type="button" onclick="brPickScheduleFile()"${canOpen ? '' : ' hidden'}>Open a newer schedule…</button>
+        <input id="br-open-file" type="file" accept=".html,.htm,.json,text/html,application/json" hidden onchange="brOpenScheduleFile(this)">
       </div>
+      <div id="br-open-note" class="br-open-note" role="status" hidden><span id="br-open-text"></span>
+        <button class="lnk" id="br-open-back" type="button" hidden onclick="brUseSchedule(PUBLISHED_DATA, '')">Back to this file's own schedule</button></div>
       <div class="stage" id="br-stage" role="tabpanel" tabindex="0" aria-labelledby="br-mTeacher">
         <div id="br-empty" class="br-empty">
           <div class="big" id="br-empty-title">Pick a name to see a schedule.</div>
@@ -1422,7 +1550,8 @@ function brBuildPublishedHTML() {
        missing (see BACKLOG.md / HISTORY.md, Round 7). */
     'const escHtml = '   + escHtml.toString()   + ';',
     'const escJsAttr = ' + escJsAttr.toString() + ';',
-    'const BR_STALE_DAYS = ' + BR_STALE_DAYS + ';'
+    'const BR_STALE_DAYS = ' + BR_STALE_DAYS + ';',
+    'const BR_READS_FORMAT = ' + BR_READS_FORMAT + ';'
   ].join('\n');
 
   const js = [
@@ -1440,6 +1569,7 @@ function brBuildPublishedHTML() {
     '    BR_GEOM = PUBLISHED_DATA.geometry;',
     "let brMode = 'teacher', brCurrent = null, brActiveIdx = -1, brOpts = [];",
     "let brGrpDay = 'A', brMapFloorIdx = 0;",
+    'let brData = PUBLISHED_DATA;',
     brPublishFnList().map(f => f.toString()).join('\n\n'),
     'brWireDocClick();',
     'brWireTabKeys();',
@@ -1487,7 +1617,7 @@ function brBuildPublishedHTML() {
     + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
     + '<title>' + brEscHTML(school) + ' — Schedule Browser</title>\n'
     + '<style>\n' + css + '\n</style>\n</head>\n<body class="br-published">\n'
-    + brBuildPublishedMarkup(school, dateStr)
+    + brBuildPublishedMarkup(school, dateStr, { canOpen: !!AppState.settings.publishCanOpen })
     + '\n<script>\n' + js + '\n<\/script>\n</body>\n</html>\n';
 }
 
@@ -1543,5 +1673,6 @@ export {
   brRenderMap, brRenderMapDyn, brRenderMapLegacy, brEscHTML, brPublishFnList, brBuildPublishedMarkup,
   brLocalISODate, brBuildPublishedHTML, brPublish, brCopyPublishedHTML, BR_CSS, BR_LEGACY_SHORT,
   BR_DEPT_FALLBACK, BR_STALE_DAYS, brDColor, brTDept, brDShort, brOrderOf, BR_A_TPL, brAR, brCR, BR_WINGS,
-  BR_CTXLABEL, brWingOf, brFloorOfWing
+  BR_CTXLABEL, brWingOf, brFloorOfWing, brCheckSchedule, brReadSchedule, brUseSchedule, brPickScheduleFile,
+  brOpenScheduleFile, BR_READS_FORMAT
 };

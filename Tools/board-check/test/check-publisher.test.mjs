@@ -35,9 +35,10 @@ console.log('check-publisher — the guard on the tree');
 const real = check();
 ok(real.failures.length === 0, 'the tree passes: ' + JSON.stringify(real.failures));
 const pub = readPublisher(html035);
-ok(pub.fns.length === 28, `28 listed functions (got ${pub.fns.length})`);
+ok(pub.fns.length === 33, `33 listed functions (got ${pub.fns.length})`);
 ok(pub.consts.length === 7, `7 .toString() constants (got ${pub.consts.length})`);
-ok(pub.json.filter(j => j.name !== 'BR_STALE_DAYS').length === 2, '2 JSON constants');
+ok(pub.json.filter(j => j.name !== 'BR_STALE_DAYS' && j.name !== 'BR_READS_FORMAT').length === 2, '2 JSON constants');
+ok(pub.json.some(j => j.name === 'BR_READS_FORMAT' && j.value === FORMAT), 'BR_READS_FORMAT is read, and is FORMAT');
 ok(pub.json.some(j => j.name === 'BR_STALE_DAYS'), 'BR_STALE_DAYS is read');
 ok(JSON.stringify(pub.state.map(s => s.name)) === JSON.stringify(['brMode', 'brCurrent', 'brActiveIdx', 'brOpts', 'brGrpDay', 'brMapFloorIdx']),
   '6 state names: ' + pub.state.map(s => s.name).join(','));
@@ -48,7 +49,7 @@ ok(pub.plan.items.find(e => e.kind === 'data').escaped === true, "PUBLISHED_DATA
 ok(assemble(pub, { school: '</script><b>' }).includes('"school":"\\u003c/script>\\u003cb>"'),
   'assemble() escapes < in the data as the page does');
 const c = s => real.fork.filter(f => f.state === s).length;
-ok(c('same') === 21 && c('forked') === 12 && c('absent') === 2, `034: 21 same, 12 forked, 2 absent (got ${c('same')}/${c('forked')}/${c('absent')})`);
+ok(c('same') === 21 && c('forked') === 12 && c('absent') === 7, `034: 21 same, 12 forked, 7 absent (got ${c('same')}/${c('forked')}/${c('absent')})`);
 const script = assemble(pub, {});
 ok(script.startsWith("'use strict';\n"), 'the assembled script is strict');
 const free = freeNames(script);
@@ -160,7 +161,7 @@ expect('a <link> in the published head', ['HEAD'], {
   b35: edit(browser035, `+ '<meta charset="UTF-8">\\n'`, `+ '<meta charset="UTF-8">\\n<link rel="icon" href="x.png">\\n'`, 'head'),
 });
 expect('a spread in the function list', ['SHAPE'], {
-  b35: edit(browser035, 'brFormatDateLong, brCheckStaleness\n  ];', 'brFormatDateLong, brCheckStaleness, ...[]\n  ];', 'spread'),
+  b35: edit(browser035, 'brPickScheduleFile, brOpenScheduleFile\n  ];', 'brPickScheduleFile, brOpenScheduleFile, ...[]\n  ];', 'spread'),
 });
 expect('a ternary in consts', ['SHAPE'], {
   b35: edit(browser035, "    'const BR_STALE_DAYS = ' + BR_STALE_DAYS + ';'", "    (1 ? 'const BR_STALE_DAYS = ' + BR_STALE_DAYS + ';' : '')", 'ternary'),
@@ -207,6 +208,12 @@ expect('the publisher drops format from its data', ['DATA'], {
 });
 expect('the publisher writes format 2, past the contract', ['DATA'], {
   b35: edit(browser035, '    format: 1, tool: TOOL_VERSION,', '    format: 2, tool: TOOL_VERSION,', 'format'), mention: 'FORMAT is 1',
+});
+expect('the published reader opens a format past the contract', ['DATA'], {
+  b35: edit(browser035, 'const BR_READS_FORMAT = 1;', 'const BR_READS_FORMAT = 2;', 'reads'), mention: 'up to format 2',
+});
+expect('the publisher stops writing BR_READS_FORMAT', ['FREE', 'DATA'], {
+  b35: edit(browser035, ",\n    'const BR_READS_FORMAT = ' + BR_READS_FORMAT + ';'", '', 'reads'), mention: 'BR_READS_FORMAT',
 });
 expect('PUBLISHED_DATA written without escaping <', ['DATA'], {
   b35: edit(browser035, "JSON.stringify(data).replace(/</g, '\\\\u003c')", 'JSON.stringify(data)', 'escape'), mention: 'u003c',

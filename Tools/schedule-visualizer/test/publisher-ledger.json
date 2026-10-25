@@ -39,6 +39,11 @@
   },
   "absent": {
     "escHtml": "034 has its own brEscHtml.",
-    "escJsAttr": "034 has its own brJsAttr."
+    "escJsAttr": "034 has its own brJsAttr.",
+    "brCheckSchedule": "Path 11 P6 increment 1: the published reader's checks on a file someone opens; 034 opens no file.",
+    "brReadSchedule": "Path 11 P6 increment 1: reads another published file's data; 034 opens no file.",
+    "brUseSchedule": "Path 11 P6 increment 1: swaps the schedule showing; 034 shows only its own.",
+    "brPickScheduleFile": "Path 11 P6 increment 1: the Open a newer schedule button; 034 has none.",
+    "brOpenScheduleFile": "Path 11 P6 increment 1: the file input's handler; 034 has none."
   }
 }
