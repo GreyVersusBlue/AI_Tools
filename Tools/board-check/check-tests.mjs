@@ -139,6 +139,8 @@ const NOT_A_SUITE = {
     'writes the PNG fixtures smoke.mjs feeds to the file input; run once, output committed',
   'Tools/schedule/test/publish.mjs':
     'a regression-baseline generator taking an output path in argv, not an assertion suite',
+  'Tools/schedule/test/published-contract.mjs':
+    "the published data's contract, imported by check:publisher, its test and smoke-publish-baseline.mjs",
 };
 
 const onDisk = [];

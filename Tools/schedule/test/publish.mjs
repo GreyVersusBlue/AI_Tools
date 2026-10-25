@@ -5,9 +5,10 @@
 //   node Tools/schedule/test/publish.mjs out.html
 //
 // This exists because the generator has no way to be driven from Node: the
-// publish path reads AppState, which only exists in a page. It is also the
-// only regression baseline the tool has. Generate before a change, generate
-// after, diff.
+// publish path reads AppState, which only exists in a page. The committed
+// regression baseline is smoke-publish-baseline.mjs's (npm run
+// test:schedule-publish, Path 11 P1), which calls this with the clock pinned;
+// a bare run of this file still writes an uncommitted test/baseline.html.
 //
 // Reuses Tools/board-check/harness.mjs for the static server and the browser
 // launch. That file belongs to another thread and is read-only here; nothing
@@ -39,11 +40,14 @@ export function generatorPath() {
  * The caller gets the live page too, so a suite can poke at the app itself
  * rather than only at its output.
  */
-export async function publishFromFixture({ project = fixtureProject(), quiet = false } = {}) {
-  const server = await serve(PORT);
+export async function publishFromFixture({ project = fixtureProject(), quiet = false, now, port = PORT } = {}) {
+  const server = await serve(port);
   const browser = await launch();
-  const base = `http://127.0.0.1:${PORT}`;
+  const base = `http://127.0.0.1:${port}`;
   const page = await prepPage(browser, base, { width: 1400, height: 1000, dsf: 1 });
+  // `now` pins the page's clock before it loads, so the published date (the
+  // footnote and publishedOn) is the same on every run.
+  if (now !== undefined) await page.clock.setFixedTime(new Date(now));
 
   await page.goto(base + generatorPath(), { waitUntil: 'load' });
   // The app wires itself on DOMContentLoaded; give the deferred jsPDF tag and

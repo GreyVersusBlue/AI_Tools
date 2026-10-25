@@ -30,18 +30,34 @@ ever read.
 ## The regression baseline
 
 The generator is a generator: its template can silently drop a column and
-nothing errors. Before changing the publish path, keep a copy of its output.
+nothing errors. Since Path 11 P1 (2026-10-25) the baseline is committed and
+held by two checks, one with a browser and one without.
 
 ```bash
-node Tools/schedule/test/publish.mjs before.html
-# ...make the change...
-node Tools/schedule/test/publish.mjs after.html
-diff before.html after.html
+npm run test:schedule-publish            # publish Northwind, diff against the baseline
+node Tools/schedule/test/smoke-publish-baseline.mjs --update   # after a change you meant
+npm run check:publisher                  # the static guard, no browser (runs in CI)
 ```
 
-The fixture's `savedAt` is a fixed string rather than `new Date()` so the two
-runs differ only where you changed something. The publish date in the footnote
-is still today's, so expect one line of diff for free.
+`test/baseline-northwind.html` is what Publish makes from the fixture with the
+page's clock pinned to 2026-01-15 17:00 UTC, with the 103 KB font block cut to
+one line holding its SHA-256 and length. The suite names every section that
+moved (page head, BR_CSS, markup, data, each constant and function, boot) with
+its first differing line. If the change is meant, run `--update` and commit the
+baseline's diff with it: that diff is the review. The suite also holds
+`check-publisher.mjs`'s `assemble()` to the real published `<script>` byte for
+byte, and the published data to `test/published-contract.mjs`.
+
+`npm run check:publisher` reads 035's publisher as text and fails on a listed
+function that is not one top-level declaration, a free name, a construct that
+is not strict, a handler or element id the published file lacks, a preamble
+`let` that has drifted from the live one, anything live-only, a `<link>` in the
+head, and 034's copy of a published piece against `test/publisher-ledger.json`.
+Its header lists the codes. `--explain <name>` shows where 034's copy of a
+piece parts from 035's.
+
+`node Tools/schedule/test/publish.mjs out.html` still writes a publish to a
+path you give it, today's date and all.
 
 ## The fixture
 

@@ -184,6 +184,15 @@ jobs:
         if: '!cancelled()'
         run: npm run check:art
 
+      # Path 11 P1: 035's publisher builds the schedule browser by .toString()-ing
+      # live functions, so a refactor silently changes what staff are emailed.
+      # This reads it statically (names, free names, strict mode, handlers, ids,
+      # state, head, the data contract) and holds 034's copies to a ledger. Its
+      # browser half is test:schedule-publish. See Tools/board-check/check-publisher.mjs.
+      - name: 'Guard: 035 publisher reads cleanly, 034 matches its ledger'
+        if: '!cancelled()'
+        run: npm run check:publisher
+
       - name: 'Report: shared-file adoption'
         if: '!cancelled()'
         run: npm run check:adoption

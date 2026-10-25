@@ -9,6 +9,46 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P1 increment 1: the publisher drift guard (2026-10-25, AI-20, no `CACHE_VERSION`)
+
+BACKLOG rank 21 kept and rewritten (now ½): increment 1 of the P1 design is built; increment 2, which changes 035, is
+not. Nothing a teacher sees changed: no page was edited, so no `CACHE_VERSION`.
+
+- **What it is for.** 035's Publish assembles a schedule browser from `.toString()` of 28 listed functions and seven
+  constants, so the first function P2 moves would change what staff are emailed and nobody would see it. Now three
+  things see it: `npm run check:publisher` (static, in CI), `npm run test:schedule-publish` (a publish diffed against a
+  committed baseline), and the ledger that holds 034's copies of the published pieces.
+- **Files.** `Tools/board-check/check-publisher.mjs` (the guard; ESLint's `Linter` for the parse and its scope manager
+  for free names, so no new dependency), `Tools/schedule/test/published-contract.mjs` (`FORMAT`, `formatOf`, `validate`,
+  `upgrade`, `readEmbedded`, `shapeOf`), `publisher-ledger.json`, `baseline-northwind.html` (60,564 bytes, fonts cut to a
+  hash line), `smoke-publish-baseline.mjs` (port 8551), `Tools/board-check/test/check-publisher.test.mjs`.
+  `publish.mjs`'s `publishFromFixture()` gained `now` and `port`. `check-tests.mjs` lists the contract as not a suite.
+  The README's "regression baseline" section and a `CLAUDE.md` bullet describe the workflow (`--update`, then commit
+  the baseline's diff).
+- **Measured, and it matched the design.** 35 published pieces (28 functions, 7 `.toString()` constants) and 3 values;
+  against 034, 21 same, 12 forked, 2 absent; free names `document` and `brRenderMapLegacy` only; 6 state names; 5 boot
+  calls; 034's data valid at format 0 with 21 one-way `co` warnings and 30 unshown-section warnings. **The guard's
+  `assemble()` equals the browser's published `<script>` byte for byte**, which the design left as the suite's first
+  assertion rather than a result. The suite is green in America/New_York and under `TZ=UTC`.
+- **Calls made, where the design was silent or self-contradictory.** (1) The design wanted each break to fail "with its
+  own code and no other" but listed `AppState` as FREE and LIVE: a free LIVE name is LIVE only. (2) A name failing LIST
+  or CONST is not reported again under FREE, HANDLER or FORK, and a publisher the guard cannot read (SHAPE, PARSE)
+  reports that alone. (3) A teacher whose A or B is `[]` is a contract *warning*: `brDeriveScheduleData()` writes that
+  for a teacher with no group visits, so it is not a bad file. (4) Publishing `brRenderMapLegacy` fails FREE *and*
+  HANDLER: it is declared in 035 already and brings `brMapFloor`, `brBuildFloorSVG` and a `brSetMapFloor()` handler
+  with it. (5) The browser suite's breaks are made on the published output (one CSS declaration, the footnote, a
+  dropped teacher field, two functions swapped), not by rewriting 035 with `page.route()`; the static breaks cover 035.
+  (6) The footnote's date depends on the browser's locale; the suite says so if it is not en-US rather than pinning a
+  locale through the shared harness, whose signature was left alone. CI's runner gives en-US.
+- **Devon's answers recorded.** P11-1 to P11-6 (2026-10-21, defaults kept) and "its own page" for 034 (2026-10-07) are
+  written into the P1 bullet; none changed what was built.
+- **Not done, and in the row.** Increment 2 (035 writes `format: 1` and `tool`, the local `publishedOn`, and data with
+  `<` escaped; `TOOL_VERSION` v62, a `CACHE_VERSION` bump, `--update`), and the browser cases that need it or were not
+  built: JS coverage of all 35 pieces from `file://`, the format-0 fixture captured before increment 2, the
+  `</script><b>` school name, the 23:30 publish. The full `npm test` was not run (about 20 minutes): `check:publisher`
+  and the other ten guards, lint, `test:check-publisher`, `test:schedule-publish`, `test:schedule`, `test:theme` and
+  `test:select-suites` were, all green.
+
 ## 035's theme, a documented exception (2026-10-25, AI-20, no `CACHE_VERSION`)
 
 BACKLOG rank 5 deleted (a gap, ranks not renumbered, as ranks 12 to 15 were). Devon decided it on 2026-10-03: **bless
