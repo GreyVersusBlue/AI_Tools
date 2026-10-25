@@ -87,6 +87,14 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-20 (v329), rank 25 (kept, 2+, rewritten), Path 11 P5 increment 1 of 4: 035's schedule checks.** New pure
+  `sv-check.js` (fourteen kinds: two errors, six warnings, six notes; fingerprints of names, never ids; one sentence per
+  kind) and view `sv-checks-view.js`: the Schedules tab's banner is the checks banner ("1 problem on A days", Notes and
+  Accepted folds, Show, Accept with a note), red cards, bulk-editor cells marked on every keystroke, a room's Capacity,
+  the what-if lab's checks diff, and Publish warns and goes on. One new key, `stviz_checks` (accepted findings), in the
+  registry row and the project file. Suites `test:schedule-check` (84) and `-smoke` (37, port 8554; **next free 8555**).
+  **Next: increment 2, and it needs a rule chosen first** (the P5 bullet: the publisher and the checks derive a
+  teacher's day differently).
 - **AI-20 (v328), rank 24 (DELETED: Path 11 P4 is whole; a gap, ranks not renumbered).** 035's "Lockdown Maps" (one page
   per floor: the plan with each room's number large, the building's note from Settings → Safety printing and each room's
   own `lockdownNote` from its panel, as typed, or blank lines; no shelter mark of its own) and "Door Signs" (per teacher or
@@ -674,7 +682,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 18 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 25 | Path 11 P5 — master-schedule assistance. **Increment 1 of 4 built (v329, AI-20): the fourteen checks (`sv-check.js`), the checks banner with Accept, the bulk editor's marked cells, Capacity, the lab's checks diff and Publish's warning.** Left, in the P5 bullet's order: **(2)** `teacherDays` into the publisher's `deriveScheduleData` (the bullet says why it is not a straight swap: the two derive a teacher's day by different rules); **(3)** `sv-suggest.js`, the Fix… list and "Try in What-If"; **(4)** the printed checks report and congestion report, and the comparison loader. Devon's P11-12..19 are settled on the defaults | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Increment 5 (AI-14, v300): named sets on 030, an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section, and its storage design under it): made from ticked questions of the bank or a built-in set, a question in a set more than once if wanted; reordered, trimmed, renamed, deleted, printed and pulled into a board whole from “Questions from”; carried in the bank file and imported beside a set already here, never over it; and a Tag filter on 030's list (the chosen source's tags).** **Left:** 018 and 019 pull station questions from it. 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -4372,7 +4380,32 @@ a real pathfinder that the published browser never exposes.
 - **P5 — Master-schedule assistance.** Constraint checks (a teacher with three
   rooms in three consecutive periods, a room double-booked), congestion as a printed
   argument (top-ten pinch points with what-if deltas), multi-year comparison.
-  **P5 is designed, not built (AI-20, 2026-10-06, a design pass: no code, no suite, no browser).** It sits on the
+  **P5 increment 1 is built (AI-20, 2026-10-25, v329; `HISTORY.md`, "Path 11 P5 increment 1").** `sv-check.js` (pure:
+  `checkSchedule`, `conflictsOf`, `fingerprint`, `applyAcks`, `pruneAcks`, `readChecksStore`, `normalizeChecks`,
+  `capacityOf`, `passingSec`, `sentence`) and the view `sv-checks-view.js` (the banner, cards, bulk-editor cells, room
+  panel, lab panel, Publish). Suites `test:schedule-check` (84, pure) and `test:schedule-check-smoke` (37, port 8554).
+  **Devon's answers (2026-10-21, P11-12 to P11-19), all the defaults, are settled:** the counsellor and admin are the
+  readers, all four increments; `maxRun` 4 and every check on; notes exist, folded and not counted; an accepted finding
+  is remembered and dropped 30 days after it stops matching; a suggestion never changes a teacher (M3 off); no subject
+  on a slot; comparison is one building, two schedules; Publish with a known error warns and goes on; names that differ
+  by a dot are two teachers. **Where the build departs from the design below, and why** (each recorded in `HISTORY.md`):
+  the design's `dayMods` import does not exist in `sv-model.js`, so the engine reads a day itself (a group's B list,
+  else its A list); `teacherDays` is not a separate export yet, its map is `checkSchedule(...).teachers`; the
+  teacher-double sentence ends "A teacher can only be in one room at a time." (the design's "She" guessed a pronoun from
+  a title); a room is "Room 204" only when its name starts with a digit, else as typed ("Library has…"); the shared
+  over-capacity sentence names each group's count ("(7-1 with 24 and 7-3 with 22)"); `room-idle` is not also reported
+  for the room of a teacher who has `teacher-idle`; bell times with no gap are "no passing time set", not a 0-minute
+  passing time; a finding measured with a margin names it; `settings.checks` is read through `normalizeChecks()` at
+  check time and never written by `normalizeSettings` (which would move the model golden and every project file), and
+  there is no Settings form for the limits; Accept is an inline note field; the Publish warning is a `confirm()` (OK
+  publishes, Cancel opens the list). **The design's claims that did not hold:** Northwind shows `room-no-teacher` (its
+  Library), not `room-no-dept` (no Northwind room has a teacher and no department); and **increment 2 is not a straight
+  swap**, because `brDeriveScheduleData` gives a teacher one room (the last tile with their name) and reads a group's B
+  day as `modsB || []` with no fallback, while the checks read every room of a teacher and fall back to the A list, so
+  `teacherDays` would move P1's `EXPECTED` for a teacher on two rooms or a group with no B list. Increment 2 decides
+  which rule the publisher keeps before it touches `sv-browser.js`. Measured: the probe building checks in about 3 ms
+  (Node 22, huginn, printed by the suite), not the design's 0.92 ms; still no debounce.
+  **The design as written (2026-10-06):** It sits on the
   P1 and P2 designs above and changes neither: every function it names from them is taken at the surface P2 wrote.
   Read from the code at v61 (`TOOL_VERSION`; site `CACHE_VERSION` v261): the schedules tab (`computeScheduleConflicts`,
   `renderConflictBanner`, `getConflictGroupIds`, the group cards, the bulk editor), the what-if lab (`wiComputeMetrics`,

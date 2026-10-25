@@ -9,6 +9,61 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P5 increment 1: 035's schedule checks (2026-10-25, AI-20, `CACHE_VERSION` v329)
+
+BACKLOG rank 25 kept (2+) and rewritten: increments 2 to 4 left. Built to the P5 bullet's design of 2026-10-06, with
+Devon's P11-12 to P11-19 (2026-10-21, every default kept) recorded as settled in the bullet.
+
+- **What shipped.** `Tools/schedule-visualizer/sv-check.js`, pure: `checkSchedule(groups, { registry, settings, days,
+  travel, walk })` returns `{ findings, summary, teachers, rooms, dropped, days, labels }` for the design's fourteen
+  kinds; a finding's `id` is its fingerprint (kind, day, mod and the room, teacher and group *names*); malformed input
+  is listed in `dropped`, never thrown; the sort is total (severity, day, mod, room, teacher, id); `conflictsOf()` is
+  the old banner's double-bookings in its old shape and order; `pruneAcks()` keeps an accepted finding while it matches
+  and 30 days from its date after that. `sentence(f, { labels })` is the one English line per kind. The view
+  `sv-checks-view.js` replaced the page's R39 `renderConflictBanner`/`getConflictGroupIds`/`computeScheduleConflicts`
+  (deleted from the page): a banner line ("1 problem on A days", or "No problems or warnings"), a list with Show and
+  Accept (an inline note), Notes and Accepted folds, all built with `textContent`; cards red for an error, amber for a
+  warning; the bulk editor's mod cells carry `data-check-cell` and are marked, with the sentences as `title`, on every
+  keystroke (no travel checks there, so nothing to debounce); the room panel's Capacity field (`tile.capacity`, 1 to
+  999, absent means unknown; `roomRegistryOf` exposes it only when set, so the model golden did not move) and a "This
+  room" line; the what-if lab's Constraint Checks panel diffs every check, scenario against live (the lab's own
+  metrics feed the walking check); and the Publish button is `publishChecked()`, a `confirm()` with the count when
+  there is an un-accepted error (P11-18: warn and go on; Cancel opens the list). `stviz_checks` (`{ v: 1, acks }`) is
+  the one new key: in the registry row, in the project file's `checks` (so the recovery ring, which snapshots the
+  project file, carries it), replaced by a project import, removed when empty.
+- **Calls made here, each cheap to reverse.** (1) A group with no B list is on its A list on B days, as the paths, the
+  lab and the door signs read it; the old banner read it as absent, so a mixed schedule now shows B-day double-bookings
+  it did not, and `conflictsOf` equals the old function only on schedules whose groups all have B lists or none (what
+  the 300-schedule test draws). (2) The teacher-double sentence ends "A teacher can only be in one room at a time."
+  The design wrote "She can only be in one.", a pronoun guessed from a title. (3) "Room 204" only for a name starting
+  with a digit; any other name as typed ("Library has no group on B days.", not "The Library"). (4) The shared
+  over-capacity sentence names each group's count. (5) `room-idle` is not also reported for a room whose teacher has
+  `teacher-idle` (one fact, one note). (6) Back-to-back bell times are no passing time set, not a 0-minute one, which
+  would flag every move; a finding measured with Settings' margin names the margin. (7) With a bell but no walk handed
+  in, `teacher-moves` says nothing (unknown is not a warning). (8) `settings.checks` is read through
+  `normalizeChecks()` when the checks run and is not written by `normalizeSettings`: writing it would have moved the
+  model golden and added a field to every project file of a school that never set a limit. There is no Settings form
+  for the limits in this increment; the defaults are Devon's.
+- **What the design got wrong.** It imports `dayMods` from `sv-model.js`; there is no such function (the day rule lives
+  in three places: `sv-routes.js`, `sv-congestion.js`'s `baseMods`, and now `sv-check.js`). Its smoke expected
+  `room-no-dept` on Northwind; Northwind has no room with a teacher and no department, and its Library gives
+  `room-no-teacher`. Its claim that `teacherDays` reproduces the publisher's slots is not so: `brDeriveScheduleData`
+  keeps one room per teacher (the last tile with the name) and reads B as `modsB || []` with no fallback. Increment 2
+  has to choose a rule first. The probe building takes about 3 ms a check here, not 0.92 ms.
+- **Checked.** `test:schedule-check` 84 (each kind present and absent by one slot, every sentence exact, 300 random
+  schedules against `scheduleConflicts`); `test:schedule-check-smoke` 37 (port 8554: Northwind clean with notes; a
+  double-booking typed in the bulk editor, marked at once; Apply, the red card, Show; Accept with a note through a
+  reload and a project export and import; Undo; Capacity; Publish's warning and Cancel; the lab's Resolved; the walking
+  checks with a bell; axe on the open banner); broken on purpose first: a sentence word, `conflictsOf`'s order, the
+  sort's tie-break, the registry line (`check:registry` says UNREGISTERED). Also all 13 guards (`check:precache --base
+  origin/main` included, `check:publisher` unchanged), lint, `test:check-publisher` (78), `test:schedule-publish` under
+  `TZ=UTC`, `test:select-suites`, `run-suites --only` schedule-visualizer (21), schedule (25), schedule-browser (4),
+  theme (3), csv-adopters, the a11y sweep and `audit-print --only 035` (0 findings), `offline:build` and
+  `offline:verify` (035 passes; 046 fails `Invalid URL` as before, not touched).
+- **Not verified.** The banner in 035's four palettes (dark included) was not looked at. No real building and no
+  counsellor has read a sentence. The bulk editor's checks use the page's mod count, not an unsaved mod count typed in
+  the editor. A full `npm test` was not run.
+
 ## Path 11 P4 increments 2 and 3: lockdown maps and door signs; P4 is whole (2026-10-25, AI-20, `CACHE_VERSION` v328)
 
 BACKLOG rank 24 deleted (a gap, ranks not renumbered). Built to the P4 bullet's design; its four questions for Devon stay
