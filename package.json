@@ -81,6 +81,7 @@
     "test:schedule-visualizer-safety-sheets": "node Tools/schedule-visualizer/test/safety-sheets.test.mjs",
     "test:schedule-check": "node Tools/schedule-visualizer/test/check.test.mjs",
     "test:schedule-check-smoke": "node Tools/schedule-visualizer/test/smoke-checks.mjs",
+    "test:schedule-reports": "node Tools/schedule-visualizer/test/reports.test.mjs",
     "test:schedule-visualizer-step-free-ui": "node Tools/schedule-visualizer/test/smoke-step-free.mjs",
     "test:schedule-publish": "node Tools/schedule-visualizer/test/smoke-publish-baseline.mjs",
     "test:dbq-images": "node Tools/dbq-source-packet-builder/test/smoke-images.mjs",

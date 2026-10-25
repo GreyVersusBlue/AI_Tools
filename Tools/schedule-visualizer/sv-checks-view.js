@@ -125,7 +125,7 @@ export function getConflictGroupIds(day) {
 
 /* ── The banner ─────────────────────────────────────────────────────── */
 
-const KIND_LABEL = {
+export const KIND_LABEL = {
   'room-double': 'Room booked twice', 'teacher-double': 'Teacher in two rooms', 'over-capacity': 'Over capacity',
   'teacher-no-planning': 'No planning', 'teacher-run': 'Long run', 'teacher-moves': 'Teacher moves',
   'passing-too-short': 'Passing time', 'room-unknown': 'Unknown room', 'group-gap': 'Empty slot',

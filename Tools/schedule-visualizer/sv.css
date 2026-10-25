@@ -2932,3 +2932,21 @@
   body.sf-printing > :not(#sf-print-sheet) { display: none !important; }
   body.sf-printing #sf-print-sheet { display: block; }
 }
+
+/* ── Path 11 P5 increment 4: the checks and congestion reports (sv-reports.js),
+   on #sf-print-sheet as above, and the lab's comparison note. A marked cell
+   carries a ✕ or ! as well as its tint, so it reads on a printer that drops
+   backgrounds. */
+.sch-check-tools { padding: 6px var(--sp-3); border-top: 1px solid #fcd34d; }
+.wi-compare-note { margin-top: var(--sp-2); font-size: 12px; line-height: 1.45; color: var(--slate-700); }
+.wi-compare-note p { margin: 0 0 4px; }
+.wi-compare-note .wi-compare-head { font-weight: 600; }
+#sf-print-sheet .cr-grid { break-inside: auto; }
+#sf-print-sheet .cr-grid-table { font-size: 9pt; table-layout: fixed; }
+#sf-print-sheet .cr-grid-table th:first-child { width: 1.3in; }
+#sf-print-sheet .cr-grid-table td { overflow-wrap: anywhere; }
+#sf-print-sheet .cr-plan { color: #555; text-align: center; }
+#sf-print-sheet .cr-warn { background: #fff1c2; font-weight: 600; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+#sf-print-sheet .cr-error { background: #ffd6d6; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+#sf-print-sheet .cr-key { font-size: 9pt; }
+#sf-print-sheet .cr-trans, #sf-print-sheet .cr-changes { margin: 0 0 6pt; padding-left: 18pt; }

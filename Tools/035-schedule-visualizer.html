@@ -95,6 +95,8 @@
     import * as SVChecksView from './schedule-visualizer/sv-checks-view.js';
     window.SVChecksView = SVChecksView;
     Object.assign(window, SVChecksView);
+    import * as SVReports from './schedule-visualizer/sv-reports.js';
+    window.SVReports = SVReports;
     import * as SVRecovery from './schedule-visualizer/sv-recovery.js';
     window.SVRecovery = SVRecovery;
     window.dispatchEvent(new Event('sv-recovery-ready'));
@@ -1040,6 +1042,8 @@
               <svg class="sch-conflict-chevron" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
             <div id="sch-conflict-table-wrap"><div id="sch-check-list"></div></div>
+            <!-- Path 11 P5 increment 4: the printed checks report, built by sv-reports.js -->
+            <div class="sch-check-tools"><button class="wi-btn" id="btn-print-checks" type="button" title="Every finding and each teacher's day, on paper, for the scheduling meeting.">Checks Report</button></div>
           </div>
 
           <div id="sch-group-list">
@@ -1703,6 +1707,14 @@
           <div class="viz-section wi-actions">
             <button class="wi-btn primary" id="wi-apply-btn" disabled>Apply Scenario to Schedule</button>
             <button class="wi-btn danger" id="wi-reset-btn" disabled>Reset Scenario</button>
+          </div>
+
+          <!-- Path 11 P5 increment 4: the congestion report and the comparison loader (sv-reports.js) -->
+          <div class="viz-section wi-actions">
+            <button class="wi-btn" id="wi-congestion-report-btn" type="button" title="The ten busiest hallway places for the day and transition shown, with the scenario's change at each, on paper.">Congestion Report</button>
+            <button class="wi-btn" id="wi-compare-btn" type="button" title="Load another full-project file of this building as the scenario, matching groups by name.">Compare with a Project File…</button>
+            <input type="file" id="wi-compare-file" accept=".json,application/json" hidden aria-label="Project file to compare with">
+            <div id="wi-compare-note" class="wi-compare-note" role="status" hidden></div>
           </div>
         </aside>
 

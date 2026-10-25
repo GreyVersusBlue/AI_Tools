@@ -175,6 +175,111 @@ try {
   await page.evaluate(id => { const g = AppState.schedules.groups.find(x => x.id === id); g.modsA[0] = '101'; g.mods = g.modsA; }, ids['6-1']);
   eq(await page.evaluate(() => publishWarning()), '', 'with no problem Publish has nothing to say');
 
+  /* ── 9. Path 11 P5 increment 4: the two printed reports and the comparison ── */
+  // Preview, then its Print (print() stubbed), then Chromium's PDF of that print.
+  const previewAndPdf = async (button) => {
+    await page.evaluate(() => { window.__printCalls = 0; window.print = () => { window.__printCalls++; }; });
+    await page.click(button);
+    await page.waitForSelector('dialog.pk-preview[data-pk-pages]', { timeout: 15000 });
+    const previewPages = Number(await page.getAttribute('dialog.pk-preview', 'data-pk-pages'));
+    await page.click('.pk-preview-print');
+    await page.waitForFunction(() => window.__printCalls > 0, null, { timeout: 15000 }).catch(() => {});
+    await settle(page, 200);
+    await page.emulateMedia({ media: null });
+    const pdfPages = (pdf => (pdf.match(/\/Type\s*\/Page[^s]/g) || []).length)((await page.pdf({ preferCSSPageSize: true })).toString('latin1'));
+    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    await settle(page, 200);
+    const left = await page.evaluate(() => !!document.querySelector('dialog[open]') || document.body.classList.contains('sf-printing') || !!document.getElementById('pk-page-style'));
+    return { previewPages, pdfPages, left };
+  };
+  await page.evaluate(id => {
+    const g = AppState.schedules.groups.find(x => x.id === id); g.modsA[0] = '106'; g.mods = g.modsA;
+    AppState.settings.schoolName = 'Northwind <b>Middle</b>';
+    switchTab('schedules'); window.renderGroupList();
+  }, ids['6-1']);
+  await settle(page, 200);
+  ok(await page.isVisible('#btn-print-checks'), 'the checks banner has a Checks Report button');
+  const cr = await previewAndPdf('#btn-print-checks');
+  eq(cr.pdfPages, cr.previewPages, `the checks report's preview count is Chromium's PDF count (${cr.previewPages})`);
+  eq(await page.evaluate(() => window.__printCalls), 1, "its preview's Print prints once");
+  ok(!cr.left, 'and after printing the print state is gone');
+  const sheet = await page.evaluate(() => {
+    const s = document.getElementById('sf-print-sheet');
+    const grid = s.querySelector('.cr-grid-table');
+    const fern = [...grid.tBodies[0].rows].find(r => r.cells[0].textContent === 'Fernwood');
+    return {
+      title: s.querySelector('h1').textContent, school: s.querySelector('.sf-sub').textContent, bold: !!s.querySelector('b'),
+      summary: s.querySelector('.sf-summary').textContent,
+      problems: [...s.querySelectorAll('.cr-findings[data-severity="error"] tbody tr')].map(r => r.cells[r.cells.length - 1].textContent),
+      heads: [...grid.tHead.rows[0].cells].map(c => c.textContent), rows: grid.tBodies[0].rows.length,
+      fern: fern && [...fern.cells].slice(1).map(c => [c.textContent, c.className.trim()]),
+    };
+  });
+  eq(sheet.title, 'Schedule checks', 'the sheet is the checks report');
+  ok(sheet.school === 'Northwind <b>Middle</b>' && !sheet.bold, 'the school name is printed as typed, never as markup');
+  ok(/^1 problem, 0 warnings, \d+ notes?\.$/.test(sheet.summary), 'its count line: ' + sheet.summary);
+  eq(sheet.problems.join(' | '), DOUBLE, 'its Problems table holds the double-booking in words');
+  eq(sheet.heads.join(','), 'Teacher,Block A,Block B,Block C,Block D', "the teachers' grid has a column a mod");
+  eq(sheet.rows, 10, 'and a row a teacher');
+  ok(sheet.fern && sheet.fern[0][0] === '✕ 106 6-1, 7-1' && sheet.fern[0][1] === 'cr-error',
+    "Fernwood's first block names both groups and is marked as a problem: " + JSON.stringify(sheet.fern));
+  ok(sheet.fern && sheet.fern.slice(1).every(([, cls]) => !cls.includes('cr-error')), 'and no other cell of the row is');
+
+  await page.evaluate(() => { AppState.settings.schoolName = 'Northwind Middle'; AppState.whatif.overrides = {}; switchTab('whatif'); AppState.whatif.day = 'A'; wiRenderAll(); });
+  await settle(page, 300);
+  const cg = await previewAndPdf('#wi-congestion-report-btn');
+  eq(cg.pdfPages, cg.previewPages, `the congestion report's preview count is Chromium's PDF count (${cg.previewPages})`);
+  ok(!cg.left, 'and after printing the print state is gone');
+  const cong = await page.evaluate(() => {
+    const s = document.getElementById('sf-print-sheet');
+    const rows = [...s.querySelectorAll('.cr-cells tbody tr')].map(r => [...r.cells].map(c => c.textContent));
+    const base = window.SVCongestion.whatIfMetrics(AppState.schedules.groups, 'A', null, { settings: AppState.settings, blueprint: AppState.blueprint, graph: window.SVGraph.buildGraph(AppState.blueprint), registry: roomRegistry });
+    return { title: s.querySelector('h1').textContent, summary: s.querySelector('.sf-summary').textContent, rows,
+      max: Math.max(...base.congAll.values()), sized: base.weighted, trans: s.querySelectorAll('.cr-trans li').length };
+  });
+  eq(cong.title, 'Hallway congestion', 'the sheet is the congestion report');
+  eq(cong.summary, 'A day, every transition, the live schedule.', 'it says which day and window, and that it is the live schedule');
+  ok(cong.rows.length > 0 && cong.rows.length <= 10 && cong.rows.every(r => r.length === 4 && r[1] && r[3]), `${cong.rows.length} places, each named and with the groups that pass`);
+  eq(cong.rows[0][2], (cong.sized ? '~' : '') + cong.max, "the first place's load is the lab's busiest cell");
+  ok(cong.trans >= 1 && cong.trans <= 3, 'up to three busiest transitions');
+
+  // Compare: the same school, next year's file, 7-2 in another room in Block B.
+  const nextYear = await page.evaluate(() => { const p = JSON.parse(JSON.stringify(serializeFullProject({ portable: true })));   // a copy: a record shares the live arrays
+ p.groups.find(g => g.name === '7-2').modsA[1] = '108'; return p; });
+  await page.setInputFiles('#wi-compare-file', { name: 'northwind-next.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(nextYear)) });
+  await settle(page, 300);
+  const cmp = await page.evaluate(() => ({ ov: AppState.whatif.overrides, ids: Object.fromEntries(AppState.schedules.groups.map(g => [g.name, g.id])),
+    note: document.getElementById('wi-compare-note').textContent, shown: !document.getElementById('wi-compare-note').hidden,
+    chips: document.getElementById('wi-override-chips').textContent }));
+  eq(JSON.stringify(cmp.ov), JSON.stringify({ [cmp.ids['7-2']]: { 1: '108' } }), "comparing makes the file's one difference the scenario, on this schedule's 7-2");
+  ok(cmp.shown && cmp.note.startsWith('Compared with northwind-next.json, A day: 1 slot differs in 1 of 4 groups with the same name.'), 'and says so under the actions: ' + cmp.note.slice(0, 120));
+  ok(cmp.chips.includes('108'), "the scenario's chips show the change");
+  const axe2 = await a11yScan(page, { include: '#wi-compare-note' });
+  eq(axe2.map(v => v.id).join(','), '', 'the comparison note has no serious axe finding');
+  const cg2 = await previewAndPdf('#wi-congestion-report-btn');
+  ok(!cg2.left, 'the congestion report prints with the scenario too');
+  ok(await page.evaluate(() => /with the scenario's 1 change\./.test(document.querySelector('#sf-print-sheet .sf-summary').textContent) &&
+    /7-2, Block B: \S+ → 108/.test(document.querySelector('#sf-print-sheet .cr-changes').textContent)), "and lists the scenario's change");
+
+  const elsewhere = await page.evaluate(() => {
+    const p = JSON.parse(JSON.stringify(serializeFullProject({ portable: true })));
+    for (const f of p.blueprint.floors) for (const c of f.cells) if (c.tile.roomNumber === '108') c.tile.roomNumber = '109';
+    return p;
+  });
+  await page.setInputFiles('#wi-compare-file', { name: 'other.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(elsewhere)) });
+  await settle(page, 300);
+  const other = await page.evaluate(() => ({ ov: AppState.whatif.overrides, note: document.getElementById('wi-compare-note').textContent }));
+  ok(other.note.startsWith('other.json describes a different building: 2 rooms differ. Comparison needs one building.') &&
+    other.note.includes('Only in this blueprint: 108') && other.note.includes('Only in the file: 109'), 'a file of another building is refused, room by room: ' + other.note.slice(0, 140));
+  eq(Object.keys(other.ov).length, 1, 'and the scenario is left as it was');
+  await page.setInputFiles('#wi-compare-file', { name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{"fileType":"stviz-blueprint"}') });
+  await settle(page, 300);
+  ok((await page.textContent('body')).includes('Comparison failed: this JSON is not a full-project file.'), "another kind of file gets the import's own words");
+  page.once('dialog', d => d.accept());
+  await page.click('#wi-reset-btn');
+  await settle(page, 200);
+  ok(await page.evaluate(() => document.getElementById('wi-compare-note').hidden && !Object.keys(AppState.whatif.overrides).length), 'Reset Scenario takes the comparison away');
+
   eq(page.__errs.length, 0, 'no page or console errors: ' + JSON.stringify(page.__errs.slice(0, 4)));
   eq(page.__blocked.length, 0, 'nothing tried to leave the site: ' + JSON.stringify(page.__blocked.slice(0, 4)));
 } catch (e) {

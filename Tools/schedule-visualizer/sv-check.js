@@ -523,3 +523,71 @@ export function sentence(f, opts = {}) {
       return f.kind;
   }
 }
+
+/* ── The printed checks report (Path 11 P5 increment 4) ──────────────── */
+
+const SECTIONS = [['error', 'Problems'], ['warn', 'Warnings'], ['note', 'Notes']];
+
+/**
+ * What the printed checks report shows, from one checkSchedule() result with
+ * the acks applied: the counts, the findings by severity (accepted ones last,
+ * with the note each was accepted with), and the teacher day grid, one per
+ * day: teachers down, mods across, each cell the rooms and groups that teacher
+ * has in that mod, or planning. A cell is marked with the worst un-accepted
+ * problem or warning about it: one whose `where` holds a group in that cell, or
+ * one about that teacher on that day with no cell of its own (no planning).
+ * It formats every finding with sentence() and computes nothing else.
+ * `acks` is the store's `{ [id]: { note, on } }`.
+ */
+export function checksReport(result, opts = {}) {
+  const acks = opts.acks || {};
+  const labels = result.labels || [];
+  const findings = result.findings || [];
+  const line = (f) => ({ id: f.id, kind: f.kind, severity: f.severity, day: f.day || null, text: sentence(f, { labels }) });
+  const sections = SECTIONS.map(([severity, title]) => ({
+    severity, title, items: findings.filter(f => !f.ack && f.severity === severity).map(line),
+  }));
+  sections.push({
+    severity: 'ack', title: 'Accepted',
+    items: findings.filter(f => f.ack).map(f => ({ ...line(f), note: (acks[f.id] && acks[f.id].note) || '' })),
+  });
+  const open = findings.filter(f => !f.ack && f.severity !== 'note');
+  const worse = (a, b) => (!a ? b : (a === 'error' || b === 'error') ? 'error' : 'warn');
+  const grids = (result.days || []).map(day => {
+    const cellMark = new Map();   // groupId|modIdx → severity
+    const rowMark = new Map();    // teacher → severity, for a finding with no cell
+    for (const f of open) {
+      if (f.day && f.day !== day) continue;
+      if (f.where.length) {
+        for (const w of f.where) {
+          const k = w.groupId + '|' + w.modIdx;
+          cellMark.set(k, worse(cellMark.get(k), f.severity));
+        }
+      } else if (f.teacher && f.day === day) {
+        rowMark.set(f.teacher, worse(rowMark.get(f.teacher), f.severity));
+      }
+    }
+    const rows = Object.keys(result.teachers || {}).sort(byName).map(teacher => {
+      const t = result.teachers[teacher];
+      const slots = (t.days && t.days[day]) || [];
+      const cells = slots.map((here, i) => {
+        if (!here.length) return { planning: true, text: '—', severity: rowMark.get(teacher) || null };
+        let sev = rowMark.get(teacher) || null;
+        for (const s of here) {
+          for (const g of s.groups) {
+            const m = cellMark.get(g.id + '|' + i);
+            if (m) sev = worse(sev, m);
+          }
+        }
+        return {
+          planning: false, severity: sev,
+          text: here.map(s => s.room + ' ' + s.groups.map(g => g.name).join(', ')).join(' / '),
+        };
+      });
+      return { teacher, rooms: t.rooms.slice(), cells };
+    });
+    return { day, rows };
+  });
+  return { counts: summary(findings), sections, grids, days: (result.days || []).slice(), labels: labels.slice(),
+    dropped: (result.dropped || []).length };
+}

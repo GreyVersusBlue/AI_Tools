@@ -15,7 +15,7 @@
 //
 // Its suite is test/congestion.test.mjs (npm run test:schedule-visualizer-congestion).
 
-import { modLabels, groupWeight, anyGroupSized, congestionDelayMult } from './sv-model.js';
+import { modLabels, groupWeight, anyGroupSized, congestionDelayMult, validateBlueprint, migrateBlueprint, floorsFromData, roomRegistryOf } from './sv-model.js';
 import { floorCellKey, parseKey, resolveRoomPath } from './sv-graph.js';
 import { isCellHeatExcluded } from './sv-routes.js';
 
@@ -396,4 +396,137 @@ export function whatIfDiff(base, scen, overrides, tf) {
     resolvedConflicts:   base.conflicts.filter(c => !sKeys.has(c.key)),
     persistingConflicts: scen.conflicts.filter(c =>  bKeys.has(c.key)),
   };
+}
+
+/* ── The printed congestion report (Path 11 P5 increment 4) ─────────── */
+
+/**
+ * The congestion report's numbers, from the lab's own metrics: the `top`
+ * (default 10) hallway cells with the highest baseline load for the
+ * transition filter `tf` (null for the whole day), each with the groups whose
+ * walk crosses it in that window and, when the scenario has changes, its
+ * delta from whatIfDiff(); the three transitions with the most load; and the
+ * scenario's changes. Ties go by cell key, so the list is the same every run.
+ * opts: { tf, top, diff (whatIfDiff's result, or null), overrides, floor0Id }.
+ * Naming a cell is the page's (cellCongestionLabel).
+ */
+export function congestionReport(base, opts = {}) {
+  const tf = opts.tf || null;
+  const top = opts.top || 10;
+  const map = congForFilter(base, tf);
+  const deltas = opts.diff ? opts.diff.deltas : null;
+  const floor0Id = opts.floor0Id || null;
+  const ranked = [...map.entries()].filter(([, v]) => v > 0)
+    .sort((a, b) => (b[1] - a[1]) || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).slice(0, top);
+  const want = new Set(ranked.map(([k]) => k));
+  const who = new Map(ranked.map(([k]) => [k, []]));
+  for (const pg of base.perGroup) {
+    const hit = new Set();
+    for (const seg of pg.segments) {
+      if (seg.error || seg.noTravel || !seg.hallwayCells) continue;
+      if (tf && seg.fromMod !== tf) continue;
+      for (const c of seg.hallwayCells) {
+        const k = floorCellKey(c.floorId || floor0Id, c.x, c.y);
+        if (want.has(k)) hit.add(k);
+      }
+    }
+    for (const k of hit) who.get(k).push(pg.name);
+  }
+  const cells = ranked.map(([key, load]) => {
+    const { x, y, floorId } = parseKey(key);
+    return { key, x, y, floorId, load, groups: who.get(key), delta: deltas ? (deltas.get(key) || 0) : null };
+  });
+  const transitions = base.congPerT.map((m, i) => {
+    let total = 0, peak = 0;
+    for (const v of m.values()) { total += v; if (v > peak) peak = v; }
+    return { t: i + 1, total, peak };
+  }).filter(t => t.total > 0).sort((a, b) => (b.total - a.total) || (a.t - b.t)).slice(0, 3);
+  const changes = [];
+  const ov = opts.overrides || {};
+  for (const pg of base.perGroup) {
+    const o = ov[pg.id];
+    if (!o) continue;
+    for (const k of Object.keys(o).map(Number).sort((a, b) => a - b)) {
+      changes.push({ group: pg.name, modIdx: k, from: pg.mods[k] || '', to: ((o[k] || '') + '').trim() });
+    }
+  }
+  return { day: base.day, tf, weighted: !!base.weighted, defaultGroupSize: base.defaultGroupSize, cells, transitions, changes };
+}
+
+/* ── Comparing with another project file (Path 11 P5 increment 4) ───── */
+
+/** A project file's groups read as applyFullProject() reads them (no ids, no colours). */
+function fileGroups(raw) {
+  const out = [];
+  for (const g of (Array.isArray(raw) ? raw : [])) {
+    if (!g || typeof g !== 'object' || typeof g.name !== 'string' || !g.name.trim()) continue;
+    const a = Array.isArray(g.modsA) ? g.modsA.slice(0, 20) : (Array.isArray(g.mods) ? g.mods.slice(0, 20) : []);
+    out.push({ name: g.name.trim(), modsA: a, mods: a, modsB: Array.isArray(g.modsB) ? g.modsB.slice(0, 20) : [] });
+  }
+  return out;
+}
+
+function countNames(groups) {
+  const n = new Map();
+  for (const g of groups) n.set(g.name, (n.get(g.name) || 0) + 1);
+  return n;
+}
+
+/**
+ * Turns a second full-project file into what-if overrides on this schedule,
+ * matching groups by name (trimmed, exact), for one day. The file is checked
+ * as an import checks it (it throws the import's own message) and nothing is
+ * applied. Two files describe one building only when their numbered rooms are
+ * the same set; otherwise `{ ok: false, onlyHere, onlyThere }`. Otherwise
+ * `{ ok: true, day, overrides: { [liveGroupId]: { [modIdx]: room } }, changed,
+ * matched, added: [{ name, mods }], removed: [name], ambiguous: [name],
+ * modCountThere }`: a group only in the file cannot be an override and is
+ * listed; a name on two groups in either file is not compared.
+ * live: { groups, registry }; opts: { day, modCount }.
+ */
+export function compareProject(live, data, opts = {}) {
+  if (!data || typeof data !== 'object') throw new Error('file is not a valid project.');
+  if (data.fileType && data.fileType !== 'stviz-project') throw new Error('this JSON is not a full-project file.');
+  if (!data.blueprint || typeof data.blueprint !== 'object') throw new Error('project file is missing its blueprint.');
+  validateBlueprint(data.blueprint);
+  const day = opts.day === 'B' ? 'B' : 'A';
+  const modCount = opts.modCount || 8;
+  const bp = migrateBlueprint(JSON.parse(JSON.stringify(data.blueprint)));
+  const there = new Set(roomRegistryOf({ floors: floorsFromData(bp) }).map(r => r.roomNumber));
+  const here = new Set((live.registry || []).map(r => r.roomNumber));
+  const sortRooms = (a, b) => a.localeCompare(b, undefined, { numeric: true });
+  const onlyHere = [...here].filter(r => !there.has(r)).sort(sortRooms);
+  const onlyThere = [...there].filter(r => !here.has(r)).sort(sortRooms);
+  if (onlyHere.length || onlyThere.length) return { ok: false, onlyHere, onlyThere };
+
+  const theirs = fileGroups(data.groups);
+  const ours = (live.groups || []).filter(g => g && typeof g.name === 'string' && g.name.trim());
+  const ourName = (g) => g.name.trim();
+  const nOurs = countNames(ours.map(g => ({ name: ourName(g) })));
+  const nTheirs = countNames(theirs);
+  const ambiguous = [...new Set([...nOurs, ...nTheirs].filter(([, n]) => n > 1).map(([name]) => name))].sort(sortRooms);
+  const skip = new Set(ambiguous);
+  const byName = new Map(theirs.map(g => [g.name, g]));
+  const overrides = {};
+  let changed = 0, matched = 0;
+  const removed = [];
+  for (const g of ours) {
+    const name = ourName(g);
+    if (skip.has(name)) continue;
+    const t = byName.get(name);
+    if (!t) { removed.push(name); continue; }
+    matched++;
+    const a = baseMods(g, day, modCount), b = baseMods(t, day, modCount);
+    for (let i = 0; i < modCount; i++) {
+      if (a[i] === b[i]) continue;
+      if (!overrides[g.id]) overrides[g.id] = {};
+      overrides[g.id][i] = b[i];
+      changed++;
+    }
+  }
+  const added = theirs.filter(t => !skip.has(t.name) && !nOurs.has(t.name))
+    .map(t => ({ name: t.name, mods: baseMods(t, day, modCount) }));
+  const settingsThere = data.settings && typeof data.settings === 'object' ? data.settings : {};
+  const modCountThere = Number.isInteger(settingsThere.modCount) ? settingsThere.modCount : null;
+  return { ok: true, day, overrides, changed, matched, added, removed, ambiguous, modCountThere };
 }
