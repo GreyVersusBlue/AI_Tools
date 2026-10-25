@@ -32,11 +32,13 @@ shapes:
   serialise/migrate/validate, ids, the lockdown maps' and door signs' content), `sv-graph.js` (the multi-floor graph, A*, the
   graph cache, and the step-free and evacuation graphs), `sv-routes.js` (group
   day paths, congestion, evacuation, the step-free report and route sheets),
-  `sv-congestion.js` (congestion data, travel times, the what-if arithmetic),
+  `sv-congestion.js` (congestion data, travel times, the what-if arithmetic,
+  and the congestion report's numbers and the comparison with a second project
+  file; Path 11 P5),
   `sv-playback.js` (a playback frame, the collision simulation), and, new
   rather than moved, `sv-check.js` (the fourteen schedule checks, their
-  fingerprints, the accepted-finding store's rules and the one sentence for
-  each kind; Path 11 P5).
+  fingerprints, the accepted-finding store's rules, the one sentence for
+  each kind and the printed checks report's content; Path 11 P5).
 - **Views**, moved verbatim: they own a tab's DOM and read the page's
   classic-script globals at call time (listed in each file's `/* global */`
   comments), and the module script copies their exports onto `window`
@@ -52,7 +54,9 @@ shapes:
   `sv-checks-view.js` (the Schedules tab's checks banner, the group cards' and
   bulk editor's marks, the room panel's capacity line, the what-if lab's
   Constraint Checks panel and Publish's warning; it keeps `stviz_checks`,
-  the accepted findings, `{ v: 1, acks }`; Path 11 P5).
+  the accepted findings, `{ v: 1, acks }`; Path 11 P5), and `sv-reports.js`
+  (the printed checks report and congestion report, through the print kit,
+  and the what-if lab's "Compare with a Project File…"; Path 11 P5).
 
 Older and separate: `sv-recovery.js` (recovery points), `sv-handoff.js`
 (WebRTC hand-off), `sv-trace-image.js` (a classic `defer` script, the trace

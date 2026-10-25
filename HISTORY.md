@@ -9,6 +9,72 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P5 increment 4: 035's printed checks and congestion reports, and the comparison loader (2026-10-25, AI-20, `CACHE_VERSION` v330)
+
+BACKLOG rank 25 kept (2+) and rewritten: increments 2 and 3 left. **Increment 2 was skipped on purpose, and increment 4
+built in its place**, because of what a probe showed (below). `TOOL_VERSION` stays v62: nothing published changed.
+
+- **Why not increment 2.** The design moves the checks' `teacherDays` into the publisher's `brDeriveScheduleData` and
+  claims P1's Northwind numbers would not move. They do not, but that proves less than it seems. A probe (not
+  committed) ran both derivations on Northwind and on five built cases. On Northwind every teacher's slots are the same.
+  In the five cases they differ, and every difference changes what 034 shows staff: a teacher on two rooms (the
+  publisher keeps one room and calls the other room's classes planning); a group with an empty B list (the publisher
+  says no B day, everything else reads B as A); a double-booked room (the publisher shows the last group, silently); a
+  teacher name with a trailing space (the publisher keeps it, the checks trim it); a slot typed "204 " (the publisher
+  misses it, the checks trim it). The session's instructions made any change to published output Devon's call, so the
+  question is in the P5 bullet ("A question for Devon, increment 2") with a before and after for each case and three
+  options. The publisher, `check:publisher` and `test:schedule-publish` are untouched.
+- **What shipped.** Pure `checksReport(result, { acks })` in `sv-check.js`: the counts; the findings by severity, each
+  through `sentence()`, with the accepted ones last and the note each was accepted with; and one teacher grid per day,
+  teachers down by name and mods across, each cell "room group, group" (two rooms joined by " / ") or "—" for planning.
+  A cell is marked with the worst un-accepted error or warning whose `where` holds a group in it; a finding about a
+  teacher's day with no cells (no planning) marks the whole row. Pure `congestionReport(base, { tf, top, diff, overrides,
+  floor0Id })` in `sv-congestion.js`: the ten cells with the highest baseline load for the lab's transition filter
+  (ties by key), the groups whose walk in that window crosses each, the scenario's delta from `whatIfDiff()`, the three
+  transitions with the most total load, and the scenario's changes from the baseline. Pure `compareProject(live, data,
+  { day, modCount })`: checks the file as `applyFullProject` does and throws its words, refuses a file whose numbered
+  rooms are not this blueprint's (`{ ok: false, onlyHere, onlyThere }`), and otherwise matches groups by trimmed name
+  and turns each differing slot into a what-if override on this schedule's ids; a group only in the file is listed
+  with its day, a group only here is listed as removed, a name two groups share in either file is not compared, a
+  different mod count is reported. It never changes the file object (a pre-floors blueprint is cloned before it is
+  migrated). The new view `sv-reports.js` puts "Checks Report" on the checks banner and "Congestion Report" and
+  "Compare with a Project File…" in the lab; both reports open `PrintKit.preview` on `#sf-print-sheet` through
+  `sv-access.js`'s `asking()` and `printSheet()`, as the safety sheets do. The comparison note under the lab's actions
+  says what was loaded and is taken away by Reset Scenario. Every typed value reaches the page by `textContent`.
+  `KIND_LABEL` is now exported from `sv-checks-view.js` for the report's What column.
+- **Calls made without Devon, so they can be reversed cheaply.** Portrait letter for both reports (035's other sheets
+  are; an eight-mod grid fits at 9 pt). A marked cell carries ✕ (a problem) or ! (a warning) as well as a tint, with a
+  key under the grid, so it reads on a printer that drops backgrounds. A congestion place is named by the lab's own
+  `cellCongestionLabel()` (corridor label or wing, nearby rooms, floor), not the design's "Floor 2, by room 204"
+  wording, so the report and the lab's Corridor Changes name a place the same way. The comparison covers the lab's
+  current day only and uses this schedule's bell times, and the note says both; it replaces an existing scenario only
+  after a `confirm()`; the note is not saved (a reload shows the overrides without it).
+- **Found on the way.** `groupRecord()` returns the live group's own `modsA` array, so a `serializeFullProject()` result
+  edited in place edits the live schedule. The new browser case did exactly that and compared a schedule with itself
+  ("0 slots differ"); it now copies the project first. Nothing on the page edits a serialized project in place, so this
+  is a trap for tests, not a bug in the tool. `offline:build` reads `git ls-files`, so a new module fails the build
+  ("Could not resolve") until it is committed.
+- **Tests.** New pure suite `test:schedule-reports` (61): the sections and their order, sentence text, the grid's
+  cells and marks, an accepted finding leaving the counts and the marks, a row marked by no-planning, two days giving two
+  grids; the congestion ranking, tie order, per-window walkers, deltas and changes, and on Northwind every load equal
+  to the lab's own `congAll`; the comparison on Northwind (no change, two overrides, A not B, added, removed, a trimmed
+  name, a doubled name, another building, three refusals, a mod-count note, a pre-floors file, the file left unchanged).
+  `smoke-checks.mjs` (66, port 8554) adds: each report's preview count equals Chromium's PDF count and the print state is
+  gone after printing; the checks sheet prints the school name as typed with no markup, the double-booking in words, a
+  column a mod and a row a teacher, and Fernwood's Block A as "✕ 106 6-1, 7-1", marked, with no other mark in the row;
+  the congestion sheet's first load is the lab's busiest cell; a comparison file loads one override on this schedule's
+  7-2 and the note says so, with no serious axe finding; a file of another building is refused room by room and leaves
+  the scenario alone; a blueprint file gets the import's words; Reset takes the note away. Broken on purpose first:
+  nine engine rules (each caught by `test:schedule-reports`) and two view rules (school name as markup, no reset hook;
+  both caught by the smoke suite). One proposed rule was dead code (a `where` entry's day, already filtered by the
+  finding's day) and was deleted instead.
+- **Ran green.** lint; every `check:*` guard, including `check:publisher` (unchanged) and `check:precache --base
+  origin/main`; `check:adoption --check`; `test:check-publisher` (78); `test:select-suites` (93); `run-suites --only`
+  schedule-visualizer (22), schedule (26), schedule-browser (4), theme (3); the a11y sweep and `audit-print` for 035 (no
+  findings); `offline:build` and `offline:verify` (035 passes, all 28 published functions as source; 046 fails with
+  `Invalid URL` as before, not touched). **Not run:** the full `npm test`. **Not verified:** either report on paper; a
+  real second year's file; the new buttons and note in 035's dark palettes; a teacher grid wider than eight mods.
+
 ## Path 11 P5 increment 1: 035's schedule checks (2026-10-25, AI-20, `CACHE_VERSION` v329)
 
 BACKLOG rank 25 kept (2+) and rewritten: increments 2 to 4 left. Built to the P5 bullet's design of 2026-10-06, with
