@@ -9,6 +9,50 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 9 P3 increment 3: 044 and 045 read the school-year spine (2026-10-25, AI-18, `CACHE_VERSION` v316)
+
+BACKLOG rank 14 deleted (a gap, ranks not renumbered): Path 9 P3 is whole. Rank 15 (P4, `.ics` and the wall calendar) is next.
+
+- **What changed for a teacher.** With 032's calendar saved on the device: *044 Sub Plan Builder* shows a box under "First
+  day out" for the day being edited: "From the School Calendar, Tuesday, Sep 8: A day.", a grading-deadline line when that
+  day, or the school day after it, is the last school day of a quarter, and "From the pacing plan:" with each course's
+  lesson ("U1-06-B Lesson 6"), catch-up day, day it does not meet or unit day ("Cells, day 4 of 20"). A day new to the
+  page gets its lesson as the title when that lesson is all the plan has on the day; otherwise each lesson has a "Use as
+  title" button. *045 Sub Binder Generator*'s Today card says the same for the packet's day (and prints it on each day's
+  page), and its section list says when the pacing plan is there. Without a calendar both pages are what they were.
+- **`_shared/school-day.js` gained five read functions**, pure-Node tested: `nextSchoolDay`, `gradingDeadline`,
+  `gradingPeriodName`, `lessonsOn` and `describeLesson`. Neither page writes 032's data; `lessonsOn` reads only the dates
+  032 stamped at its last save and never runs the placer.
+- **Calls made.** (1) *A grading deadline is a period's last **school** day*, not the day its tag sits on: the seed's
+  second marking period ends on a workday (2027-01-22), which no "next school day" can ever be, so the design's test as
+  written would never fire for Quarter 2. (2) *"Is tomorrow a deadline" is asked of the day out*, and of the school day
+  after it: a sub plan's date is the day that matters, and it is usually written the day before. (3) *The title is filled
+  only on a day new to the page, and only when one lesson is all the day holds*: two courses, or a lesson beside another
+  course's unit day, is ambiguous, so it gets buttons. A day the teacher has been on keeps what they left, an emptied
+  title included. 044's plan is not saved, so nothing stored changes. (4) *A course is named only when the plan has two
+  or more*: "Course 1: …" on every line of a one-course plan is noise. (5) *A typed unit's day number* is counted from
+  the unit's stamped start with `dayValue()`'s rule copied into `school-day.js` (a classic script cannot import the ES
+  module); the suite holds the two equal on every date of every unit. (6) *A plan newer than v1, or a calendar 032 has
+  not re-saved since v309* (only the old `pacing` field), reads as no lessons, not as a guess. (7) *045's deadline line
+  prints on the packet*: it is a fact about the day, and the Today card prints whole. (8) *044's box is built with DOM
+  text*, so `check:inline-sinks` holds 044 at 5.
+- **Checks.** `npm run test:school-day` 185 checks, 51 breaks caught, two zones (new: next school day; one deadline per
+  period on its last school day; `gradingPeriodName`; `lessonsOn` against a plan placed and stamped by `scv-plan.js`
+  itself, three courses, every date of the year: lessons with code and title, bumps with reason, lost dates per course,
+  typed unit days n of m as the placement numbers them, an A-only course, a skipped day type, unstamped/newer/broken
+  plans; `describeLesson`). New `npm run test:school-day-sub-plans` (`smoke-consumers-sub-plans.mjs`, Chromium, port
+  8548): 47 checks and 10 breaks of the pages and `school-day.js` altered on the wire, each caught; also green under
+  `TZ=UTC`. `run-suites --only` school-calendar 15 (all, with the new one; 18.2 min), sub-plan-builder 1,
+  sub-binder-generator 1, classroom-timer 4, command-center 2, hall-pass-log 2, final-grade-checker 5,
+  schedule-visualizer 5, service-worker 3, tool-registry 1; the a11y sweep on 044 (and seeded) and 045 clean;
+  `test:theme` 966; `path7:next --only` 044 and 045 0 findings; lint; every guard, `check:inline-sinks` (044 still 5),
+  `check:precache --base origin/main` and `check:adoption --check` (`school-day.js` 8).
+- **What did not work.** The first fixture filled 044's title on the two-course day: the rule counted lessons, and the
+  other course had a unit day, not a lesson. The rule now counts everything the plan has on the day. `run-suites.mjs
+  --help` is not an option: it starts the whole list (it died when its pipe closed, in its third suite; nothing was left running).
+- **Not verified.** No teacher has written a sub plan against a real pacing plan; the printed packet was read as text,
+  not on paper; neither box was read by a screen reader.
+
 ## Path 9 P3 increment 2: 001 and 036 read the school-year spine (2026-10-25, AI-18, `CACHE_VERSION` v315)
 
 BACKLOG rank 14 kept and rewritten (now ½): only 044/045 is left.
