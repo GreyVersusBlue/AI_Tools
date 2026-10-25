@@ -50,6 +50,9 @@
   <script src="../_shared/media-db.js" defer></script>
   <!-- Path 7 P4: ExportKit writes the groups template CSV. -->
   <script src="../_shared/export.js" defer></script>
+  <!-- Path 11 P3: the step-free report prints and previews through the print kit. -->
+  <link rel="stylesheet" href="../_shared/print-kit.css">
+  <script src="../_shared/print-kit.js" defer></script>
   <script src="schedule-visualizer/sv-trace-image.js" defer></script>
   <!-- Path 9 P1: reads 032's bell schedules for "From the School Calendar"
        under the bell schedule editor. Pure; not deferred, since the inline
@@ -83,6 +86,8 @@
     import * as SVWhatIf from './schedule-visualizer/sv-whatif.js';
     window.SVWhatIf = SVWhatIf;
     Object.assign(window, SVWhatIf);
+    import * as SVAccess from './schedule-visualizer/sv-access.js';
+    window.SVAccess = SVAccess;
     import * as SVRecovery from './schedule-visualizer/sv-recovery.js';
     window.SVRecovery = SVRecovery;
     window.dispatchEvent(new Event('sv-recovery-ready'));
@@ -414,6 +419,19 @@
             </div>
           </div>
 
+          <!-- Path 11 P3: step-free access -->
+          <div class="bp-sidebar-section">
+            <div class="bp-sidebar-label">Step-free access</div>
+            <button class="bp-icon-btn" id="btn-step-free-report" style="width:100%;justify-content:flex-start;padding:8px var(--sp-3);" title="Which rooms cannot be reached from an exit without stairs, and which moves in the schedule have no step-free route">
+              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="4" r="2"/><path d="M12 7v6h5l2 6"/><path d="M9 11a5 5 0 1 0 6 7"/>
+              </svg>Step-free Report
+            </button>
+            <div style="font-size:11px;color:var(--slate-400);line-height:1.5;margin-top:var(--sp-2);">
+              Select a paired staircase and say whether it is stairs, an elevator or a ramp. Rooms are judged from the marked exterior exits.
+            </div>
+          </div>
+
           <!-- Actions -->
           <div class="bp-sidebar-section">
             <div class="bp-sidebar-label">Canvas</div>
@@ -580,6 +598,27 @@
 
               <div id="rp-pair-target-info" style="display:none;font-size:12px;color:var(--slate-500);margin-bottom:var(--sp-3);line-height:1.4;">
                 Paired with: <span id="rp-pair-partner-coords" style="font-family:var(--font-mono);color:var(--slate-700);font-weight:600;"></span>
+              </div>
+            </div>
+
+            <!-- Path 11 P3: what this pair is, for step-free routes -->
+            <div class="rp-section" id="rp-pair-access-section" style="display:none;">
+              <div class="rp-field">
+                <label class="rp-label" for="rp-pair-access">What this pair is</label>
+                <select id="rp-pair-access" class="rp-input" style="cursor:pointer;">
+                  <option value="stairs">Stairs</option>
+                  <option value="elevator">Elevator</option>
+                  <option value="ramp">Ramp</option>
+                </select>
+              </div>
+              <div class="rp-field" id="rp-pair-oos-row" style="display:none;">
+                <label style="display:flex;align-items:flex-start;gap:var(--sp-2);cursor:pointer;user-select:none;">
+                  <input type="checkbox" id="rp-pair-out-of-service" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent);" />
+                  <span style="font-size:12px;font-weight:600;color:var(--slate-700);">Out of service</span>
+                </label>
+              </div>
+              <div style="font-size:11px;color:var(--slate-500);line-height:1.5;">
+                Step-free routes (Visualize → Options, and the step-free report) use elevators and ramps only, and never cross a stair tile. An elevator out of service is used by no route.
               </div>
             </div>
 
@@ -1237,6 +1276,10 @@
             <div class="viz-toggle-row">
               <span>Mod markers &amp; labels<span class="viz-info-icon" data-tip="Draws a dot at each classroom endpoint and labels it with the mod number — useful for tracing individual group routes">i</span></span>
               <label class="viz-switch" title="Draws a dot at each classroom endpoint and labels it with the mod number — useful for tracing individual group routes"><input type="checkbox" id="viz-opt-markers" checked /><span class="viz-switch-track"></span></label>
+            </div>
+            <div class="viz-toggle-row">
+              <span>Step-free routes<span class="viz-info-icon" data-tip="Routes a wheelchair user could take: elevators and ramps only, never a stair tile. A move with no such route is shown as an error, not drawn up the stairs.">i</span></span>
+              <label class="viz-switch" title="Routes a wheelchair user could take: elevators and ramps only, never a stair tile"><input type="checkbox" id="viz-opt-step-free" aria-label="Step-free routes" /><span class="viz-switch-track"></span></label>
             </div>
             <div class="viz-toggle-row">
               <span>Constant line width<span class="viz-info-icon" data-tip="Keeps stroke width fixed regardless of zoom level — useful when zoomed in far">i</span></span>
@@ -2588,8 +2631,17 @@ function svGraph() {
 }
 let _svGraphCache = null;
 function graphCache() { return _svGraphCache || (_svGraphCache = svGraph().createCache()); }
-function invalidatePathfindingGraph() { if (_svGraphCache) _svGraphCache.invalidate(); }
+function invalidatePathfindingGraph() {
+  if (_svGraphCache) _svGraphCache.invalidate();
+  if (_svStepFreeCache) _svStepFreeCache.invalidate();
+}
 function getPathfindingGraph() { return graphCache().get(AppState.blueprint); }
+/* Path 11 P3: the step-free graph, cached beside the ordinary one and
+   invalidated with it. The Visualize tab's "Step-free routes" switch
+   (AppState.viz.stepFree) makes group day paths and congestion use it. */
+let _svStepFreeCache = null;
+function getStepFreeGraph() { return (_svStepFreeCache || (_svStepFreeCache = svGraph().createCache({ stepFree: true }))).get(AppState.blueprint); }
+function routeGraph() { return AppState.viz.stepFree ? getStepFreeGraph() : getPathfindingGraph(); }
 function rebuildPathfindingGraph() { return graphCache().rebuild(AppState.blueprint); }
 window.rebuildPathfindingGraph = rebuildPathfindingGraph;
 function cellKey(x, y) { return svGraph().cellKey(x, y); }
@@ -2611,11 +2663,11 @@ function isCellHeatExcluded(x, y, floorId) { return svRoutes().isCellHeatExclude
 function findGroupDayPath(groupName, day) {
   const group = AppState.schedules.groups.find(g => g.name === groupName);
   return svRoutes().groupDayPath(group, day,
-    { graph: getPathfindingGraph(), settings: AppState.settings, pairs: AppState.blueprint.crossFloorPairs });
+    { graph: routeGraph(), settings: AppState.settings, pairs: AppState.blueprint.crossFloorPairs });
 }
 function computeCongestionMap(groupNames, day) {
   return svRoutes().congestionMap(groupNames, day,
-    { groups: AppState.schedules.groups, graph: getPathfindingGraph(), settings: AppState.settings, blueprint: AppState.blueprint });
+    { groups: AppState.schedules.groups, graph: routeGraph(), settings: AppState.settings, blueprint: AppState.blueprint });
 }
 function collectExitPoints() { return svRoutes().collectExitPoints(AppState.blueprint, getPathfindingGraph()); }
 function computeEvacuationRouteForRoom(roomKey, exits, graph) {
@@ -5352,5 +5404,7 @@ window.wiComputeDiff    = wiComputeDiff;
 
 <!-- The Schedule Browser script and its publisher are schedule-visualizer/sv-browser.js (Path 11 P2 increment 7), loaded by the module script in <head>. -->
 <script src="../_shared/sw-register.js" defer></script>
+<!-- Path 11 P3: the step-free report, built by sv-access.js; on paper only while body.sf-printing. -->
+<section id="sf-print-sheet" class="pk-page pk-paper" aria-label="Step-free access report"></section>
 </body>
 </html>

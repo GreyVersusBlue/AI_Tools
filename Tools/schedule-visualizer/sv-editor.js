@@ -2563,6 +2563,7 @@ function refreshStaircasePanel(col, row) {
   const btnPairWith  = document.getElementById('rp-btn-pair-with');
   const btnCancel    = document.getElementById('rp-btn-cancel-pair');
   const btnUnpair    = document.getElementById('rp-btn-unpair');
+  refreshPairAccessFields(col, row);
 
   const src = AppState.ui.pairingSource;
   const activeFloorId = getActiveFloorData().id;
@@ -2632,6 +2633,41 @@ function refreshStaircasePanel(col, row) {
     if (existingPairHere) existingPairHere.style.display = 'none';
   }
 }
+
+/* Path 11 P3: the pair's access kind and out-of-service flag, shown only
+   while this staircase is paired and no pairing is in progress. */
+function refreshPairAccessFields(col, row) {
+  const section = document.getElementById('rp-pair-access-section');
+  if (!section) return;
+  const idx = getPairIndex(col, row);
+  const pair = idx >= 0 ? AppState.blueprint.crossFloorPairs[idx] : null;
+  section.style.display = (pair && !AppState.ui.isPairingMode) ? '' : 'none';
+  if (!pair) return;
+  const access = (pair.access === 'elevator' || pair.access === 'ramp') ? pair.access : 'stairs';
+  document.getElementById('rp-pair-access').value = access;
+  document.getElementById('rp-pair-oos-row').style.display = access === 'elevator' ? '' : 'none';
+  document.getElementById('rp-pair-out-of-service').checked = access === 'elevator' && pair.outOfService === true;
+}
+
+function applyPairAccess() {
+  const target = AppState.ui.editorTarget;
+  if (!target) return;
+  const idx = getPairIndex(target.col, target.row);
+  if (idx < 0) return;
+  const pair = AppState.blueprint.crossFloorPairs[idx];
+  const access = document.getElementById('rp-pair-access').value;
+  const oos = document.getElementById('rp-pair-out-of-service').checked;
+  beginAction();
+  if (access === 'elevator' || access === 'ramp') pair.access = access; else delete pair.access;
+  if (access === 'elevator' && oos) pair.outOfService = true; else delete pair.outOfService;
+  commitAction();
+  invalidatePathfindingGraph();
+  refreshPairAccessFields(target.col, target.row);
+  renderCanvas();
+  scheduleBlueprintAutosave();
+}
+document.getElementById('rp-pair-access')?.addEventListener('change', applyPairAccess);
+document.getElementById('rp-pair-out-of-service')?.addEventListener('change', applyPairAccess);
 
 document.getElementById('rp-btn-pair-with').addEventListener('click', () => {
   const target = AppState.ui.editorTarget;

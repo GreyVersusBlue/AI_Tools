@@ -1,17 +1,18 @@
 {
   "//": "Path 11 P2's size ledger. page is the byte cap on Tools/035-schedule-visualizer.html (fs.statSync size); size.test.mjs fails above it and more than 2 KB below it, so lower it in the commit that shrinks the page. modules are a record of each moved-out file's bytes, not a cap.",
-  "page": 278920,
+  "page": 282881,
   "modules": {
-    "Tools/schedule-visualizer/sv.css": 157889,
+    "Tools/schedule-visualizer/sv.css": 159310,
     "Tools/schedule-visualizer/sv-model.js": 18853,
-    "Tools/schedule-visualizer/sv-graph.js": 25331,
-    "Tools/schedule-visualizer/sv-routes.js": 11110,
+    "Tools/schedule-visualizer/sv-graph.js": 30268,
+    "Tools/schedule-visualizer/sv-routes.js": 15114,
     "Tools/schedule-visualizer/sv-congestion.js": 17744,
     "Tools/schedule-visualizer/sv-playback.js": 36822,
-    "Tools/schedule-visualizer/sv-browser.js": 86424,
-    "Tools/schedule-visualizer/sv-viz.js": 120082,
-    "Tools/schedule-visualizer/sv-editor.js": 151713,
+    "Tools/schedule-visualizer/sv-browser.js": 86457,
+    "Tools/schedule-visualizer/sv-viz.js": 120423,
+    "Tools/schedule-visualizer/sv-editor.js": 153524,
     "Tools/schedule-visualizer/sv-schedules-tab.js": 65260,
-    "Tools/schedule-visualizer/sv-whatif.js": 37796
+    "Tools/schedule-visualizer/sv-whatif.js": 37796,
+    "Tools/schedule-visualizer/sv-access.js": 8059
   }
 }

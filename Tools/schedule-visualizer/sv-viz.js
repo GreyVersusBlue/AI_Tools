@@ -2151,6 +2151,13 @@ function initVizModule() {
   if (optMark) optMark.addEventListener('change', () => {
     AppState.viz.showMarkers = optMark.checked; renderVizCanvas();
   });
+  // Path 11 P3: step-free routes (the page's routeGraph() reads the flag).
+  const optStepFree = document.getElementById('viz-opt-step-free');
+  if (optStepFree) optStepFree.addEventListener('change', () => {
+    AppState.viz.stepFree = optStepFree.checked;
+    updateVizCompletenessBar();
+    if (AppState.viz.rendered) vizRender();
+  });
   const optConst = document.getElementById('viz-opt-constant');
   if (optConst) optConst.addEventListener('change', () => {
     AppState.viz.constantWidth = optConst.checked; renderVizCanvas();

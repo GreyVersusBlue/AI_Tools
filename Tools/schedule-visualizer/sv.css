@@ -2832,3 +2832,24 @@
       #app-visualizer .tab-panel thead th { position: static; }
       .group-card, .viz-section, .viz-stat, .wi-card, .palette-card, .subject-row { break-inside: avoid; }
     }
+
+/* ── Path 11 P3: the step-free access report (sv-access.js) ──
+   Off screen always; on paper only while <body> carries sf-printing, and
+   then alone. The print kit's preview copies <body>'s classes, so it shows
+   the sheet the same way. */
+#sf-print-sheet { display: none; color: #000; background: #fff; font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height: 1.35; }
+#sf-print-sheet .sf-title { font-size: 18pt; margin: 0 0 2pt; }
+#sf-print-sheet .sf-sub { margin: 0 0 8pt; color: #333; }
+#sf-print-sheet .sf-summary { font-size: 12pt; font-weight: 600; margin: 0 0 8pt; }
+#sf-print-sheet .sf-warning { border: 1.5pt solid #000; padding: 4pt 6pt; font-weight: 600; margin: 0 0 8pt; }
+#sf-print-sheet .sf-h2 { font-size: 12.5pt; margin: 12pt 0 4pt; break-after: avoid; }
+#sf-print-sheet .sf-none, #sf-print-sheet .sf-note { margin: 0 0 4pt; }
+#sf-print-sheet .sf-foot { margin-top: 14pt; font-size: 9pt; color: #333; }
+#sf-print-sheet .sf-table { border-collapse: collapse; width: 100%; }
+#sf-print-sheet .sf-table th, #sf-print-sheet .sf-table td { border: 0.75pt solid #000; padding: 2pt 5pt; text-align: left; vertical-align: top; }
+#sf-print-sheet .sf-table th { background: #e8e8e8; }
+#sf-print-sheet .sf-table tr { break-inside: avoid; }
+@media print {
+  body.sf-printing > :not(#sf-print-sheet) { display: none !important; }
+  body.sf-printing #sf-print-sheet { display: block; }
+}

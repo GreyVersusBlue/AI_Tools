@@ -107,7 +107,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 
 ## Repo structure
 
-`index.html` at the repo root is the toolkit landing page. Each tool's own entry point is a single `.html` file inside `Tools/`. Supporting scripts, fonts, and libraries for a given tool live in a matching subfolder under `Tools/` (e.g. `Tools/final-grade-checker/`, `Tools/schedule/`, `Tools/seating-chart/`). You shouldn't need to touch those unless you're editing the tool itself.
+`index.html` at the repo root is the toolkit landing page. Each tool's own entry point is a single `.html` file inside `Tools/`. Supporting scripts, fonts, and libraries for a given tool live in a matching subfolder under `Tools/` (e.g. `Tools/final-grade-checker/`, `Tools/schedule-visualizer/`, `Tools/seating-chart/`). You shouldn't need to touch those unless you're editing the tool itself.
 
 ## Parent conference sign-up
 

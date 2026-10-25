@@ -411,6 +411,7 @@ const PRECACHE_URLS = [
   "Tools/rubric-builder/rb-templates.js",
   "Tools/034-schedule-browser.html",
   "Tools/035-schedule-visualizer.html",
+  "Tools/schedule-visualizer/sv-access.js",
   "Tools/schedule-visualizer/sv-browser.js",
   "Tools/schedule-visualizer/sv-congestion.js",
   "Tools/schedule-visualizer/sv-editor.js",
