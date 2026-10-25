@@ -267,6 +267,7 @@
       reads: [
         'crh_students_v1',
         'np_rosters',
+        'scv_calendar_v1',
       ],
     },
     {
@@ -490,6 +491,9 @@
       category: 'assessment-grading',
       keys: [
         { k: 'final-grade-checker:settings-v1' },
+      ],
+      reads: [
+        'scv_calendar_v1',
       ],
     },
     {

@@ -25,6 +25,7 @@
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/export.js"></script>
+<script src="../_shared/school-day.js"></script>
 <link rel="stylesheet" href="../_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css">
 <link rel="stylesheet" href="../_shared/theme.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -132,6 +133,7 @@
   .need-target-type { display: flex; gap: var(--space-3); font-size: 13px; flex-wrap: wrap; }
   .need-target-type label { display: flex; align-items: center; gap: 5px; }
   #need-target-letter, #need-target-pct { width: 150px; padding: 8px 10px; }
+  .need-calendar { font-size: 13px; margin: var(--space-3) 0 0; padding: 8px 12px; border-left: 3px solid var(--color-accent); background: var(--color-surface); }
   .need-result-note { font-size: 11px; opacity: 0.75; margin-top: 4px; line-height: 1.4; }
   #need-results.results-section { flex-direction: row; flex-wrap: wrap; }
   #need-results .result-box { width: 220px; min-width: 220px; }
@@ -529,6 +531,7 @@
         score needed on the open quarter, using whichever method gets there with the lower score. Each
         quarter counts equally: 25% of the final grade.
       </p>
+      <p class="need-calendar" id="need-calendar" role="status" hidden></p>
 
       <div class="need-quarters-row">
         <div class="need-quarter-wrap">
@@ -558,13 +561,13 @@
           <label><input type="radio" name="need-target-type" value="letter" checked> Target letter grade</label>
           <label><input type="radio" name="need-target-type" value="pct"> Target percentage</label>
         </div>
-        <select class="input" id="need-target-letter">
+        <select class="input" id="need-target-letter" aria-label="Target letter grade">
           <option value="A">A (90–100)</option>
           <option value="B">B (80–89)</option>
           <option value="C">C (70–79)</option>
           <option value="D">D (60–69)</option>
         </select>
-        <input class="input" type="number" id="need-target-pct" min="0" max="100" step="0.01" placeholder="e.g. 85" disabled>
+        <input class="input" type="number" id="need-target-pct" min="0" max="100" step="0.01" placeholder="e.g. 85" aria-label="Target percentage" disabled>
       </div>
 
       <div id="need-results" class="results-section" style="margin-top:var(--space-4);"></div>
@@ -2018,6 +2021,49 @@ function computeNeed() {
   });
 }
 
+/* ── The grading window, from 032 School Calendar (Path 9 P3) ──
+   Read through SchoolDay, never written. With a calendar saved on this device the
+   need tab says which quarter today is in and how many school days it has left
+   (half days counted as days and named beside them, P9-1), and on first load marks
+   that quarter as the open one; every radio stays the teacher's to change. No
+   calendar: the section is what it was. The calendar's grading periods are its
+   own "End of Marking Period" tags; only a year of four is read as quarters. */
+function isoWords(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+function showSchoolCalendar(pick) {
+  const el = document.getElementById('need-calendar');
+  const cal = window.SchoolDay ? SchoolDay.read(localStorage) : null;
+  if (!cal) { el.hidden = true; el.textContent = ''; return; }
+  const today = SchoolDay.localISO(new Date());
+  const periods = SchoolDay.gradingPeriods(cal);
+  const gp = SchoolDay.gradingPeriodOf(cal, today);
+  const quarters = periods.length === QUARTERS;
+  let msg;
+  if (!gp) {
+    msg = today < cal.meta.start
+      ? `From the School Calendar: the school year starts ${isoWords(cal.meta.start)}.`
+      : `From the School Calendar: the school year ended ${isoWords(cal.meta.end)}.`;
+  } else {
+    const name = quarters ? `Quarter ${gp.n}` : `grading period ${gp.n} of ${periods.length}`;
+    const left = SchoolDay.daysRemaining(cal, gp, today);
+    const days = left.days === 0 ? 'no school days left'
+      : `${left.days} school day${left.days === 1 ? '' : 's'} left` +
+        (!left.half ? '' : left.days === 1 ? ', a half day' : left.half === 1 ? ', 1 of them a half day' : `, ${left.half} of them half days`);
+    msg = `From the School Calendar: today is in ${name} (${isoWords(gp.start)} to ${isoWords(gp.end)}), ${days}.`;
+    if (quarters) {
+      if (pick) {
+        const radio = document.querySelector(`input[name="need-solve"][value="${gp.n - 1}"]`);
+        if (radio) radio.checked = true;
+      }
+      msg += ` ${name} is marked as the open one; choose another if you need to.`;
+    }
+  }
+  el.textContent = msg;
+  el.hidden = false;
+}
+
 function attachNeedListeners() {
   document.querySelectorAll('input[name="need-solve"]').forEach(r => r.addEventListener('change', () => { updateNeedSolveTarget(); computeNeed(); }));
   for (let i = 1; i <= QUARTERS; i++) {
@@ -2239,8 +2285,12 @@ loadPersistedSettings();
 applySettingsToForm();
 wireSettingsPanel();
 attachNeedListeners();
+showSchoolCalendar(true);
 updateNeedSolveTarget();
 computeNeed();
+window.addEventListener('storage', e => {
+  if (e.key === null || (window.SchoolDay && e.key === SchoolDay.KEY)) showSchoolCalendar(false);
+});
 
 if (navigator.share) {
   document.getElementById('share-pdf-btn').style.display = '';
