@@ -73,6 +73,7 @@
     "test:schedule-visualizer-graph": "node Tools/schedule-visualizer/test/graph.test.mjs",
     "test:schedule-visualizer-routes": "node Tools/schedule-visualizer/test/routes.test.mjs",
     "test:schedule-visualizer-congestion": "node Tools/schedule-visualizer/test/congestion.test.mjs",
+    "test:schedule-visualizer-playback": "node Tools/schedule-visualizer/test/playback.test.mjs",
     "test:schedule-visualizer-bridge": "node Tools/schedule-visualizer/test/bridge.test.mjs",
     "test:schedule-publish": "node Tools/schedule/test/smoke-publish-baseline.mjs",
     "test:dbq-images": "node Tools/dbq-source-packet-builder/test/smoke-images.mjs",

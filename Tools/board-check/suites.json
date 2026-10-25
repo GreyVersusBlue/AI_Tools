@@ -323,6 +323,7 @@
     "Tools/schedule-visualizer/test/graph.test.mjs",
     "Tools/schedule-visualizer/test/routes.test.mjs",
     "Tools/schedule-visualizer/test/congestion.test.mjs",
+    "Tools/schedule-visualizer/test/playback.test.mjs",
     "Tools/schedule-visualizer/test/bridge.test.mjs",
     "Tools/board-check/test/check-entities.test.mjs",
     "Tools/board-check/test/check-publisher.test.mjs",
