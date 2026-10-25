@@ -21,12 +21,24 @@
 // The baseline changes on purpose when 035's publisher does: run --update,
 // read the diff, commit it with the change. A change you did not mean is the
 // thing this exists to catch.
+//
+// Since v62 (P1 increment 2) it also opens the published file from file://
+// and walks it until every published piece has run (Chromium's JS coverage
+// names one that never did); reads Northwind as v61 published it
+// (fixture-published-format0.json) through today's reader; publishes a school
+// named with a closing script tag; publishes at 23:30 in Los Angeles; and
+// breaks 035 itself on the way in with page.route(), each break named by its
+// own section of the baseline. A published file it opens is written under
+// os.tmpdir() and removed after.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { fileURLToPath } from 'node:url';
-import { publishFromFixture } from './publish.mjs';
+import os from 'node:os';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { publishFromFixture, generatorPath } from './publish.mjs';
+import { fixtureProject } from './fixture-northwind.mjs';
+import { prepPage } from '../../board-check/harness.mjs';
 import { readPublisher, assemble } from '../../board-check/check-publisher.mjs';
 import { readEmbedded, validate } from './published-contract.mjs';
 
@@ -35,6 +47,12 @@ const BASELINE = path.join(HERE, 'baseline-northwind.html');
 const PORT = 8551;
 const NOW = '2026-01-15T17:00:00Z';
 const UPDATE = process.argv.includes('--update');
+/** Published pieces nothing in a published file can call, each with its
+ *  reason. The coverage walk fails if one of these ever runs (delete it then),
+ *  as check-publisher's KNOWN_FREE does. */
+const UNREACHED = {
+  brDShort: 'only brRenderMapLegacy calls it, behind the dead door check-publisher lists as KNOWN_FREE',
+};
 
 let passed = 0, failed = 0;
 const ok = (cond, label) => {
@@ -98,6 +116,179 @@ export function compare(baseline, actual) {
     diffs.push({ section: 'order', baseline: ak[i], now: bk[i] });
   }
   return diffs;
+}
+
+/** Open a published file from file:// in a fresh context, its clock at `at`. */
+async function openPublished(browser, html, { at, coverage = false } = {}) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sv-published-'));
+  const file = path.join(dir, 'published.html');
+  fs.writeFileSync(file, html);
+  const page = await prepPage(browser, 'file://', { width: 1200, height: 900 });
+  if (at) await page.clock.setFixedTime(new Date(at));
+  if (coverage) await page.coverage.startJSCoverage({ resetOnNavigation: false });
+  await page.goto(pathToFileURL(file).href, { waitUntil: 'load' });
+  return {
+    page,
+    close: async () => { await page.context().close(); fs.rmSync(dir, { recursive: true, force: true }); },
+  };
+}
+
+const viewText = page => page.evaluate(() => document.getElementById('br-view').innerText);
+
+/** Pick a teacher the way a person does: type, arrow down, Enter. */
+async function pickTeacher(page, name) {
+  await page.click('#br-search');
+  await page.fill('#br-search', name);
+  await page.press('#br-search', 'ArrowDown');
+  await page.press('#br-search', 'Enter');
+  await page.waitForFunction(n => document.querySelector('#br-view h2')?.textContent === n, name);
+}
+
+/** Publish again from the page that is open, after loading 035 with `rewrite`
+ *  applied to its text (null: as it is). Restores nothing; the caller decides. */
+async function republish(page, { rewrite = null, project = fixtureProject() } = {}) {
+  const url = new URL(page.url());
+  const target = url.origin + generatorPath();
+  if (rewrite) {
+    await page.route(target, async route => {
+      const resp = await route.fetch();
+      await route.fulfill({ response: resp, body: rewrite(await resp.text()) });
+    });
+  }
+  try {
+    await page.goto(target, { waitUntil: 'load' });
+    await page.waitForFunction(() => typeof window.applyFullProject === 'function', { timeout: 20000 });
+    return await page.evaluate(p => { window.confirm = () => true; window.applyFullProject(p); return window.brBuildPublishedHTML(); }, project);
+  } finally {
+    if (rewrite) await page.unroute(target);
+  }
+}
+
+async function increment2(run, pub, html) {
+  const browser = run.browser;
+  const data = readEmbedded(html);
+  ok(data.format === 1 && data.tool === 'v62', `the data says format 1 and tool v62 (got ${data.format}, ${data.tool})`);
+  ok(JSON.stringify(Object.keys(data).slice(0, 3)) === '["format","tool","school"]', 'format and tool come first');
+
+  // 1. Every published piece runs at least once, opened from file://, with the
+  //    clock 90 days past publishing so the out-of-date banner shows too.
+  {
+    const pieces = pub.fns.map(f => f.name).concat(pub.consts.map(c => c.name));
+    ok(pieces.length === 35, `35 published pieces to cover (got ${pieces.length})`);
+    const o = await openPublished(browser, html, { at: '2026-04-15T17:00:00Z', coverage: true });
+    const p = o.page;
+    try {
+      const banner = await p.evaluate(() => { const b = document.getElementById('br-stale-banner'); return { on: b.classList.contains('show'), text: b.textContent }; });
+      ok(banner.on && banner.text.includes('published on January 15, 2026') && banner.text.includes('90 days ago'),
+        'opened 90 days on, the banner says January 15, 2026 and 90 days: ' + banner.text.slice(0, 90));
+      await p.click('#br-search');
+      await p.keyboard.type('Fern');
+      await p.press('#br-search', 'ArrowDown');
+      await p.press('#br-search', 'ArrowUp');
+      await p.press('#br-search', 'Escape');
+      await p.click('#br-mast-school');                       // a click outside the search box
+      await pickTeacher(p, 'Fernwood');
+      await p.click('#br-view .btn-map');                     // "See the whole floor"
+      await p.click('#br-view .floortabs button:nth-child(2)'); // Floor 2
+      await p.click('#br-view svg [onclick*="brJumpTeacher"]'); // a room on the map
+      await p.waitForFunction(() => ['Ivywood', 'Jessamine'].includes(document.querySelector('#br-view h2')?.textContent));
+      await p.click('#br-view .tcard');                       // a mate
+      await p.click('#br-view .gchip');                       // one of the teacher's groups
+      await p.waitForFunction(() => /Class /.test(document.getElementById('br-search').value));
+      await p.click('#br-view .daychips button:nth-child(2)'); // B day
+      await p.click('#br-view .lnk');                         // a teacher in the group
+      await p.focus('#br-mTeacher');
+      for (const k of ['ArrowRight', 'ArrowLeft', 'End', 'Home', 'ArrowDown', 'ArrowUp']) await p.keyboard.press(k);
+      const cov = await p.coverage.stopJSCoverage();
+      const ran = new Map();
+      for (const entry of cov) for (const f of entry.functions) {
+        if (f.functionName) ran.set(f.functionName, (ran.get(f.functionName) || 0) + (f.ranges[0] ? f.ranges[0].count : 0));
+      }
+      const never = pieces.filter(n => !(ran.get(n) > 0));
+      const missed = never.filter(n => !UNREACHED[n]);
+      const expired = Object.keys(UNREACHED).filter(n => ran.get(n) > 0 || !pieces.includes(n));
+      ok(missed.length === 0, 'every published piece runs from file://; never ran: ' + JSON.stringify(missed));
+      ok(expired.length === 0, 'an UNREACHED entry that ran or is no longer published (delete it): ' + JSON.stringify(expired));
+      ok(p.__errs.length === 0, 'no page errors in the published file: ' + JSON.stringify(p.__errs));
+    } finally { await o.close(); }
+  }
+
+  // 2. A newer reader reads an older file's data: v62's file with Northwind as
+  //    v61 wrote it shows the same day for the same teacher.
+  {
+    const f0 = JSON.parse(fs.readFileSync(path.join(HERE, 'fixture-published-format0.json'), 'utf8'));
+    ok(validate(f0).format === 0, 'fixture-published-format0.json is format 0');
+    const line = html.split('\n').find(l => l.startsWith('const PUBLISHED_DATA = '));
+    const old = html.replace(line, () => 'const PUBLISHED_DATA = ' + JSON.stringify(f0) + ';');
+    const days = [];
+    for (const h of [html, old]) {
+      const o = await openPublished(browser, h, { at: NOW });
+      try {
+        await pickTeacher(o.page, 'Fernwood');
+        days.push(await viewText(o.page));
+        ok(o.page.__errs.length === 0, 'no page errors: ' + JSON.stringify(o.page.__errs));
+      } finally { await o.close(); }
+    }
+    ok(days[0].includes('Class 7-1') && days[0] === days[1], "today's reader shows a format 0 file's teacher exactly as a format 1 file's");
+  }
+
+  // 3. A school named with a closing script tag: one script block, and the
+  //    name in the masthead as text.
+  {
+    const evil = '</script><b>';
+    const project = fixtureProject();
+    project.settings.schoolName = evil;
+    for (const f of project.blueprint && project.blueprint.settings ? [project.blueprint.settings] : []) f.schoolName = evil;
+    const h = await republish(run.page, { project });
+    ok((h.match(/<script\b/gi) || []).length === 1 && (h.match(/<\/script>/gi) || []).length === 1,
+      'a school named ' + evil + ' publishes a file with one script block');
+    ok(readEmbedded(h).school === evil, 'and the data holds the name, escaped');
+    const o = await openPublished(browser, h, { at: NOW });
+    try {
+      const shown = await o.page.evaluate(() => ({ h1: document.getElementById('br-mast-school').textContent, title: document.title,
+        b: document.querySelectorAll('#br-mast-school b').length }));
+      ok(shown.h1 === evil && shown.b === 0 && shown.title.startsWith(evil), 'the masthead and title show it as text: ' + JSON.stringify(shown));
+      ok(o.page.__errs.length === 0, 'and the file runs: ' + JSON.stringify(o.page.__errs));
+    } finally { await o.close(); }
+  }
+
+  // 4. Published at 23:30 in Los Angeles (07:30 the next day in UTC): both
+  //    dates are the local one. Before v62 publishedOn said the 16th.
+  {
+    const cdp = await run.page.context().newCDPSession(run.page);
+    await cdp.send('Emulation.setTimezoneOverride', { timezoneId: 'America/Los_Angeles' });
+    try {
+      await run.page.clock.setFixedTime(new Date('2026-01-16T07:30:00Z'));
+      const h = await run.page.evaluate(() => window.brBuildPublishedHTML());
+      const d = readEmbedded(h);
+      ok(d.publishedOn === '2026-01-15' && h.includes('Published January 15, 2026 from'),
+        `a publish at 23:30 local is dated the 15th in both places (publishedOn ${d.publishedOn})`);
+    } finally {
+      await cdp.send('Emulation.setTimezoneOverride', { timezoneId: '' }).catch(() => {});
+      await run.page.clock.setFixedTime(new Date(NOW));
+    }
+  }
+
+  // 5. Breaks made in 035 itself, on the way in: each must move its own
+  //    section of the baseline and no other.
+  {
+    const base = fs.readFileSync(BASELINE, 'utf8');
+    const cssStart = pub.css.split('\n')[0];
+    const sub = (a, b) => t => { if (!t.includes(a)) throw new Error('035 edit not found: ' + a); return t.replace(a, b); };
+    const breaks = [
+      ['a property dropped from every teacher record', sub('    t.co = [...co].sort();', '    delete t.co;'), 'data'],
+      ['two functions swapped in brPublishFnList()', sub('brChoose, brJumpTeacher, brJumpGroup,', 'brChoose, brJumpGroup, brJumpTeacher,'), 'order'],
+      ['one CSS declaration added to BR_CSS', sub('const BR_CSS = `#app-browser {', 'const BR_CSS = `#app-browser {\n  outline: 0;'), 'BR_CSS'],
+      ['the footnote reworded', sub('This file is a read-only snapshot', 'This file is a snapshot'), 'markup'],
+    ];
+    for (const [label, rewrite, want] of breaks) {
+      const h = await republish(run.page, { rewrite });
+      const d = compare(base, stripFonts(h, cssStart)).map(x => x.section);
+      ok(JSON.stringify(d) === JSON.stringify([want]), `035 broken on purpose: ${label} → ${JSON.stringify(d)}, want ["${want}"]`);
+    }
+    const again = await republish(run.page);
+    ok(compare(base, stripFonts(again, cssStart)).length === 0, 'and 035 as it is, loaded again, matches the baseline');
+  }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -176,6 +367,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
         only('two functions swapped in the list', swapped, 'order');
       }
     }
+
+    await increment2(run, pub, html);
   } finally {
     await run.close();
   }

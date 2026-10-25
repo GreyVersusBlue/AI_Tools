@@ -2916,7 +2916,7 @@
         <!-- The version used to live in the filename. It lives here now, so the
              board href and any bookmark survive a version bump. Set from
              TOOL_VERSION at startup. -->
-        <span class="header-subtitle">School Layout Visualizer <span id="header-version">v61</span></span>
+        <span class="header-subtitle">School Layout Visualizer <span id="header-version">v62</span></span>
       </div>
     </div>
     <div class="header-spacer"></div>
@@ -5304,8 +5304,10 @@ const AppState = {
 
    Bump this when the tool changes. v61 is session 8: vendored fonts and
    jsPDF, stable filenames, the naming reconciled to "School Layout
-   Visualizer". */
-const TOOL_VERSION = 'v61';
+   Visualizer". v62 is Path 11 P1: a published file's data says its format
+   and this version, is dated by the local calendar, and has every < in it
+   escaped so no name can end its script. */
+const TOOL_VERSION = 'v62';
 
 const SETTINGS_KEY  = 'stviz_settings';
 const BLUEPRINT_KEY = 'stviz_blueprint';
@@ -20785,15 +20787,27 @@ function brBuildPublishedMarkup(school, dateStr) {
 </div>`;
 }
 
+/* The local calendar date as YYYY-MM-DD. toISOString() gives the UTC date,
+   so a file published after 8 pm eastern was dated tomorrow, beside a
+   footnote saying today, and read back as local midnight by the banner. */
+function brLocalISODate(d) {
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+
 function brBuildPublishedHTML() {
   /* Refresh every snapshot from the live app immediately before assembly. */
   brLoadFromVisualizer();
   const school  = (AppState.settings.schoolName || 'Schedule Browser').trim() || 'Schedule Browser';
   const now     = new Date();
   const dateStr = now.toLocaleDateString(undefined, { year:'numeric', month:'long', day:'numeric' });
-  const iso     = now.toISOString().slice(0, 10);
+  const iso     = brLocalISODate(now);
 
+  /* format and tool: the published data's contract (Path 11 P1,
+     Tools/schedule/test/published-contract.mjs). A file with no format is
+     format 0, which is every file published up to v61. */
   const data = {
+    format: 1, tool: TOOL_VERSION,
     school, publishedOn: iso,
     dept: BR_DEPT, order: BR_ORDER,
     teachers: BR_TEACHERS, sections: BR_SECTIONS, room2teacher: BR_ROOM2TEACHER,
@@ -20823,7 +20837,9 @@ function brBuildPublishedHTML() {
   const js = [
     "'use strict';",
     '/* Published by the School Layout Visualizer — read-only schedule snapshot. */',
-    'const PUBLISHED_DATA = ' + JSON.stringify(data) + ';',
+    /* Every < written \u003c, so a name holding a closing script tag (it can
+       arrive in an imported project or a hand-off) cannot end this script. */
+    'const PUBLISHED_DATA = ' + JSON.stringify(data).replace(/</g, '\\u003c') + ';',
     'let BR_DEPT = PUBLISHED_DATA.dept, BR_ORDER = PUBLISHED_DATA.order;',
     consts,
     'let BR_TEACHERS = PUBLISHED_DATA.teachers, BR_SECTIONS = PUBLISHED_DATA.sections,',
@@ -20889,7 +20905,7 @@ function brPublish() {
     const html   = brBuildPublishedHTML();
     const school = (AppState.settings.schoolName || 'School').trim() || 'School';
     const safe   = school.replace(/[^\w\- ]/g, '').trim().replace(/\s+/g, '_') || 'School';
-    const iso    = new Date().toISOString().slice(0, 10);
+    const iso    = brLocalISODate(new Date());
     const blob   = new Blob([html], { type: 'text/html' });
     const url    = URL.createObjectURL(blob);
     const a      = document.createElement('a');

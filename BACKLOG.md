@@ -87,10 +87,16 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-20 (v319), rank 21 (DELETED: Path 11 P1 is whole; a gap, ranks not renumbered), P1 increment 2.** 035 (`TOOL_VERSION`
+  v62) publishes `format: 1` and `tool`, dates a file by the local calendar, and writes every `<` in the data `\u003c`;
+  `check:publisher` fails DATA if the escape, the format or a key goes missing. `test:schedule-publish` now also covers
+  every published piece from `file://`, reads `fixture-published-format0.json` (Northwind as v61 published it), publishes
+  a `</script><b>` school and a 23:30 Los Angeles publish, and breaks 035 itself with `page.route()`. **Path 11's next row
+  is P2 (rank 22). No new suite, so the next free suite port is still 8552.**
 - **AI-20 (no `CACHE_VERSION`), ranks 5 and 21.** Rank 5 DELETED (a gap): 035's four-palette theme is the documented
   exception (`CLAUDE.md`; `test:theme`'s `OWN_THEME`). Rank 21 kept, now ½: Path 11 P1 increment 1, `npm run
   check:publisher` (CI), the data contract, the 034 ledger, `test:check-publisher`, `test:schedule-publish` (port 8551)
-  with a committed baseline. **Left of P1: increment 2 (035's data `format: 1`, local date, escaping). Next free suite port: 8552.**
+  with a committed baseline. (Increment 2, the entry above, finished P1.)
 - **AI-18 (v318), rank 15 (DELETED: Path 9 P4 is whole, and with it Path 9; a gap, ranks not renumbered): pasted-table
   import in 032.** "Paste a Date Table…" reads a district PDF's date table through the new pure `readTable()` in
   `scv-ics.js` (tabs, runs of spaces, bars; date first or last; ranges; a yearless date put in the school year; a line it
@@ -615,7 +621,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 18 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 21 | Path 11 P1 — publisher drift guard before any extraction. **Increment 1 built 2026-10-25 (AI-20): `check:publisher` in CI, the data contract, the 034 ledger, `test:check-publisher`, and `test:schedule-publish` with a committed baseline.** **Left:** increment 2 (035 publishes `format: 1`, the local date and `\u003c`-escaped data; a `CACHE_VERSION` bump and `--update` of the baseline) and the browser cases the P1 bullet's first sub-bullet lists. Devon's seven answers are recorded there | 035 | ½ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 22 | Path 11 P2 — extract the pure engines; target the HTML under ~300 KB. **Designed 2026-10-05 (AI-20), not built: the P2 bullet has the whole design, a measured ladder of eleven increments (the page is 968 KB; the engines alone leave it at about 620 KB, the full ladder at about 270 KB), and five questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 23 | Path 11 P3 — accessibility routing: wheelchair/elevator-weighted routes and a printable report | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
@@ -3482,8 +3487,8 @@ a real pathfinder that the published browser never exposes.
   newer social branding. Only after this is green does extraction start. *Fable
   because the coupling is by string name and by closure, and the failure is a
   silently wrong published file that teachers rely on.*
-  **P1 increment 1 is built (AI-20, 2026-10-25, no `CACHE_VERSION`); increment 2 is not.** The first sub-bullet says
-  what was built and what is left; the rest is the design as written on 2026-10-05 (a design pass), the whole of it. It was written from the code as it stands at v248 and from one static probe, a scratch
+  **P1 is built, both increments (AI-20, 2026-10-25: increment 1 with no `CACHE_VERSION`, increment 2 in v319).** The
+  first sub-bullet says what was built; the rest is the design as written on 2026-10-05 (a design pass), the whole of it. It was written from the code as it stands at v248 and from one static probe, a scratch
   script that was not kept (what it measured is marked *measured*; everything else is read off the code).
   **What the bullet above gets wrong, first.** There is no baseline: `test/publish.mjs` writes
   `Tools/schedule/test/baseline.html` when run with no argument, and that file has never been committed (it is
@@ -3512,14 +3517,22 @@ a real pathfinder that the published browser never exposes.
     link-preview branding is unchanged and the guard checks only that a publish carries no social block; question 4,
     nothing is built for data newer than its reader (`upgrade()` throws, which is the test's only use); question 5,
     a double-booked room or a teacher in two rooms **warns and carries on** (P5 builds the warning; P1 changes
-    nothing); question 6, format 0 files are still read; question 7, the banner stays at 60 days. **Left
-    (increment 2, 035 only, a `CACHE_VERSION` bump and `TOOL_VERSION` v62, the baseline regenerated with `--update` in
-    the same commit):** `data` gains `format: 1` and `tool`; `publishedOn` becomes the local date; every `<` in
-    `JSON.stringify(data)` written `\u003c`. **And the browser-suite cases that need it or were not built:** the
-    file opened from `file://` running every one of the 35 pieces (JS coverage); `fixture-published-format0.json`
-    captured from the tool as it is now, before increment 2, read by a later reader; a school named `</script><b>`;
-    a publish at 23:30 local; the breaks made by rewriting 035 with `page.route()` (four breaks on the output
-    stand in for them now).
+    nothing); question 6, format 0 files are still read; question 7, the banner stays at 60 days. **Built, increment 2
+    (v319, 035 only, `TOOL_VERSION` v62, the baseline regenerated with `--update` in the same commit):** `data` starts
+    `format: 1, tool: TOOL_VERSION`; `publishedOn` (and the download's file name) is the local date, through a new
+    unpublished `brLocalISODate()`; `PUBLISHED_DATA` is `JSON.stringify(data).replace(/</g, '\\u003c')`, a sixth form the
+    guard reads, and DATA fails if the escape, `format: 1` or a key is missing (`PUBLISHED_KEYS` in the contract is
+    `format`, `tool`, then the twelve). The browser cases are built too: the file opened from `file://` is walked until
+    every piece has run (Chromium's JS coverage), except **`brDShort`, which nothing in a published file can call** (only
+    `brRenderMapLegacy` does): it is the suite's one `UNREACHED` entry, which fails if it ever runs;
+    `fixture-published-format0.json` is the `PUBLISHED_DATA` of the increment-1 baseline (published by the untouched v61
+    tool with the pinned clock), and today's file with it put back shows the same teacher's day; a `</script><b>` school
+    gives one script block and the name as text; a 23:30 Los Angeles publish says the 15th in both places; and four
+    breaks are made in 035 with `page.route()` (a teacher field dropped, two listed functions swapped, a `BR_CSS`
+    declaration, the footnote), each naming its own section. The four breaks on the output stay as the comparator's
+    own test. `test:check-publisher` is 73 checks (five new breaks: format dropped, format 2, the escape removed, another
+    replacement, a constant written escaped). Both new browser cases were run against 035 with the escape and the local
+    date taken back out, and failed there.
   - *What can drift. Three pairs, and they are not the same problem.*
     **(a) 035 live against what 035 publishes.** The published script is assembled from strings: a hand-typed
     preamble (`let brMode = 'teacher'…`), two JSON constants, seven `.toString()` constants, the 28 functions,

@@ -48,6 +48,21 @@ baseline's diff with it: that diff is the review. The suite also holds
 `check-publisher.mjs`'s `assemble()` to the real published `<script>` byte for
 byte, and the published data to `test/published-contract.mjs`.
 
+Since v62 (Path 11 P1 increment 2) a published file's data starts with
+`format: 1` and `tool` (the `TOOL_VERSION` that wrote it), `publishedOn` is the
+local date (it was the UTC date, so a file published after 8 pm eastern was
+dated tomorrow), and every `<` in the data is written `\u003c`, so a school,
+room or teacher name holding a closing script tag cannot end the published
+script. A file with no `format` is format 0: every file published up to v61,
+034's included. It is still read; `test/fixture-published-format0.json` is
+Northwind as v61 published it, and the suite opens today's file with that data
+put back in and checks the same teacher's day. The suite also opens the file
+from `file://` and walks it until every published piece has run (Chromium's JS
+coverage; `brDShort` is the one listed as unreachable, since only the
+unpublished legacy map calls it), publishes a school named `</script><b>`,
+publishes at 23:30 in Los Angeles, and breaks 035 itself on the way in with
+`page.route()`, each break named by its own section.
+
 `npm run check:publisher` reads 035's publisher as text and fails on a listed
 function that is not one top-level declaration, a free name, a construct that
 is not strict, a handler or element id the published file lacks, a preamble

@@ -9,6 +9,44 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P1 increment 2: 035 publishes format 1 (2026-10-25, AI-20, `CACHE_VERSION` v319)
+
+BACKLOG rank 21 deleted (a gap, ranks not renumbered): Path 11 P1 is whole. 035 is `TOOL_VERSION` v62.
+
+- **What a teacher's file gains.** `PUBLISHED_DATA` starts `format: 1, tool: "v62"`. `publishedOn`, and the date in the
+  download's file name, are the local calendar date through a new, unpublished `brLocalISODate()`: both were
+  `toISOString()`, the UTC date, so a file published after 8 pm eastern was dated tomorrow beside a footnote saying
+  today. Every `<` in the data is written `\u003c`, so a school, room or teacher name holding a closing script tag can no
+  longer end the published script; before, the file broke with a `SyntaxError` (seen in the break-on-purpose run below).
+  Nothing else in the published file moved: the baseline's diff is the footnote's version, `format` and `tool`.
+- **The guard.** `check-publisher.mjs` reads a sixth form, `JSON.stringify(Y).replace(/</g, '\\u003c')`, for
+  `PUBLISHED_DATA` only (a constant written that way is SHAPE), and `assemble()` applies it; DATA now fails if the escape
+  is missing, if `data.format` is not the contract's `FORMAT`, or if the keys are not the new `PUBLISHED_KEYS` (`format`,
+  `tool`, then the twelve). `test:check-publisher` is 73 checks, five new breaks among them.
+- **The browser cases the design listed, all built** in `smoke-publish-baseline.mjs` (34 checks): the published file
+  opened from `file://` (written under `os.tmpdir()`, removed after) and walked by search, arrow keys, Escape, a click
+  outside, the floor link, a floor tab, a room on the map, a mate, a group, B day, a group's teacher and the tablist's
+  keys, until Chromium's JS coverage shows all 35 pieces ran, opened 90 days on so the out-of-date banner runs too; the
+  format-0 data put back into today's file showing the same teacher's day; the `</script><b>` school; a 23:30 publish in
+  Los Angeles (by CDP's `Emulation.setTimezoneOverride`, so it does not depend on the machine's zone); and four breaks
+  made in 035 with `page.route()`, each naming its own section, then 035 as it is matching again.
+- **Calls made.** (1) **`brDShort` is published and nothing in a published file can call it**: only `brRenderMapLegacy`
+  does, behind the dead door `KNOWN_FREE` lists. The design said a piece nothing reaches "is reported and fails"; it is
+  in the suite's `UNREACHED` list with that reason instead, which fails if it ever runs or stops being published. Taking
+  it (and `BR_LEGACY_SHORT`) out of the published file would be a published change P1 did not design; it is P2's to
+  decide when it moves the map code. (2) `fixture-published-format0.json` was taken from the increment-1 baseline's
+  `PUBLISHED_DATA`, which the untouched v61 tool published with the pinned clock, not by a second run of the old tool:
+  the same bytes, and they are in git at 9635214. (3) The download's file name takes the local date too; the design
+  named only `publishedOn`, and leaving the two different would have been a new mismatch. (4) The four breaks on the
+  output were kept beside the four `page.route()` ones, as the comparator's own test.
+- **Verified.** Both new browser cases were run against 035 with the escape and the local date taken back out: four
+  failures (the guard's DATA, one script block, the file runs, the 23:30 date), then 035 put back. Green: the eleven
+  guards and `check:publisher`, `check:precache --base origin/main` (v313 → v319), lint, `test:check-publisher`,
+  `test:schedule-publish` in America/New_York and under `TZ=UTC`, `run-suites --only schedule` (11 suites),
+  `--only schedule-visualizer` (5), `--only schedule-browser` (4), `test:theme`, `test:select-suites`. **Not run:** the
+  full `npm test`. No real teacher's file was published or opened on a phone; no file published by v62 was opened in
+  Firefox or Safari.
+
 ## Path 11 P1 increment 1: the publisher drift guard (2026-10-25, AI-20, no `CACHE_VERSION`)
 
 BACKLOG rank 21 kept and rewritten (now ½): increment 1 of the P1 design is built; increment 2, which changes 035, is

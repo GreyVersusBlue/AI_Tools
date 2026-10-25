@@ -39,8 +39,11 @@
 //            top-level declaration's
 //   HEAD     the page template gains a <link>, a <script src>, a manifest or
 //            a gvb:social marker
-//   DATA     the publisher's data keys are not the contract's, or 034's
-//            embedded data has a contract error at its own format
+//   DATA     the publisher's data keys are not the contract's, its `format`
+//            is not the contract's FORMAT, PUBLISHED_DATA is not written with
+//            every < escaped (a name holding a closing script tag would end
+//            the published script), or 034's embedded data has a contract
+//            error at its own format
 //   FORK     034's copy of a published piece against the ledger
 //            (Tools/schedule/test/publisher-ledger.json): a `same` piece that
 //            differs, a `forked` one that became the same, a name in no group
@@ -62,7 +65,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Linter } from 'eslint';
 import globals from 'globals';
-import { DATA_KEYS, readEmbedded, validate, shapeOf, formatOf } from '../schedule/test/published-contract.mjs';
+import { FORMAT, PUBLISHED_KEYS, readEmbedded, validate, shapeOf, formatOf } from '../schedule/test/published-contract.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, '..', '..');
@@ -182,7 +185,8 @@ function flattenPlus(n) {
 }
 const memberName = n => n && n.type === 'MemberExpression' && !n.computed && n.property.type === 'Identifier' ? n.property.name : null;
 
-/** One element of the `consts` or `js` array: one of the five forms, or null. */
+/** One element of the `consts` or `js` array: one of the five forms, or null.
+ *  (The JSON form may also be JSON.stringify(Y).replace(/</g, '\\u003c').) */
 function classify(el) {
   if (isStrLit(el)) return { kind: 'str', value: el.value };
   if (el.type === 'Identifier' && el.name === 'consts') return { kind: 'consts' };
@@ -213,6 +217,18 @@ function classify(el) {
         && mid.callee.type === 'MemberExpression' && mid.callee.object.type === 'Identifier'
         && mid.callee.object.name === 'JSON' && memberName(mid.callee) === 'stringify') {
       return { kind: 'json', name: m[1], from: mid.arguments[0].name };
+    }
+    // JSON.stringify(Y).replace(/</g, '\\u003c'): the data, safe inside <script>.
+    const inner = mid.type === 'CallExpression' && memberName(mid.callee) === 'replace' ? mid.callee.object : null;
+    if (inner && mid.arguments.length === 2 && inner.type === 'CallExpression' && inner.arguments.length === 1
+        && inner.arguments[0].type === 'Identifier' && inner.callee.type === 'MemberExpression'
+        && inner.callee.object.type === 'Identifier' && inner.callee.object.name === 'JSON'
+        && memberName(inner.callee) === 'stringify') {
+      const [re, to] = mid.arguments;
+      if (re.type === 'Literal' && re.regex && re.regex.pattern === '<' && re.regex.flags === 'g'
+          && isStrLit(to) && to.value === '\\u003c') {
+        return { kind: 'json', name: m[1], from: inner.arguments[0].name, escaped: true };
+      }
     }
     if (mid.type === 'Identifier') return { kind: 'value', name: m[1], from: mid.name };
   }
@@ -284,12 +300,15 @@ export function readPublisher(html) {
   const constsArr = readArray('consts');
   const jsArr = readArray('js');
 
-  // data's keys, in order.
+  // data's keys, in order, and the format it says it is.
   const dataKeys = [];
+  let dataFormat;
   if (local.data && local.data.init && local.data.init.type === 'ObjectExpression') {
     for (const p of local.data.init.properties) {
-      if (p.type === 'Property' && !p.computed && p.key.type === 'Identifier') dataKeys.push(p.key.name);
-      else fail('SHAPE', 'publisher not understood: `data` must be a plain object literal');
+      if (p.type === 'Property' && !p.computed && p.key.type === 'Identifier') {
+        dataKeys.push(p.key.name);
+        if (p.key.name === 'format') dataFormat = p.value.type === 'Literal' ? p.value.value : '(not a literal)';
+      } else fail('SHAPE', 'publisher not understood: `data` must be a plain object literal');
     }
   } else fail('SHAPE', 'publisher not understood: `data` in brBuildPublishedHTML must be an object literal');
 
@@ -330,6 +349,8 @@ export function readPublisher(html) {
       if (!text) { broken.add(c.name); fail('CONST', `${c.from} is not one top-level function or arrow constant`); continue; }
       consts.push({ name: c.name, from: c.from, kind: 'toString', text, line: ds[0].line });
       constsPlan.push({ ...c, text });
+    } else if (c.escaped) {
+      fail('SHAPE', `publisher not understood: only PUBLISHED_DATA is written escaped, not ${c.name}`);
     } else if (c.kind === 'json' || c.kind === 'value') {
       const ds = one(c.from);
       const v = ds.length === 1 ? literalValue(ds[0].init, ds[0].code) : { ok: false };
@@ -348,7 +369,10 @@ export function readPublisher(html) {
     if (c.kind === 'str') { (seenFns ? boot : preamble).push(c.value); plan.push(c); }
     else if (c.kind === 'consts') plan.push({ kind: 'consts', items: constsPlan, sep: constsArr ? constsArr.sep : '\n' });
     else if (c.kind === 'fns') { seenFns = true; plan.push(c); }
-    else if (c.kind === 'json' && c.name === 'PUBLISHED_DATA' && c.from === 'data') { seenData = true; plan.push({ kind: 'data' }); }
+    else if (c.kind === 'json' && c.name === 'PUBLISHED_DATA' && c.from === 'data') {
+      seenData = true; plan.push({ kind: 'data', escaped: !!c.escaped });
+      if (!c.escaped) fail('DATA', "PUBLISHED_DATA is written without .replace(/</g, '\\u003c'): a name holding a closing script tag would end the published script");
+    }
     else fail('SHAPE', `publisher not understood: \`js\` holds a ${c.kind} (${c.name || ''})`);
   }
   if (jsArr && (!seenFns || !seenData)) fail('SHAPE', 'publisher not understood: `js` must hold the function list and PUBLISHED_DATA once each');
@@ -366,7 +390,7 @@ export function readPublisher(html) {
     }
   }
 
-  return { fns, consts, json, preamble, boot, state, markup, css, template, dataKeys, problems, broken, decls,
+  return { fns, consts, json, preamble, boot, state, markup, css, template, dataKeys, dataFormat, problems, broken, decls,
     plan: { items: plan, sep: jsArr ? jsArr.sep : '\n' } };
 }
 
@@ -380,7 +404,8 @@ export function assemble(pub, data) {
       : `const ${e.name} = ${e.kind === 'json' ? JSON.stringify(e.value) : String(e.value)};`;
   return pub.plan.items.map(e =>
     e.kind === 'str' ? e.value
-      : e.kind === 'data' ? 'const PUBLISHED_DATA = ' + JSON.stringify(data) + ';'
+      : e.kind === 'data' ? 'const PUBLISHED_DATA = '
+        + (e.escaped ? JSON.stringify(data).replace(/</g, '\\u003c') : JSON.stringify(data)) + ';'
         : e.kind === 'consts' ? e.items.map(constText).join(e.sep)
           : pub.fns.map(f => f.text).join(e.sep)).join(pub.plan.sep);
 }
@@ -524,8 +549,10 @@ export function check({ root = ROOT, html035, html034, ledger } = {}) {
   }
 
   // DATA
-  if (JSON.stringify(pub.dataKeys) !== JSON.stringify(DATA_KEYS)) {
-    fail('DATA', `the publisher writes data keys ${JSON.stringify(pub.dataKeys)}; the contract's are ${JSON.stringify(DATA_KEYS)}`);
+  if (JSON.stringify(pub.dataKeys) !== JSON.stringify(PUBLISHED_KEYS)) {
+    fail('DATA', `the publisher writes data keys ${JSON.stringify(pub.dataKeys)}; the contract's are ${JSON.stringify(PUBLISHED_KEYS)}`);
+  } else if (pub.dataFormat !== FORMAT) {
+    fail('DATA', `the publisher writes format ${JSON.stringify(pub.dataFormat)}; the contract's FORMAT is ${FORMAT}`);
   }
   let d034 = null;
   try { d034 = readEmbedded(html034); } catch (e) { fail('DATA', `034's PUBLISHED_DATA: ${e.message}`); }

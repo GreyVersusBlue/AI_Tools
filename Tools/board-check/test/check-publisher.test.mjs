@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { check, readPublisher, assemble, freeNames, ROOT, PAGE_035, PAGE_034, LEDGER }
   from '../check-publisher.mjs';
-import { FORMAT, DATA_KEYS, formatOf, validate, upgrade, readEmbedded, shapeOf }
+import { FORMAT, DATA_KEYS, PUBLISHED_KEYS, formatOf, validate, upgrade, readEmbedded, shapeOf }
   from '../../schedule/test/published-contract.mjs';
 
 let passed = 0, failed = 0;
@@ -36,7 +36,11 @@ ok(pub.json.some(j => j.name === 'BR_STALE_DAYS'), 'BR_STALE_DAYS is read');
 ok(JSON.stringify(pub.state.map(s => s.name)) === JSON.stringify(['brMode', 'brCurrent', 'brActiveIdx', 'brOpts', 'brGrpDay', 'brMapFloorIdx']),
   '6 state names: ' + pub.state.map(s => s.name).join(','));
 ok(pub.boot.filter(b => /^\w+\(\);$/.test(b)).length === 5, '5 boot calls');
-ok(JSON.stringify(pub.dataKeys) === JSON.stringify(DATA_KEYS), 'the publisher writes the contract\'s keys');
+ok(JSON.stringify(pub.dataKeys) === JSON.stringify(PUBLISHED_KEYS), 'the publisher writes the contract\'s keys, format and tool first');
+ok(pub.dataFormat === FORMAT, `the publisher writes format ${FORMAT} (got ${pub.dataFormat})`);
+ok(pub.plan.items.find(e => e.kind === 'data').escaped === true, "PUBLISHED_DATA is written with every < escaped");
+ok(assemble(pub, { school: '</script><b>' }).includes('"school":"\\u003c/script>\\u003cb>"'),
+  'assemble() escapes < in the data as the page does');
 const c = s => real.fork.filter(f => f.state === s).length;
 ok(c('same') === 21 && c('forked') === 12 && c('absent') === 2, `034: 21 same, 12 forked, 2 absent (got ${c('same')}/${c('forked')}/${c('absent')})`);
 const script = assemble(pub, {});
@@ -176,6 +180,22 @@ expect('brRenderMapLegacy published after all (KNOWN_FREE expired)', ['FREE', 'H
 expect('the publisher writes a data key the contract does not have', ['DATA'], {
   h35: edit(html035, 'bell: BR_BELL, geometry: BR_GEOM\n  };', 'bell: BR_BELL, geometry: BR_GEOM, extra: 1\n  };', 'data'),
 });
+expect('the publisher drops format from its data', ['DATA'], {
+  h35: edit(html035, '    format: 1, tool: TOOL_VERSION,\n', '    tool: TOOL_VERSION,\n', 'format'),
+});
+expect('the publisher writes format 2, past the contract', ['DATA'], {
+  h35: edit(html035, '    format: 1, tool: TOOL_VERSION,', '    format: 2, tool: TOOL_VERSION,', 'format'), mention: 'FORMAT is 1',
+});
+expect('PUBLISHED_DATA written without escaping <', ['DATA'], {
+  h35: edit(html035, "JSON.stringify(data).replace(/</g, '\\\\u003c')", 'JSON.stringify(data)', 'escape'), mention: 'u003c',
+});
+expect('PUBLISHED_DATA escaped with some other replacement', ['SHAPE'], {
+  h35: edit(html035, "JSON.stringify(data).replace(/</g, '\\\\u003c')", "JSON.stringify(data).replace(/</g, '&lt;')", 'escape'),
+});
+expect('a constant in consts written escaped', ['SHAPE'], {
+  h35: edit(html035, "'const BR_LEGACY_SHORT = ' + JSON.stringify(BR_LEGACY_SHORT) + ';'",
+    "'const BR_LEGACY_SHORT = ' + JSON.stringify(BR_LEGACY_SHORT).replace(/</g, '\\\\u003c') + ';'", 'consts'),
+});
 {
   const d = readEmbedded(html034);
   const name = Object.keys(d.teachers)[0];
@@ -276,6 +296,16 @@ warnCase('a teacher with no day at all', d => { d.teachers['Mr. Lund'].A = []; }
   const d = readEmbedded(html034);
   const r = validate(d);
   ok(r.ok && r.format === 0, "034's committed data is valid format 0");
+}
+{
+  // Northwind as v61 published it (taken from the baseline before v62), the
+  // file a later reader must still read (Devon, P11-5).
+  const f0 = JSON.parse(fs.readFileSync(path.join(ROOT, 'Tools/schedule/test/fixture-published-format0.json'), 'utf8'));
+  const r = validate(f0);
+  ok(r.ok && r.format === 0 && r.warnings.length === 0, 'fixture-published-format0.json is valid format 0 with no warnings: ' + JSON.stringify(shapeOf(f0)));
+  ok(!('format' in f0) && !('tool' in f0), 'and carries neither format nor tool');
+  const u = upgrade(f0);
+  ok(validate(u).ok && u.format === 1 && u.tool === 'unknown', 'it upgrades to a valid format 1');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

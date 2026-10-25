@@ -32,6 +32,8 @@ export const DATA_KEYS = ['school', 'publishedOn', 'dept', 'order', 'teachers', 
  *  old files are still read; the reader already allows it with `|| {}`). */
 export const OPTIONAL_IN_0 = ['groupRooms', 'bell', 'geometry'];
 const FORMAT1_KEYS = ['format', 'tool'];
+/** The keys 035 publishes since v62, in its order: format 1's two, then the rest. */
+export const PUBLISHED_KEYS = FORMAT1_KEYS.concat(DATA_KEYS);
 
 const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isInt = v => Number.isInteger(v);
