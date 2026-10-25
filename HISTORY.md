@@ -9,6 +9,31 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P2 increment 1: 035's stylesheet out of the page (2026-10-25, AI-20, `CACHE_VERSION` v320)
+
+BACKLOG rank 22 kept (2+), its text rewritten: increment 1 of the eleven in the P2 bullet's ladder.
+
+- **What moved.** The first `<style>` block of `Tools/035-schedule-visualizer.html` (lines 66–2897, 157,702 bytes) is
+  `Tools/schedule-visualizer/sv.css`, byte for byte (checked with `diff` against the old lines) under a two-line header
+  comment, linked by one `<link rel="stylesheet">` where the block was, so the cascade is in the same order and the
+  settings panel's inline block still follows it. The block has no `url()` but data URLs, so no path changed meaning.
+  The page went from **974,675 to 817,015 bytes**. `sv.css` is in `PRECACHE_URLS`, not `SHELL_URLS`.
+- **The size ledger, early.** The design put `size-ledger.json` and `size.test.mjs` in no particular increment; they
+  landed here (`npm run test:schedule-visualizer-size`, pure Node, no port) so that every later rung lowers the line in
+  its own commit. The test was made to fail both ways (a line 15 bytes low, a line 13 KB high) before it was committed.
+- **Calls made.** (1) Stopped at one rung. Increment 1 was small, but increment 2 (`sv-model.js`, the bridge, the
+  Node suite, the save round-trip and the publisher guard learning `sources`) is a whole session's work, and a half
+  rung was worse than none. (2) Devon's P11-7 to P11-11 (2026-10-21, every default kept) are written into the P2
+  bullet as settled.
+- **What did not work, and what was not verified.** An ad-hoc before/after screenshot script, run first on its own
+  server and then on `harness.mjs`, hung on the second page load both times and was dropped, so **no pixel comparison
+  was made**. The move is held by the verbatim diff and by the checks that read the styles: `check:hidden-flex` (its
+  `DEBUG_HIDDEN_FLEX=1` output for 035 is identical) and `check:print-clip` follow the link; `audit-print --only 035`
+  (9 states, nothing to report), the a11y sweep for 035, `test:theme` (all three suites) and the eleven
+  `--only schedule` suites, the publish baseline among them, all green. `check:publisher` gives the same output as
+  before. The design's page figures are about 6 KB low from here on: the page had grown since they were measured.
+  Full `npm test` not run.
+
 ## Path 11 P1 increment 2: 035 publishes format 1 (2026-10-25, AI-20, `CACHE_VERSION` v319)
 
 BACKLOG rank 21 deleted (a gap, ranks not renumbered): Path 11 P1 is whole. 035 is `TOOL_VERSION` v62.

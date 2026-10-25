@@ -87,6 +87,10 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-20 (v320), rank 22 (kept, 2+), Path 11 P2 increment 1 of 11.** 035's first `<style>` block is now
+  `Tools/schedule-visualizer/sv.css`, verbatim; the page is 817,015 bytes (from 974,675). New pure-Node `npm run
+  test:schedule-visualizer-size` holds it to `size-ledger.json` (lower the line when the page shrinks). **Next: P2
+  increment 2, `sv-model.js`. No new port; the next free suite port is still 8552.**
 - **AI-20 (v319), rank 21 (DELETED: Path 11 P1 is whole; a gap, ranks not renumbered), P1 increment 2.** 035 (`TOOL_VERSION`
   v62) publishes `format: 1` and `tool`, dates a file by the local calendar, and writes every `<` in the data `\u003c`;
   `check:publisher` fails DATA if the escape, the format or a key goes missing. `test:schedule-publish` now also covers
@@ -621,7 +625,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 18 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 22 | Path 11 P2 — extract the pure engines; target the HTML under ~300 KB. **Designed 2026-10-05 (AI-20), not built: the P2 bullet has the whole design, a measured ladder of eleven increments (the page is 968 KB; the engines alone leave it at about 620 KB, the full ladder at about 270 KB), and five questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 22 | Path 11 P2 — extract the pure engines; target the HTML at about 270 KB (Devon, P11-7). **Increment 1 of 11 built (AI-20, v320): the app stylesheet is `schedule-visualizer/sv.css`; the page is 817,015 bytes (from 974,675), held by `size-ledger.json`. Left: increments 2–11 as the P2 bullet's ladder lays them out, starting with `sv-model.js`, the bridge and the publisher guard's `sources`; the folder fold is last** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 23 | Path 11 P3 — accessibility routing: wheelchair/elevator-weighted routes and a printable report | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
@@ -4095,6 +4099,19 @@ a real pathfinder that the published browser never exposes.
        browser without the publisher. The design says one, for P1's sake.
     5. **Does the help and onboarding prose stay in the markup?** It is 7.6 KB and the only markup a template could
        carry without changing what a teacher sees before `init()`.
+  - **Settled (Devon, 2026-10-21, P11-7 to P11-11, every default kept):** (1) go to increment 11, about 270 KB;
+    (2) fold the two folders, last; (3) both doubtful rules stay as they are in P2 and are only named in its suites;
+    (4) `sv-browser.js` is one module; (5) the help and onboarding prose stays in the markup.
+  - **Built so far.** *Increment 1 (AI-20, 2026-10-25, v320):* the first `<style>` block moved verbatim to
+    `Tools/schedule-visualizer/sv.css` (157,889 bytes with a two-line header), linked where the block was; the page
+    went from **974,675 to 817,015 bytes** (it had grown 6 KB since the design's 968,296, so every later figure in the
+    ladder is about 6 KB low). `size-ledger.json` and `size.test.mjs` (`npm run test:schedule-visualizer-size`,
+    pure Node, no port) landed with it, ahead of increment 2, so each rung lowers the ledger line in its own commit.
+    `check:hidden-flex` and `check:print-clip` follow the link and report what they did before; `audit-print --only
+    035`, the a11y sweep for 035, `test:theme` and the eleven `--only schedule` suites green. Not verified: a
+    pixel comparison of the page before and after (an ad-hoc screenshot script hung on its second page load and was
+    dropped). *Next: increment 2*, `sv-model.js`, the `BRIDGE` section, `model.test.mjs`, `imports.test.mjs` and
+    `check-publisher.mjs`'s `sources`, in one commit, since the publisher reaches `formatModTime` and `getSubjects`.
 - **P3 — Accessibility routing.** Wheelchair/elevator-weighted routes over the
   existing graph, per-student route sheets, and "which rooms can't be reached
   without stairs" as a printable report — the notes call this "a real legal and
