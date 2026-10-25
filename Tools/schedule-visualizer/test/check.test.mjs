@@ -48,7 +48,7 @@ function groups() {
   ];
 }
 function run(gs, opts) {
-  return C.checkSchedule(gs, { registry: registry(opts && opts.rooms), settings: settings(opts && opts.settings), ...(opts || {}) });
+  return C.checkSchedule(gs, { ...(opts || {}), registry: registry(opts && opts.rooms), settings: settings(opts && opts.settings) });
 }
 const kinds = (r, kind) => r.findings.filter(f => f.kind === kind);
 const say = (f) => C.sentence(f, { labels: LABELS });
@@ -142,10 +142,16 @@ const say = (f) => C.sentence(f, { labels: LABELS });
   check(kinds(run(gs, { walk: () => 240 }), 'teacher-moves').length === 0, 'a walk of exactly the passing time fits (240 of 240)');
   const over = kinds(run(gs, { walk: () => 300 }), 'teacher-moves');
   check(over.length === 1 && say(over[0]) === 'Ms. Okafor moves from 204 to 118 between Blocks 1 and 2: a 5-minute walk in a 4-minute passing time.', 'teacher-moves sentence, too far');
-  check(kinds(run(gs, { walk: () => 200, settings: { checks: { passingMarginSec: 60 } } }), 'teacher-moves').length === 1, 'passingMarginSec takes time off the window');
+  const mg = kinds(run(gs, { walk: () => 200, settings: { checks: { passingMarginSec: 60 } } }), 'teacher-moves');
+  check(mg.length === 1, 'passingMarginSec takes time off the window');
+  check(say(mg[0]) === 'Ms. Okafor moves from 204 to 118 between Blocks 1 and 2: a walk of 3 minutes 20 seconds in a 4-minute passing time, less 1 minute of margin.', 'and the sentence says so');
   const one = [{ id: 'a', name: '7-1', modsA: ['116', '', '', '', '', '', '', ''] }, { id: 'b', name: '7-2', modsA: ['', '116', '', '', '', '', '', ''] }];
   check(kinds(run(one, { settings: { bellSchedule: { A: null, B: null } } }), 'teacher-moves').length === 0, 'a teacher on one room never gets teacher-moves');
   check(kinds(run(gs), 'teacher-moves').length === 0, 'with a bell and no walk handed in, teacher-moves says nothing');
+  const flat = bell().map((e, i, all) => ({ start: e.start, end: all[i + 1] ? all[i + 1].start : e.end }));
+  const z = kinds(run(gs, { settings: { bellSchedule: { A: flat, B: null } }, walk: () => 30 }), 'teacher-moves');
+  check(z.length === 1 && z[0].window === undefined && C.passingSec(settings({ bellSchedule: { A: flat, B: null } }), 'A', 0) === null,
+    'back-to-back bell times are no passing time set, not a 0-minute one');
 }
 
 /* passing-too-short, from the lab's numbers. */

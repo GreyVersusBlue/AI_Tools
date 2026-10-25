@@ -158,7 +158,20 @@ try {
   const lab = await page.textContent('#wi-conflicts');
   ok(lab.includes('Resolved') && lab.includes(DOUBLE), 'the lab says the scenario resolves the double-booking: ' + lab.slice(0, 160));
 
-  /* ── 7. back to clean: Publish says nothing ──────────────────────────── */
+  /* ── 7. the walking checks, with a bell ─────────────────────────────── */
+  const walking = await page.evaluate(() => {
+    const before = window.runChecks(AppState.schedules.groups, { travel: true }).findings.filter(f => f.kind === 'passing-too-short').length;
+    AppState.settings.bellSchedule = { A: [{ start: '08:30', end: '09:58' }, { start: '10:00', end: '11:28' }, { start: '11:30', end: '13:28' }, { start: '13:30', end: '15:00' }], B: null };
+    AppState.settings.checks = { passingMarginSec: 100 };
+    const r = window.runChecks(AppState.schedules.groups, { travel: true });
+    const f = r.findings.filter(x => x.kind === 'passing-too-short');
+    delete AppState.settings.checks;
+    return { before, n: f.length, first: f[0] ? window.SVCheck.sentence(f[0], { labels: r.labels }) : '' };
+  });
+  ok(walking.before === 0 && walking.n > 0 && /^\S+ has .+ of walking between Blocks [A-D] and [A-D] on A days \(.+\) in a 2-minute passing time, less 1 minute 40 seconds of margin\.$/.test(walking.first),
+    'with a bell the banner run measures each move on the blueprint (passing-too-short, margin 100 s): ' + walking.n + ', ' + walking.first);
+
+  /* ── 8. back to clean: Publish says nothing ──────────────────────────── */
   await page.evaluate(id => { const g = AppState.schedules.groups.find(x => x.id === id); g.modsA[0] = '101'; g.mods = g.modsA; }, ids['6-1']);
   eq(await page.evaluate(() => publishWarning()), '', 'with no problem Publish has nothing to say');
 

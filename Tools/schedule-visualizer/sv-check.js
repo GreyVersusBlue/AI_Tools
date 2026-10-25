@@ -64,14 +64,16 @@ function hhmmSec(t) {
   return h * 3600 + m * 60;
 }
 
-/** Seconds between mod `i`'s end and mod `i + 1`'s start (0-based i), or null. */
+/** Seconds between mod `i`'s end and mod `i + 1`'s start (0-based i), or null.
+    A zero gap is null too: back-to-back times are a bell typed without passing
+    time, and reading it as "0 minutes" would flag every move in the building. */
 export function passingSec(settings, day, i) {
   const arr = bellDay(settings, day);
   if (!arr) return null;
   const a = arr[i], b = arr[i + 1];
   const end = a && hhmmSec(a.end), start = b && hhmmSec(b.start);
   if (end === null || start === null || end === undefined || start === undefined) return null;
-  return start >= end ? start - end : null;
+  return start > end ? start - end : null;
 }
 
 /** The days a schedule has: A and B when any group has a B day, else A. */
@@ -275,7 +277,7 @@ export function checkSchedule(groups, opts = {}) {
         if (window === null) { add(f); continue; }
         const sec = typeof opts.walk === 'function' ? opts.walk(from, to) : null;
         if (sec === null || sec === undefined || !Number.isFinite(sec)) continue;
-        if (sec > window - limits.passingMarginSec) add({ ...f, sec: Math.round(sec), window });
+        if (sec > window - limits.passingMarginSec) add({ ...f, sec: Math.round(sec), window, margin: limits.passingMarginSec });
       }
     }
 
@@ -307,7 +309,7 @@ export function checkSchedule(groups, opts = {}) {
           const sec = (seg.travelSec || 0) + (seg.delaySec || 0);
           if (sec > window - limits.passingMarginSec) {
             add({ kind: 'passing-too-short', day, mods: [seg.fromMod, seg.toMod], rooms: [seg.fromRoom, seg.toRoom],
-              groups: [{ id: cg.id, name: cg.name }], sec, window, crowd: (seg.delaySec || 0) > 0,
+              groups: [{ id: cg.id, name: cg.name }], sec, window, margin: limits.passingMarginSec, crowd: (seg.delaySec || 0) > 0,
               where: [{ groupId: cg.id, day, modIdx: seg.toMod - 1 }] });
           }
         }
@@ -453,6 +455,9 @@ function aDuration(sec, what) {
   return 'a ' + what + ' of ' + duration(s);
 }
 
+/** ", less 1 minute 40 seconds of margin" when Settings keeps a margin. */
+function less(f) { return f.margin ? ', less ' + duration(f.margin) + ' of margin' : ''; }
+
 /**
  * The English line for a finding. `opts.labels` is modLabels(settings); the day
  * is named only when the schedule has two (`f.oneDay` is false).
@@ -492,12 +497,12 @@ export function sentence(f, opts = {}) {
       const head = f.teacher + ' moves from ' + f.rooms[0] + ' to ' + f.rooms[1] + ' between ' +
         modsPhrase(labels, f.mods, 'and') + on;
       if (f.window == null) return head + ', and no bell times are set.';
-      return head + ': ' + aDuration(f.sec, 'walk') + ' in ' + aDuration(f.window, 'passing time') + '.';
+      return head + ': ' + aDuration(f.sec, 'walk') + ' in ' + aDuration(f.window, 'passing time') + less(f) + '.';
     }
     case 'passing-too-short':
       return names[0] + ' has ' + duration(f.sec) + ' of walking between ' + modsPhrase(labels, f.mods, 'and') + on +
         ' (' + f.rooms[0] + ' to ' + f.rooms[1] + (f.crowd ? ', with the crowd' : '') + ') in ' +
-        aDuration(f.window, 'passing time') + '.';
+        aDuration(f.window, 'passing time') + less(f) + '.';
     case 'room-unknown':
       return names[0] + " is in '" + f.room + "' in " + mod(f.mod) + on + ", and the blueprint has no room '" + f.room + "'.";
     case 'group-gap':
