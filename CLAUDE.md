@@ -199,7 +199,8 @@ every edit. The deduplication work that established them is summarised in
   tool-private page global a suite reads inside `page.evaluate()` is declared
   at the top of that suite with `/* global name -- why */`. It runs in CI.
 - **`npm run check:precache` enforces this.** It fails if a live page's
-  `src`/`href`, or a local file `manifest.json` names, is missing from
+  `src`/`href`, a module its `<script type="module">` imports (followed through each
+  module's own imports, since v323), or a local file `manifest.json` names, is missing from
   `PRECACHE_URLS`, or if a listed URL is dead or duplicated. It runs in CI.
   The `CACHE_VERSION` bump is checked only on request, because it needs a
   base to compare against: `npm run check:precache -- --base origin/main`

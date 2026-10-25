@@ -19,8 +19,9 @@
 //
 // It also walks the import graph from the module script and fails on a
 // module missing from sw.js's PRECACHE_URLS, or on a namespace a wrapper
-// reads that the module script never sets. check:precache reads the page's
-// own src/href, not module-to-module imports (BACKLOG Path 11 P2, increment 8).
+// reads that the module script never sets. Since increment 8 (v323)
+// check:precache follows module imports site-wide too; this stays as 035's own
+// copy of that check, because it costs nothing and names the module script.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
