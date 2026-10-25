@@ -1,7 +1,8 @@
 {
   "//": "Path 11 P2's size ledger. page is the byte cap on Tools/035-schedule-visualizer.html (fs.statSync size); size.test.mjs fails above it and more than 2 KB below it, so lower it in the commit that shrinks the page. modules are a record of each moved-out file's bytes, not a cap.",
-  "page": 817015,
+  "page": 803500,
   "modules": {
-    "Tools/schedule-visualizer/sv.css": 157889
+    "Tools/schedule-visualizer/sv.css": 157889,
+    "Tools/schedule-visualizer/sv-model.js": 18853
   }
 }

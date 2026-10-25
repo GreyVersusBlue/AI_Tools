@@ -58,6 +58,8 @@
   <script type="module">
     import { drawQR, startHost, startJoin } from './schedule-visualizer/sv-handoff.js';
     window.SVHandoff = { drawQR, startHost, startJoin };
+    import * as SVModel from './schedule-visualizer/sv-model.js';
+    window.SVModel = SVModel;
     import * as SVRecovery from './schedule-visualizer/sv-recovery.js';
     window.SVRecovery = SVRecovery;
     window.dispatchEvent(new Event('sv-recovery-ready'));
@@ -2513,24 +2515,46 @@ const TILE_COLORS = {
 };
 
 /* ==============================================
-   MOD LABEL HELPERS
+   BRIDGE — Path 11 P2
+   The model's pure rules live in schedule-visualizer/sv-model.js, put on
+   window.SVModel by the module script in <head>. Module scripts run after
+   this classic script is parsed and before DOMContentLoaded, when init()
+   runs; nothing at the top level of this script calls a wrapper, so each
+   one finds its namespace (test/bridge.test.mjs holds that). The wrappers
+   keep the old names, so every call site is unchanged; each reads AppState
+   and hands it in.
 =============================================== */
-const BLOCK_LETTERS  = ['A','B','C','D','E','F','G','H','I','J','K','L'];
-const ORDINAL_SUFFIX = ['st','nd','rd','th','th','th','th','th','th','th','th','th'];
-
-function modLabel(index, style) {
-  switch (style) {
-    case 'period': return `Period ${index}`;
-    case 'block':  return `Block ${BLOCK_LETTERS[index - 1] || index}`;
-    case 'hour':   return `${index}${ORDINAL_SUFFIX[index - 1] || 'th'} Hour`;
-    default:       return `Mod ${index}`;
-  }
+function svModel() {
+  if (!window.SVModel) throw new Error('SVModel is not loaded');
+  return window.SVModel;
 }
-
-function getAllModLabels() {
-  const { modCount, modLabel: style } = AppState.settings;
-  return Array.from({ length: modCount }, (_, i) => modLabel(i + 1, style));
+function modLabel(index, style) { return svModel().modLabel(index, style); }
+function getAllModLabels() { return svModel().modLabels(AppState.settings); }
+function normalizeSettings(s) { return svModel().normalizeSettings(s); }
+function groupWeight(group) { return svModel().groupWeight(group, AppState.settings); }
+function anyGroupSized(groups) { return svModel().anyGroupSized(groups || AppState.schedules.groups || []); }
+function congestionDelayMult(effOthers) { return svModel().congestionDelayMult(effOthers); }
+function formatClockTime(hhmm) { return svModel().formatClockTime(hhmm); }
+function getBellDay(day) { return svModel().bellDay(AppState.settings, day); }
+function formatModTime(day, modIdx) { return svModel().formatModTime(AppState.settings, day, modIdx); }
+function formatTransitionWindow(day, fromMod) { return svModel().formatTransitionWindow(AppState.settings, day, fromMod); }
+function isGroupAnchorOn(gridData, gridCols, gridRows, col, row, groupId) {
+  return svModel().isGroupAnchorOn(gridData, gridCols, gridRows, col, row, groupId);
 }
+function serializeBlueprint(opts) {
+  return svModel().serializeBlueprint(AppState.blueprint, AppState.settings, {
+    portable: !!(opts && opts.portable), traceImage: portableTraceImage, savedAt: new Date().toISOString() });
+}
+function migrateBlueprintToFloors(data) { return svModel().migrateBlueprint(data); }
+function validateBlueprintData(data) { return svModel().validateBlueprint(data); }
+function initFloorGridData(floor) { return svModel().initFloorGridData(floor); }
+function deriveSameFloorPairs(floorId) { return svModel().deriveSameFloorPairs(AppState.blueprint.crossFloorPairs, floorId); }
+function getPairLabel(pairIndex) { return svModel().pairLabel(pairIndex); }
+function computeScheduleConflicts(day) {
+  return svModel().scheduleConflicts(AppState.schedules.groups, day, { registry: roomRegistry, labels: getAllModLabels() });
+}
+function getNextGroupColor() { return svModel().nextGroupColor(AppState.schedules.groups, GROUP_COLOR_PRESETS); }
+function generateGroupId() { return svModel().groupId(); }
 
 /* ==============================================
    LOCALSTORAGE — Settings
@@ -2549,117 +2573,6 @@ const DEFAULT_SETTINGS = {
   bellSchedule: { A: null, B: null },   // R59
   subjects: null,                       // R59 (null → seeded by normalizeSettings)
 };
-
-/* ── Round 59: Subjects seed — carries the pre-R59 BR_DEPT colors so
-   existing classroom data renders unchanged in the Schedule Browser. ── */
-const SUBJECT_SEED = [
-  { code: 'ELA',    name: 'English / ELA',              color: '#2563eb' },
-  { code: 'MATH',   name: 'Mathematics',                color: '#c2520f' },
-  { code: 'SCI',    name: 'Science',                    color: '#0d7c69' },
-  { code: 'SS',     name: 'Social Studies',             color: '#7c3aa8' },
-  { code: 'SCI/SS', name: 'Science / Social Studies',   color: '#71641f' },
-];
-
-/* R59: coerce one bell-schedule day payload into [{start,end}|null,…] or null. */
-function _r59NormalizeBellDay(day) {
-  if (!Array.isArray(day)) return null;
-  const timeRe = /^([01]?\d|2[0-3]):[0-5]\d$/;
-  return day.map(e => {
-    if (!e || typeof e !== 'object') return null;
-    const start = (typeof e.start === 'string' && timeRe.test(e.start)) ? e.start : null;
-    const end   = (typeof e.end   === 'string' && timeRe.test(e.end))   ? e.end   : null;
-    return (start || end) ? { start, end } : null;
-  });
-}
-
-/* R59: normalize settings in place after any load / reset / import so old
-   files (no defaultGroupSize / bellSchedule / subjects keys) get clean
-   defaults with no migration errors. Deep-clones seeds so DEFAULT_SETTINGS
-   is never mutated by reference. */
-function normalizeSettings(s) {
-  if (!s || typeof s !== 'object') return s;
-  const dgs = parseInt(s.defaultGroupSize, 10);
-  s.defaultGroupSize = (Number.isFinite(dgs) && dgs >= 1 && dgs <= 999) ? dgs : 25;
-
-  const bs = (s.bellSchedule && typeof s.bellSchedule === 'object') ? s.bellSchedule : {};
-  s.bellSchedule = { A: _r59NormalizeBellDay(bs.A), B: _r59NormalizeBellDay(bs.B) };
-
-  const validSubjects = Array.isArray(s.subjects) && s.subjects.length > 0 &&
-    s.subjects.every(sub => sub && typeof sub === 'object' && typeof sub.code === 'string' && sub.code.trim());
-  s.subjects = validSubjects
-    ? s.subjects.map(sub => ({
-        code:  sub.code.trim(),
-        name:  (typeof sub.name === 'string' && sub.name.trim()) ? sub.name.trim() : sub.code.trim(),
-        color: (typeof sub.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(sub.color)) ? sub.color : '#64748b',
-      }))
-    : SUBJECT_SEED.map(sub => ({ ...sub }));
-  return s;
-}
-
-/* ── R59 shared helpers — all group-size consumers (weighted heat, travel
-   delay, Stage-4 dot counts) route through these. ── */
-
-/** Effective headcount of a group: explicit size, else settings default. */
-function groupWeight(group) {
-  const sz = group ? Number(group.size) : NaN;
-  if (Number.isFinite(sz) && sz > 0) return Math.round(sz);
-  const d = AppState.settings.defaultGroupSize;
-  return (Number.isFinite(d) && d > 0) ? d : 25;
-}
-
-/** True when at least one group has an explicit size — controls whether
-    congestion figures are displayed as "~N students" vs. raw group counts. */
-function anyGroupSized(groups) {
-  const list = groups || AppState.schedules.groups || [];
-  return list.some(g => Number.isFinite(Number(g && g.size)) && Number(g.size) > 0);
-}
-
-/** Congestion-delay multiplier from "effective other groups" on a tile.
-    Piecewise-linear through the R30 anchor points (0,0) (1,0.2) (2,0.5)
-    (3,0.8), clamped at 0.8 — agrees exactly with the R58 discrete steps at
-    every integer, so the all-sizes-null regression holds. */
-function congestionDelayMult(effOthers) {
-  if (!(effOthers > 0)) return 0;
-  if (effOthers >= 3) return 0.8;
-  if (effOthers >= 2) return 0.5 + (effOthers - 2) * 0.3;
-  if (effOthers >= 1) return 0.2 + (effOthers - 1) * 0.3;
-  return effOthers * 0.2;
-}
-
-/* ── R59 bell-schedule helpers ── */
-
-/** "HH:MM" 24h → compact display ("08:05" → "8:05", "13:40" → "1:40"). */
-function formatClockTime(hhmm) {
-  if (typeof hhmm !== 'string' || !/^\d{1,2}:\d{2}$/.test(hhmm)) return '';
-  let [h, m] = hhmm.split(':').map(Number);
-  h = h % 12; if (h === 0) h = 12;
-  return `${h}:${String(m).padStart(2, '0')}`;
-}
-
-/** Resolve the bell-schedule array for a day ('B' falls back to A when null). */
-function getBellDay(day) {
-  const bs = AppState.settings.bellSchedule || {};
-  if (day === 'B' && Array.isArray(bs.B)) return bs.B;
-  return Array.isArray(bs.A) ? bs.A : null;
-}
-
-/** formatModTime('A', 0) → "8:00–8:42", or '' when no times exist. */
-function formatModTime(day, modIdx) {
-  const arr = getBellDay(day);
-  const e = arr && arr[modIdx];
-  if (!e || !e.start || !e.end) return '';
-  return `${formatClockTime(e.start)}\u2013${formatClockTime(e.end)}`;
-}
-
-/** Passing window for transition fromMod→fromMod+1 (1-based fromMod):
-    prevMod.end → nextMod.start, e.g. "8:42–8:46". '' when unavailable. */
-function formatTransitionWindow(day, fromMod) {
-  const arr = getBellDay(day);
-  if (!arr) return '';
-  const prev = arr[fromMod - 1], next = arr[fromMod];
-  if (!prev || !prev.end || !next || !next.start) return '';
-  return `${formatClockTime(prev.end)}\u2013${formatClockTime(next.start)}`;
-}
 
 /* ── R59 subjects helpers ── */
 function getSubjects() {
@@ -2829,42 +2742,7 @@ function renderPaletteGrid() {
 let roomRegistry = [];
 
 function rebuildRoomRegistry() {
-  roomRegistry = [];
-  const seenGroups = new Set();
-
-  // Round 31: iterate every floor so rooms on all floors register, each tagged
-  // with its floorId. groupId uniqueness is global, so seenGroups spans floors.
-  for (const floor of AppState.blueprint.floors) {
-    const gridData = floor.gridData;
-    const gridCols = floor.gridCols;
-    const gridRows = floor.gridRows;
-    if (!gridData) continue;
-    for (let r = 0; r < gridRows; r++) {
-      for (let c = 0; c < gridCols; c++) {
-        const tile = gridData[r] && gridData[r][c];
-        if (!tile || tile.type !== 'classroom') continue;
-        if (tile.groupId) {
-          if (seenGroups.has(tile.groupId)) continue;
-          if (!isGroupAnchorOn(gridData, gridCols, gridRows, c, r, tile.groupId)) continue;
-          seenGroups.add(tile.groupId);
-        }
-        if (!tile.roomNumber) continue;
-        roomRegistry.push({
-          roomNumber:           tile.roomNumber,
-          teacherName:          tile.teacher || null,
-          teacherDept:          tile.dept    || null,
-          wing:                 tile.wing    || null,
-          excludeFromConflict:  !!(tile.excludeFromConflict),
-          floorId:         floor.id,
-          cellCoordinates: { col: c, row: r },
-        });
-      }
-    }
-  }
-
-  // Sort alphabetically by room number for clean UX downstream
-  roomRegistry.sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true }));
-
+  roomRegistry = svModel().roomRegistryOf(AppState.blueprint);
   // Notify Schedules module of updated room list
   if (typeof scheduleModuleOnRoomRegistryUpdate === 'function') {
     scheduleModuleOnRoomRegistryUpdate();
@@ -2886,100 +2764,6 @@ function portableTraceImage(t) {
 }
 
 /**
- * Serialize the full blueprint state into a portable object.
- *
- * Path 4 P4: a floor's trace image is saved as an `idb:` reference, which
- * means nothing outside this browser. `{ portable: true }` puts the image
- * bytes back (a data URL) for everything that leaves it or must stand alone —
- * the JSON exports, the handoff, a recovery point — and drops a reference
- * whose image is not here rather than writing a dead one into a file.
- */
-function serializeBlueprint(opts) {
-  const portable = !!(opts && opts.portable);
-  const bp = AppState.blueprint;
-  const s  = AppState.settings;
-
-  // Round 31: serialize each floor as a sparse cells array.
-  const floors = bp.floors.map(f => {
-    const cells = [];
-    if (f.gridData) {
-      for (let r = 0; r < f.gridRows; r++) {
-        for (let c = 0; c < f.gridCols; c++) {
-          const tile = f.gridData[r] && f.gridData[r][c];
-          if (tile) cells.push({ col: c, row: r, tile: { ...tile } });
-        }
-      }
-    }
-    return {
-      id:               f.id,
-      label:            f.label,
-      gridCols:         f.gridCols,
-      gridRows:         f.gridRows,
-      cells,
-      heatExcludeZones: JSON.parse(JSON.stringify(f.heatExcludeZones || [])),
-      traceImage:       portable ? portableTraceImage(f.traceImage) : (f.traceImage ? { ...f.traceImage } : null),
-    };
-  });
-
-  // Top-level fields mirror floors[0] so legacy/external readers (and
-  // validateBlueprintData) still see a valid single-floor payload.
-  const f0 = floors[0] || { gridCols: bp.gridCols, gridRows: bp.gridRows, cells: [], heatExcludeZones: [] };
-
-  return {
-    version:          5,
-    savedAt:          new Date().toISOString(),
-    gridCols:         f0.gridCols,
-    gridRows:         f0.gridRows,
-    cells:            f0.cells,
-    staircasePairs:   deriveSameFloorPairs(bp.floors[0] ? bp.floors[0].id : 'floor_0'),
-    heatExcludeZones: f0.heatExcludeZones,
-    // Round 31 multi-floor payload:
-    floors,
-    activeFloorIdx:   bp.activeFloorIdx || 0,
-    crossFloorPairs:  JSON.parse(JSON.stringify(bp.crossFloorPairs || [])),
-    settings: {
-      schoolName: s.schoolName,
-      gridSize:   s.gridSize,
-      gridCols:   s.gridCols,
-      gridRows:   s.gridRows,
-      // R59: carried in the blueprint file so a blueprint-only import keeps
-      // bell times + subject palette in sync with the building it describes.
-      bellSchedule: JSON.parse(JSON.stringify(s.bellSchedule || { A: null, B: null })),
-      subjects:     JSON.parse(JSON.stringify(s.subjects || null)),
-    },
-  };
-}
-
-/**
- * Round 31: normalize any blueprint payload (old or new) into a floors[] +
- * crossFloorPairs shape. Mutates `data` in place and returns it.
- */
-function migrateBlueprintToFloors(data) {
-  if (data && Array.isArray(data.floors) && data.floors.length) {
-    if (!Array.isArray(data.crossFloorPairs)) data.crossFloorPairs = [];
-    if (typeof data.activeFloorIdx !== 'number') data.activeFloorIdx = 0;
-    return data;
-  }
-  // Pre-Round-31 single-floor payload (top-level cells array).
-  data.floors = [{
-    id:               'floor_0',
-    label:            'Floor 1',
-    gridCols:         data.gridCols || 30,
-    gridRows:         data.gridRows || 20,
-    cells:            Array.isArray(data.cells) ? data.cells : [],
-    heatExcludeZones: data.heatExcludeZones || [],
-  }];
-  data.crossFloorPairs = (data.staircasePairs || []).map(([ka, kb]) => {
-    const [ac, ar] = String(ka).split(',').map(Number);
-    const [bc, br] = String(kb).split(',').map(Number);
-    return { a: { floorId: 'floor_0', col: ac, row: ar },
-             b: { floorId: 'floor_0', col: bc, row: br } };
-  });
-  data.activeFloorIdx = 0;
-  return data;
-}
-
-/**
  * Apply a deserialized blueprint object to the application state and re-render.
  * Returns true on success, throws on validation failure.
  */
@@ -2995,25 +2779,7 @@ function applyBlueprintData(data) {
   AppState.ui.editorTarget  = null;
 
   // Rebuild every floor object from its serialized cells array.
-  const floors = data.floors.map((sf, i) => {
-    const floor = {
-      id:               sf.id || ('floor_' + i),
-      label:            sf.label || ('Floor ' + (i + 1)),
-      gridCols:         sf.gridCols || 30,
-      gridRows:         sf.gridRows || 20,
-      gridData:         null,
-      heatExcludeZones: JSON.parse(JSON.stringify(sf.heatExcludeZones || [])),
-      traceImage:       sf.traceImage ? { ...sf.traceImage } : null,
-    };
-    initFloorGridData(floor);
-    for (const entry of (sf.cells || [])) {
-      if (entry.col >= 0 && entry.col < floor.gridCols &&
-          entry.row >= 0 && entry.row < floor.gridRows) {
-        floor.gridData[entry.row][entry.col] = { ...entry.tile };
-      }
-    }
-    return floor;
-  });
+  const floors = svModel().floorsFromData(data);
 
   AppState.blueprint.floors          = floors;
   AppState.blueprint.crossFloorPairs = JSON.parse(JSON.stringify(data.crossFloorPairs || []));
@@ -3065,38 +2831,6 @@ function applyBlueprintData(data) {
   adoptTraceImages();   // Path 4 P4: read stored trace images, store arriving ones
 
   return true;
-}
-
-/**
- * Validate that a parsed JSON object is a valid blueprint payload.
- * Throws an Error with a user-friendly message if invalid.
- */
-function validateBlueprintData(data) {
-  if (!data || typeof data !== 'object')
-    throw new Error('Invalid file: not a JSON object.');
-  // Round 31: a floors-based payload is valid on its own.
-  const hasFloors = Array.isArray(data.floors) && data.floors.length > 0;
-  if (!hasFloors) {
-    if (typeof data.gridCols !== 'number' || typeof data.gridRows !== 'number')
-      throw new Error('Invalid file: missing grid dimensions.');
-    if (data.gridCols < 5 || data.gridRows < 5 || data.gridCols > 200 || data.gridRows > 200)
-      throw new Error('Invalid file: grid dimensions out of range (5–200).');
-    if (!Array.isArray(data.cells))
-      throw new Error('Invalid file: missing cells array.');
-    if (!Array.isArray(data.staircasePairs))
-      throw new Error('Invalid file: missing staircasePairs array.');
-    if (data.cells.length > 0) {
-      const first = data.cells[0];
-      if (typeof first.col !== 'number' || typeof first.row !== 'number' || !first.tile)
-        throw new Error('Invalid file: malformed cell entry.');
-    }
-  } else {
-    const f0 = data.floors[0];
-    if (!f0 || typeof f0.gridCols !== 'number' || typeof f0.gridRows !== 'number')
-      throw new Error('Invalid file: malformed floor entry.');
-    if (!Array.isArray(f0.cells))
-      throw new Error('Invalid file: floor missing cells array.');
-  }
 }
 
 /**
@@ -3411,13 +3145,6 @@ function getActiveFloorData() {
   return floors[idx] || floors[0];
 }
 
-/** Initialize a floor object's gridData 2D array (rows × cols of nulls). */
-function initFloorGridData(floor) {
-  floor.gridData = Array.from({ length: floor.gridRows }, () =>
-    Array.from({ length: floor.gridCols }, () => null)
-  );
-}
-
 /**
  * Re-point the legacy mirror fields at a floor object (BY REFERENCE so that
  * in-place tile mutations through the mirror persist to the floor).
@@ -3431,13 +3158,6 @@ function syncLegacyMirror(floor) {
   bp.staircasePairs   = deriveSameFloorPairs(floor.id);
   AppState.settings.gridCols = floor.gridCols;
   AppState.settings.gridRows = floor.gridRows;
-}
-
-/** Legacy staircasePairs format (['col,row','col,row']) for same-floor pairs on one floor. */
-function deriveSameFloorPairs(floorId) {
-  return (AppState.blueprint.crossFloorPairs || [])
-    .filter(p => p.a.floorId === floorId && p.b.floorId === floorId)
-    .map(p => [`${p.a.col},${p.a.row}`, `${p.b.col},${p.b.row}`]);
 }
 
 /** Switch which floor the blueprint editor shows; re-syncs all legacy mirrors. */
@@ -3663,13 +3383,6 @@ function getPairIndex(col, row) {
   return pairs.findIndex(p =>
     (p.a.floorId === fid && p.a.col === col && p.a.row === row) ||
     (p.b.floorId === fid && p.b.col === col && p.b.row === row));
-}
-
-/**
- * Returns the pair letter label ('A', 'B', etc.)
- */
-function getPairLabel(pairIndex) {
-  return String.fromCharCode(65 + (pairIndex % 26));
 }
 
 /**
@@ -4713,22 +4426,6 @@ function isSameGroup(col, row, groupId) {
 function isGroupAnchor(col, row, groupId) {
   const bounds = getGroupBounds(col, row, groupId);
   return col === bounds.minCol && row === bounds.minRow;
-}
-
-/** Round 31: floor-explicit anchor test (used by rebuildRoomRegistry across floors). */
-function isGroupAnchorOn(gridData, gridCols, gridRows, col, row, groupId) {
-  if (!groupId) return true;
-  let minCol = col, minRow = row;
-  for (let r = 0; r < gridRows; r++) {
-    for (let c = 0; c < gridCols; c++) {
-      const t = gridData[r] && gridData[r][c];
-      if (t && t.type === 'classroom' && t.groupId === groupId) {
-        if (c < minCol) minCol = c;
-        if (r < minRow) minRow = r;
-      }
-    }
-  }
-  return col === minCol && row === minRow;
 }
 
 /** Get the bounding box of all cells sharing a groupId */
@@ -8307,7 +8004,6 @@ function populateDeptDropdown(currentValue) {
   sel.innerHTML = html;
   sel.value = keep || '';
 }
-populateDeptDropdown();
 
 /* ==============================================
    TAB NAVIGATION
@@ -8387,45 +8083,6 @@ function showToast(message, type = 'success') {
    SCHEDULES MODULE — Data & Storage
 =============================================== */
 
-/* R39: Compute room double-booking conflicts for a given day ('A' or 'B').
-   Returns array of { mod (1-based), modLabel, room, groupNames[] } */
-function computeScheduleConflicts(day) {
-  // Build a fast lookup set of rooms excluded from conflict detection
-  const excludedRooms = new Set(
-    roomRegistry.filter(r => r.excludeFromConflict).map(r => r.roomNumber)
-  );
-
-  const labels = getAllModLabels();
-  const map = new Map(); // key `${modIndex}-${room}` → [groupName, ...]
-  for (const group of AppState.schedules.groups) {
-    const mods = day === 'B'
-      ? (group.modsB || [])
-      : (group.modsA || group.mods || []);
-    mods.forEach((room, idx) => {
-      if (!room || room === '') return;
-      if (excludedRooms.has(room)) return; // skip rooms flagged as excluded
-      const key = `${idx}-${room}`;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key).push(group.name);
-    });
-  }
-  const conflicts = [];
-  for (const [key, names] of map) {
-    if (names.length < 2) continue;
-    const [idxStr, ...roomParts] = key.split('-');
-    const idx  = parseInt(idxStr, 10);
-    const room = roomParts.join('-');
-    conflicts.push({
-      mod:      idx + 1,
-      modLabel: labels[idx] || `Mod ${idx + 1}`,
-      room,
-      groupNames: names,
-    });
-  }
-  conflicts.sort((a, b) => a.mod - b.mod);
-  return conflicts;
-}
-
 /* R39: Render conflict banner above group list */
 function renderConflictBanner() {
   const banner   = document.getElementById('sch-conflict-banner');
@@ -8481,22 +8138,6 @@ const GROUP_COLOR_PRESETS = [
   '#8b5cf6','#ec4899','#06b6d4','#f97316',
   '#14b8a6','#6366f1','#84cc16','#a855f7',
 ];
-
-// Auto-assign next unused preset color
-function getNextGroupColor() {
-  const used = new Set(AppState.schedules.groups.map(g => g.color));
-  for (const c of GROUP_COLOR_PRESETS) {
-    if (!used.has(c)) return c;
-  }
-  // All used — generate a hue-spaced color
-  const hue = (AppState.schedules.groups.length * 47) % 360;
-  return `hsl(${hue}, 70%, 50%)`;
-}
-
-// Generate a unique group ID
-function generateGroupId() {
-  return 'grp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-}
 
 function saveSchedules() {
   try {
@@ -14762,13 +14403,7 @@ function serializeFullProject(opts) {
     savedAt:  new Date().toISOString(),
     settings: { ...AppState.settings },
     blueprint: serializeBlueprint(opts),
-    groups: AppState.schedules.groups.map(g => ({
-      name: g.name, grade: g.grade, color: g.color,
-      size: (Number.isFinite(Number(g.size)) && Number(g.size) > 0) ? Math.round(Number(g.size)) : null,  // R59
-      modsA: g.modsA || g.mods || [],
-      modsB: g.modsB || [],
-      mods: g.modsA || g.mods || [],
-    })),
+    groups: AppState.schedules.groups.map(g => svModel().groupRecord(g)),
     // R58: What-If scenario payload. Overrides are keyed by group ARRAY INDEX
     // (not group id) because applyFullProject regenerates every group id on
     // import — index order matches the groups[] array exported above.
