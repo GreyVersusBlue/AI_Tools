@@ -29,7 +29,7 @@ export function building() {
   off.gridData[0][0] = { type: 'hallway', isExit: true, exitLabel: 'lone' };   // in the graph, unreachable
   return { floors: [f1, f2, off], crossFloorPairs: [pair('f1', 5, 0, 'f2', 0, 0)], heatExcludeZones: f1.heatExcludeZones };
 }
-function northwind() {
+export function northwind() {
   const bp = NW().blueprint;
   return {
     floors: bp.floors.map(f => {

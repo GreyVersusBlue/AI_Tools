@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v321';
+const CACHE_VERSION = 'v322';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -411,6 +411,7 @@ const PRECACHE_URLS = [
   "Tools/rubric-builder/rb-templates.js",
   "Tools/034-schedule-browser.html",
   "Tools/035-schedule-visualizer.html",
+  "Tools/schedule-visualizer/sv-congestion.js",
   "Tools/schedule-visualizer/sv-graph.js",
   "Tools/schedule-visualizer/sv-handoff.js",
   "Tools/schedule-visualizer/sv-model.js",
