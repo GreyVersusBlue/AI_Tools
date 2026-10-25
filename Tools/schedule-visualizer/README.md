@@ -33,7 +33,10 @@ shapes:
   graph cache, and the step-free and evacuation graphs), `sv-routes.js` (group
   day paths, congestion, evacuation, the step-free report and route sheets),
   `sv-congestion.js` (congestion data, travel times, the what-if arithmetic),
-  `sv-playback.js` (a playback frame, the collision simulation).
+  `sv-playback.js` (a playback frame, the collision simulation), and, new
+  rather than moved, `sv-check.js` (the fourteen schedule checks, their
+  fingerprints, the accepted-finding store's rules and the one sentence for
+  each kind; Path 11 P5).
 - **Views**, moved verbatim: they own a tab's DOM and read the page's
   classic-script globals at call time (listed in each file's `/* global */`
   comments), and the module script copies their exports onto `window`
@@ -45,7 +48,11 @@ shapes:
   search and the what-if lab's controls), `sv-access.js` (the step-free report
   and route sheets as printed sheets, through the print kit; Path 11 P3),
   `sv-safety.js` (the evacuation cards, one per room, the lockdown maps, one
-  per floor, and the door signs, per teacher, through the print kit; Path 11 P4).
+  per floor, and the door signs, per teacher, through the print kit; Path 11 P4),
+  `sv-checks-view.js` (the Schedules tab's checks banner, the group cards' and
+  bulk editor's marks, the room panel's capacity line, the what-if lab's
+  Constraint Checks panel and Publish's warning; it keeps `stviz_checks`,
+  the accepted findings, `{ v: 1, acks }`; Path 11 P5).
 
 Older and separate: `sv-recovery.js` (recovery points), `sv-handoff.js`
 (WebRTC hand-off), `sv-trace-image.js` (a classic `defer` script, the trace
@@ -72,9 +79,11 @@ pairs, and the settings, bell and subjects editors.
 file from `file://`), `test:schedule-publish` (the baseline below),
 `test:schedule-visualizer` (recovery, evacuation cards, lockdown maps, door signs), `-trace`, `-print`,
 `-editor` (`smoke-editor.mjs`, port 8552: paints a plan with real mouse
-events, pairs stairs, undoes, reloads), `test:layout-bell-from-calendar`, and
+events, pairs stairs, undoes, reloads), `test:schedule-check-smoke`
+(`smoke-checks.mjs`, port 8554: the checks banner, accept, capacity, publish), `test:layout-bell-from-calendar`, and
 the pure-Node `-size`, `-model`, `-graph`, `-routes`, `-congestion`,
-`-playback`, `-bridge`, `-step-free`, `-evac-cards`, `-safety-sheets`. `node Tools/board-check/run-suites.mjs --only schedule`
+`-playback`, `-bridge`, `-step-free`, `-evac-cards`, `-safety-sheets`, and
+`test:schedule-check` (`check.test.mjs`). `node Tools/board-check/run-suites.mjs --only schedule`
 runs them all, with 034's `Tools/schedule-browser/` suites. The engine suites
 compare each module with a golden file written by running the same cases
 through the page's own functions before the move.

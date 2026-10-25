@@ -167,7 +167,7 @@ export function isGroupAnchorOn(gridData, gridCols, gridRows, col, row, groupId)
 /**
  * Every assigned room on every floor, sorted by room number (numeric-aware).
  * Each entry: { roomNumber, teacherName, teacherDept, wing, excludeFromConflict,
- * floorId, cellCoordinates: {col, row} }. A multi-cell grouped classroom is
+ * floorId, cellCoordinates: {col, row}, capacity? }. A multi-cell grouped classroom is
  * registered once, at its anchor cell; groupId uniqueness is global, so the
  * seen set spans floors.
  */
@@ -197,6 +197,8 @@ export function roomRegistryOf(blueprint) {
           excludeFromConflict:  !!(tile.excludeFromConflict),
           floorId:         floor.id,
           cellCoordinates: { col: c, row: r },
+          // Path 11 P5: seats, only when the school typed a whole number 1 to 999.
+          ...(Number.isInteger(tile.capacity) && tile.capacity >= 1 && tile.capacity <= 999 ? { capacity: tile.capacity } : {}),
         });
       }
     }

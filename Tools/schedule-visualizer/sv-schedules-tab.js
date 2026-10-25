@@ -1,6 +1,6 @@
 // sv-schedules-tab.js — the School Layout Visualizer's Schedules tab: the
 // group list and its cards, the group editor (mods, colours, drag to
-// reorder), save and validate, the conflicts banner, schedule export and
+// reorder), save and validate, schedule export and
 // import, the autosave indicator, CSV bulk import and the bulk editor.
 //
 // Path 11 P2 increment 11 (BACKLOG.md, "Path 11", the P2 bullet). Moved
@@ -9,8 +9,8 @@
 // this is a view: it owns the tab's DOM and reads the page at call time
 // through the globals listed below. The page keeps the storage pair
 // ("SCHEDULES MODULE — Data & Storage": saveSchedules, loadSchedules,
-// GROUP_COLOR_PRESETS, which the BRIDGE reads); the conflict check itself is
-// sv-model.js. The page's module script copies every export onto window,
+// GROUP_COLOR_PRESETS, which the BRIDGE reads); the checks and their banner
+// are sv-check.js and sv-checks-view.js (Path 11 P5). The page's module script copies every export onto window,
 // which is the global surface the classic script had.
 
 /* global AppState, roomRegistry, GROUP_COLOR_PRESETS -- 035's classic-script state and constants */
@@ -75,6 +75,7 @@ function renderGroupList(filterQuery) {
   const html = filtered.map(group => {
     const isActive  = group.id === editingId;
     const hasConflict = conflictGroupIds.has(group.id);
+    const hasError    = conflictGroupIds.get && conflictGroupIds.get(group.id) === 'error';   // Path 11 P5
     const total     = AppState.settings.modCount;
     const modsA     = group.modsA || group.mods || [];
     const modsB     = group.modsB || [];
@@ -103,7 +104,7 @@ function renderGroupList(filterQuery) {
 
     // R39: amber conflict icon
     const conflictIcon = hasConflict ? `
-      <span class="group-card-warn-icon conflict" title="This group shares a room with another group in the same mod">
+      <span class="group-card-warn-icon conflict${hasError ? ' error' : ''}" title="${hasError ? 'A problem in this group\'s day: see the checks above' : 'A warning about this group\'s day: see the checks above'}">
         <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
           <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -115,7 +116,7 @@ function renderGroupList(filterQuery) {
       : `<span style="background:var(--slate-100);color:var(--slate-400);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;font-family:var(--font-mono);">A only</span>`;
 
     return `
-    <div class="group-card${isActive ? ' active' : ''}${hasConflict ? ' has-conflict' : ''}" data-group-id="${group.id}">
+    <div class="group-card${isActive ? ' active' : ''}${hasConflict ? ' has-conflict' : ''}${hasError ? ' has-error' : ''}" data-group-id="${group.id}">
       <div class="group-card-top">
         <div class="group-color-swatch" style="background:${escHtml(group.color)};"></div>
         <div class="group-card-info">
@@ -1356,6 +1357,14 @@ function applyBulkEdits() {
   showToast(`Applied changes to ${updated.length} group${updated.length !== 1 ? 's' : ''}.`, 'success');
 }
 
+/* Path 11 P5: the checks on the bulk editor's working copy, on every keystroke
+   (no travel, so no debounce; sv-check.js's suite prints what one costs). */
+function beMarkChecks() {
+  if (window.SVCheck && typeof window.markBulkCells === 'function') {
+    window.markBulkCells(beState.groups, document.getElementById('be-grade-sections'));
+  }
+}
+
 function renderBulkEditor() {
   const modCount = beState.modCount;
   const groups   = beState.groups;
@@ -1396,6 +1405,7 @@ function renderBulkEditor() {
         <p style="font-size:13px;">No groups yet. Click <strong>Add Group</strong> above.</p>
       </div>`;
   }
+  beMarkChecks();
 }
 
 function renderBeGradeSection(container, grade, groups, modCount, isOther = false) {
@@ -1544,11 +1554,13 @@ function renderBeGradeSection(container, grade, groups, modCount, isOther = fals
       inp.type = 'text';
       inp.value = (group.modsA || group.mods || [])[m] || '';
       inp.placeholder = '—';
+      inp.dataset.checkCell = group.id + '|A|' + m;   // Path 11 P5: the checks mark this cell
       inp.addEventListener('input', () => {
         if (!group.modsA) group.modsA = [];
         while (group.modsA.length <= m) group.modsA.push('');
         group.modsA[m] = inp.value.trim();
         group.mods = group.modsA; // keep compat
+        beMarkChecks();
       });
       td.appendChild(inp);
       tr.appendChild(td);
@@ -1562,10 +1574,12 @@ function renderBeGradeSection(container, grade, groups, modCount, isOther = fals
       inp.type = 'text';
       inp.value = (group.modsB || [])[m] || '';
       inp.placeholder = '—';
+      inp.dataset.checkCell = group.id + '|B|' + m;
       inp.addEventListener('input', () => {
         if (!group.modsB) group.modsB = [];
         while (group.modsB.length <= m) group.modsB.push('');
         group.modsB[m] = inp.value.trim();
+        beMarkChecks();
       });
       td.appendChild(inp);
       tr.appendChild(td);

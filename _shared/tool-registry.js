@@ -386,6 +386,7 @@
          snapshot points at are deleted when the tool next loads. */
       keys: [
         { k: 'stviz_blueprint' },
+        { k: 'stviz_checks' },   // Path 11 P5: accepted check findings, { v: 1, acks }
         { k: 'stviz_onboarded' },
         { k: 'stviz_schedules' },
         { k: 'STVIZ_SESSION_OPEN_v1' },

@@ -90,6 +90,11 @@
     window.SVAccess = SVAccess;
     import * as SVSafety from './schedule-visualizer/sv-safety.js';
     window.SVSafety = SVSafety;
+    import * as SVCheck from './schedule-visualizer/sv-check.js';
+    window.SVCheck = SVCheck;
+    import * as SVChecksView from './schedule-visualizer/sv-checks-view.js';
+    window.SVChecksView = SVChecksView;
+    Object.assign(window, SVChecksView);
     import * as SVRecovery from './schedule-visualizer/sv-recovery.js';
     window.SVRecovery = SVRecovery;
     window.dispatchEvent(new Event('sv-recovery-ready'));
@@ -552,6 +557,11 @@
                   <option value="SCI/SS">Science / Social Studies</option>
                 </select>
               </div>
+              <div class="rp-field">
+                <label class="rp-label" for="rp-capacity">Capacity <span class="rp-label-opt">(seats, optional)</span></label>
+                <input type="number" id="rp-capacity" class="rp-input" min="1" max="999" step="1" inputmode="numeric" />
+              </div>
+              <div id="rp-room-checks"></div>
               <div class="rp-field">
                 <label class="rp-label" for="rp-wing-label">Wing / Floor <span class="rp-label-opt">(optional)</span></label>
                 <input type="text" id="rp-wing-label" class="rp-input" placeholder="e.g. North Wing, Floor 2" maxlength="40" />
@@ -1019,22 +1029,17 @@
             <span id="sch-autosave-text">Saved</span>
           </div>
 
-          <!-- R39: Conflict banner (hidden until conflicts exist) -->
+          <!-- Path 11 P5: the checks banner (R39's conflict banner, widened to every check) -->
           <div id="sch-conflict-banner" style="display:none;">
-            <div class="sch-conflict-banner-header" id="sch-conflict-banner-header">
+            <div class="sch-conflict-banner-header" id="sch-conflict-banner-header" role="button" tabindex="0" aria-expanded="false" aria-controls="sch-conflict-table-wrap">
               <span class="sch-conflict-banner-icon">
                 <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               </span>
-              <span class="sch-conflict-banner-label">Room conflicts detected</span>
+              <span class="sch-conflict-banner-label" id="sch-conflict-label">Schedule checks</span>
               <span class="sch-conflict-count" id="sch-conflict-count">0</span>
               <svg class="sch-conflict-chevron" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <div id="sch-conflict-table-wrap">
-              <table class="sch-conflict-table">
-                <thead><tr><th>Mod</th><th>Room</th><th>Groups</th></tr></thead>
-                <tbody id="sch-conflict-tbody"></tbody>
-              </table>
-            </div>
+            <div id="sch-conflict-table-wrap"><div id="sch-check-list"></div></div>
           </div>
 
           <div id="sch-group-list">
@@ -2714,9 +2719,8 @@ function validateBlueprintData(data) { return svModel().validateBlueprint(data);
 function initFloorGridData(floor) { return svModel().initFloorGridData(floor); }
 function deriveSameFloorPairs(floorId) { return svModel().deriveSameFloorPairs(AppState.blueprint.crossFloorPairs, floorId); }
 function getPairLabel(pairIndex) { return svModel().pairLabel(pairIndex); }
-function computeScheduleConflicts(day) {
-  return svModel().scheduleConflicts(AppState.schedules.groups, day, { registry: roomRegistry, labels: getAllModLabels() });
-}
+/* computeScheduleConflicts, renderConflictBanner and getConflictGroupIds are
+   schedule-visualizer/sv-checks-view.js since Path 11 P5 (the checks). */
 function getNextGroupColor() { return svModel().nextGroupColor(AppState.schedules.groups, GROUP_COLOR_PRESETS); }
 function generateGroupId(taken) { return svModel().groupId(taken || AppState.schedules.groups); }
 
@@ -4472,55 +4476,6 @@ function showToast(message, type = 'success') {
    SCHEDULES MODULE — Data & Storage
 =============================================== */
 
-/* R39: Render conflict banner above group list */
-function renderConflictBanner() {
-  const banner   = document.getElementById('sch-conflict-banner');
-  const countEl  = document.getElementById('sch-conflict-count');
-  const tbody    = document.getElementById('sch-conflict-tbody');
-  const header   = document.getElementById('sch-conflict-banner-header');
-  const tableWrap = document.getElementById('sch-conflict-table-wrap');
-  if (!banner || !countEl || !tbody) return;
-
-  // Check both days
-  const day = AppState.schedules.activeDayTab || 'A';
-  const conflicts = computeScheduleConflicts(day);
-
-  if (conflicts.length === 0) {
-    banner.style.display = 'none';
-    return;
-  }
-
-  banner.style.display = '';
-  countEl.textContent = conflicts.length;
-  tbody.innerHTML = conflicts.map(c =>
-    `<tr><td>${escHtml(c.modLabel)}</td><td style="font-family:var(--font-mono);font-weight:600;">${escHtml(c.room)}</td><td>${c.groupNames.map(escHtml).join(', ')}</td></tr>`
-  ).join('');
-
-  // Wire toggle only once
-  if (!header.dataset.conflictWired) {
-    header.dataset.conflictWired = '1';
-    header.addEventListener('click', () => {
-      const isOpen = tableWrap.classList.toggle('open');
-      header.classList.toggle('open', isOpen);
-    });
-  }
-}
-
-/* Set of group IDs that have conflicts — built by renderConflictBanner */
-function getConflictGroupIds(day) {
-  const conflicts = computeScheduleConflicts(day);
-  const ids = new Set();
-  for (const conflict of conflicts) {
-    for (const group of AppState.schedules.groups) {
-      const mods = day === 'B'
-        ? (group.modsB || [])
-        : (group.modsA || group.mods || []);
-      if (mods[conflict.mod - 1] === conflict.room) ids.add(group.id);
-    }
-  }
-  return ids;
-}
-
 // Preset group colors
 const GROUP_COLOR_PRESETS = [
   '#3b82f6','#ef4444','#10b981','#f59e0b',
@@ -4733,6 +4688,8 @@ function serializeFullProject(opts) {
     // (not group id) because applyFullProject regenerates every group id on
     // import — index order matches the groups[] array exported above.
     whatif: serializeWhatIfForProject(),
+    // Path 11 P5: accepted check findings travel with the schedule.
+    checks: window.SVChecksView ? window.SVChecksView.checksForProject() : { v: 1, acks: {} },
   };
 }
 
@@ -4800,6 +4757,7 @@ function applyFullProject(data) {
   // `whatif` key — applyWhatIfFromProject treats that as "clear the sandbox"
   // so imports of older files succeed cleanly with an empty scenario.
   applyWhatIfFromProject(data.whatif, cleanGroups);
+  if (window.SVChecksView) window.SVChecksView.applyChecksFromProject(data.checks);   // Path 11 P5
 
   // Persist + refresh UI everywhere.
   saveSettings();
@@ -5519,7 +5477,7 @@ window.wiComputeDiff    = wiComputeDiff;
           </div>
         </div>
         <button class="btn-print" onclick="window.print()">Print / Save PDF</button>
-        <button class="btn-print" id="br-publish-btn" onclick="brPublish()" title="Export a standalone, read-only Schedule Browser file to share with staff">Publish for Teachers</button>
+        <button class="btn-print" id="br-publish-btn" onclick="publishChecked()" title="Export a standalone, read-only Schedule Browser file to share with staff">Publish for Teachers</button>
         <button class="btn-print" id="br-publish-copy-btn" onclick="brCopyPublishedHTML()" title="Copy the generated Schedule Browser HTML to the clipboard, to paste directly into GitHub's web file editor">Copy Publish HTML</button>
       </div>
       <div class="stage" id="br-stage" role="tabpanel" tabindex="0" aria-labelledby="br-mTeacher">

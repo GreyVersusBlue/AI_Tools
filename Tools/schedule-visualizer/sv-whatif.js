@@ -697,6 +697,8 @@ function wiRenderHotspots(diff) {
 function wiRenderConflicts(diff) {
   const host = document.getElementById('wi-conflicts');
   if (!host) return;
+  // Path 11 P5: every check, scenario against the live schedule (sv-checks-view.js).
+  if (window.SVCheck && typeof window.renderLabChecks === 'function') { window.renderLabChecks(diff); return; }
   const rows = [];
   const conflictLine = (tag, c) =>
     `<div class="wi-hot-item"><span><span class="wi-conflict-tag ${tag}">${tag === 'new' ? 'New' : 'Resolved'}</span>` +

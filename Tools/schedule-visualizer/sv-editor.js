@@ -2237,6 +2237,8 @@ function showClassroomEditor(col, row, tile) {
   document.getElementById('rp-wing-label').value   = tile.wing         || '';
   document.getElementById('rp-exclude-conflict').checked = !!(tile.excludeFromConflict);
   document.getElementById('rp-lockdown-note').value = window.SVModel.lockdownNoteOf(tile);   // Path 11 P4
+  document.getElementById('rp-capacity').value = window.SVCheck ? (window.SVCheck.capacityOf(tile.capacity) || '') : '';   // Path 11 P5
+  if (typeof window.renderRoomChecks === 'function') window.renderRoomChecks(tile.roomNumber || '');
 
   document.getElementById('rp-room-number').classList.remove('required-empty');
 
@@ -2301,6 +2303,9 @@ document.getElementById('rp-btn-save-room').addEventListener('click', () => {
   // Path 11 P4: the school's own lockdown note for this room; blank removes the key.
   const lockdownNote = document.getElementById('rp-lockdown-note').value.trim().slice(0, 300);
   if (lockdownNote) tile.lockdownNote = lockdownNote; else delete tile.lockdownNote;
+  // Path 11 P5: seats, a whole number from 1 to 999; blank (or anything else) removes the key.
+  const capacity = window.SVCheck ? window.SVCheck.capacityOf(document.getElementById('rp-capacity').value) : null;
+  if (capacity) tile.capacity = capacity; else delete tile.capacity;
 
   setTile(target.col, target.row, tile);
 
@@ -2317,6 +2322,7 @@ document.getElementById('rp-btn-save-room').addEventListener('click', () => {
           t.wing    = tile.wing;
           t.roomNumber = null; // only anchor holds roomNumber
           delete t.lockdownNote; // and its lockdown note
+          delete t.capacity;     // and its capacity
           redrawCell(c, r);
         }
       }
@@ -2327,6 +2333,8 @@ document.getElementById('rp-btn-save-room').addEventListener('click', () => {
   redrawCell(target.col, target.row);
   renderCanvas(); // Re-apply selection highlight
   scheduleBlueprintAutosave();
+  if (typeof window.renderRoomChecks === 'function') window.renderRoomChecks(roomNumber);
+  if (typeof window.renderConflictBanner === 'function') window.renderConflictBanner();
   showToast(`Room "${roomNumber}" saved.`, 'success');
 });
 
@@ -2356,6 +2364,7 @@ document.getElementById('rp-btn-clear-room').addEventListener('click', () => {
   tile.doors      = null;
   tile.excludeFromConflict = false;
   delete tile.lockdownNote;
+  delete tile.capacity;
 
   setTile(target.col, target.row, tile);
   commitAction();
@@ -2366,6 +2375,8 @@ document.getElementById('rp-btn-clear-room').addEventListener('click', () => {
   document.getElementById('rp-wing-label').value   = '';
   document.getElementById('rp-exclude-conflict').checked = false;
   document.getElementById('rp-lockdown-note').value = '';
+  document.getElementById('rp-capacity').value = '';
+  if (typeof window.renderRoomChecks === 'function') window.renderRoomChecks('');
   renderDoorList(target.col, target.row, tile);
   redrawCell(target.col, target.row);
   renderCanvas();
