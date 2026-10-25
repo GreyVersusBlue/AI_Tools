@@ -9,6 +9,48 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 9 P3 increment 2: 001 and 036 read the school-year spine (2026-10-25, AI-18, `CACHE_VERSION` v315)
+
+BACKLOG rank 14 kept and rewritten (now ½): only 044/045 is left.
+
+- **What changed for a teacher.** *001 Hall Pass Log*: with 032's calendar saved on the device, every trip is named by
+  the period it happened in: a Period column in the history and on the printed log, the period beside each trip's time in
+  today's log, a Period column in the range export's detail, and a **By period** table in the long-range report (passes and
+  minutes per period, on screen, on paper, in the CSV and as its own Excel sheet). A trip in a passing time, before or after
+  school is named so; a trip on a closed day, a day with no schedule, or an old row with no time shows "—". *036 Final
+  Grade Checker*: the "What do I need" tab says "From the School Calendar: today is in Quarter 2 (Nov 5 to Jan 22), 30
+  school days left, 2 of them half days." and marks Quarter 2 as the one still open; the teacher can pick another. Before
+  or after the year it says when the year starts or ended and marks nothing.
+- **Calls made.** (1) *001 works the period out each time it shows a trip and stores nothing*: the trip's time is the
+  fact, and a calendar edited later (a schedule fixed, a snow day entered) relabels old trips, which is what a teacher
+  reading the report would want. (2) *No calendar, no column*: the page is byte for byte what it was, so `smoke-export.mjs`
+  and the a11y sweep hold unchanged. (3) *Outside a period has words* ("Passing time", "Before school", "After school")
+  rather than "—", which the design kept for a day with no schedule: a trip between bells is the likeliest kind and a
+  dash hides it. (4) *The By period table puts periods first*, most passes first, ties by name, then the non-period
+  rows the same way; it is a second table under the per-student one, not a regrouping of it, so the totals a counselor
+  conversation starts from are where they were. (5) *036 marks the quarter only on load*; a calendar arriving from
+  another tab updates the note and leaves the radios alone. (6) *Only a year of four grading periods is read as
+  quarters*: 036 is a four-quarter tool, and a calendar with six periods gets "grading period 3 of 6" and no mark.
+  (7) *037 is counted done with nothing built*: it charts one assignment's scores and has no quarter, date or window a
+  grading period could fill; inventing one (a "Quarter 2" caption) would be decoration. Reverse by adding it back to rank 14.
+  (8) *036's target select and percentage box got `aria-label`s*: axe found the select unnamed (serious) once the new suite
+  scanned the need tab, which the page sweep never opens because the tab is hidden at load; it predates this change.
+- **Checks.** New `npm run test:school-day-trips-grades` (`smoke-consumers-trips-grades.mjs`, Chromium, port 8547): 43
+  checks (001 with no calendar everywhere, the B and A schedules giving one time two answers, the half day over its
+  letter, passing/before/after, Labor Day, a row with no time, today's log, the printed day, the By period table on
+  screen and on paper, the CSV's table and column, another tab's save; 036 with no calendar, Dec 1 against school days
+  counted off the seed, the marked quarter and the teacher changing it, before and after the year, six periods, another
+  tab; neither page writes the calendar; axe on 001's history and 036's need tab) and 10 breaks of the pages and
+  `school-day.js` altered on the wire, each caught; also green under `TZ=UTC`. `run-suites --only` hall-pass-log 2,
+  final-grade-checker 5, tool-registry 1, service-worker 3; school-calendar 12 of its 14 before a time cap I set cut the
+  run (no failure), the 13th, `test:school-day-consumers`, green alone and the 14th is the new suite; `test:tool-restore` 34
+  (001 hosts the card); the a11y sweep on 001 and 036 clean; `test:theme` 966; `path7:next --only 001` 0; lint; every guard,
+  `check:precache --base origin/main` and `check:adoption --check` (`school-day.js` 6).
+- **What did not work.** My first runs wrapped `flock` in `timeout`, so the time spent waiting for the shared suite lock
+  counted against the cap and two runs were killed with their output lost; put `timeout` inside `flock`.
+- **Not verified.** No real trip has been logged against a real bell schedule; the Excel "By period" sheet was not
+  opened in a spreadsheet (the CSV was read); 036's note was not read by a screen reader.
+
 ## Path 9 P3 increment 1: 004 and 010 read the school-year spine (2026-10-25, AI-18, `CACHE_VERSION` v314)
 
 BACKLOG rank 14 kept and rewritten (now 1): 001, 036/037 and 044/045 are left. The P3 design, per consumer, is in its bullet.
