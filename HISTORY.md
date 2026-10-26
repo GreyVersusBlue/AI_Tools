@@ -9,6 +9,60 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 13 P2 increment 2: 002 forms groups through the engine (2026-10-26, AI-21, `CACHE_VERSION` v341)
+
+**Shipped.** 002's port alone (commit 10dd5f4). `makeGroups()` calls `Grouping.formGroups()` with the page's count or
+size, its remainder rule, strategy, absent students, keep-apart and keep-together pairs and the previous groups with
+their locks, and `rng: Math.random`. The five strategies, `applyOddHandling()`, `locksAreValid()`,
+`resolveConstraints()` and its score, `prunePairHistoryToRoster()` and `recordPairHistory()` are gone (prune is
+`history.prune(..., { departed: 'drop' })`, record is `history.record()`). `gtg-memory.js`'s long-memory `refine()`
+and the roles still run after the engine, where they ran. The memory is a new field on the class,
+**`groupHistory`**, written from the first shuffle, and `pairHistory`/`pairGen` are written from it on every change
+(the P1 design's *Storage*): opening a class with the field runs `absorbLegacy()`, so a shuffle made since by an older
+cached page (which drops the field when it saves) is taken in; a class without it is read from `pairHistory`. Undo puts
+the field back, Reset deletes it, and a followed rename is `history.rekey()`. Duplicate is a JSON copy, so it carries
+the field. No new key, so `tool-registry.js` and 009 are untouched. The 022/027 storage step was not started (time).
+
+**How it is held.** `smoke-year-memory.mjs`'s golden (twelve classes, five rounds, recorded from the page before the
+year memory) gives the same groups and floaters, and the saved string with `groupHistory` taken out is the old page's
+bytes, key order and all; that check used to hash the whole string and now takes the field out first and asserts that
+`pairHistory` and `pairGen` are exactly what the field mirrors. The suite also gains an older page's shuffle absorbed on
+opening, Undo restoring the field, and Reset removing it (166 → 175). `test:grouping-adopters` gets 002: per case, a
+fresh class, the page's `Math.random` replaced by `Grouping.rng(seed)`, Make Groups, Reshuffle, then Reshuffle with group
+1 locked, compared with `_legacy.mjs`'s `gtg002()` on the same numbers (groups, floaters, saved `pairHistory`, `pairGen`
+and the mirror); five cases x five seeds, every strategy and remainder rule, pairs and an absence (160 → 187). With
+`rng: Math.random` taken out of the page's call all 25 002 cases fail. `test:grouping-parity`'s 002 grid unchanged
+(10,380 groupings).
+
+**Calls made here.** (1) **Keys are `'n:' + name`**, as the 022/027 ports' role maps are; a second student of one name
+is `'n:' + name + '#2'` so the engine (which drops a repeated key) still deals both, and to every rule naming them the
+pair means the first, as `groupIndexOf()` did. The design's `identify()` keys with roster ids, and with them the end of
+`idNames` and `trackRenames()` here, change what is stored by id and go with rank 32's storage step, for all three
+tools at once. (2) **`rng: Math.random`**, not the engine's own generator: 002's golden suite seeds `Math.random`, and
+the same numbers in the same order is what "unchanged" means there. (3) **The page's own `floater` is passed as
+`floaters`**: the engine knows `floaters`, and an unknown remainder falls back to `spread` silently, so a straight pass
+would have quietly stopped floating anyone (the parity grid used the engine's word, so it could not see this; the
+golden suite would have). (4) The warnings, the brand-new pair count and the busiest pair are read off the final groups
+by the page's own finders, kept for that, because long memory's `refine()` moves students after the engine counted.
+(5) A locked group keeps the very entries `lastGroups` had, as before. (6) **Found in the build: `rekey()` keeps the
+member's stored name**, which is right for an id key and wrong for a name key, so the first draft wrote the renamed
+pair back under the old spelling; `smoke-rename-follow.mjs`'s 002 case caught it. The page now moves the stored name
+with the key. (7) The one difference: Reshuffle with nobody left on the list (every name deleted after a shuffle; the
+absent boxes clear the groups) drew one empty card and now draws none. (8) Not handled, as designed: a Reset on an older
+cached page is not seen by `absorbLegacy()` (its `pairGen` goes back, not forward), so the next open here brings the
+memory back; and pairs an older page pruned come back in the mirror until the next shuffle prunes them again. No new
+question for Devon.
+
+**Ran green:** lint; all thirteen `check:*` guards, `check:precache --base origin/main`, `check:adoption --check`
+(after pasting the row: `grouping.js` 6); `test:grouping` (81); `test:grouping-parity` (122,352);
+`test:grouping-adopters` (187); `run-suites --only group-team-generator` (4 suites: share, pairing history, year-memory
+core 110, year memory 175); `smoke-rename-follow` (36), `smoke-flag-adopters`, `smoke-picker-rollout`,
+`handoffs.test`, `smoke-send-to`, `test:theme` and `smoke-dark-rollout`, `registry-shape`, the three service-worker
+suites, `smoke-image-sets`, `smoke-imposition`, `smoke-export`, `smoke-impose`, and the a11y sweep `--only 002`: every
+suite `run-suites --changed` selects for the diff; `offline:build` (`offline:verify` opens no 002 page, so it holds
+nothing here). **Not run:** full `npm test`. **Not verified:** 002 on a phone or a
+board; CI's Chromium; a class saved by an older page on a second device.
+
 ## Path 13 P2 increment 1: 007, 087, 021, 027 and 022 split through the engine (2026-10-25, AI-21, `CACHE_VERSION` v336–v340)
 
 **Shipped.** Five of the six adopters, one commit and one `CACHE_VERSION` each, each the port alone: 007 (v336, commit
