@@ -218,6 +218,9 @@
         { k: 'ct_prefs' },
         { k: 'ct_running_v1' },
       ],
+      reads: [
+        'scv_calendar_v1',
+      ],
     },
     {
       slug: 'group-team-generator',
@@ -264,6 +267,7 @@
       reads: [
         'crh_students_v1',
         'np_rosters',
+        'scv_calendar_v1',
       ],
     },
     {
@@ -382,6 +386,7 @@
          snapshot points at are deleted when the tool next loads. */
       keys: [
         { k: 'stviz_blueprint' },
+        { k: 'stviz_checks' },   // Path 11 P5: accepted check findings, { v: 1, acks }
         { k: 'stviz_onboarded' },
         { k: 'stviz_schedules' },
         { k: 'STVIZ_SESSION_OPEN_v1' },
@@ -487,6 +492,9 @@
       category: 'assessment-grading',
       keys: [
         { k: 'final-grade-checker:settings-v1' },
+      ],
+      reads: [
+        'scv_calendar_v1',
       ],
     },
     {

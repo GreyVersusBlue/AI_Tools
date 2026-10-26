@@ -25,6 +25,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { serve, launch, prepPage, settle, SITE } from '../../board-check/harness.mjs';
 import { ADOPTERS, GUARD, parseCsv, writeCsv, unguard, capture } from './_csv-adopters.mjs';
+import { moduleSources } from '../../board-check/check-publisher.mjs';
 
 const PORT = 8486;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -72,11 +73,14 @@ for (const a of ADOPTERS) {
   console.log(`${a.tool} — ${a.file}`);
   const T = `${a.tool}:`;
 
-  /* the page itself: the shared file, and no quoting of its own left */
+  /* the page itself: the shared file, and no quoting of its own left. The page's
+     code is its own text plus every module its module script imports (035's
+     schedules tab is sv-schedules-tab.js since v324). */
   const src = fs.readFileSync(path.join(SITE, a.file), 'utf8');
+  const code = [src, ...moduleSources(src, { root: SITE, page: a.file }).map(m => m.code)].join('\n');
   ok(/<script src="\.\.\/_shared\/export\.js"(?: defer)?><\/script>/.test(src), `${T} the page loads _shared/export.js`);
-  ok(src.includes('ExportKit.toCsv('), `${T} the page calls ExportKit.toCsv()`);
-  ok(!/\.replace\(\/"\/g,\s*'""'\)/.test(src), `${T} the page doubles no quotes itself`);
+  ok(code.includes('ExportKit.toCsv('), `${T} the page calls ExportKit.toCsv()`);
+  ok(!/\.replace\(\/"\/g,\s*'""'\)/.test(code), `${T} the page doubles no quotes itself`);
 
   const { page, errors } = await open(a, a.seed);
   const file = await capture(page, a.button);

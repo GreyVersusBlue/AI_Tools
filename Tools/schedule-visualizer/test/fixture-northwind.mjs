@@ -152,7 +152,7 @@ export function fixtureProject() {
    it can be dropped into the tool's own Import Full Project button by hand.
    Regenerate it after editing anything above:
 
-     node Tools/schedule/test/fixture-northwind.mjs
+     node Tools/schedule-visualizer/test/fixture-northwind.mjs
 
    smoke.mjs fails if the two have drifted. */
 if (process.argv[1] && process.argv[1].endsWith('fixture-northwind.mjs')) {

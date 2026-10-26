@@ -27,6 +27,7 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <script src="../_shared/store.js"></script>
 <script src="../_shared/student-flags.js"></script>
+<script src="../_shared/grouping.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
@@ -727,7 +728,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
    lets gvb-save do the probing, because reading the `localStorage` property
    throws outright in a browser configured to block storage. */
 import { createStore, OPTION_DEFAULTS } from './name-picker/np-store.js';
-import { freshRotation, pickOne, pickMany, shuffle, makeGroups as splitGroups, leastPicked, fairnessWeights } from './name-picker/np-pick.js';
+import { freshRotation, pickOne, pickMany, shuffle, leastPicked, fairnessWeights } from './name-picker/np-pick.js';
 import { report as equityReport, summaryLine as equitySummaryLine, dayKey } from './name-picker/np-equity.js';
 import { loadDetails, lookupDetail, displayName, loadIds, lookupId } from './name-picker/np-details.js';
 import { loadSeatingState, seatEquityReport, seatSummaryLine } from './name-picker/np-seat-equity.js';
@@ -1661,8 +1662,12 @@ function makeGroups(){
   if(!n||n<2||!originalNames.length){document.getElementById('groupsResult').innerHTML='<p class="muted-text">Load names first and pick a number ≥ 2.</p>';return;}
   /* Was `sort(()=>Math.random()-0.5)`, which is not a shuffle — the comparator is
      inconsistent, so in V8 the first name in the roster landed in group 1 far more
-     often than one in n. splitGroups() uses Fisher-Yates; the suite measures both. */
-  const groups=splitGroups(originalNames,n);
+     often than one in n. The split is _shared/grouping.js's since Path 13 P2 (it was
+     np-pick.js's makeGroups): Fisher-Yates, then round-robin, at least two groups,
+     repeated and blank names dropped, and an empty group when there are more groups
+     than names, all as before; Tools/grouping/test/parity.test.mjs holds it to the
+     old function. */
+  const groups=Grouping.formGroups(originalNames,{count:n,min:2,allowEmpty:true}).groups;
   document.getElementById('groupsResult').innerHTML=groups.map((g,i)=>`<div class="group-card"><h4>Group ${i+1} <small style="opacity:0.7;font-family:Outfit;">(${g.length})</small></h4><div class="group-card-names">${g.map(escapeHtml).join(', ')}</div></div>`).join('');
 }
 

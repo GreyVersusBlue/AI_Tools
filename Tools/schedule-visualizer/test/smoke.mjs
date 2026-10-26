@@ -1,6 +1,6 @@
 // smoke.mjs — the Schedule Visualizer's first test suite.
 //
-//   node Tools/schedule/test/smoke.mjs
+//   node Tools/schedule-visualizer/test/smoke.mjs
 //
 // Exits non-zero on any failure (locked decision #13).
 //
@@ -50,7 +50,7 @@ console.log('schedule visualizer smoke\n');
   const fromModule = JSON.stringify(fixtureProject());
   ok(onDisk === fromModule,
      'fixture-northwind.json is current',
-     'run: node Tools/schedule/test/fixture-northwind.mjs');
+     'run: node Tools/schedule-visualizer/test/fixture-northwind.mjs');
 }
 
 /* ── 1. The generator loads clean and publishes ────────────────────────── */

@@ -141,6 +141,17 @@ for (const rel of ENTRIES) {
     }
   }
 
+  // Deeper check for 035: its Publish .toString()s live functions, so they
+  // must be the source text, not a bundler's reprint (make-offline-copy's
+  // unbundleScheduleBrowser()). Every published piece is compared.
+  if (rel === 'Tools/035-schedule-visualizer.html' && !pageErrs.length) {
+    const live = fs.readFileSync(path.join(SITE, 'Tools', 'schedule-visualizer', 'sv-browser.js'), 'utf8').replace(/\r/g, '');
+    const texts = await page.evaluate(() => window.brPublishFnList().map(f => [f.name, f.toString()]));
+    const off = texts.filter(([, s]) => !live.includes(s)).map(([n]) => n);
+    if (!texts.length || off.length) errors.push(`Tools/035-schedule-visualizer.html: ${off.length} of ${texts.length} published functions are not their source text offline: ${off.slice(0, 5).join(', ')}`);
+    else console.log(`  ok  Tools/035-schedule-visualizer.html: all ${texts.length} published functions are their source text`);
+  }
+
   // Deeper check for the landing page: every tool icon has to put ink on the
   // screen. An external <use href="…tools.svg#t007"> draws nothing under
   // file:// (the builder inlines the sprite for that reason), and a blank

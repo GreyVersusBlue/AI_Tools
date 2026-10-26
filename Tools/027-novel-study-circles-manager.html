@@ -28,6 +28,7 @@
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/grouping.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -535,6 +536,7 @@
   //   roles: [roleName, ...],
   //   together: bool,
   //   history: { studentName: [roleName,...] } (oldest first, fairness memory),
+  //   written from groupHistory, the engine's role memory (setRoleMemory(), v343),
   //   meetings: [ { id, date, together, wholeClassCheckpoint, vocab: [{word, definition}],
   //                 groups: [ { id, label, checkpoint, assignment: [{name, role}] } ] } ] (newest first)
   // }
@@ -544,7 +546,7 @@
   // adapted from 022-lab-group-role-randomizer.html's undoSnapshot pattern.
   // Kept out of `state` (and so out of localStorage/export) on purpose: it's
   // a scratch copy of just the field the last destructive action touched,
-  // { type: 'meeting-delete'|'history-reset', meetings|history: <deep clone> }.
+  // { type: 'meeting-delete'|'history-reset', meetings: <deep clone> | groupHistory }.
   // Overwritten by the next destructive action (single level, not a stack)
   // and cleared by anything that could make it stale — logging a new
   // meeting (touches both meetings and history) or switching/loading a
@@ -563,7 +565,7 @@
 
   function armUndo(type, label) {
     if (type === 'meeting-delete') undoSnapshot = { type: type, meetings: deepClone(state.meetings) };
-    else if (type === 'history-reset') undoSnapshot = { type: type, history: deepClone(state.history) };
+    else if (type === 'history-reset') undoSnapshot = { type: type, groupHistory: state.groupHistory };
     else return;
     els.undoBtn.disabled = false;
     els.undoBtn.textContent = 'Undo: ' + label;
@@ -579,7 +581,7 @@
       renderVocabLog();
       showMsg('Restored the deleted meeting.', true);
     } else if (undoSnapshot.type === 'history-reset') {
-      state.history = undoSnapshot.history || {};
+      setRoleMemory(undoSnapshot.groupHistory);
       saveCurrent();
       renderHistoryHint();
       showMsg('Restored role history for this project.', true);
@@ -701,11 +703,7 @@
       over-served. */
   function renameStudentData(from, to) {
     var moved = false;
-    if (state.history[from] !== undefined && state.history[to] === undefined) {
-      state.history[to] = state.history[from];
-      delete state.history[from];
-      moved = true;
-    }
+    if (renameInMemory(from, to)) moved = true;
     (state.groups || []).forEach(function (g) {
       (g.members || []).forEach(function (m, i) {
         if (m === from) { g.members[i] = to; moved = true; }
@@ -895,25 +893,17 @@
     return Math.max(1, Math.min(count, n));
   }
 
-  // ── Shuffle / grouping helpers ───────────────────────────────────────────
-  function shuffle(arr) {
-    var a = arr.slice();
-    for (var i = a.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
-      var t = a[i]; a[i] = a[j]; a[j] = t;
-    }
-    return a;
-  }
-
-  // Pure random split into groups, same mechanics as lab-group-role-randomizer
-  // / group-team-generator (no skill-balancing / keep-apart here).
+  // ── Grouping ─────────────────────────────────────────────────────────────
+  // A pure random split, by _shared/grouping.js since Path 13 P2 (v339): the
+  // same shuffle and deal as before, and Tools/grouping/test/parity.test.mjs
+  // holds it to the old code. Members are keyed by position, so two students of
+  // one name stay two, as they did.
   function makeGroups(names) {
     var k = groupCountFor(names.length);
-    var groups = [];
-    for (var i = 0; i < k; i++) groups.push({ id: makeId(), label: 'Group ' + (i + 1), members: [] });
-    var shuffled = shuffle(names);
-    shuffled.forEach(function (name, idx) { groups[idx % k].members.push(name); });
-    return groups;
+    var members = names.map(function (n, i) { return { key: String(i), name: n }; });
+    return Grouping.formGroups(members, { count: k }).groups.map(function (g, i) {
+      return { id: makeId(), label: 'Group ' + (i + 1), members: g.map(function (key) { return names[+key]; }) };
+    });
   }
 
   els.splitBtn.addEventListener('click', function () {
@@ -986,44 +976,113 @@
   }
 
   // ── Role-fairness memory ────────────────────────────────────────────────
-  // Adapted directly from 022-lab-group-role-randomizer.html: for each student,
-  // state.history[name] is an array of role names they've held in past
-  // meetings, oldest first. We bias assignment within each group toward
-  // whichever role a student has held least recently (or never).
-  function roleRecencyScore(studentName, role) {
-    var hist = (state.history && state.history[studentName]) || [];
-    var idxFromEnd = -1;
-    for (var i = hist.length - 1; i >= 0; i--) {
-      if (hist[i] === role) { idxFromEnd = hist.length - 1 - i; break; }
-    }
-    if (idxFromEnd === -1) return -1; // never held -> most preferred
-    return idxFromEnd === 0 ? 1000 : (100 - Math.min(idxFromEnd, 99));
+  // Within each group a student takes the open role they held longest ago (or
+  // never), with a random tie-break: Grouping.rotateRoles() since Path 13 P2,
+  // draw for draw the picker this page had (parity.test.mjs). Since the P2
+  // storage step (v343) the memory itself is state.groupHistory, the
+  // engine's (_shared/grouping.js), roles only: this page has never remembered
+  // partners. state.history, { name: [role, ...] } oldest first, the map every
+  // other line here reads, is written from it on every change by
+  // setRoleMemory(), because an older cached copy of this page reads that map
+  // and drops groupHistory when it saves; roleMemoryOf() takes back what such
+  // a copy wrote. Keys come from Grouping.history.identify(), one per name as
+  // the map had one entry per name: since v346 a student's roster id where
+  // Class Roster Hub has one ('i:<id>'), so the memory follows a rename it
+  // sees by itself. followRenames() still moves a rename trackRenames()
+  // reports (renameInMemory()), under the rules it always had, and the id map
+  // keys a memory saved by name before then (roleMemoryOf()).
+  function setRoleMemory(h) {
+    state.groupHistory = h;
+    state.history = Grouping.history.toLegacyRoles(h);
   }
 
-  function assignRolesForGroup(members, roles) {
-    var order = shuffle(members);
-    var available = roles.slice();
-    var assignment = {}; // name -> role or null (Group Member)
-
-    order.forEach(function (name) {
-      if (!available.length) { assignment[name] = null; return; }
-      var ranked = available.map(function (role) {
-        return { role: role, score: roleRecencyScore(name, role) + Math.random() * 0.5 };
-      }).sort(function (a, b) { return a.score - b.score; });
-      var chosen = ranked[0].role;
-      assignment[name] = chosen;
-      available.splice(available.indexOf(chosen), 1);
+  /** A memory holding only the members at `idx`, in that order, so the map
+      written from it keeps the order the old map's entries had. */
+  function pickMembers(h, idx) {
+    var out = { v: h.v, gen: h.gen, keys: [], names: [], seen: [], pairs: {}, roles: {} };
+    idx.forEach(function (i, j) {
+      out.keys.push(h.keys[i]); out.names.push(h.names[i]); out.seen.push(h.seen[i]);
+      if (h.roles[i]) out.roles[j] = h.roles[i].slice();
     });
+    return Grouping.history.normalize(out);
+  }
 
+  /** The memory a saved record holds. Its groupHistory with the old map
+      absorbed into it, or, on a record from before the field (or one an older
+      page saved), the memory made from the old map. The old map is what an
+      older page wrote last, so it decides who has a list and in what order: a
+      list it no longer has (that page's Reset, or a rename it moved) leaves the
+      memory too. */
+  function roleMemoryOf(loaded) {
+    var H = Grouping.history;
+    var legacy = loaded && loaded.history && typeof loaded.history === 'object' && !Array.isArray(loaded.history) ? loaded.history : {};
+    var h = H.absorbLegacy(loaded ? loaded.groupHistory : null, { roles: legacy, idNames: loaded ? loaded.idNames : null });
+    var idx = [];
+    Object.keys(legacy).forEach(function (n) {
+      for (var i = 0; i < h.names.length; i++) {
+        if (h.names[i] === n) { if (h.roles[i] && idx.indexOf(i) === -1) idx.push(i); return; }
+      }
+    });
+    return pickMembers(h, idx);
+  }
+
+  /** Hands out this group's roles from the memory and records them, before
+      the next group is handed out, as the page always did. Returns
+      { name: role|null } (null is "Group Member", which is not remembered). */
+  function handOutRoles(members, roles) {
+    var H = Grouping.history;
+    var names = members.filter(function (n, i) { return members.indexOf(n) === i; });
+    var keyOf = {};
+    var ided = H.identify(state.groupHistory, names, Roster.idsFor(names, state.rosterName || ''));
+    ided.members.forEach(function (m) { keyOf['#' + m.name] = m.key; });
+    var keys = members.map(function (name) { return keyOf['#' + name]; });
+    var assignment = {};
+    Grouping.rotateRoles([keys], roles, ided.history).byGroup[0].forEach(function (x, i) {
+      assignment[members[i]] = x.role;
+    });
+    // One entry per member in group order, so a name that is in the group
+    // twice is pushed twice, as the old recordHistory() pushed it.
+    var h = H.record(ided.history, [], { pairs: false, roles: [members.map(function (name, i) {
+      return { key: keys[i], role: assignment[name] };
+    })] });
+    members.forEach(function (name, i) { var at = h.keys.indexOf(keys[i]); if (at !== -1) h.names[at] = name; });
+    /* identify() makes a member of every student it keys; the memory holds
+       only those with a role, as it always has, so a student who has only
+       been "Group Member" joins the map when they first get one, where they did. */
+    setRoleMemory(pickMembers(h, h.keys.map(function (k, i) { return i; }).filter(function (i) { return h.roles[i] && h.roles[i].length; })));
     return assignment;
   }
 
-  function recordHistory(name, role) {
-    if (!role) return; // "Group Member" isn't tracked as a rotating role
-    if (!state.history) state.history = {};
-    if (!state.history[name]) state.history[name] = [];
-    state.history[name].push(role);
-    if (state.history[name].length > 30) state.history[name].shift();
+  /** A rename for the memory: the roles move when `to` has none, and the
+      entry goes to the end of the map, where the old move put it. A student
+      keyed by id keeps the key. When `to` has roles the move is refused, as it
+      always was, and a student keyed by id is unbound from it, so identify()
+      does not merge the two later: the roles stay under the old name and the
+      student reads the ones `to` has, which is what the refusal always did. */
+  function renameInMemory(from, to) {
+    if (state.history[from] === undefined) return false;
+    var H = Grouping.history, h = H.normalize(state.groupHistory);
+    var i = h.names.indexOf(from);
+    if (i === -1) return false;
+    function nameKey(n) {
+      var k = 'n:' + n, c = 1;
+      while (h.keys.indexOf(k) !== -1) { c++; k = 'n:' + n + '#' + c; }
+      return k;
+    }
+    if (state.history[to] !== undefined) {
+      if (h.keys[i].indexOf('i:') === 0) setRoleMemory(H.rekey(h, h.keys[i], nameKey(from)));
+      return false;
+    }
+    var key = h.keys[i];
+    if (key.indexOf('i:') !== 0) {
+      key = nameKey(to);
+      h = H.rekey(h, h.keys[i], key);
+    }
+    i = h.keys.indexOf(key);
+    h.names[i] = to;
+    var idx = h.keys.map(function (k, j) { return j; }).filter(function (j) { return j !== i; });
+    setRoleMemory(pickMembers(h, idx.concat([i])));
+    return true;
   }
 
   function renderHistoryHint() {
@@ -1036,7 +1095,7 @@
   els.resetHistoryBtn.addEventListener('click', function () {
     if (!confirm('Clear role history for "' + state.name + '"? Everyone will look brand-new to the fairness algorithm.')) return;
     armUndo('history-reset', 'reset role history');
-    state.history = {};
+    setRoleMemory(Grouping.history.empty());
     saveCurrent();
     renderHistoryHint();
     showMsg('Role history reset for this project.', true);
@@ -1060,8 +1119,7 @@
     }
 
     var meetingGroups = state.groups.map(function (g) {
-      var assignment = assignRolesForGroup(g.members, roles);
-      g.members.forEach(function (name) { recordHistory(name, assignment[name]); });
+      var assignment = handOutRoles(g.members, roles);
       var checkpoint = state.together
         ? wholeClassCheckpoint
         : (function () {
@@ -1621,7 +1679,7 @@
       name: name, students: '', bookTitle: '',
       mode: 'count', splitValue: 4,
       groups: [], roles: defaultRoleObjects(),
-      together: true, history: {}, meetings: [], schedule: null,
+      together: true, history: {}, groupHistory: Grouping.history.empty(), meetings: [], schedule: null,
       rosterName: '', idNames: {}
     };
     saveCurrent();
@@ -1636,6 +1694,7 @@
     var all = loadAll();
     var loaded = all[name];
     if (!loaded) return;
+    var memory = roleMemoryOf(loaded);
     state = {
       name: loaded.name,
       students: loaded.students || '',
@@ -1645,7 +1704,8 @@
       groups: loaded.groups || [],
       roles: (loaded.roles && loaded.roles.length) ? normalizeRoles(loaded.roles) : defaultRoleObjects(),
       together: loaded.together !== false,
-      history: loaded.history || {},
+      history: Grouping.history.toLegacyRoles(memory),
+      groupHistory: memory,
       meetings: loaded.meetings || [],
       schedule: loaded.schedule || null,
       /* Path 3 P4: which saved roster this project follows, and which name each
@@ -1726,6 +1786,7 @@
       var baseName = imported.name || 'Imported Project';
       var newName = baseName, suffix = 2;
       while (existingNames.indexOf(newName) !== -1) { newName = baseName + ' (' + suffix + ')'; suffix++; }
+      var memory = roleMemoryOf(imported);
       state = {
         name: newName,
         students: imported.students || '',
@@ -1735,7 +1796,8 @@
         groups: imported.groups || [],
         roles: (imported.roles && imported.roles.length) ? normalizeRoles(imported.roles) : defaultRoleObjects(),
         together: imported.together !== false,
-        history: imported.history || {},
+        history: Grouping.history.toLegacyRoles(memory),
+        groupHistory: memory,
         meetings: imported.meetings || [],
         schedule: imported.schedule || null
       };

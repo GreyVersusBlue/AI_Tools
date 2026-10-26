@@ -19,8 +19,8 @@
 //              from a mention of the path in prose or in a comment; see
 //              `loadedFiles` below for why that distinction cost six
 //              increments. Only those pages get a theme at all, so only those
-//              can be candidates. (035 runs its own four-palette system and is
-//              reported separately, not ranked.)
+//              can be candidates. (035 runs its own four-palette system, a
+//              documented exception, and is reported separately, not ranked.)
 //   NATIVE     the page sets `window.A11Y_NATIVE_THEME = true` — it has opted
 //              out of a11y.css's invert filter and paints its own dark. Done.
 //   CANDIDATE  a themed page that is not native yet. It is still getting the
@@ -316,7 +316,7 @@ if (unthemed.length) {
   console.log('\nNeeds _shared/a11y.js first (' + unthemed.length + ') — these pages get no theme at all\n' +
     'today, native or filtered, so a dark palette on one would never be switched on:');
   for (const u of unthemed) {
-    const why = u.file.includes('035') ? '  — runs its own four-palette data-theme system (see BACKLOG Standing decisions)'
+    const why = u.file.includes('035') ? '  — runs its own four-palette data-theme system, a documented exception (CLAUDE.md; Devon, 2026-10-03)'
       : u.inkPaper ? '  — links ink-paper.css already'
       : u.themeCss ? '  — links theme.css (Industry palette)'
       : '  — no shared palette either';

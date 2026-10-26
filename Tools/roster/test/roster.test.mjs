@@ -683,5 +683,26 @@ console.log('Roster — the shared roster service (Path 3 P1)');
   eq(t.idNames, {}, '31: ...and lends nobody its id');
 }
 
+/* ── 32. idsFor: the ids the grouping engine keys its memory on ──────── */
+{
+  /* Path 13 P1. Read-only, and the same precedence as idFor(): the tool's own
+     roster first, so two classes with a "Sam" do not share one memory. */
+  const { Roster, storage } = make();
+  Roster.setRoster('Period 3', ['Sam Diaz', 'Ana Ruiz']);
+  Roster.syncRecords('Period 3', ['Sam Diaz', 'Ana Ruiz']);
+  Roster.setRoster('Period 7', ['Sam Diaz']);
+  Roster.syncRecords('Period 7', ['Sam Diaz']);
+  const p3 = Roster.getStudents('Period 3').find(s => s.name === 'Sam Diaz').id;
+  const p7 = Roster.getStudents('Period 7')[0].id;
+  const before = JSON.stringify([...storage.__map]);
+  const ids = Roster.idsFor(['Sam Diaz', 'Ana Ruiz', 'Nobody Here', 'Sam Diaz'], 'Period 7');
+  eq(Object.keys(ids), ['Sam Diaz', 'Ana Ruiz', 'Nobody Here'], '32: one entry per name, repeats folded');
+  ok(ids['Sam Diaz'] === p7 && p7 !== p3, '32: the tool’s own roster wins');
+  ok(typeof ids['Ana Ruiz'] === 'string' && ids['Ana Ruiz'], '32: ...and another roster answers for a name it lacks');
+  ok(ids['Nobody Here'] === null, '32: a name with no id is null');
+  ok(JSON.stringify([...storage.__map]) === before, '32: idsFor writes nothing');
+  eq(Roster.idsFor('nope'), {}, '32: not a list is an empty map');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) { console.log('\nFailures:'); fails.forEach(f => console.log('  - ' + f)); process.exit(1); }

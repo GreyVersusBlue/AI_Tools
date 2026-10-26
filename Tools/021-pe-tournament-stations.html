@@ -26,6 +26,7 @@
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/grouping.js"></script>
 <script src="../_shared/stage.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -866,10 +867,14 @@
     if (names.length < 1) { showMsg('Paste a roster first — one name per line.'); return; }
     var k = Math.max(1, parseInt(els.splitCount.value, 10) || 1);
     if (state.groups.length && !confirm('Replace the current ' + state.groups.length + ' group(s) with a fresh random split of ' + names.length + ' students into ' + k + ' groups?')) return;
-    var shuffled = shuffle(names);
-    var buckets = [];
-    for (var i = 0; i < k; i++) buckets.push([]);
-    shuffled.forEach(function (n, idx) { buckets[idx % k].push(n); });
+    /* The split is _shared/grouping.js's since Path 13 P2 (v338): the same
+       shuffle and deal, an empty group when there are more groups than names,
+       and members keyed by position so two students of one name stay two.
+       Tools/grouping/test/parity.test.mjs holds it to the old code. */
+    var members = names.map(function (n, i) { return { key: String(i), name: n }; });
+    var buckets = Grouping.formGroups(members, { count: k, allowEmpty: true }).groups.map(function (g) {
+      return g.map(function (key) { return names[+key]; });
+    });
     state.groups = buckets.map(function (members, i) {
       return { id: uid('grp'), name: 'Group ' + (i + 1), members: members.join(', ') };
     });

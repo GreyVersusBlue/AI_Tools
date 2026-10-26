@@ -1,7 +1,9 @@
 // school-day.test.mjs — pure-logic tests for _shared/school-day.js (Path 9 P1):
 // how a date resolves to a kind of day and a bell schedule, where a time falls in
 // that schedule, the A/B letter, grading periods and the days left in one, the
-// bell field's cleaning, and the import of 035 Schedule Visualizer's times.
+// bell field's cleaning, the import of 035 Schedule Visualizer's times, grading
+// deadlines and the next school day, and today's lesson read off 032's stamped pacing
+// (held to scv-plan.js's own placer and dayValue()).
 //
 //   node Tools/school-calendar/test/school-day.test.mjs   (or: npm run test:school-day)
 //
@@ -24,7 +26,8 @@ import { isDeepStrictEqual } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { seedCalendar2026 } from '../scv-seed.js';
 import { abLetters as weeksLetters } from '../scv-weeks.js';
-import { isTeachableDay } from '../scv-pacing.js';
+import { isTeachableDay, parseLessonList } from '../scv-pacing.js';
+import { newCourse, newUnit, placePlan, stamp, dayValue, syncUnits } from '../scv-plan.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const site = path.join(here, '..', '..', '..');
@@ -298,10 +301,147 @@ function checks(S) {
   S.forScheduleVisualizer(calIn, 2, { A: 'reg', B: 'half' });
   eq(calIn, calBefore, 'to 035 changes nothing it is given');
 
+  // ---- the day in words (Path 9 P3: 004 and 010 show it) ----
+  const W = (c, d) => S.describe(c, S.dayOf(c, d));
+  eq(S.typeLabel(seed, 'halfday'), 'Half Day / Early Dismissal', 'typeLabel reads the legend');
+  eq(S.typeLabel(seed, 'nope'), '', 'typeLabel of an unknown id is empty');
+  eq(S.typeLabel(null, 'halfday'), '', 'typeLabel with no calendar is empty');
+  eq(W(seed, '2026-09-07'), 'No school: Labor Day', 'a closed day is named by its own label');
+  const unnamed = clone(seed); unnamed.days['2026-09-07'].label = '';
+  eq(W(unnamed, '2026-09-07'), 'No school: Holiday / No School', '...else by its type');
+  eq(W(seed, '2026-09-05'), 'No school (weekend)', 'a weekend in words');
+  eq(W(seed, '2026-07-01'), 'Outside the school year', 'summer in words');
+  eq(W(seed, '2026-09-01'), 'A school day', 'an untagged day with the cycle off');
+  eq(W(cal, '2026-09-01'), 'B day', 'an untagged B day');
+  eq(W(cal, '2026-11-20'), S.dayOf(cal, '2026-11-20').letter + ' day \u00b7 Half Day / Early Dismissal \u00b7 Early Dismissal \u2014 Professional Learning',
+    'a half day: letter, type, then the day\'s name');
+  eq(S.describe(seed, S.dayOf(seed, '2026-02-30')), '', 'an invalid date has no words');
+  eq(S.describe(null, S.dayOf(seed, '2026-09-01')), '', 'no calendar has no words');
+  eq(S.describe(seed, null), '', 'no day has no words');
+
+  // ---- grading deadlines and the next school day (Path 9 P3: 044/045) ----
+  eq(S.nextSchoolDay(seed, '2026-09-04'), '2026-09-08', 'the next school day skips a weekend and Labor Day');
+  eq(S.nextSchoolDay(seed, '2026-09-01'), '2026-09-02', 'the next school day of a Tuesday is Wednesday');
+  eq(S.nextSchoolDay(seed, '2026-07-01'), seed.meta.start, 'before the year, the next school day is its first');
+  eq(S.nextSchoolDay(seed, seed.meta.end), null, 'after the last day there is none');
+  eq(S.nextSchoolDay(null, '2026-09-01'), null, 'no calendar, no next day');
+  eq(S.nextSchoolDay(seed, '2026-02-30'), null, 'an invalid date has no next day');
+  const gps = S.gradingPeriods(seed);
+  const deadlines = [];
+  eachDate(seed.meta.start, seed.meta.end, d => { const g = S.gradingDeadline(seed, d); if (g) deadlines.push([d, g.n]); });
+  eq(deadlines, [['2026-11-04', 1], ['2027-01-21', 2], ['2027-04-07', 3], [gps[3] && (() => { let last = null; eachDate(gps[3].start, gps[3].end, d => { if (isTeachableDay(d, seed.days, seed.dayTypes)) last = d; }); return last; })(), 4]],
+    'one deadline a grading period, on its last school day (Q2 ends on a workday, so Jan 21)');
+  ok(deadlines.every(([d, n]) => { const nx = S.nextSchoolDay(seed, d); return nx === null || S.gradingPeriodOf(seed, nx).n === n + 1; }),
+    'the school day after each deadline is in the next period');
+  eq(S.gradingDeadline(seed, '2027-01-22'), null, 'the workday the tag sits on is not a deadline');
+  eq(S.gradingDeadline(seed, '2026-11-03'), null, 'the day before a deadline is not one');
+  eq(S.gradingDeadline(null, '2026-11-04'), null, 'no calendar, no deadline');
+  eq(S.gradingPeriodName(seed, gps[1]), 'Quarter 2', 'a year of four names quarters');
+  const three = clone(seed); delete three.days['2027-04-07'];
+  eq(S.gradingPeriodName(three, S.gradingPeriods(three)[2]), 'grading period 3 of 3', 'any other year names grading periods');
+  eq(S.gradingPeriodName(seed, null), '', 'no period, no name');
+
+  // ---- today's lesson from 032's stamped pacing (Path 9 P3: 044/045) ----
+  // Held to scv-plan.js itself: the plan is placed and stamped by 032's own module, and
+  // lessonsOn() must give back, for every date of the year, what that placement put there.
+  const pcal = clone(cal);
+  const les = parseLessonList(Array.from({ length: 40 }, (_, i) =>
+    `U${1 + Math.floor(i / 12)}-${i % 12 === 11 ? 'BUF1' : String(i % 12 + 1).padStart(2, '0')}-${i % 2 ? 'B' : 'A'}-Lesson ${i + 1} - part`).join('\n')).lessons;
+  const cA = Object.assign(newCourse('Civics', { id: 'c_a', meets: 'A' }), { lessons: les,
+    adjustments: [{ id: 'adj_1', beforeLessonId: les[4].id, reason: 'Ran long', createdOn: '2026-09-01' }],
+    lost: [{ id: 'lost_1', date: '2026-09-29', reason: 'Assembly' }] });
+  const cB = Object.assign(newCourse('Lab', { id: 'c_b', start: '2026-09-14' }), { pace: { halfday: 'skip' },
+    units: [newUnit('Cells', 15, { id: 'u_1' }), Object.assign(newUnit('Energy', 12, { id: 'u_2' }), { pin: '2026-11-02' }), newUnit('Genetics', 30, { id: 'u_3' })],
+    lost: [{ id: 'lost_2', date: '2026-09-22', reason: '' }] });
+  const cC = Object.assign(newCourse('Art', { id: 'c_c', meets: 'B' }), { units: [newUnit('Color', 20, { id: 'u_c' })] });
+  pcal.plan = { v: 1, active: 'c_a', algo: 1, courses: [syncUnits(cA), cB, cC] };
+  const placed = placePlan(pcal);
+  const stamped = stamp(pcal, placed);
+  const pA = placed.c_a, pB = placed.c_b;
+  const lesById = Object.fromEntries(les.map(l => [l.id, l]));
+  let lessonMiss = 0, gapMiss = 0, unitMiss = 0, meetMiss = 0, lostMiss = 0, lessonSeen = 0, unitSeen = 0;
+  const lettersP = weeksLetters(pcal);
+  eachDate('2026-08-01', '2027-07-01', d => {
+    const got = plain(S.lessonsOn(stamped, d));
+    const a = got.filter(x => x.courseId === 'c_a'), b = got.filter(x => x.courseId === 'c_b');
+    const slot = pA.slots[d];
+    const wantA = slot && slot.kind === 'lesson' ? [{ kind: 'lesson', code: `U${lesById[slot.lessonId].unit}-${lesById[slot.lessonId].num}-${lesById[slot.lessonId].letter}`, title: lesById[slot.lessonId].title }] : [];
+    const gapA = slot && slot.kind === 'gap' ? [{ kind: 'gap', reason: slot.reason }] : [];
+    if (!isDeepStrictEqual(a.filter(x => x.kind === 'lesson').map(x => ({ kind: x.kind, code: x.code, title: x.title })), wantA)) lessonMiss++;
+    if (!isDeepStrictEqual(a.filter(x => x.kind === 'gap').map(x => ({ kind: x.kind, reason: x.reason })), gapA)) gapMiss++;
+    if (a.some(x => x.kind === 'unit')) unitMiss++;
+    if (wantA.length) lessonSeen++;
+    const sb = pB.slots[d];
+    const wantB = sb && sb.kind === 'day' ? [{ unit: cB.units.find(u => u.id === sb.unitId).name, n: sb.n, of: sb.of }] : [];
+    if (!isDeepStrictEqual(b.filter(x => x.kind === 'unit').map(x => ({ unit: x.unit, n: x.n, of: x.of })), wantB)) unitMiss++;
+    if (wantB.length) unitSeen++;
+    // The unit test and dayValue() agree on every date inside a unit's span.
+    const inSpan = stamped.plan.courses[1].units.some(u => u.start && d >= u.start && d <= u.end);
+    if (inSpan && dayValue(pcal, cB, d, lettersP).meets !== (b.some(x => x.kind === 'unit'))) meetMiss++;
+    const sc = placed.c_c.slots[d], c = got.filter(x => x.courseId === 'c_c');
+    if (!isDeepStrictEqual(c.map(x => [x.kind, x.n]), sc ? [['unit', sc.n]] : [])) unitMiss++;
+    const lostWant = (d === '2026-09-29' ? ['c_a'] : []).concat(d === '2026-09-22' ? ['c_b'] : []);
+    if (!isDeepStrictEqual(got.filter(x => x.kind === 'lost').map(x => x.courseId), lostWant)) lostMiss++;
+  });
+  ok(lessonSeen > 30 && unitSeen > 50, `the fixture places lessons and unit days (${lessonSeen}, ${unitSeen})`);
+  eq(lessonMiss, 0, 'every stamped lesson is read back on its date, with its code and title, and nowhere else');
+  eq(gapMiss, 0, 'every stamped bump is read back on its date, with its reason');
+  eq(unitMiss, 0, 'every typed unit day is read back with its name and day n of m, as the placement numbers it');
+  eq(meetMiss, 0, 'inside a unit, a class day is exactly what scv-plan.js dayValue() says');
+  eq(lostMiss, 0, 'a lost date is read back for its course only');
+  ok(Object.values(pB.slots).some(x => x.half === false) && pcal.days['2026-11-20'] && !S.lessonsOn(stamped, '2026-11-20').some(x => x.courseId === 'c_b'),
+    'a day type the course skips holds no unit day');
+  const gapDate = pA.adjDates.adj_1;
+  eq(S.lessonsOn(stamped, gapDate).find(x => x.kind === 'gap'), { courseId: 'c_a', course: 'Civics', kind: 'gap', code: 'U1-05-A', title: 'Lesson 5 - part', unit: '', n: 0, of: 0, reason: 'Ran long' },
+    'a bump names the lesson it was for');
+  eq(S.lessonsOn(stamped, pA.dateByLessonId[les[0].id]).map(x => [x.course, x.code]), [['Civics', 'U1-01-A']].concat(
+    pB.slots[pA.dateByLessonId[les[0].id]] ? [['Lab', '']] : []), 'courses come back in the plan\'s order');
+  eq(S.lessonsOn(pcal, pA.dateByLessonId[les[0].id]), [], 'an unstamped plan reads as nothing (lessonsOn never places)');
+  eq(S.lessonsOn(Object.assign(clone(stamped), { plan: Object.assign(clone(stamped.plan), { v: 2 }) }), pA.dateByLessonId[les[0].id]), [], 'a newer plan is not read');
+  eq(S.lessonsOn(Object.assign(clone(stamped), { plan: 'x' }), pA.dateByLessonId[les[0].id]), [], 'a broken plan is not read');
+  eq(S.lessonsOn(seed, '2026-09-01'), [], 'a calendar with no plan has no lessons');
+  eq(S.lessonsOn(null, '2026-09-01'), [], 'no calendar, no lessons');
+  const odd = clone(stamped); odd.plan.courses[0].lessons[0].num = '<b>'; odd.plan.courses.push(null, { id: 'c_x', lessons: 'no' });
+  eq(S.lessonsOn(odd, pA.dateByLessonId[les[0].id]).filter(x => x.courseId !== 'c_b').map(x => x.code), [''], 'a code that is not a lesson code is left out, and a bad course is skipped');
+  const DL = (x) => S.describeLesson(x);
+  eq(DL({ kind: 'lesson', code: 'U3-06-A', title: 'Fractions review' }), 'U3-06-A Fractions review', 'a lesson in words');
+  eq(DL({ kind: 'lesson', code: '', title: 'Fractions review' }), 'Fractions review', 'a lesson with no code');
+  eq(DL({ kind: 'lesson', code: '', title: '' }), 'A lesson', 'a lesson with nothing to say');
+  eq(DL(plain(S.lessonsOn(stamped, gapDate)).find(x => x.kind === 'gap')), 'Catch-up day: Ran long (U1-05-A is next)', 'a bump in words');
+  eq(DL({ kind: 'gap', code: '', reason: '' }), 'Catch-up day', 'a bare bump');
+  eq(DL({ kind: 'lost', reason: 'Assembly' }), 'Does not meet: Assembly', 'a lost day in words');
+  eq(DL({ kind: 'lost', reason: '' }), 'Does not meet', 'a lost day with no reason');
+  eq(DL({ kind: 'unit', unit: 'Cells', n: 3, of: 15 }), 'Cells, day 3 of 15', 'a unit day in words');
+  eq(DL(null), '', 'nothing in words');
+  eq(DL({ kind: 'what' }), '', 'an unknown kind in words');
+  const stampedBytes = JSON.stringify(stamped); S.lessonsOn(stamped, gapDate);
+  eq(JSON.stringify(stamped), stampedBytes, 'lessonsOn changes nothing it is given');
+
+
   return fails;
 }
 
 const MUTANTS = [
+  ['describeLesson drops the code', "return [item.code, item.title].filter(Boolean).join(' ')", "return [item.title].filter(Boolean).join(' ')"],
+  ['describeLesson drops the reason', "var why = item.reason ? ': ' + item.reason : '';", "var why = '';"],
+  ['describeLesson drops the day number', "return item.unit + ', day ' + item.n + ' of ' + item.of;", "return item.unit;"],
+  ['next school day includes the day itself', "var from = iso < cal.meta.start ? isoToMs(cal.meta.start) : isoToMs(iso) + DAY_MS;", "var from = iso < cal.meta.start ? isoToMs(cal.meta.start) : isoToMs(iso);"],
+  ['deadline on the tag, not the last school day', "if (!isCalendar(cal) || !isSchoolDay(cal, iso)) return null;\n    var gp = gradingPeriodOf(cal, iso);\n    if (!gp) return null;\n    for", "if (!isCalendar(cal)) return null;\n    var gp = gradingPeriodOf(cal, iso);\n    if (!gp) return null;\n    if (gp.end === iso) return gp;\n    for"],
+  ['every school day a deadline', "      if (isSchoolDay(cal, msToIso(ms))) return null;\n    }\n    return gp;", "    }\n    return gp;"],
+  ['quarters in any year', "return of === 4 ? 'Quarter '", "return of ? 'Quarter '"],
+  ['lessonsOn reads a newer plan', "plan.v !== PLAN_VERSION ||", ''],
+  ['lessonsOn ignores the rotation', "if ((course.meets === 'A' || course.meets === 'B') && cycle && letters[iso] !== course.meets) return false;", ''],
+  ['lessonsOn ignores a skipped day type', "if ((pace[types[i].id] || types[i].pace || 'count') === 'skip') return false;", ''],
+  ['lessonsOn ignores lost dates for units', "for (var j = 0; j < lost.length; j++) if (isObj(lost[j]) && lost[j].date === iso) return false;", ''],
+  ['unit day counted from the year', "for (var ms = isoToMs(u.start), end = isoToMs(iso); ms <= end; ms += DAY_MS) {", "for (var ms = isoToMs(cal.meta.start), end = isoToMs(iso); ms <= end; ms += DAY_MS) {"],
+  ['units shown beside lessons', "      if (lessons.length) return;\n", ''],
+  ['bumps not read', "if (!isObj(a) || a.on !== iso) return;", "return;"],
+  ['lost dates not read', "if (isObj(x) && x.date === iso) push({ kind: 'lost'", "if (false) push({ kind: 'lost'"],
+  ['any code accepted', "/^[A-Za-z0-9]+$/.test(String(l.num))", 'true'],
+  ['describe drops the letter', "    if (day.letter) parts.push(day.letter + ' day');\n", ''],
+  ['describe ignores the day\'s own name', "'No school: ' + (name || typeLabel", "'No school: ' + (typeLabel"],
+  ['describe calls a weekend closed', "if (day.why === 'weekend') return 'No school (weekend)';", ''],
+  ['typeLabel takes the first type', "if (isObj(t) && t.id === id) return text(t.label);", "if (isObj(t)) return text(t.label);"],
   ['outside not tested', "if (iso < cal.meta.start || iso > cal.meta.end) { out.why = 'outside'; return out; }", ''],
   ['weekend not tested', "if (!isWeekday(iso)) { out.why = 'weekend'; return out; }", ''],
   ['closure not tested', "if (types[i].noSchool) { out.why = 'closed'; out.closedBy = types[i].id; return out; }", ''],

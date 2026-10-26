@@ -20,7 +20,7 @@ import {
   createStore, KEYS, OPTION_DEFAULTS, liftLegacyBackup, fixBundle
 } from "../np-store.js";
 import {
-  shuffle, freshRotation, fairPick, uniformPick, pickOne, pickMany, makeGroups, leastPicked,
+  shuffle, freshRotation, fairPick, uniformPick, pickOne, pickMany, leastPicked,
   weightedChoice, fairnessWeights
 } from "../np-pick.js";
 import { report, overdue, summaryLine, daysBetween, shiftDay, dayKey } from "../np-equity.js";
@@ -609,19 +609,8 @@ console.log("name-picker smoke\n");
   assert(orig.join() === "x,y,z", "shuffle does not mutate its input");
 }
 
-{
-  const groups = makeGroups(CLASS_OF_28, 4, seeded(8));
-  assert(groups.length === 4, "four groups requested, four returned");
-  const sizes = groups.map(g => g.length);
-  assert(Math.max(...sizes) - Math.min(...sizes) <= 1, "group sizes differ by at most one");
-  assert(sizes.reduce((a, b) => a + b, 0) === 28, "everybody is in exactly one group");
-  const flat = groups.flat();
-  assert(new Set(flat).size === 28, "nobody is in two groups");
-
-  const odd = makeGroups(CLASS_OF_28.slice(0, 27), 4, seeded(8)).map(g => g.length);
-  assert(Math.max(...odd) - Math.min(...odd) <= 1, "27 into 4 still differs by at most one");
-  assert(makeGroups(CLASS_OF_28, 1, seeded(8)).length === 2, "a group count below 2 is clamped to 2");
-}
+// makeGroups() moved to _shared/grouping.js in Path 13 P2 (v336); its six
+// assertions are in Tools/grouping/test/parity.test.mjs, against the page's call.
 
 /* =====================================================================
    leastPicked — reading the stats back, which nothing used to do

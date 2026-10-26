@@ -9,6 +9,1403 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## CI: the suites run as six parallel shard jobs (2026-10-26, AI-34, no `CACHE_VERSION`)
+
+**Why.** Devon approved splitting the CI suites across jobs on 2026-10-07 ("yes, to proceed"); the 2026-10-07 entry below
+raised the one job's timeout to 120 minutes and said that bought time and fixed nothing. It ran out on 2026-10-26: the wave
+PR AI_Tools#372 touched `_shared/`, selected all 330 suites, and was cancelled at 120 minutes in suite 307 (the a11y sweep).
+The last green full run on `main` (after #371) took 97 minutes for 301 suites.
+
+**Shipped.** `run-suites.mjs --shard i/n` keeps the i-th share of whatever was selected (full list, `--only`, `--changed`),
+printing the whole plan at the top. The split is `Tools/board-check/shard-suites.mjs`: longest-first greedy over
+`Tools/board-check/suite-durations.json` (seconds per suite, read off the GitHub timestamps of #371's full run and #372's
+cancelled one, #372 winning; 314 of 330 timed, 121.3 minutes summed), ties by path then lowest shard, each shard in
+`suites.json` order, an untimed suite costed at the table's median. `suite-durations.mjs` refreshes the table from job logs.
+`.github/workflows/ci.yml` is now three jobs: `guards` (the read-only checks once, no Chromium or poppler; none of their
+scripts mentions either), `suites` (a `fail-fast: false` matrix of six, `timeout-minutes: 60`, each with the old setup steps
+and `--shard <i>/${{ strategy.job-total }}`, artifacts as `suite-output-shard-<i>` since upload-artifact v4+ refuses one name
+from two jobs), and `test`, which needs both and is green only if both results are `success` (`!cancelled()`, so it goes red
+rather than skipped when a shard fails). **Branch protection:** `gh api .../branches/main/protection` answered "Branch not
+protected" and the repo has no rulesets, so no required check names the old job; the aggregate keeps the name `test` anyway,
+so anything that reads "the test check" (the landing routine waits on all checks) still means everything.
+
+**Proof.** `npm run test:shard-suites` (pure Node, 120 assertions): every n from 1 to 10 over the real list partitions it
+(no suite in two shards or none, each shard in order), the same plan twice and with the table's keys reversed, shards within
+one suite's time of each other, count-balanced with no table, the median rule, empty shards, and the CLI's `--list` for
+`--shard i/6` and `--only board-check --shard i/3`. Locally: each of `--only board-check --shard 1/3..3/3` and
+`--only name-picker --shard 1/2..2/2` ran green (the 1.9-minute estimate for `drive-weighting.mjs` matched its 1.9-minute run),
+an empty shard exits 0, and `--changed --base origin/main --shard i/6 --list` for i = 1..6 gave 52/56/56/56/55/56 suites,
+~20.6 minutes each, union equal to `suites.json`'s 331 with no repeat. The workflow parses with PyYAML and keeps all 15 guard
+steps byte-identical.
+
+**Not verified.** No GitHub Actions run has used the new workflow; `strategy.job-total` inside `run:` and the aggregate's
+behaviour are from the documentation, not a run. A suite that silently relied on an earlier suite's leftovers would now fail
+in a shard; `--changed` already ran arbitrary subsets, so none is expected, but the first full run on `main` is the real test.
+Each shard repeats the setup (npm ci, Chromium deps, poppler), a few minutes each. The table goes stale as suites are added; it
+only moves suites between jobs.
+
+## Path 11 CI fix: the published browser's axe scans raced its fade-in (2026-10-26, AI-20, no `CACHE_VERSION`)
+
+**What failed.** The wave PR AI_Tools#372 went red on GitHub's runner in `smoke-publish-baseline.mjs` (103 passed,
+1 failed): "the Directions tab with a route has no serious or critical axe finding", color-contrast on the two room
+labels and both map captions. The same suite was 104/0 on huginn.
+
+**The cause was the test, not the colours.** A published view fades in: `#br-view` has `animation: br-rise .4s`,
+opacity 0 to 1, restarted each time a tab is shown. The suite opens a published file with `page.clock.setFixedTime()`,
+and under that clock the animation sat at `currentTime 0`, so on huginn every scan of `#br-view` saw a view at
+**opacity 0, which axe skips as invisible**. Those scans passed having checked nothing (Directions since v333, Sub
+Plan light and dark since v334). On the runner the animation had moved part of the way, so axe measured the text
+half-blended into the white card and failed it. It listed only the first four nodes (`harness.mjs` cuts there).
+The first four were the forest-ink text. The darker `--br-ink` of the moves and the large heading sat closer to the
+line. A probe showed it: pausing the fade at 120 ms (opacity 0.45) failed 13 nodes on huginn, and the same run's
+Sub Plan scan failed `.factline` and the Planning rows the same way. Nothing about fonts or the runner's theme was
+involved.
+
+**What changed.** Only `Tools/schedule-visualizer/test/smoke-publish-baseline.mjs`, so no precached file, no
+`CACHE_VERSION`. The prompt asked for a bump; the repo bumps only when a precached file changes, so this follows the
+repo. The published browser, `sv-browser.js`, the Northwind baseline and the 034 ledger are untouched, and
+`check:publisher`'s output did not move. That holds for unticked and ticked output alike.
+- `settledScan(page)` replaces the suite's three `a11yScan(p, …'#br-view')` calls: it finishes every finite
+  animation and transition first, then **throws if `#br-view` and its ancestors are still not opacity 1**. With the
+  finish taken out it throws on huginn ("still at opacity 0"), which is the check that would have caught this here.
+- `contrastOf(page, selectors)` works out WCAG contrast from computed styles, without axe: the text colour with its
+  alpha and every ancestor's opacity folded in, over the stacked background colours, and a background image makes it
+  unmeasurable, which fails. Font plays no part. It is asserted at 4.5:1 for the Directions heading, labels, moves and
+  captions (light and now dark too, with a dark axe scan added), Sub Plan's head line, column heads and Planning rows
+  (light and dark), and the open-a-file button, note and Back link (increment 1, which axe never scanned).
+  Measured: Directions 10.16 light / 8.88 dark (moves 12.35 / 13.85); open-a-file 10.16 / 8.69; Sub Plan's
+  `--br-muted` text is the thinnest margin, **4.92 (`.factline`) and 4.70 (Planning row on `--br-plan-bg`) in light**,
+  7.61 / 6.88 in dark. Those pass, but a future tweak to either token will reach the line first.
+- The open-a-file button first measured 3.05. The test had just clicked it, so it was mid-way through its `.18s`
+  hover transition, which the fixed clock never advances. `contrastOf` finishes transitions too, for that reason.
+- Broken on purpose: the captions set to `#9aa89f` failed both the axe scan and the direct measure (2.48); the
+  settle step removed made the suite throw.
+
+**Not checked.** The run on GitHub's runner itself (it lands with the next wave). `Tools/schedule-browser/test/smoke-dark-theme.mjs`
+scans 034, which has the same `br-rise` fade, with plain `a11yScan`; it is green on CI and was not changed here. It
+may share the blind spot, if its clock leaves the fade at 0.
+
+## Path 13 P2 increment 4: 002, 022 and 027 keyed by roster id (2026-10-26, AI-21, `CACHE_VERSION` v344–v346)
+
+**Shipped.** 002 (v344, 02473b2, with the engine change), 022 (v345, c73c9b8) and 027 (v346, 1b35bcc), one commit
+each, then the 022/027 tests (416fd7a). Each page now keys every student through `Grouping.history.identify()` with
+the ids `Roster.idsFor()` gives (`'i:<id>'` where Class Roster Hub has the student, else `'n:' + name`, a second of
+one name `'#2'`), so the memory follows a rename in the hub by itself. Keys never move a draw: the engine works on
+places, not key strings (read in `formGroups()`, and held below).
+
+**The gap increment 3 found, settled (a technical call, no question for Devon).** Neither of rank 32's two ways was
+enough alone. The real hole was the switch itself: a v341–v343 memory is keyed by *name*, so a rename made in the hub
+before the new page first saw the id leaves `identify()` matching the *new* name against a memory that holds the
+*old* one, and the pairs are stranded. Only the id map knows the two names are one student. So: (1) **the engine's
+`absorbLegacy()` reads `idNames` first** (new `byIdNames()`): a name-keyed member whose name is the map's name for an
+id is re-keyed to `'i:<id>'`, and an `'i:<id>'` member takes the map's name (an older page that followed a rename
+wrote it). It adds no member, so "seed every member from `idNames`" was not needed; `fromLegacy()` already keyed by
+the map. `golden.json` is unchanged (it never calls `absorbLegacy()`). (2) **`trackRenames()` and `idNames` stay**
+as the detector for what each page keeps by name (002's absence marks, keep-apart/together pairs and gtg-memory
+roles; 022's absences, safety exclusions, last groups and keep-apart; 027's circles and meetings), and the map is
+still written, which an older cached page needs. Why not drive those from `identify()`'s `moved`, as the design said:
+`trackRenames()` refuses a rename whose old name is still on the list, and a case-only change, and `identify()`
+follows both; reimplementing the refusal beside it would be a second rule to keep equal to the first. Keeping it
+makes the name-keyed lists move exactly as before, by construction.
+
+**What a teacher can see differ (each the case the design lists as `identify()`'s, now right):** a student renamed in
+the hub *and* a new student given the old name in the same step keeps their own pair or role memory (the new student
+used to inherit it); a case-only rename ("sam" → "Sam") keeps the memory (it used to be dropped at the next shuffle);
+and in 002 a rename typed into the box that matches a hub student is followed by the memory at the next shuffle (it
+was lost). Absence marks and pairs typed by name do not follow those three, as before.
+
+**022 and 027, the two rules that needed care.** (a) A rename onto a name that already has roles was refused, and
+still is; a refused student keyed by id is now *unbound* from it (re-keyed `'n:' + old name`), because otherwise the
+next `identify()` would follow the id and leave two members of one name, which the map cannot hold. With the unbind,
+the student reads the new name's roles and the old ones stay under the old name, as the refusal always did; removing
+the unbind fails two checks. (b) `identify()` makes a member of everyone it keys, and the memory has only ever held
+students with a role; a student who drew "Team Member"/"Group Member" used to join the map at their first role, so
+after each hand-out the roleless members are dropped (`pickMembers()`), which keeps the map's key order. The first
+build missed this: the adopters suite caught it as four 022 failures on key order alone. `rotateRoles()` now reads
+`identify()`'s memory, not the stored one, so a student re-keyed in that call is still read.
+
+**How it is held.** `test:grouping` 84 checks (a new one for `byIdNames()`, failing with it removed); parity 122,352;
+`test:grouping-adopters` 221 → 231 (two 002 classes in Class Roster Hub, every key `i:`, same groups and memory as the
+old splitter on the same numbers); `smoke-rename-follow.mjs` 38 → 66 (002: a v343 save across a rename, then a second
+rename with the id map gone; 022 and 027: a v342–v344 save across a rename and after a press, and the refused rename).
+
+**Checked:** lint; all thirteen `check:*` guards and `check:precache -- --base origin/main`; run-suites `--only`
+group-team-generator (year-memory 175: the twelve golden classes), lab-group-role-randomizer,
+novel-study-circles-manager, name-picker, pe-tournament-stations, grouping, roster (16), theme; `class-screen`'s
+smoke-widgets/-periods crash as they do on origin/main (known), its other suite passes. **Not run:** the full
+selection (`_shared/grouping.js` makes it all 331 suites, ~1.5 h; CI runs it on landing), a full `npm test`, the a11y
+sweep. **Not verified:** a sidecar written by a real 006 session (the fixtures use `Roster.syncRecords`); anything on a
+phone; a departed student who returns renamed (002 prunes them at the shuffle, so only `idNames` remembers them, as
+before).
+
+## Path 13 P2 increment 3: 022's and 027's role memory is `groupHistory` (2026-10-26, AI-21, `CACHE_VERSION` v342–v343)
+
+**Shipped.** The storage step for 022 (v342, c84bd6c) and 027 (v343, 6d630aa), one commit each, then the tests
+(a7870ba). Each page's role memory is now **`state.groupHistory`**, the engine's memory, roles only (neither page
+remembers partners, Devon's P13-3). `state.history`, the `{ name: [role] }` map every other line of the page reads
+(the hint, the role-history and fairness tables, the print), is written from it by `setRoleMemory()` on every change,
+because an older cached copy of the page reads that map and drops the field when it saves. Loading goes through
+`roleMemoryOf()`: `absorbLegacy()` over the stored field, then **the old map decides who has a list and in what
+order** (a list it no longer has, from an older page's Reset or rename, leaves the memory; the members are put in the
+map's order, so the map written back has the old key order). So a save from before the field, a roster or project
+file from before it, and a pair the map has since overtaken all hand out roles exactly as before. 022's
+`normalizeRosterData()` (storage, its roster file, a link) and 027's `loadProjectByName()`, project import and
+`newProject()` carry the field, and an exported file includes it. `handOutRoles()` replaces the old
+`assignRolesForGroup()` + `recordHistory()` pair: keys from `identify()`, `rotateRoles()` on the memory itself, and
+`record(..., { pairs: false })` once per group, before the next group is handed out, as the page always did (a name
+twice in one group is pushed twice). Undo keeps the memory object; Reset writes an empty one.
+
+**The call (no question for Devon).** Keys come from `identify()` **by name alone** (no roster ids) in this step, one
+key per name as the map had one entry per name. With ids, `identify()` would follow a rename by itself while
+`followRenames()` (`trackRenames()` and `renameStudentData()`) also follows it by name, and the two disagree on a
+rename onto a name that already has roles (the old page refuses to merge; an id key would carry the renamed student's
+roles onto it). So `renameStudentData()` moves the memory by name (`renameInMemory()`: the same refusal, the entry
+moved to the end of the map, where the old move put it), and moving 022 and 027 onto roster ids goes with 002's key
+step, which has to settle the same question. `record()` is called once per group, so `gen` counts groups, not
+shuffles; nothing in these two pages reads `gen`.
+
+**How it is held.** `test:grouping-adopters` (187 → 221): every 022 and 027 case now asserts that the saved map is
+exactly `toLegacyRoles(groupHistory)`; and for each page three stored records of the old shapes (the map alone; a
+`groupHistory` the map has since overtaken; a map an older page reset to `{}`) and an old file (imported, then
+exported and imported again) hand out roles over three presses exactly as the old picker would from the old map.
+Removing `roleMemoryOf()`'s map-wins step fails two of them. `smoke-rename-follow.mjs` (36 → 38) asserts the memory
+follows a rename in both pages (its fixtures are the old format).
+
+**Checked:** lint; all thirteen `check:*` guards and `check:precache -- --base main`; `run-suites --changed --base main`
+(25 suites, 19.3 min, all green, including the parity suite's 122,352, the adopters, rename-follow, the a11y sweep and
+the service-worker suites). **Not verified:** a full `npm test`; anything on a phone; a real 009 backup restored beside
+an older page's save.
+
+**Not done, and why: 002's keys onto `identify()`** (rank 32's other half). Read, not built: driving
+`followRenames()`/`renameStudentData()` from `identify()`'s `moved` and writing `idNames` no more loses a case
+`trackRenames()` covers today. A student in `idNames` with no pair yet (a class that has not shuffled, or a new
+student) is not in the memory, because `fromLegacy()` adds members only from `pairHistory` and roles, so a rename
+produces no `moved` and their absent mark and keep-apart pairs stay under the old name. The step needs either
+`fromLegacy()`/`absorbLegacy()` to seed members from `idNames`, or `trackRenames()` kept as the fallback. Building the
+first is an engine change with its own golden; that and the 002 suites did not fit before the night's deadline.
+
+## Path 13 P2 increment 2: 002 forms groups through the engine (2026-10-26, AI-21, `CACHE_VERSION` v341)
+
+**Shipped.** 002's port alone (commit 10dd5f4). `makeGroups()` calls `Grouping.formGroups()` with the page's count or
+size, its remainder rule, strategy, absent students, keep-apart and keep-together pairs and the previous groups with
+their locks, and `rng: Math.random`. The five strategies, `applyOddHandling()`, `locksAreValid()`,
+`resolveConstraints()` and its score, `prunePairHistoryToRoster()` and `recordPairHistory()` are gone (prune is
+`history.prune(..., { departed: 'drop' })`, record is `history.record()`). `gtg-memory.js`'s long-memory `refine()`
+and the roles still run after the engine, where they ran. The memory is a new field on the class,
+**`groupHistory`**, written from the first shuffle, and `pairHistory`/`pairGen` are written from it on every change
+(the P1 design's *Storage*): opening a class with the field runs `absorbLegacy()`, so a shuffle made since by an older
+cached page (which drops the field when it saves) is taken in; a class without it is read from `pairHistory`. Undo puts
+the field back, Reset deletes it, and a followed rename is `history.rekey()`. Duplicate is a JSON copy, so it carries
+the field. No new key, so `tool-registry.js` and 009 are untouched. The 022/027 storage step was not started (time).
+
+**How it is held.** `smoke-year-memory.mjs`'s golden (twelve classes, five rounds, recorded from the page before the
+year memory) gives the same groups and floaters, and the saved string with `groupHistory` taken out is the old page's
+bytes, key order and all; that check used to hash the whole string and now takes the field out first and asserts that
+`pairHistory` and `pairGen` are exactly what the field mirrors. The suite also gains an older page's shuffle absorbed on
+opening, Undo restoring the field, and Reset removing it (166 → 175). `test:grouping-adopters` gets 002: per case, a
+fresh class, the page's `Math.random` replaced by `Grouping.rng(seed)`, Make Groups, Reshuffle, then Reshuffle with group
+1 locked, compared with `_legacy.mjs`'s `gtg002()` on the same numbers (groups, floaters, saved `pairHistory`, `pairGen`
+and the mirror); five cases x five seeds, every strategy and remainder rule, pairs and an absence (160 → 187). With
+`rng: Math.random` taken out of the page's call all 25 002 cases fail. `test:grouping-parity`'s 002 grid unchanged
+(10,380 groupings).
+
+**Calls made here.** (1) **Keys are `'n:' + name`**, as the 022/027 ports' role maps are; a second student of one name
+is `'n:' + name + '#2'` so the engine (which drops a repeated key) still deals both, and to every rule naming them the
+pair means the first, as `groupIndexOf()` did. The design's `identify()` keys with roster ids, and with them the end of
+`idNames` and `trackRenames()` here, change what is stored by id and go with rank 32's storage step, for all three
+tools at once. (2) **`rng: Math.random`**, not the engine's own generator: 002's golden suite seeds `Math.random`, and
+the same numbers in the same order is what "unchanged" means there. (3) **The page's own `floater` is passed as
+`floaters`**: the engine knows `floaters`, and an unknown remainder falls back to `spread` silently, so a straight pass
+would have quietly stopped floating anyone (the parity grid used the engine's word, so it could not see this; the
+golden suite would have). (4) The warnings, the brand-new pair count and the busiest pair are read off the final groups
+by the page's own finders, kept for that, because long memory's `refine()` moves students after the engine counted.
+(5) A locked group keeps the very entries `lastGroups` had, as before. (6) **Found in the build: `rekey()` keeps the
+member's stored name**, which is right for an id key and wrong for a name key, so the first draft wrote the renamed
+pair back under the old spelling; `smoke-rename-follow.mjs`'s 002 case caught it. The page now moves the stored name
+with the key. (7) The one difference: Reshuffle with nobody left on the list (every name deleted after a shuffle; the
+absent boxes clear the groups) drew one empty card and now draws none. (8) Not handled, as designed: a Reset on an older
+cached page is not seen by `absorbLegacy()` (its `pairGen` goes back, not forward), so the next open here brings the
+memory back; and pairs an older page pruned come back in the mirror until the next shuffle prunes them again. No new
+question for Devon.
+
+**Ran green:** lint; all thirteen `check:*` guards, `check:precache --base origin/main`, `check:adoption --check`
+(after pasting the row: `grouping.js` 6); `test:grouping` (81); `test:grouping-parity` (122,352);
+`test:grouping-adopters` (187); `run-suites --only group-team-generator` (4 suites: share, pairing history, year-memory
+core 110, year memory 175); `smoke-rename-follow` (36), `smoke-flag-adopters`, `smoke-picker-rollout`,
+`handoffs.test`, `smoke-send-to`, `test:theme` and `smoke-dark-rollout`, `registry-shape`, the three service-worker
+suites, `smoke-image-sets`, `smoke-imposition`, `smoke-export`, `smoke-impose`, and the a11y sweep `--only 002`: every
+suite `run-suites --changed` selects for the diff; `offline:build` (`offline:verify` opens no 002 page, so it holds
+nothing here). **Not run:** full `npm test`. **Not verified:** 002 on a phone or a
+board; CI's Chromium; a class saved by an older page on a second device.
+
+## Path 13 P2 increment 1: 007, 087, 021, 027 and 022 split through the engine (2026-10-25, AI-21, `CACHE_VERSION` v336–v340)
+
+**Shipped.** Five of the six adopters, one commit and one `CACHE_VERSION` each, each the port alone: 007 (v336, commit
+5208dd0: Make Random Groups calls `Grouping.formGroups(names, { count, min: 2, allowEmpty: true })`; `np-pick.js` loses
+`makeGroups()` and the name-picker suite's six assertions on it move to `parity.test.mjs`), 087 (v337, 20d900a:
+`cs-core.js`'s `makeGroups()` keeps its signature and calls the engine with `{ count }` or `{ size, sizeRule: 'near' }`;
+`core.test.mjs` loads `grouping.js`), 021 (v338, a851bb8: the roster split, `{ count, allowEmpty: true }`, still saved
+as comma-joined text), 027 (v339, 7745f17: the split, and the role picker through `rotateRoles()`) and 022 (v340,
+98d7387: the split with keep-apart pairs, the role picker, and `computeEffectiveMembers()` through `coverRoles()`). 002
+is not ported. BACKLOG rank 32 rewritten to what is left.
+
+**How it is held.** `test:grouping-parity` as before, plus 300 cases of 087's real `cs-core.js` against the old function
+with repeated and blank names, and 007's six moved assertions (122,352 checks). A new browser suite,
+`npm run test:grouping-adopters` (`Tools/grouping/test/smoke-adopters.mjs`, Chromium, port 8555): for each page it pins
+the engine (`Grouping.pin(seed)`), presses the tool's own button, reads the groups off the screen or out of storage, and
+compares them with `_legacy.mjs`'s copy fed the same seed's numbers, five seeds a case; 027 logs three meetings and 022
+presses Shuffle three times, and both compare roles and the role memory too, with a repeated name in the class; 022's
+last case adds four keep-apart pairs through the page's own controls and checks the page passes them to the engine,
+keeps them and does not warn. 160 checks.
+
+**Calls made here.** (1) **Members keyed by position** in 087, 021, 027 and 022: the engine drops a repeated key, and
+those four pages kept two students of one name as two (007 always dropped repeats, so it passes names). (2) **The role
+memory stays where it was.** 027 and 022 hand `rotateRoles()` the page's `state.history` as a plain map with keys
+`'n:' + name` (a bare map is read as an engine memory if it has an array called `keys`, so a student named "keys" would
+have been misread; `'n:'` also makes "constructor" an ordinary name), and the page's `recordHistory()` still writes it.
+The design's `groupHistory` field, `identify()` keys and the cut of `renameStudentData()` change what is stored, which
+is not a port, so they are rank 32's storage step. (3) 022 keeps `findApartViolations()` and `groupIndexOf()` (the
+warning on a restored grouping reads saved names against the current pairs, which no engine result covers) and
+`shuffle()` (stations). (4) With two students of one name, a keep-apart pair means the first in the roster to the
+engine and the first found in a group to that warning; the suite found the two disagreeing on one seed of five and its pairs
+now avoid the repeated name. The old page's repair and warning used the same first-found rule and could not disagree,
+but neither could tell the two students apart either; nobody can say which one a pair by name means. (5) 022 with
+keep-apart pairs takes 002's repair, so its draws differ there, as the P1 design said (the failure rate is measured in
+`parity.test.mjs`). No new question for Devon.
+
+**Ran green:** lint; all twelve `check:*` guards, `check:precache --base origin/main`, `check:adoption --check` (after
+pasting the row: `grouping.js` 5); `test:grouping-parity` (122,352); `test:grouping-adopters` (160); `run-suites --only`
+name-picker (3), pe-tournament-stations (2), novel-study-circles-manager (1), lab-group-role-randomizer (2), roster (16),
+share (22), backup-restore (10), stage (3), store (15), service-worker (3); `test:theme` (966); the a11y sweep `--only`
+each of the five pages; `test:select-suites` (93); `offline:build` and `offline:verify` (007 ok; fails only on 046's
+"Invalid URL", as before). **Red, not mine:** `class-screen`'s `smoke-widgets.mjs` and `smoke-periods.mjs` crash on
+huginn (the `.a11y-widget` intercepts a click on the dock) and crash identically on a worktree of origin/main, as
+earlier entries record; their group-maker assertions sit after the crash, so 087's widget is held here by
+`test:grouping-adopters` only. **Not run:** full `npm test`. **Not verified:** any of the five on a phone or a board;
+CI's Chromium.
+
+## Path 13 P1: the one grouping engine, `_shared/grouping.js` (2026-10-25, AI-21, `CACHE_VERSION` v335)
+
+**Built.** `_shared/grouping.js`, a classic script publishing `Grouping`, to the design AI-21 wrote on 2026-10-05
+(BACKLOG, Path 13, the P1 bullet). Devon answered its ten questions on 2026-10-21 (P13-1 to P13-10, "keep the
+default", all ten), so the build follows the assumptions as written: no skill on the shared record, a memory per tool,
+022 and 027 remember roles only, every press counts, never over the group size, each tool keeps its rounding, the
+teacher's strategy wins under `keepStrategy`, keep-together is a block once `units` is on, a departed student kept by
+each tool's rule, balance on skill only. `plan()`, `formGroups()`, `rotateRoles()`, `coverRoles()`, `rng`/`newSeed`/
+`pin`, and `history.*` (empty, normalize, record, count, lastGen, rolesOf, coverage, rekey, prune, identify,
+fromLegacy, toLegacyPairs, toLegacyRoles, absorbLegacy). `Roster.idsFor(names, rosterName)` added to `roster.js`,
+read-only. No page loads the engine; P2 (rank 32) adopts it. Commit c5f2ef3.
+
+**How it is held.** `test:grouping-parity`: `Tools/grouping/test/_legacy.mjs` holds the six splitters and the role
+picker copied out of the v334 pages (only `Math.random` made an argument and page state a context object; a
+line-by-line check against the files found nothing else), and old and new are fed two generators from one seed: 007,
+087 (both rules) and 021 for 300 seeds each; 027 and 022 for 300 classes, 60 of them over eight meetings with roles and
+role history; 022's absent-role cover; 002 across five strategies, three remainder rules, count and size, with and
+without apart and together pairs, locks and absences, one to six generations of pair memory carried on both sides
+(10,380 groupings at 100 seeds a configuration; 300 passed once); the legacy fields there and back, and
+`absorbLegacy()` on what an older page writes. 122,046 checks, about two minutes. `test:grouping`: 27 named checks
+(plan for n 0 to 60 under every rule, placement for 500 seeds, seeds and pin, locks, the three impossible shapes and
+none on 2,000 satisfiable classes, `units` against `pairs` on the two-triples case at the measured 4.5%, `keepStrategy`
+over four generations, restarts, how the repair stops, fallback and dropped options, `spread`, the memory never written
+by `formGroups`, `best` never repeating when it need not, `greedy` at about 1.1%, the memory's functions, fifteen broken
+shapes for `normalize`, `identify`'s six cases), each run again against a copy of the engine with that check's rule
+broken (27 mutants, each must fail its check), and `golden.json`, twelve fixed-seed results.
+
+**Calls made here** (the design is the default; these are where the tree or the numbers said otherwise). (1) 002 grew
+`gtg-memory.js` at v277, after the design read 002 at v248: a long-memory refine after the repair and a Hungarian role
+rotation with a `roleHistory` of its own. Folding either into the engine would change 002's draws, so both stay 002's,
+run after `formGroups()` where they run today, and parity is held with long memory off and no roles. (2) `allowEmpty`:
+007's `np-pick.js` and 021's split make empty groups when asked for more groups than there are names, which the design's
+clamp to `n` would have changed. (3) No present members is no groups; 002 returned one empty group, from a state its page
+cannot reach (Generate is off under two present), and the parity grid skips that state as the page does. (4)
+`record(..., { pairs: false })` for 027, which remembers roles and not pairs, and `rotateRoles` reading a plain
+`{ key: [role] }` map. (5) `moved` entries carry both keys and both names, since the tools' own lists are by name. (6)
+Every function trusts a memory shaped as `normalize()` returns it: profiling showed `record()` spending its time
+re-normalizing (eight times 002's own cost); it now works on indexes and the hot loop reads pair tables built once per
+call, which brought the engine to about 002's own speed. (7) Under `units`, blocks go first into the smallest group and
+the rest follow the strategy's order into the smallest group; a pop-from-the-end guard against splitting a block was
+written and removed, because a block is always dealt before any single. (8) The design's "the engine fails no more
+often than 022" is a comparison of two samples; at 30 in 3 with 20 pairs it read 022 23 against the engine 24 of 2,000,
+so it is held to three standard deviations there and to zero on the five shapes where 022 never fails. (9) The 002 grid
+runs 100 seeds a configuration (002's copy costs about 35 ms a call at 36 students with memory, spending its 800-try
+budget), with `GTG_SEEDS=300` for the design's figure. (10) `Roster.idsFor` is tested in the pure `roster.test.mjs`
+(assertion 32), not the browser `smoke-rename-follow.mjs`: no page calls it yet.
+
+**Found.** `{ __proto__: true, constructor: true, prototype: true }` as an object literal sets the object's prototype
+and makes no `__proto__` key, so the first draft's guard let `__proto__` through `normalize()`; the fifteen-shapes check
+failed on it, and the set is now built on `Object.create(null)`. Four of the first mutants passed their checks (the
+restarts check could not reach a restart, the `best` check's mutant fell through to a swap search that happened to be
+optimal, the map-history check did not need the history, the golden check returned early under `--update`); each check
+was tightened until its mutant failed.
+
+**Bookkeeping.** `_shared/grouping.js` in `PRECACHE_URLS` and `SHELL_URLS`, `CACHE_VERSION` v334 → v335; `Grouping` in
+`eslint.config.js`'s `SITE_GLOBALS`; both suites in `suites.json` with `test:grouping` and `test:grouping-parity`; no
+registry row (no key); no new port. BACKLOG rank 31 deleted (a gap, ranks not renumbered) and rank 32 rewritten for what
+P2 now inherits; the P1 bullet marked built, with *As built* and Devon's answers.
+
+**Ran green:** lint; `check:tests`, `check:precache` (and `--base origin/main`), `check:dedupe`, `check:registry`,
+`check:docs-commands`, `check:adoption`, `check:entities`, `check:hidden-flex`, `check:print-clip`,
+`check:inline-sinks`, `check:art`, `check:publisher`; `test:grouping` (81); `test:grouping-parity` (122,046);
+`roster.test.mjs` (158); `test:select-suites` (93); `run-suites --only roster` (16 suites) and `--only service-worker`
+(3). **Not run:** full `npm test`; `offline:build`/`offline:verify` (no page references the file). **Not verified:**
+the engine on any page or in a browser; `identify()` against a sidecar 006 wrote; the old-cache case of the mirror
+(read from 022's and 027's load functions in the design, still not reproduced).
+
+## Path 11 P6 increment 3: a published copy shows a sub plan; P6, P5 and Path 11 are whole (2026-10-25, AI-20, `CACHE_VERSION` v334)
+
+**Built.** A third box in 035's Settings → Publishing, "Published copies show a sub plan" (`settings.publishSubPlan`,
+absent when off). Ticked, a published file has a Sub Plan tab: "Absent teacher" (every teacher, with their room), "Day"
+(A or B) and an optional typed date; below them one row a mod with the class, the room and the bell time, and on a class
+mod who is on Planning then ("No one is free. Check with the office." when nobody is) and a "Covered by" box with a
+datalist of those names; a Planning mod reads "Planning, nothing to cover". "Copy the plan" copies plain text (the
+school; "Absent: name (Room r)"; "Day: A day, date"; a line a mod, "Covered by X." or "Not covered yet (free: …)." or
+"Planning, nothing to cover.") and shows the same text selected below; "Print the plan" prints the tab with the lists,
+buttons and toolbar hidden. Nothing is stored. Commit e3c1a5a.
+
+**The teacher day.** It is the publisher's own, read exactly as By Teacher shows it: a slot that is empty or
+`'Planning'` is Planning, the room is the teacher's one published room. Devon answered P5 increment 2's question "No"
+(2026-10-25, about 21:05 ET), so `deriveScheduleData` keeps its rule and no published teacher day changed.
+
+**Calls made here.** (1) The tab is mode `'sub'` with id `br-mSub`, both of which `brSyncTabs` (a `same` piece) already
+listed for 034's own Substitute Plan, so the tab's selected state needs no new code and no shared piece moved; the
+renderers are new `brCover…` names, so 034's `brSub*` rows did not move either. (2) A date box the design did not name:
+a plan pasted into an email is no use without its date. Typed, never stored or checked. (3) `navigator` added to
+`check:publisher`'s `PUBLISHED_GLOBALS` (it held only `document`) rather than a deprecated `execCommand('copy')`;
+`navigator.clipboard` is feature-tested and the text is always shown selected, because a file opened from disk may
+refuse the clipboard. (4) Who is free is listed by department, then name, as 034's coverage list and the overview
+order them. (5) The Planning rows use `--br-muted` on `--br-plan-bg`: By Teacher's `--br-plan-ink` on that background
+failed axe's colour contrast in a table cell (By Teacher's own Planning rows were not changed). No new question for
+Devon; P6's (4) (name who covers, or only list who is free) and (5) (copied text, or a Path 6 link) stay open on
+what is built.
+
+**What changed in the published output, exactly.** `baseline-northwind.html` regenerated with `--update` (78,100 →
+85,794 bytes, +106 −2 lines): BR_CSS gains the `.br-cover-*` rules and their `@media print` block; `brSetMode`'s
+map/dir branch takes `'sub'` too (the two removed lines are that `if` and its render line); five new functions. The
+data and markup sections are byte-identical. A ticked publish differs from the default in the markup only (the tab),
+which the suite asserts.
+
+**Guards.** Ledger `absent` +5 (18 now; 21 same, 12 forked). `test:check-publisher` 84 → 88 (counts; free names now
+`document`, `navigator`, `brRenderMapLegacy`; the spread fixture moved; four new breaks: `br-cover-out` renamed fails
+ID, `brCoverText` dropped from the list fails FREE, the copy writing sessionStorage fails LIVE, a bare `location` read
+fails FREE). `test:schedule-publish` 78 → 104: the coverage walk is 51 pieces and drives the Sub Plan and its copy; a
+new section checks the default file has no tab, the ticked copy's markup-only move and saved setting, the tab's keys
+and panel label, every row's free list against the data, the copied text line by line, B day, an empty slot read as
+Planning, a name with quotes, `&` and markup shown as text, axe (0 serious) in light and dark schemes, print
+visibility, one Letter page, and five tabs in order with directions ticked too. Five code breaks were made on purpose
+(the name unescaped, the tab always on, the print rule lost, the typed covers ignored, an empty slot not read as
+Planning): each failed a behaviour check, not only the baseline; the last one needed the empty-slot case, which
+Northwind (every Planning written out) could not reach. Size ledger: 035 is 297,900 bytes, under 300 KB.
+
+**Bookkeeping.** BACKLOG ranks 25 (P5, holding only the closed increment 2) and 26 (P6) deleted, leaving gaps; P5's
+question struck with Devon's answer; Path 11's section says it has no row left, only Devon's open questions.
+
+**Ran green:** lint; all thirteen `check:*` guards (`check:precache --base origin/main`); `test:check-publisher` (88);
+`test:schedule-publish` (104, ET and `TZ=UTC`); `run-suites --only schedule-visualizer` (24), `--only schedule-browser`
+(4), `--only theme` (3); a11y sweep `--only 035`; `audit-print --only 035` (0 findings); `test:select-suites` (93);
+`offline:build` + `offline:verify` (035 passes, all 44 published functions are source text; 046 still fails with
+`Invalid URL`, unchanged). **Not run:** full `npm test`. **Not verified:** a plan on paper (the page count is Chromium's
+PDF); a real building; a phone; whether a teacher's mail client keeps the copied text's line breaks; the clipboard from
+a file opened in Safari or Firefox (headless Chromium took the fallback or the copy, and the test accepts either).
+
+## Path 11 P6 increment 2: a published copy shows directions (2026-10-25, AI-20, `CACHE_VERSION` v333)
+
+**Built.** A second box in 035's Settings → Publishing, "Published copies show directions"
+(`settings.publishDirections`, absent when off). Ticked, a published file has a fourth tab, Directions: "From room"
+and "To room" lists (room number · teacher, every room with a door cell), a "Step-free route (no stairs or steps)"
+switch only when a pair is marked elevator or ramp, the moves as a numbered list, and one floor map per floor the
+walk crosses, in order, the route drawn as a line and Start/End marked (`brGeoFloorSVG` unchanged, the line added
+after it; nothing on these maps is clickable). From a room to itself it says so; data with no `links` says "This file
+has no directions. Ask for a newer copy of the schedule browser."
+
+**How the copy routes.** `brDirGraph(geom, stepFree)` and `brDirRoute()` are a Dijkstra in the published file on
+`sv-graph.js`'s rules: hallway and staircase tiles joined side to side at 1, a pair at 0, a room left and entered only
+at its door cell; step-free drops stairs pairs, staircase tiles that are not an elevator or ramp end, marked hallway
+steps and doors marked as a step, and an elevator costs its wait. `brDirSteps()` is `routeSteps()`'s wording.
+The geometry gains, only when ticked, what the walk needs (optional fields, no `FORMAT` bump, contract rules for each):
+`rooms[].door` (the graph's `roomToKey` cell) and `rooms[].doors` (that cell's corridor neighbours, `[c, r, 1]` for a
+step at that door), `floors[].steps`, and `geometry.links` (`{ a: [floorId, c, r], b, access, wait? }`, only pairs
+whose ends are both staircases, out-of-service elevators left out, an elevator's `wait` resolved against Settings'
+default). The live side, `brRouteGeometry()`, reads these off 035's own graph through `window.SVGraph` (sv-browser.js
+may not import: the offline copy ships it as a classic script), so the copy cannot disagree with 035 about which cell
+is a room's door.
+
+**Calls made here.** (1) The suite holds route *cost* to `sv-graph.js`, not cell count as the design said: with a
+0-cost pair two cheapest routes can differ in cells, and A* and Dijkstra break the tie differently. It also checks
+every published route is a walk in 035's graph and that `brDirSteps` on 035's own path says what `routeSteps` says.
+(2) Unticked, the tab is left out of the markup rather than published `hidden` as increment 1's button is: a hidden
+`role="tab"` would still be a stop for `brWireTabKeys`'s arrow keys (a `same` piece, so it could not learn to skip it
+without touching 034), which would change a default file's keyboard behaviour. (3) `brSetMode` (forked, 035's own)
+sets the Directions tab's state itself, because `brSyncTabs` is `same` and 034 is not touched. (4) The tab's heading
+has no `.role` subtitle: the shared muted style failed axe colour contrast on it (the Building Map tab uses the same
+style; not changed here).
+
+**What changed in the published output, exactly.** `baseline-northwind.html` regenerated with `--update`
+(66,648 → 78,100 bytes, +218 −2 lines): BR_CSS gains nine `.br-dir-*` rules; `brSetMode` gains the `dir` branch
+(the two removed lines are its `if (mo==='map')` and `brRenderMap(); v.classList.add('show');`); six new functions.
+The data and markup sections are byte-identical. A ticked publish differs from the default in the markup (the tab)
+and the data (the geometry fields) only; the suite asserts both and that nothing else in the data moves.
+
+**Guards.** Ledger `absent` +6 (13 now). `test:check-publisher` 81 → 84 (counts; spread fixture moved; three new
+breaks: `br-mDir` renamed fails ID, `brDirSteps` dropped from the list fails FREE, the tab writing localStorage fails
+LIVE). `test:schedule-publish` 53 → 78: the coverage walk is 46 pieces and opens a file with directions to drive the
+tab; a new section checks the default file has no tab and End still lands on Building Map, the ticked copy's tabs,
+keys and panel label, a route from Floor 1 to Floor 2 (stairs, two maps with lines, Start/End), axe on the tab (0
+serious), the same room, By Teacher after it, a schedule without directions, and an elevator (published with wait 10,
+step-free takes it). New pure suite `test:schedule-directions` (42): `graph.test.mjs`'s six blueprints, Northwind, and
+a stairs/elevator/ramp building in six variants (stairs only, elevator out of service, its own wait, a hallway step, a
+door step), ordinary and step-free, every ordered room pair; plus contract checks and four data breaks. Six code breaks
+were made on purpose (stair tiles kept step-free, a pair costing 1, a door step ignored, a hallway step ignored,
+stairs pairs kept step-free, the live door cell taken as the room's first cell): each failed it. Size ledger: 035 is
+296,603 bytes (the Settings box), still under 300 KB.
+
+**Ran green:** lint; all thirteen `check:*` guards (`check:precache --base origin/main`); `test:check-publisher` (84);
+`test:schedule-publish` (78); `test:schedule-directions` (42); `run-suites --only schedule-visualizer` (24),
+`--only schedule-browser` (4), `--only theme` (3); a11y sweep `--only 035` (0 findings); `test:select-suites` (93);
+`offline:build` + `offline:verify` (035 passes, all 39 published functions are source text; 046 still fails with
+`Invalid URL`, unchanged). A screenshot of a ticked copy's step-free route was looked at. **Not run:** full `npm test`;
+`audit-print` (no print CSS changed; printing a route was not looked at). **Not verified:** a real building; a phone;
+the tab in the dark palette; whether "tiles" means anything to a teacher (it is 035's own word on its route sheets).
+
+## Path 11 P6 designed, increment 1: a published copy opens a newer schedule file (2026-10-25, AI-20, `CACHE_VERSION` v332)
+
+**Designed** in the P6 bullet of `BACKLOG.md`'s Path 11: three increments, each behind its own box in 035's new
+Settings → Publishing, all off by default, so a file published after P6 shows staff the default view it always did
+unless the publisher chooses otherwise; the pieces are published either way (one publisher for `check:publisher` to
+read), hidden. 034 is not touched (its own page for good, P11 question 1); P6's pieces go in the ledger's `absent`.
+Increment 2 is directions (two optional geometry fields, no `FORMAT` bump, a published tile search held to
+`sv-graph.js`), increment 3 a sub plan from the schedule alone. Five questions for Devon end the bullet; the build
+takes their defaults (all boxes off; a newer format is refused; copied text, not a link, for the sub plan's return).
+
+**Built, increment 1.** `settings.publishCanOpen` (the key is absent when the box is off). A published file now
+carries `brCheckSchedule`, `brReadSchedule`, `brUseSchedule`, `brPickScheduleFile` and `brOpenScheduleFile`, the
+value `BR_READS_FORMAT = 1`, `let brData = PUBLISHED_DATA;` in the preamble, one CSS rule (`.br-open-note` and its
+link), and in the markup an "Open a newer schedule…" button, a file input and a status note, all `hidden` unless the
+box was ticked. `brCheckStaleness()` now reads `brData` instead of `PUBLISHED_DATA` and clears the banner before
+deciding, so it can run again after a swap.
+
+**What changed in the published output, exactly.** The committed `baseline-northwind.html` was regenerated with
+`--update` in the build commit and moved by those bytes and nothing else (60,588 → 66,648 bytes, +108 −2 lines:
+the two removed lines are `brCheckStaleness`'s `typeof PUBLISHED_DATA` test and its read of
+`PUBLISHED_DATA.publishedOn`). The data section is byte-identical: same keys, `format: 1`, `tool: 'v62'`. A ticked
+publish differs from the default in one line (the button's ` hidden`), which the suite asserts.
+`TOOL_VERSION` stays v62: the data format did not change and the footnote's version names the writer of the data.
+That is a call, made here: a v62 file published today has an opener a v62 file published yesterday lacks.
+
+**The reader's rules.** It accepts a file whose one line starts `const PUBLISHED_DATA = ` (two such lines is not a
+schedule) or text starting `{`. A format above `BR_READS_FORMAT` gets "made by a newer version… Ask for a new copy of
+the schedule browser" and the schedule showing does not change: P11 question 4's default was "nothing is built",
+which stopped being possible once a reader existed, so the smallest safe reading (refuse) was taken and is P6
+question 2. `brCheckSchedule()` is a subset of the contract's hard rules (types and shapes the views read, no
+cross-references) plus one rule the contract does not have: **any `<` or `>` in a loaded file is refused**, because
+`brRenderMenu()` and `brDayRows()` write names and slots into markup unescaped. Breaking that check on purpose made a
+teacher named `<img src=x onerror=…>` fire its handler in the published page, which is the evidence it is needed. The
+file's own embedded data is not put through the check (it was published by the tool).
+
+**Guards.** `check:publisher`'s DATA fails when `BR_READS_FORMAT` is missing (with FREE, since the reader names it)
+or is not `FORMAT`; `test:check-publisher` 78 → 81 (counts updated, one new check, two new breaks). `test:schedule-publish` is 53
+checks, with a rewritten coverage walk (40 pieces, the opener driven by name with a file chooser) and a new section:
+the default copy hides it all; a ticked copy shows the button; seven refusals (format 2, not a schedule, two data
+lines, broken JSON, a teacher with no B list, a name holding markup, no mod count) each leave the masthead and title
+alone; an older Southgate file opens with its own title, initial, note and stale banner and resets to an empty By
+Teacher; Back restores the file's own schedule with no banner; v61's format-0 Northwind data opens and shows
+Fernwood's day exactly as the file's own data does. Both breaks of the reader (format check off, `<` check off) were
+made on purpose and failed the suite. Size ledger: 035 is 295,289 bytes (the Settings section), line raised from
+293,511; still under 300 KB.
+
+**Ran green:** lint; all thirteen `check:*` guards (`check:precache --base origin/main`); `test:check-publisher` (81);
+`test:schedule-publish` (53); every pure 035 suite; the browser suites of 035 and 034 one by one (smoke, recovery,
+evacuation, trace-image, print, editor, step-free, bell-from-calendar, checks, mode-tabs, dark-theme, personal-notes,
+substitute-view); `run-suites --only theme` (3, 966 checks); a11y sweep `--only 035` (0 findings); `test:select-suites`
+(93); `offline:build` + `offline:verify` (035 passes, "all 33 published functions are their source text"; 046 still
+fails with `Invalid URL`, unchanged and not touched). **Not run:** full `npm test`; `audit-print` (no print CSS
+changed; the note is not hidden in print, on purpose, so a printed loaded schedule names its school). **Not
+verified:** a real second building's file; opening a file on a phone or under a school's file-picker restrictions; the
+note in the dark palette (the rule uses the `--br-` tokens the dark theme sets).
+
+## Path 11 P5 increment 3: 035's suggestions, Fix… and "Try in What-If" (2026-10-25, AI-20, `CACHE_VERSION` v331)
+
+BACKLOG rank 25 kept and cut to ½: only increment 2 is left, and it waits on Devon (the P5 bullet's "A question for
+Devon, increment 2"; nothing here touches the publisher, `check:publisher` printed the same output). `TOOL_VERSION`
+stays v62: nothing published changed.
+
+- **What shipped.** Pure `Tools/schedule-visualizer/sv-suggest.js`. `suggestFor(finding, { groups, registry, settings,
+  acks, kinds, max, blueprint, graph, pathCache, resolve, travelDays, now })` returns `{ candidates, tried, found,
+  stoppedBy }`. The moves are the design's: **M1** swaps two of the group's own slots that day; **M2** moves the slot to
+  another room of the same teacher, or to a room with no teacher named, free that mod (or shared, `excludeFromConflict`);
+  **M3** (another teacher's room in the same department) exists only when `kinds` names it, carries `changesTeacher`,
+  and the page never asks for it (Devon's P11-15). Stage 1 runs `checkSchedule()` on a copy of the groups for every
+  candidate (with the teacher's walk, without the groups' travel) and drops a candidate after which the finding's
+  fingerprint is still there; stage 2 measures the first `max` (5) with `whatIfMetrics()` for each day that has bell
+  times, through a path cache, drops any whose finding is still there with travel counted, and orders by problems,
+  warnings and notes left, then the school's added travel and delay. A 500 ms stop around stage 2 says `'time'`.
+  `suggestionSentence()` and `suggestionHeadline()` are the one wording ("Swap 7-3's Block 2 (204) and Block 3
+  (nothing): same rooms, same teachers, another order. It adds 1 problem: …"; "No change to one group's day clears this
+  (16 tried). The tool does not offer a move that gives a group to another teacher."). In `sv-checks-view.js` every
+  open problem and warning with a day has "Fix…" (`aria-expanded`), which lists the candidates, each with "Try in
+  What-If": `tryInWhatIf()` asks before replacing changes already in the lab, sets the lab's day and group, writes each
+  change with the lab's own `wiSetOverride`, and opens the lab, whose checks panel then says Resolved. The live schedule
+  is untouched until the lab's Apply. `whatIfMetrics` gained an optional `resolve(fromRoom, toRoom)`; without it nothing
+  changes (`test:schedule-visualizer-congestion`'s golden passes unedited).
+- **Calls made without Devon, so they can be reversed cheaply.** (1) **Order among equal counts is M1, M2, M3, not
+  slots changed.** The design asked for `[error, warn, note, changes.length]` and also for "the reorder first among
+  equals"; a swap always changes two slots, so with both rules a swap could never come first. The suite holds the M1
+  rule. (2) A finding about a teacher with no cell of its own (`teacher-no-planning`) is tried on every cell that teacher
+  teaches that day; without that, "no planning" could never be fixed. (3) The sentence names only problems and
+  warnings cleared or added; `fixes` and `breaks` keep notes too (a swap with an empty slot moves a `group-gap` note,
+  which read as "it also clears 1 other finding" and meant nothing to a reader). (4) Stage 2 measures the changed copy
+  of the groups day by day rather than passing overrides, because a group with no B list changes on both days when its
+  A day changes (that is what the lab's Apply writes) and an override covers one day. (5) The path cache is the view's,
+  one `Map` per graph object in a `WeakMap`: the page's graph cache hands out a new object after any blueprint edit, so
+  a stale path cannot be served and no `invalidate()` call had to be added. (6) A second "Try in What-If" with changes
+  already in the lab is a `confirm()`; Cancel keeps the lab as it was. (7) A candidate that clears the finding but
+  leaves another problem is still listed, last, with the problem it makes (moving a group into the teacher's other
+  room while she teaches in the first gives `teacher-double`); hiding it would hide why the obvious move does not work.
+- **Found.** The banner is redrawn by the blueprint autosave 800 ms after a room is saved, which closes an open Fix…
+  list. That is right after an edit (the suggestions were for the old schedule), so it was left; the smoke suite waits it
+  out before opening the list and says why.
+- **Tests.** New pure `Tools/schedule-visualizer/test/suggest.test.mjs` (`npm run test:schedule-suggest`, 60 checks):
+  a double booking on the invented building gives swaps, the teacher's other room and the Library, never 210 or 116;
+  P11-15 held on every candidate; M3 only when asked, same department only, with `changesTeacher`; `max`, `found` and
+  `'max'`; a swap that moves the double booking lists the one it makes; a long run nothing can fix returns none with
+  `tried` above 0; `teacher-rooms` is `'none'`; no planning is fixed through the teacher's cells; a B day read from an A
+  list; Northwind with a graph: travel deltas, every room pair to the pathfinder once (a counting stub), a second run
+  with no pathfinder call, the 500 ms stop on a fake clock, the `resolve` hook changing no number; nothing mutated;
+  every sentence form held to its text. `smoke-checks.mjs` 66 → 82: Fix… on 035 lists one to five M1/M2 changes with no
+  serious axe finding, Try in What-If lands the first as the lab's overrides with Resolved and the live slot unchanged,
+  and a second Try asks. **Broken on purpose first, each seen failing:** no discard in stage 1, another teacher's room
+  in M2, M3 on by default, no cache write, M2 ranked before M1, no time stop, groups mutated in place, no B fallback;
+  in the view, no `confirm()` and a Try that writes the live schedule.
+- **Not verified.** A real building or a counsellor reading the sentences; a schedule big enough to reach the 500 ms
+  stop for real (Northwind answers in about 12 ms, 8 tried, 29 paths; the stop was tested on a fake clock); 035's dark
+  palettes with the list open; full `npm test`. `offline:build` + `offline:verify` pass 035 with the new module (046 still
+  fails with `Invalid URL`, unchanged and not this diff's; the build reads tracked files, so it must run after `git add`).
+
+## Path 11 P5 increment 4: 035's printed checks and congestion reports, and the comparison loader (2026-10-25, AI-20, `CACHE_VERSION` v330)
+
+BACKLOG rank 25 kept (2+) and rewritten: increments 2 and 3 left. **Increment 2 was skipped on purpose, and increment 4
+built in its place**, because of what a probe showed (below). `TOOL_VERSION` stays v62: nothing published changed.
+
+- **Why not increment 2.** The design moves the checks' `teacherDays` into the publisher's `brDeriveScheduleData` and
+  claims P1's Northwind numbers would not move. They do not, but that proves less than it seems. A probe (not
+  committed) ran both derivations on Northwind and on five built cases. On Northwind every teacher's slots are the same.
+  In the five cases they differ, and every difference changes what 034 shows staff: a teacher on two rooms (the
+  publisher keeps one room and calls the other room's classes planning); a group with an empty B list (the publisher
+  says no B day, everything else reads B as A); a double-booked room (the publisher shows the last group, silently); a
+  teacher name with a trailing space (the publisher keeps it, the checks trim it); a slot typed "204 " (the publisher
+  misses it, the checks trim it). The session's instructions made any change to published output Devon's call, so the
+  question is in the P5 bullet ("A question for Devon, increment 2") with a before and after for each case and three
+  options. The publisher, `check:publisher` and `test:schedule-publish` are untouched.
+- **What shipped.** Pure `checksReport(result, { acks })` in `sv-check.js`: the counts; the findings by severity, each
+  through `sentence()`, with the accepted ones last and the note each was accepted with; and one teacher grid per day,
+  teachers down by name and mods across, each cell "room group, group" (two rooms joined by " / ") or "—" for planning.
+  A cell is marked with the worst un-accepted error or warning whose `where` holds a group in it; a finding about a
+  teacher's day with no cells (no planning) marks the whole row. Pure `congestionReport(base, { tf, top, diff, overrides,
+  floor0Id })` in `sv-congestion.js`: the ten cells with the highest baseline load for the lab's transition filter
+  (ties by key), the groups whose walk in that window crosses each, the scenario's delta from `whatIfDiff()`, the three
+  transitions with the most total load, and the scenario's changes from the baseline. Pure `compareProject(live, data,
+  { day, modCount })`: checks the file as `applyFullProject` does and throws its words, refuses a file whose numbered
+  rooms are not this blueprint's (`{ ok: false, onlyHere, onlyThere }`), and otherwise matches groups by trimmed name
+  and turns each differing slot into a what-if override on this schedule's ids; a group only in the file is listed
+  with its day, a group only here is listed as removed, a name two groups share in either file is not compared, a
+  different mod count is reported. It never changes the file object (a pre-floors blueprint is cloned before it is
+  migrated). The new view `sv-reports.js` puts "Checks Report" on the checks banner and "Congestion Report" and
+  "Compare with a Project File…" in the lab; both reports open `PrintKit.preview` on `#sf-print-sheet` through
+  `sv-access.js`'s `asking()` and `printSheet()`, as the safety sheets do. The comparison note under the lab's actions
+  says what was loaded and is taken away by Reset Scenario. Every typed value reaches the page by `textContent`.
+  `KIND_LABEL` is now exported from `sv-checks-view.js` for the report's What column.
+- **Calls made without Devon, so they can be reversed cheaply.** Portrait letter for both reports (035's other sheets
+  are; an eight-mod grid fits at 9 pt). A marked cell carries ✕ (a problem) or ! (a warning) as well as a tint, with a
+  key under the grid, so it reads on a printer that drops backgrounds. A congestion place is named by the lab's own
+  `cellCongestionLabel()` (corridor label or wing, nearby rooms, floor), not the design's "Floor 2, by room 204"
+  wording, so the report and the lab's Corridor Changes name a place the same way. The comparison covers the lab's
+  current day only and uses this schedule's bell times, and the note says both; it replaces an existing scenario only
+  after a `confirm()`; the note is not saved (a reload shows the overrides without it).
+- **Found on the way.** `groupRecord()` returns the live group's own `modsA` array, so a `serializeFullProject()` result
+  edited in place edits the live schedule. The new browser case did exactly that and compared a schedule with itself
+  ("0 slots differ"); it now copies the project first. Nothing on the page edits a serialized project in place, so this
+  is a trap for tests, not a bug in the tool. `offline:build` reads `git ls-files`, so a new module fails the build
+  ("Could not resolve") until it is committed.
+- **Tests.** New pure suite `test:schedule-reports` (61): the sections and their order, sentence text, the grid's
+  cells and marks, an accepted finding leaving the counts and the marks, a row marked by no-planning, two days giving two
+  grids; the congestion ranking, tie order, per-window walkers, deltas and changes, and on Northwind every load equal
+  to the lab's own `congAll`; the comparison on Northwind (no change, two overrides, A not B, added, removed, a trimmed
+  name, a doubled name, another building, three refusals, a mod-count note, a pre-floors file, the file left unchanged).
+  `smoke-checks.mjs` (66, port 8554) adds: each report's preview count equals Chromium's PDF count and the print state is
+  gone after printing; the checks sheet prints the school name as typed with no markup, the double-booking in words, a
+  column a mod and a row a teacher, and Fernwood's Block A as "✕ 106 6-1, 7-1", marked, with no other mark in the row;
+  the congestion sheet's first load is the lab's busiest cell; a comparison file loads one override on this schedule's
+  7-2 and the note says so, with no serious axe finding; a file of another building is refused room by room and leaves
+  the scenario alone; a blueprint file gets the import's words; Reset takes the note away. Broken on purpose first:
+  nine engine rules (each caught by `test:schedule-reports`) and two view rules (school name as markup, no reset hook;
+  both caught by the smoke suite). One proposed rule was dead code (a `where` entry's day, already filtered by the
+  finding's day) and was deleted instead.
+- **Ran green.** lint; every `check:*` guard, including `check:publisher` (unchanged) and `check:precache --base
+  origin/main`; `check:adoption --check`; `test:check-publisher` (78); `test:select-suites` (93); `run-suites --only`
+  schedule-visualizer (22), schedule (26), schedule-browser (4), theme (3); the a11y sweep and `audit-print` for 035 (no
+  findings); `offline:build` and `offline:verify` (035 passes, all 28 published functions as source; 046 fails with
+  `Invalid URL` as before, not touched). **Not run:** the full `npm test`. **Not verified:** either report on paper; a
+  real second year's file; the new buttons and note in 035's dark palettes; a teacher grid wider than eight mods.
+
+## Path 11 P5 increment 1: 035's schedule checks (2026-10-25, AI-20, `CACHE_VERSION` v329)
+
+BACKLOG rank 25 kept (2+) and rewritten: increments 2 to 4 left. Built to the P5 bullet's design of 2026-10-06, with
+Devon's P11-12 to P11-19 (2026-10-21, every default kept) recorded as settled in the bullet.
+
+- **What shipped.** `Tools/schedule-visualizer/sv-check.js`, pure: `checkSchedule(groups, { registry, settings, days,
+  travel, walk })` returns `{ findings, summary, teachers, rooms, dropped, days, labels }` for the design's fourteen
+  kinds; a finding's `id` is its fingerprint (kind, day, mod and the room, teacher and group *names*); malformed input
+  is listed in `dropped`, never thrown; the sort is total (severity, day, mod, room, teacher, id); `conflictsOf()` is
+  the old banner's double-bookings in its old shape and order; `pruneAcks()` keeps an accepted finding while it matches
+  and 30 days from its date after that. `sentence(f, { labels })` is the one English line per kind. The view
+  `sv-checks-view.js` replaced the page's R39 `renderConflictBanner`/`getConflictGroupIds`/`computeScheduleConflicts`
+  (deleted from the page): a banner line ("1 problem on A days", or "No problems or warnings"), a list with Show and
+  Accept (an inline note), Notes and Accepted folds, all built with `textContent`; cards red for an error, amber for a
+  warning; the bulk editor's mod cells carry `data-check-cell` and are marked, with the sentences as `title`, on every
+  keystroke (no travel checks there, so nothing to debounce); the room panel's Capacity field (`tile.capacity`, 1 to
+  999, absent means unknown; `roomRegistryOf` exposes it only when set, so the model golden did not move) and a "This
+  room" line; the what-if lab's Constraint Checks panel diffs every check, scenario against live (the lab's own
+  metrics feed the walking check); and the Publish button is `publishChecked()`, a `confirm()` with the count when
+  there is an un-accepted error (P11-18: warn and go on; Cancel opens the list). `stviz_checks` (`{ v: 1, acks }`) is
+  the one new key: in the registry row, in the project file's `checks` (so the recovery ring, which snapshots the
+  project file, carries it), replaced by a project import, removed when empty.
+- **Calls made here, each cheap to reverse.** (1) A group with no B list is on its A list on B days, as the paths, the
+  lab and the door signs read it; the old banner read it as absent, so a mixed schedule now shows B-day double-bookings
+  it did not, and `conflictsOf` equals the old function only on schedules whose groups all have B lists or none (what
+  the 300-schedule test draws). (2) The teacher-double sentence ends "A teacher can only be in one room at a time."
+  The design wrote "She can only be in one.", a pronoun guessed from a title. (3) "Room 204" only for a name starting
+  with a digit; any other name as typed ("Library has no group on B days.", not "The Library"). (4) The shared
+  over-capacity sentence names each group's count. (5) `room-idle` is not also reported for a room whose teacher has
+  `teacher-idle` (one fact, one note). (6) Back-to-back bell times are no passing time set, not a 0-minute one, which
+  would flag every move; a finding measured with Settings' margin names the margin. (7) With a bell but no walk handed
+  in, `teacher-moves` says nothing (unknown is not a warning). (8) `settings.checks` is read through
+  `normalizeChecks()` when the checks run and is not written by `normalizeSettings`: writing it would have moved the
+  model golden and added a field to every project file of a school that never set a limit. There is no Settings form
+  for the limits in this increment; the defaults are Devon's.
+- **What the design got wrong.** It imports `dayMods` from `sv-model.js`; there is no such function (the day rule lives
+  in three places: `sv-routes.js`, `sv-congestion.js`'s `baseMods`, and now `sv-check.js`). Its smoke expected
+  `room-no-dept` on Northwind; Northwind has no room with a teacher and no department, and its Library gives
+  `room-no-teacher`. Its claim that `teacherDays` reproduces the publisher's slots is not so: `brDeriveScheduleData`
+  keeps one room per teacher (the last tile with the name) and reads B as `modsB || []` with no fallback. Increment 2
+  has to choose a rule first. The probe building takes about 3 ms a check here, not 0.92 ms.
+- **Checked.** `test:schedule-check` 84 (each kind present and absent by one slot, every sentence exact, 300 random
+  schedules against `scheduleConflicts`); `test:schedule-check-smoke` 37 (port 8554: Northwind clean with notes; a
+  double-booking typed in the bulk editor, marked at once; Apply, the red card, Show; Accept with a note through a
+  reload and a project export and import; Undo; Capacity; Publish's warning and Cancel; the lab's Resolved; the walking
+  checks with a bell; axe on the open banner); broken on purpose first: a sentence word, `conflictsOf`'s order, the
+  sort's tie-break, the registry line (`check:registry` says UNREGISTERED). Also all 13 guards (`check:precache --base
+  origin/main` included, `check:publisher` unchanged), lint, `test:check-publisher` (78), `test:schedule-publish` under
+  `TZ=UTC`, `test:select-suites`, `run-suites --only` schedule-visualizer (21), schedule (25), schedule-browser (4),
+  theme (3), csv-adopters, the a11y sweep and `audit-print --only 035` (0 findings), `offline:build` and
+  `offline:verify` (035 passes; 046 fails `Invalid URL` as before, not touched).
+- **Not verified.** The banner in 035's four palettes (dark included) was not looked at. No real building and no
+  counsellor has read a sentence. The bulk editor's checks use the page's mod count, not an unsaved mod count typed in
+  the editor. A full `npm test` was not run.
+
+## Path 11 P4 increments 2 and 3: lockdown maps and door signs; P4 is whole (2026-10-25, AI-20, `CACHE_VERSION` v328)
+
+BACKLOG rank 24 deleted (a gap, ranks not renumbered). Built to the P4 bullet's design; its four questions for Devon stay
+open on their defaults. Shares v328 with the id fix below (one bump for the session).
+
+- **What shipped.** The Blueprint sidebar's "Lockdown and door signs" section. **Lockdown Maps** previews one page per
+  floor that has a numbered room: the whole floor (`renderLockdownMap()` in `sv-editor.js`: `renderPlainFloor()` under
+  `withFloorShown()`, then each room's number in a white box sized to the room's cells), "Lockdown note for the
+  building" (Settings → Safety printing, `settings.lockdownNote`, 600 characters, blank removes the key) or three
+  blank lines under that heading, and "Notes for rooms on this floor": each room's own note (the room panel's new
+  "Lockdown note", `tile.lockdownNote` on the anchor, 300 characters) as typed, or "No room on this floor has a note."
+  **Door Signs** previews a half-page sign for each room with a teacher name, two to a page through
+  `PrintKit.renderCards(…, { cols: 1, perPage: 2 }, …)`, for every teacher or the one picked in "Door signs for": the
+  room, the teacher, the room's subject by its Settings name, and a table per day of each mod's label, bell time (the
+  column left out when no times are set) and the groups the schedule puts there. Content is pure: `lockdownPages()`
+  and `doorSigns()` in `sv-model.js`; layout in `sv-safety.js`, every typed value through `textContent`.
+- **Calls made, cheap to reverse.** (1) The map marks nothing but room numbers: no shelter area, corner or lock, as the
+  design says; the school's words are the only content beyond labels. (2) Room notes print as a list under the map,
+  not on it, so a long note cannot cover the plan. (3) A door sign's B day appears only when some group has a B list of
+  its own; then a group with none is shown where its A list puts it, which is how paths read it (the publisher reads
+  an empty B list as "no B day"; a sign is about the room, so the path rule is the one that matches the building).
+  (4) Teacher names match exactly, as P11-19 settled for the checks. (5) A room with no teacher gets no sign, and a
+  toast counts them.
+- **Checked.** `npm run test:schedule-visualizer-safety-sheets` (21, pure; five rules broken on purpose and seen to
+  fail: the room bounds walk, empty floors, the B-day switch, the B-day lists, grouping by teacher), `smoke-evacuation.mjs`
+  sections 9–10 (57 in all: notes typed through the room panel and Settings, a `<i>` in a note printed as text, a map
+  per floor including the one not on screen, both previews' page counts equal to Chromium's PDF, one teacher's signs
+  alone); `run-suites --only` schedule-visualizer (19) and schedule (23); a11y sweep and print audit for 035, clean;
+  lint and every guard, `check:publisher` unchanged; `offline:verify` passes 035 (046 still fails, unchanged). Both
+  sheets looked at as PDF pages rendered to PNG (Northwind). The size ledger's line rose 289,312 → 293,109 bytes for
+  the new markup. **What did not work first:** a mutation I wrote to prove the room-note rule was itself wrong (it
+  could never change the answer), so that claim is not in the suite's header.
+- **Not verified.** Either sheet on paper; a real building; a room two teachers share (a tile holds one name, so its
+  sign names one); the full `npm test`.
+
+## 035's ids cannot collide: `groupId()` and four more id makers (2026-10-25, AI-20, `CACHE_VERSION` v328)
+
+`model.test.mjs`'s "groupId() gives 200 distinct grp_ ids" failed about one run in fifteen (seen by the Selector, then
+1 in 23 in a 40-run loop). It was a real bug, not a test problem.
+
+- **Why.** A group id was `'grp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)`: the clock and
+  four random characters, checked against nothing. Ids made in one millisecond (a CSV import, the bulk editor, a
+  project load, the test's loop of 200) share the clock part, so 200 of them leave four base-36 characters to keep
+  apart, and the slice is shorter than four whenever the random number's base-36 form is short. Two groups with one id
+  are one group to every lookup by id (edit, delete, what-if overrides).
+- **What shipped.** `freshId(prefix, taken)` in `sv-model.js`: prefix, clock, four random characters drawn one at a
+  time (always four), and a four-character count of the ids this page has made, so two ids from one visit differ
+  whatever the clock and random source do; `taken` (ids, records with `id`, or anything with `has()`) is checked so an
+  id saved on an earlier visit is never handed out. `groupId(taken)` is `freshId('grp_', taken)`; the page's
+  `generateGroupId()` passes the current groups (a project load passes the list it is building). The same pattern was
+  in four more places, all now through `freshId` or a count: a floor's id (`floor_`, clock plus *three* random digits),
+  a classroom tile group in the editor (`grp_<ms>_…`, now checked against every tile group on every floor), the bulk
+  editor's row ids (`be_`, random only) and a recovery point's id in `sv-recovery.js` (a count appended; a repeat id
+  would have overwritten the earlier point in IndexedDB). Saved ids are read as they are: nothing parses an id.
+- **The test.** It stubs `Date.now` and `Math.random` (constant 0.5, 0, just under 1) and asks for 200 ids; the old
+  function returns one id 200 times, so the test fails on it every run (checked: five runs against the old module, five
+  failures), and passes 50 of 50 on the new. A `taken` whose `has()` refuses the first five ids proves the check.
+- **Checked.** `test:schedule-visualizer-model` 50 runs, `run-suites --only` schedule-visualizer (18) and schedule
+  (22), lint, `check:publisher` (unchanged), `check:precache --base origin/main`. The size ledger's line rose 289,290 →
+  289,312 bytes. **Not verified:** a browser drive of a CSV import of many groups (covered only by the suites that
+  already import).
+
+## Path 11 P4 designed, increment 1: evacuation cards (2026-10-25, AI-20, `CACHE_VERSION` v327)
+
+BACKLOG rank 24 kept and rewritten (lockdown maps and door-sign sets left). P4 had no design; it is in the P4 bullet now,
+written before the build, with four questions for Devon left on their defaults.
+
+- **What shipped.** The Blueprint sidebar's "Evacuation Cards" opens `PrintKit.preview()` of one card per room on every
+  floor (floor order, then room number), one to a letter page. Each card has the first way out (cheapest route to any
+  door), the second way out (cheapest to a *different* door, or "No second marked exit can be reached from this room."),
+  and the step-free way out on a graph with neither stairs nor elevators: the first or second way out named when it is
+  one, its own steps when not, else "No step-free way out of this room…" and the school's plan. Every route ends at the
+  door's name and its assembly point as typed; a blank one prints "not entered" with a write-in line. The map is the
+  room's floor (it need not be the one on screen) with the first way out solid and the second dashed, cut where a
+  route leaves the floor, which the card says. Pure `exitDoors()`, `pathInGraph()` and `evacuationCards()` in
+  `sv-routes.js`; the view is the new `sv-safety.js`; `sv-editor.js` gained `renderPlainFloor()` (renderCanvas()'s
+  first half, shared) and `withFloorShown()`, and lost the jsPDF card code (`drawEvacuationDoorCard`,
+  `drawDoorCardFooter`, `printEvacuationDoorCards`). Settings → Safety printing: "Plan for anyone who cannot use stairs
+  or steps" (`settings.evacNoStepFreePlan`, 600 characters, blank removes the key).
+- **Found and fixed: P3's sheets printed blank.** `<button id="btn-toggle-app" style="display:none">` near the end of
+  035 was never closed, so `#sf-print-sheet`, added after it in v325, was the hidden button's child: in print it had
+  height 0 and every step-free report and route sheet was one blank page. The print kit's preview copies the sheet into
+  a frame, so it looked right there, and P3's suite never took a PDF. Closed the button; `smoke-step-free.mjs` now
+  checks the sheet is `<body>`'s child (which fails with the button open again; its PDF count alone would not, since
+  the report is one page either way) and that the report's PDF has the preview's page count.
+- **Calls made, cheap to reverse.** (1) Exit tiles touching on one floor, or sharing a name, are one door, so a double
+  door is never a "second way out". (2) The step-free way out never uses an elevator, as the door cards already did.
+  (3) The school's plan is printed only on cards with no step-free way out. (4) The cards replace the jsPDF download
+  (active floor only, first way out only): print to PDF for a file. (5) No card names a teacher. (6) The tool's own
+  words are labels and plain statements of what it could not route; nothing reads as procedure.
+- **Checked.** `npm run test:schedule-visualizer-evac-cards` (29, pure Node; each of eight rules broken on purpose and
+  seen to fail), `smoke-evacuation.mjs` (37, port 8155: the preview, both floors, a map of the floor not on screen, the
+  plan as text with a `<b>` in it, the preview's count against Chromium's PDF, nothing marked), `smoke-step-free.mjs`
+  (67), `run-suites --only` schedule-visualizer (18), schedule (22), schedule-browser (4), theme (3); a11y and print
+  audit for 035, clean; lint and every guard, `check:publisher` unchanged, `check:precache --base origin/main`;
+  `offline:verify` passes 035 (046 still fails, `Invalid URL`, unchanged). The size ledger's line rose 287,319 →
+  289,290 bytes for the Settings section. **What did not work first:** the PDF comparison read 1 page twice, first
+  because my test reopened the preview before the old dialog's async close had run (a test race, fixed by settling),
+  and then because of the button above, which was the real bug.
+- **Not verified.** A card on paper; a real building; the wording read by staff; the offline copy's cards under
+  `file://` (only that 035 loads there); the full `npm test`.
+
+## Path 11 P3 increments 2 and 3: route sheets, elevator wait, steps that are not stairs; P3 is whole (2026-10-25, AI-20, `CACHE_VERSION` v326)
+
+BACKLOG rank 23 deleted (a gap, ranks not renumbered); the P3 bullet records both increments as built. Built to the
+design written in that bullet the same day; its five questions for Devon stay open on their defaults.
+
+- **What shipped, increment 2.** A group can be marked "Needs step-free routes" (`group.stepFree: true`, the flag on
+  a cohort as question 5's default says, never on a student). The Blueprint sidebar's "Step-free Route Sheets" prints
+  one page per flagged group through `PrintKit.preview()`: every move between two rooms as turn-by-turn steps on the
+  step-free graph ending "Arrive at room N", or the plain "No step-free route between these rooms" with no steps.
+  Pure `stepFreeRouteSheets()` and `needsStepFree()` in `sv-routes.js`; `routeSteps()` is the walk the door cards
+  always printed, now shared (the routes goldens did not move). Settings → Travel Time has "Elevator wait, in tiles"
+  (`settings.elevatorWait`; blank removes the key and means 10). A staircase tile draws an elevator, crossed out when out
+  of service, or a ramp, in place of the steps picture.
+- **What shipped, increment 3.** "A step here" on a hallway tile (`step: true`, saved by the panel's Apply, drawn as two
+  amber treads) and "Step at this door" on each door in a room's list (`stepFree: false` on the door, with undo). On
+  the step-free graph only, the tile is cut like a stair tile and the door loses its edge to the corridor both ways;
+  `markedSteps()` in `sv-graph.js` is their one reader. The report and sheets now say "stairs or a step".
+- **Calls made, cheap to reverse.** The flag is written only when set (absent is the old group). It goes through
+  Copy and the JSON export and import, and not through the CSV groups template, whose columns `ExportKit`'s adopters
+  suite pins. A blank or out-of-range wait stores nothing rather than a clamped number, so normalising old settings did
+  not change (the model golden is untouched). Directions are compass words on the blueprint, as the door cards already
+  were, and the sheet says north is the top of the map. Marking a hallway step has no undo, the same as the exit mark
+  beside it, which Apply has never had; a door step has undo, like removing a door. The Visualize canvas shows the
+  pair glyphs (it draws staircases with the editor's own function) but not the hallway step.
+- **What did not work first.** One pure check's counts expected one skipped move where the fixture has two (a blank
+  last mod on each day): the test was wrong, not the engine. The first try at "cutting a door one way only" did not
+  fail anything, because a one-door room that loses its way out is caught by the isolation check anyway; a check that
+  the corridor has no edge back into the room was added, and the break then failed it. Removing the explicit graph
+  invalidation from the hallway Apply failed nothing either: another path in the editor already invalidates it. It
+  is kept, and that is recorded here rather than claimed as tested.
+- **Checks.** `test:schedule-visualizer-step-free` (76, from 44; every new rule broken on purpose),
+  `-step-free-ui` (65, from 31, port 8553; the wait cache, the flag's removal, the glyph, the hallway step's picture and
+  the door's undo each broken on purpose), `run-suites --only` schedule-visualizer (17), schedule (21), schedule-browser
+  (4), theme (3), csv-adopters (after increment 2); the 11 guards and `check:publisher` (unchanged), `check:precache --base origin/main`,
+  `check:adoption --check`, lint, the a11y sweep and `audit-print` for 035 (0 findings), `test:select-suites`, `offline:verify` for 035
+  (046 still fails, unchanged). Not run: full `npm test`. Not verified: any sheet on paper, a real building, the
+  wording read by someone who uses the routes.
+
+## Path 11 P3 designed, increment 1: step-free routes and report (2026-10-25, AI-20, `CACHE_VERSION` v325)
+
+BACKLOG rank 23 kept and rewritten: the P3 bullet had no design, so one was written into it first (marking, weights,
+the no-route sentence, the report, three increments, five questions for Devon), then increment 1 was built.
+
+- **What shipped.** A staircase pair may be `access: 'elevator' | 'ramp'`, an elevator `outOfService` and its own
+  `wait`. `buildGraph(bp, { stepFree: true })` drops stairs pairs and every stair tile that is not an elevator or ramp
+  end, and charges an elevator its wait (10 cells); `resolveRoomPath()` then says "No step-free route between these
+  rooms". `stepFreeReport()` judges every room from the marked exits. 035: the staircase panel's "What this pair is",
+  Visualize's "Step-free routes" switch, and the Blueprint sidebar's "Step-free Report" (new `sv-access.js`, through
+  `PrintKit.preview()`). 035 now links the print kit (adoption row 14 → 15). Page 278,920 → 283,223 bytes.
+- **Found while writing the design: door cards and elevators.** The evacuation door cards routed on the ordinary graph,
+  where a marked elevator is still the 0-cost link it was as a pair, so marking one would have printed "Take the
+  elevator" on a fire card. They now route on `{ evacuation: true }`, which leaves every elevator out. Nothing was ever
+  printed that way: the marking and the card wording arrived in the same version.
+- **Calls made, cheap to reverse.** A stair tile is steps even when drawn in a corridor (Northwind draws them at the
+  ends; a corridor drawn through one is cut on the step-free graph, which shows up as stairs-only rooms in the report).
+  Marking changes nothing about ordinary routes. With no exit marked the report judges nothing rather than guessing a
+  front door. A room no route reaches, stairs included, is listed apart as "not connected" (a blueprint problem, or an
+  elevator out of service). Which needs besides wheelchair access, the wait, and the per-student sheets are the P3
+  bullet's questions; only the step-free need is built.
+- **What did not work first.** The browser check expected floor 2 to be "stairs only" with Northwind's only pair
+  marked as an elevator out of service; with that pair gone nothing reaches floor 2 at all, so the right answer is
+  "not connected", and the summary sentence now names an elevator out of service as a cause. The step-free test's first
+  "broken on purpose" claim (drop the stairs teleport) did not break it, because the stair-tile rule also stops that
+  route; the claim was rewritten to say either rule alone suffices, and both were removed together to see it fail.
+- **Checks.** `test:schedule-visualizer-step-free` (44, every rule broken on purpose), `-step-free-ui` (31, port 8553;
+  routeGraph() broken on purpose failed two), `run-suites --only` schedule-visualizer (17), schedule (21),
+  schedule-browser (4), theme (3); the 11 guards and `check:publisher` (unchanged), `check:precache --base origin/main`,
+  `check:adoption --check`, lint, the a11y sweep and `audit-print` for 035, `test:select-suites`, `offline:verify` for
+  035 (046 still fails, unchanged). Not run: full `npm test`. Not verified: the sheet on paper, a real building.
+- **Tidy.** README's and `select-suites.mjs`'s last mentions of the folded `Tools/schedule/` name
+  `Tools/schedule-visualizer/`.
+
+## Path 11 P2 increments 10–11 and the folder fold: P2 is whole (2026-10-25, AI-20, `CACHE_VERSION` v324)
+
+BACKLOG rank 22 DELETED (a gap; ranks not renumbered): the last two rungs of the P2 bullet's eleven, and the fold the
+design put last (Devon, P11-8). 035 is **278,920 bytes**, from 974,675 when P2 started and 522,868 this morning.
+
+- **What moved.** Increment 10: `sv-editor.js` (151,713 bytes, 128 functions and constants: floor helpers, staircase
+  pairing, undo/redo, the canvas and its rendering, the plain floor-plan export and Ctrl+P sheet, the evacuation door
+  cards, tool placement, the right-panel editors, corridor labels, the canvas wiring, heat-exclude zones, zoom, the
+  palette, the context menu, tile stats). Increment 11: `sv-schedules-tab.js` (65,260 bytes: "SCHEDULES MODULE —
+  Rendering" through the bulk editor) and `sv-whatif.js` (37,796 bytes: room search and the what-if lab's controls).
+  All three verbatim views, like `sv-viz.js`: `/* global */` comments for the page names they read, exports copied onto
+  `window`. The page went **522,868 → 376,298 → 278,571 bytes**, then +305 for the six module-script lines and +44
+  for the folded font paths. The ladder said 368 KB and about 270 KB.
+- **What stayed on the page, and why.** A classic script cannot see a module's `let`, so whatever other code assigns
+  or reads as a binding stayed: `let canvas, ctx` (the door cards and the what-if lab swap `ctx`), `FloorManager`
+  (called by the sidebar init and by the editor), the heat-zone id counter (loading a blueprint resets it),
+  `GROUP_COLOR_PRESETS` and the schedules storage pair (the BRIDGE reads the first; the design keeps storage pairs on
+  the page), `AppState.whatif`, and the trace-image and hand-off glue, which the design keeps. The `window.findPath`
+  and `window.wiComputeMetrics` lines stay too; they point at BRIDGE wrappers.
+- **Found, by a scratch probe and not by any committed test.** Three page listeners passed a moved function **by
+  reference** at parse time (`addEventListener('click', exportBlueprintAsPNG)`, the PDF one, the door cards').
+  `bridge.test.mjs` follows calls, not references, so it would have passed a page whose classic script threw a
+  `ReferenceError` there and stopped. The three lines moved into the module beside their functions. The bridge test
+  still does not check bare references; the README says so.
+- **Found: two static readers of 035's text.** `smoke-csv-adopters.mjs` looked for `ExportKit.toCsv(` in the page and
+  failed once the groups template moved. Its static checks now read the page plus every module it imports, through
+  `check-publisher.mjs`'s `moduleSources()`. And `offline:build` stages tracked files only: before `git add`, the new
+  modules were missing and esbuild failed to resolve them (a session that builds before adding sees a crash, not a
+  clear message).
+- **The fold.** `Tools/schedule/fonts/` and `Tools/schedule/test/` are in `Tools/schedule-visualizer/`, `Tools/schedule/`
+  is gone, and `Tools/schedule/README.md` became `Tools/schedule-visualizer/README.md` with the file list, the module
+  map, the parse-time rule and the suites. Paths rewritten in `sw.js` (13 font lines), `suites.json`, `package.json`,
+  `check-publisher.mjs`, `check-tests.mjs`, `print-audit-prep.mjs`, the engine suites' fixture reads, harness and
+  select-suites comments, `CLAUDE.md` and two vendor READMEs. `select-suites.test.mjs`'s rule-2 case ("an edit to
+  `Tools/schedule/*.js` reaches 035") is now an edit to `sv-graph.js`. `published-fonts.js` rebuilt byte-identical;
+  the publish baseline needed no `--update`. Older text in `BACKLOG.md` and this file still names `Tools/schedule/`
+  paths; they were true when written.
+- **Calls made.** (1) One bump, v324, for both rungs and the fold. (2) The new suite took port **8552**, which the repo
+  recorded as next free and nothing used; the session's prompt expected 8553. The next free is 8553. (3) Six dead locals
+  in the editor (`pageW`, `phase`, `r`, `statusText`, `endCol`, `endRow`) were dropped once lint saw them; no
+  initialiser had a side effect (`inBounds` and `getElementById` are reads). (4) The size ledger was raised by 44 bytes
+  in the fold commit, since the fold lengthened two paths in the page.
+- **Tests.** New `smoke-editor.mjs` (`npm run test:schedule-visualizer-editor`, port 8552, 18 checks): from an empty
+  floor, real mouse events paint a hallway, place stairs and a classroom, pair the stairs through "Pair with", undo and
+  redo, and reload; it failed three ways with the module's `Object.assign(window, …)` line removed. Run green: the
+  eleven guards plus `check:publisher`, `check:precache --base origin/main`, `check:adoption --check`, lint,
+  `test:check-publisher` (78), `test:select-suites` (93), `--only schedule-visualizer` (13), `--only schedule` (19, after
+  the fold), `--only schedule-browser`, `--only theme`, `test:csv-adopters` (172), the a11y sweep and `audit-print` for
+  035, `offline:build`, and `offline:verify` for 035 (all 28 published functions source text). `offline:verify` still
+  fails 046 (`Invalid URL`), unchanged. **The full suite list, all 318, ran green, in two passes on one tree:** `npm test` passed suites 1–136 and was then killed by the session's own 50-minute `timeout` (a full pass on huginn took far longer than the documented ~20 minutes, with other loops sharing the machine); suites 137–318 were then run one by one as `run-suites` runs them (`node <suite>` from the root, 900 s cap each), all exit 0. Only `.md` files changed between the passes.
+- **Not verified.** No before/after pixel comparison of the Blueprint or Schedules tabs (increment 9 had one for
+  Visualize; this one relies on the suites and the editor smoke). Nothing drives the what-if lab's or the bulk editor's
+  controls in a browser. Not opened on a phone.
+
+## Path 11 P2 increments 7–9: 035's publisher and Visualize tab out of the page, `check:precache` follows imports (2026-10-25, AI-20, `CACHE_VERSION` v323)
+
+BACKLOG rank 22 kept (2+), its text rewritten: increments 7, 8 and 9 of the eleven in the P2 bullet's ladder.
+
+- **What moved.** `Tools/schedule-visualizer/sv-browser.js` (the whole embedded Schedule Browser script: `BR_CSS`, the
+  data derivation, the views, the geometry map, the legacy map and the publisher) and `sv-viz.js` (the Visualize tab: its
+  canvas, controls, congestion dock and pulse, tooltip, PNG/PDF export, path health check, `PlaybackController` and the
+  travel-time panel). Both verbatim, each with an `export { … }` list at its end, which the page's module script copies
+  onto `window`. The page went **722,664 → 639,357 → 522,868 bytes**.
+- **The publisher guard.** `check:publisher` reads every module the page's module script imports (`moduleSources()`,
+  exported for its test and the baseline suite) and treats `export function` / `export const` as declarations. Its report
+  is unchanged and `test:schedule-publish` matches `baseline-northwind.html` with no `--update`, which is P1's
+  "regenerate and diff" doing what it was built for. `check-publisher.test.mjs` edits the module now; three cases are new
+  and two expectations moved (below).
+- **Increment 8.** `check:precache`'s MISSING follows module imports from every live page, through modules' own
+  imports, and SHELLDEP counts a shell page's static imports. Nothing in the tree was missing. Each break on purpose (in a
+  scratch `sw.js`) failed by name; with the old guard, dropping `sv-browser.js` gave no finding at all.
+- **Calls made.** (1) Three rungs: 7, 8 and 9. Increment 10 (the editor, with a new browser suite) is a session of its
+  own. (2) One bump, v323, for the three. (3) **Neither new module is pure, against the design**: they are views, so they
+  read 035's classic-script globals at call time, named in `/* global */` comments (the writable ones marked), and are
+  reached through `Object.assign(window, …)`, which keeps every old global name working with no wrappers. The design's
+  `SVBrowser.load(data)`, the `ctx` object for `sv-viz.js` and `createPlayback({ now, raf })` were not built. (4) Module
+  `let`s are not exported (a copy on `window` would go stale); nothing outside each file read them. (5) `AppState.viz` and
+  the six canvas `let`s stay on the page, because the what-if lab swaps `vizCtx` and `ctx`. (6) Two expectations in
+  `check-publisher.test.mjs` changed: a listed function declared twice and a duplicate parameter are PARSE now, not LIST
+  and STRICT. A module is strict, so both are syntax errors there. That failure is earlier and stronger, and LIST still
+  covers a name the page and the module both declare (a new case). (7) Four unused locals in `sv-viz.js` (`maxCount`,
+  `cellSizeBase`, `cellSize`, `logicalScale`) were dropped once lint saw them. Each initialiser had no side effect.
+- **Found, and fixed.** The offline copy bundles module scripts with esbuild, and esbuild reprints code, so after
+  increment 7 a Publish from the offline copy `.toString()`ed esbuild's text. The file worked (opened from `file://`;
+  teacher, group and map views drew; no errors) but did not match the site's. `make-offline-copy.mjs` now ships
+  `sv-browser.js` unbundled, as the classic deferred script it was before v323, and `verify-offline-copy.mjs` checks
+  that all 28 published functions are their source text on the offline 035. Re-run after the fix: it passes, and a
+  Publish from the unzipped copy has `brRenderTeacher` byte-equal to the baseline's.
+- **Found, not fixed.** Unseeded, 035's Visualize tab in "all" mode differs from itself between loads. Rows tied on
+  time are ordered by group id, which is random (`grp_` + `Math.random`). It is older than this change; the A/B seeded
+  `Math.random` on both sides to compare.
+- **What did not work, and what was not verified.** The first A/B run stalled on the onboarding modal (`stviz_onboarded`
+  was not set), and the first export probe compared a string of an object. Both fixed in the scratch script, which is not
+  kept. A full `npm test` was not run. Run green: the eleven guards plus `check:publisher`, `check:precache --base
+  origin/main`, `check:adoption --check`, lint, `test:check-publisher` (78), `test:select-suites` (92), the 18 `--only
+  schedule` suites (twice), `--only theme`, `smoke-csv-adopters`, `smoke-pairing-qr`, the a11y sweep `--only 035` and
+  `audit-print --only 035`. `offline:build` OK. `offline:verify` passes 035, including the new check, and fails 046
+  (`Uncaught TypeError: Failed to construct 'URL': Invalid URL`) as it did before; this change does not reach 046. No
+  suite port was taken; the next free is still 8552.
+
+## Path 11 P2 increments 5–6: 035's congestion arithmetic and playback renderer out of the page (2026-10-25, AI-20, `CACHE_VERSION` v322)
+
+BACKLOG rank 22 kept (2+), its text rewritten: increments 5 and 6 of the eleven in the P2 bullet's ladder.
+
+- **What moved.** `Tools/schedule-visualizer/sv-congestion.js` (the visualize tab's congestion and hotspot data, the
+  travel and delay times, and the what-if lab's base and effective mods, metrics and diff) and `sv-playback.js` (one
+  animated playback frame, the R50/R53/R54 collision simulation, the R57/R58 staircase portal effects). The page went
+  **771,651 → 756,973 → 722,664 bytes**. The module script sets `window.SVCongestion` and `SVPlayback`; the `BRIDGE`
+  section keeps every old name (`window.wiComputeMetrics` and `wiComputeDiff` are where they were). `drawPlaybackFrame`
+  takes the context it draws on and a `view` object its wrapper builds at call time, so the PNG export, which swaps
+  `vizCtx` for an offscreen context, still reaches it.
+- **How the move is held.** `test:schedule-visualizer-congestion` and `test:schedule-visualizer-playback` (pure Node)
+  compare each module with a golden file written by the **v321 page's own functions** on the same cases, read out of
+  the page and run in `vm` (scratch script, not committed). The playback golden is every call and property set a frame
+  makes on a recording 2D context, kept as a count and a hash per frame. Each suite was broken on purpose (the delay
+  curve scaled by 1.01, the transition filter removed, the conflict threshold raised, the dwell ring 3% wider, the
+  same-direction clearance 0.51, the reduced-motion answer ignored, the waiting pulse's colour and clock) and failed.
+  Two breaks passed the first time: the hotspot tie order and the waiting pulse were reached by no case. A tie case and
+  a plus-shaped junction where one group waits for another were added, and both breaks fail now. Browser A/B against
+  the v321 page (seeded `Math.random`, pinned `Date.now`, Northwind): congestion data, travel times, what-if diffs on
+  both days were byte-identical JSON, and 48 playback frames (four modes × three transitions × four points) were
+  pixel-identical canvases, with no page errors on either side. The what-if and visualize tabs open with no errors.
+- **Offline copy** (the Selector asked, since the last entry had not rebuilt it): `npm run offline:build` OK;
+  `npm run offline:verify` passes 035 and every other module page **except 046**, which fails with `Uncaught
+  TypeError: Failed to construct 'URL': Invalid URL`. This change touches no file 046 loads, so the failure is older
+  than it; it was not run on `origin/main` to prove that, and it is not fixed here. A further `file://` run of the
+  staged 035 found all six namespaces set and ran congestion, travel times, a playback frame and a what-if diff with
+  no error.
+- **Calls made.** (1) Two rungs, not three: increment 7 moves the publisher and teaches `check:publisher` to follow
+  modules, which is a session's work on its own. (2) One `CACHE_VERSION` bump, v322, for both. (3) `PlaybackController`
+  and `updateTravelTimePanel` stay on the page: they are the play bar and a panel, all DOM, so the design's
+  `createPlayback({ now, raf })` waits for `sv-viz.js` (increment 9), with them. (4) `drawPortalDwellArc` takes the
+  reduced-motion answer as an argument; the cached `matchMedia` test (`prefersReducedMotionViz`) stays on the page. (5)
+  An unused `isRealtime` local in `drawPlaybackFrame` was dropped (lint caught it once it was a module); nothing read it.
+  (6) A segment that uses a staircase gets `stairSec` once, as the page did; the design's "per teleport" was wrong.
+- **What did not work, and what was not verified.** The first congestion golden came out with every `Map` empty: a Map
+  made in the `vm` context is not `instanceof Map` in the main realm, so the serialiser now checks the tag. The first
+  goldens were 786 KB and 430 KB; paths and draw logs are now hashed. Full `npm test` not run; the a11y sweep and print
+  audit were not re-run (no markup or style changed). The waiting pulse is pinned on a hand-made junction only; no
+  Northwind frame reaches it.
+
+## Path 11 P2 increments 2–4: 035's model, graph and routes out of the page (2026-10-25, AI-20, `CACHE_VERSION` v321)
+
+BACKLOG rank 22 kept (2+), its text rewritten: increments 2, 3 and 4 of the eleven in the P2 bullet's ladder.
+
+- **What moved.** `Tools/schedule-visualizer/sv-model.js` (labels, settings, bell times, group weights, the room
+  registry, blueprint serialise/migrate/validate and the floors rebuild, conflicts, group colours, ids and the project
+  file's group record), `sv-graph.js` (Rounds 7, 8 and 31: the multi-floor graph, the teleport-aware heuristic, A*,
+  `findPath`, `resolveRoomPath` and its metadata) and `sv-routes.js` (a group's day of segments, the congestion map,
+  the heat-exclude test and the evacuation section). The page went **817,015 → 803,500 → 779,928 → 771,651 bytes**.
+  The page's inline module script sets `window.SVModel`, `SVGraph` and `SVRoutes`; a `BRIDGE` section keeps every old
+  name as a wrapper that reads `AppState` and hands it in, so no call site and no suite global changed. The graph's
+  two shared `let`s are `SVGraph.createCache()`, created on first use.
+- **How the move is held.** Each module's Node suite compares it with a golden file written by the **v320 page's own
+  functions** on the same cases (a scratch script read the functions out of the page and ran them in `vm` with
+  `AppState` set per call; it is not committed, because the goldens are what it was for). A golden is never
+  regenerated from the module; a change that is meant edits it by hand. Each suite was broken on purpose (a 0.3 made
+  0.31, the cache's dirty check removed, a direction word changed) and failed. A browser A/B against the v320 page
+  gave byte-identical JSON for Northwind. The eleven `--only schedule` suites (the publish baseline among them), the
+  ten `schedule-visualizer` and four `schedule-browser` suites, the a11y sweep for 035, the eleven guards,
+  `check:publisher`, `check:precache --base origin/main`, lint and `test:select-suites` are green.
+- **Calls made.** (1) Three rungs, not two: each was a whole step and all three fit. (2) One `CACHE_VERSION` bump,
+  v321, for the three, which land together. (3) The design's `imports.test.mjs` is part of `bridge.test.mjs`. (4)
+  Where the design's surface renamed or reshaped a function (`validateBlueprint` returning `{ ok, errors }`, a new
+  `dayMods()`, `evacuationRoute`/`evacuationSteps`), the page's shape was kept: P2 changes no rule, and a reshape is
+  P5's to make.
+- **What did not work, and what was not verified.** The design's "no top-level statement calls a function" was
+  wrong: the first browser run failed on a bare `populateDeptDropdown()` that ran before the modules (deleted;
+  `init()` repeats it). Its claim that the publisher guard would fail FREE on increment 2 without `sources` was wrong
+  too: no published piece reaches the model, so `sources` waits for increment 7. The first version of the bridge test
+  followed calls inside listeners and reported two false paths; it now follows only synchronous calls. A*'s reopen
+  branch is not reached by any fixture. No real v61 `stviz_blueprint` was captured for the round trip. Full `npm test`
+  not run; the offline zip (whose bundler turns the module script into a classic deferred script) was not rebuilt.
+
+## Path 11 P2 increment 1: 035's stylesheet out of the page (2026-10-25, AI-20, `CACHE_VERSION` v320)
+
+BACKLOG rank 22 kept (2+), its text rewritten: increment 1 of the eleven in the P2 bullet's ladder.
+
+- **What moved.** The first `<style>` block of `Tools/035-schedule-visualizer.html` (lines 66–2897, 157,702 bytes) is
+  `Tools/schedule-visualizer/sv.css`, byte for byte (checked with `diff` against the old lines) under a two-line header
+  comment, linked by one `<link rel="stylesheet">` where the block was, so the cascade is in the same order and the
+  settings panel's inline block still follows it. The block has no `url()` but data URLs, so no path changed meaning.
+  The page went from **974,675 to 817,015 bytes**. `sv.css` is in `PRECACHE_URLS`, not `SHELL_URLS`.
+- **The size ledger, early.** The design put `size-ledger.json` and `size.test.mjs` in no particular increment; they
+  landed here (`npm run test:schedule-visualizer-size`, pure Node, no port) so that every later rung lowers the line in
+  its own commit. The test was made to fail both ways (a line 15 bytes low, a line 13 KB high) before it was committed.
+- **Calls made.** (1) Stopped at one rung. Increment 1 was small, but increment 2 (`sv-model.js`, the bridge, the
+  Node suite, the save round-trip and the publisher guard learning `sources`) is a whole session's work, and a half
+  rung was worse than none. (2) Devon's P11-7 to P11-11 (2026-10-21, every default kept) are written into the P2
+  bullet as settled.
+- **What did not work, and what was not verified.** An ad-hoc before/after screenshot script, run first on its own
+  server and then on `harness.mjs`, hung on the second page load both times and was dropped, so **no pixel comparison
+  was made**. The move is held by the verbatim diff and by the checks that read the styles: `check:hidden-flex` (its
+  `DEBUG_HIDDEN_FLEX=1` output for 035 is identical) and `check:print-clip` follow the link; `audit-print --only 035`
+  (9 states, nothing to report), the a11y sweep for 035, `test:theme` (all three suites) and the eleven
+  `--only schedule` suites, the publish baseline among them, all green. `check:publisher` gives the same output as
+  before. The design's page figures are about 6 KB low from here on: the page had grown since they were measured.
+  Full `npm test` not run.
+
+## Path 11 P1 increment 2: 035 publishes format 1 (2026-10-25, AI-20, `CACHE_VERSION` v319)
+
+BACKLOG rank 21 deleted (a gap, ranks not renumbered): Path 11 P1 is whole. 035 is `TOOL_VERSION` v62.
+
+- **What a teacher's file gains.** `PUBLISHED_DATA` starts `format: 1, tool: "v62"`. `publishedOn`, and the date in the
+  download's file name, are the local calendar date through a new, unpublished `brLocalISODate()`: both were
+  `toISOString()`, the UTC date, so a file published after 8 pm eastern was dated tomorrow beside a footnote saying
+  today. Every `<` in the data is written `\u003c`, so a school, room or teacher name holding a closing script tag can no
+  longer end the published script; before, the file broke with a `SyntaxError` (seen in the break-on-purpose run below).
+  Nothing else in the published file moved: the baseline's diff is the footnote's version, `format` and `tool`.
+- **The guard.** `check-publisher.mjs` reads a sixth form, `JSON.stringify(Y).replace(/</g, '\\u003c')`, for
+  `PUBLISHED_DATA` only (a constant written that way is SHAPE), and `assemble()` applies it; DATA now fails if the escape
+  is missing, if `data.format` is not the contract's `FORMAT`, or if the keys are not the new `PUBLISHED_KEYS` (`format`,
+  `tool`, then the twelve). `test:check-publisher` is 73 checks, five new breaks among them.
+- **The browser cases the design listed, all built** in `smoke-publish-baseline.mjs` (34 checks): the published file
+  opened from `file://` (written under `os.tmpdir()`, removed after) and walked by search, arrow keys, Escape, a click
+  outside, the floor link, a floor tab, a room on the map, a mate, a group, B day, a group's teacher and the tablist's
+  keys, until Chromium's JS coverage shows all 35 pieces ran, opened 90 days on so the out-of-date banner runs too; the
+  format-0 data put back into today's file showing the same teacher's day; the `</script><b>` school; a 23:30 publish in
+  Los Angeles (by CDP's `Emulation.setTimezoneOverride`, so it does not depend on the machine's zone); and four breaks
+  made in 035 with `page.route()`, each naming its own section, then 035 as it is matching again.
+- **Calls made.** (1) **`brDShort` is published and nothing in a published file can call it**: only `brRenderMapLegacy`
+  does, behind the dead door `KNOWN_FREE` lists. The design said a piece nothing reaches "is reported and fails"; it is
+  in the suite's `UNREACHED` list with that reason instead, which fails if it ever runs or stops being published. Taking
+  it (and `BR_LEGACY_SHORT`) out of the published file would be a published change P1 did not design; it is P2's to
+  decide when it moves the map code. (2) `fixture-published-format0.json` was taken from the increment-1 baseline's
+  `PUBLISHED_DATA`, which the untouched v61 tool published with the pinned clock, not by a second run of the old tool:
+  the same bytes, and they are in git at 9635214. (3) The download's file name takes the local date too; the design
+  named only `publishedOn`, and leaving the two different would have been a new mismatch. (4) The four breaks on the
+  output were kept beside the four `page.route()` ones, as the comparator's own test.
+- **Verified.** Both new browser cases were run against 035 with the escape and the local date taken back out: four
+  failures (the guard's DATA, one script block, the file runs, the 23:30 date), then 035 put back. Green: the eleven
+  guards and `check:publisher`, `check:precache --base origin/main` (v313 → v319), lint, `test:check-publisher`,
+  `test:schedule-publish` in America/New_York and under `TZ=UTC`, `run-suites --only schedule` (11 suites),
+  `--only schedule-visualizer` (5), `--only schedule-browser` (4), `test:theme`, `test:select-suites`. **Not run:** the
+  full `npm test`. No real teacher's file was published or opened on a phone; no file published by v62 was opened in
+  Firefox or Safari.
+
+## Path 11 P1 increment 1: the publisher drift guard (2026-10-25, AI-20, no `CACHE_VERSION`)
+
+BACKLOG rank 21 kept and rewritten (now ½): increment 1 of the P1 design is built; increment 2, which changes 035, is
+not. Nothing a teacher sees changed: no page was edited, so no `CACHE_VERSION`.
+
+- **What it is for.** 035's Publish assembles a schedule browser from `.toString()` of 28 listed functions and seven
+  constants, so the first function P2 moves would change what staff are emailed and nobody would see it. Now three
+  things see it: `npm run check:publisher` (static, in CI), `npm run test:schedule-publish` (a publish diffed against a
+  committed baseline), and the ledger that holds 034's copies of the published pieces.
+- **Files.** `Tools/board-check/check-publisher.mjs` (the guard; ESLint's `Linter` for the parse and its scope manager
+  for free names, so no new dependency), `Tools/schedule/test/published-contract.mjs` (`FORMAT`, `formatOf`, `validate`,
+  `upgrade`, `readEmbedded`, `shapeOf`), `publisher-ledger.json`, `baseline-northwind.html` (60,564 bytes, fonts cut to a
+  hash line), `smoke-publish-baseline.mjs` (port 8551), `Tools/board-check/test/check-publisher.test.mjs`.
+  `publish.mjs`'s `publishFromFixture()` gained `now` and `port`. `check-tests.mjs` lists the contract as not a suite.
+  The README's "regression baseline" section and a `CLAUDE.md` bullet describe the workflow (`--update`, then commit
+  the baseline's diff).
+- **Measured, and it matched the design.** 35 published pieces (28 functions, 7 `.toString()` constants) and 3 values;
+  against 034, 21 same, 12 forked, 2 absent; free names `document` and `brRenderMapLegacy` only; 6 state names; 5 boot
+  calls; 034's data valid at format 0 with 21 one-way `co` warnings and 30 unshown-section warnings. **The guard's
+  `assemble()` equals the browser's published `<script>` byte for byte**, which the design left as the suite's first
+  assertion rather than a result. The suite is green in America/New_York and under `TZ=UTC`.
+- **Calls made, where the design was silent or self-contradictory.** (1) The design wanted each break to fail "with its
+  own code and no other" but listed `AppState` as FREE and LIVE: a free LIVE name is LIVE only. (2) A name failing LIST
+  or CONST is not reported again under FREE, HANDLER or FORK, and a publisher the guard cannot read (SHAPE, PARSE)
+  reports that alone. (3) A teacher whose A or B is `[]` is a contract *warning*: `brDeriveScheduleData()` writes that
+  for a teacher with no group visits, so it is not a bad file. (4) Publishing `brRenderMapLegacy` fails FREE *and*
+  HANDLER: it is declared in 035 already and brings `brMapFloor`, `brBuildFloorSVG` and a `brSetMapFloor()` handler
+  with it. (5) The browser suite's breaks are made on the published output (one CSS declaration, the footnote, a
+  dropped teacher field, two functions swapped), not by rewriting 035 with `page.route()`; the static breaks cover 035.
+  (6) The footnote's date depends on the browser's locale; the suite says so if it is not en-US rather than pinning a
+  locale through the shared harness, whose signature was left alone. CI's runner gives en-US.
+- **Devon's answers recorded.** P11-1 to P11-6 (2026-10-21, defaults kept) and "its own page" for 034 (2026-10-07) are
+  written into the P1 bullet; none changed what was built.
+- **Not done, and in the row.** Increment 2 (035 writes `format: 1` and `tool`, the local `publishedOn`, and data with
+  `<` escaped; `TOOL_VERSION` v62, a `CACHE_VERSION` bump, `--update`), and the browser cases that need it or were not
+  built: JS coverage of all 35 pieces from `file://`, the format-0 fixture captured before increment 2, the
+  `</script><b>` school name, the 23:30 publish. The full `npm test` was not run (about 20 minutes): `check:publisher`
+  and the other ten guards, lint, `test:check-publisher`, `test:schedule-publish`, `test:schedule`, `test:theme` and
+  `test:select-suites` were, all green.
+
+## 035's theme, a documented exception (2026-10-25, AI-20, no `CACHE_VERSION`)
+
+BACKLOG rank 5 deleted (a gap, ranks not renumbered, as ranks 12 to 15 were). Devon decided it on 2026-10-03: **bless
+and document** 035's private four-palette theme system, and do not adopt `a11y.js` there cold. This writes it up; 035
+itself is untouched (no page changes, so no `CACHE_VERSION`).
+
+- **Where the exception is written.** `CLAUDE.md`'s a11y.js bullet, which says a11y.js is "the only owner of theme on
+  this site", now names 035 as the one exception and what it does (`data-theme` from the `palette` field of its
+  settings: default, green-gold, dark, green-gold-dark; its embedded schedule browser follows the two dark ones).
+  `BACKLOG.md`'s Standing decisions row is marked spent and its Cross-cutting bullet rewritten; `path5:next`'s line for
+  035 says "a documented exception" instead of pointing at an open decision.
+- **The guard that says why.** `test:theme` (`Tools/theme/test/smoke-theme.mjs`) gains `OWN_THEME`, a one-entry list
+  with its reason: the pages that write `data-theme` with no a11y.js must be exactly that list. Before this nothing
+  stopped a second page doing what 035 does; the old assertion covered only pages that load a11y.js. It fails both
+  ways, so if 035 ever adopts a11y.js (Path 5 P4 opening it anyway is still allowed) the entry has to go with it.
+  Measured before writing it: 035 is the only such page today. The suite ran green (63 passed).
+- **Not done.** No break-on-purpose run of the new assertion beyond reading it; it is a set equality over the same
+  sweep the `rival` check uses. This was the "theme decision" the audit's AI-20 entry lists as a dependency of the
+  Path 11 builds; it is settled.
+
+## Path 9 P4 finished: the pasted-table import in 032 (2026-10-25, AI-18, `CACHE_VERSION` v318)
+
+BACKLOG rank 15 deleted (a gap, ranks not renumbered, as ranks 12 to 14 were). P4 is whole, and with it every phase of
+Path 9: bell schedules (P1), pacing (P2), the consumers (P3) and import/export with the wall calendar (P4).
+
+- **What changed for a teacher.** 032's toolbar has *Paste a Date Table…* beside *Import Calendar (.ics)*. It opens a
+  box: copy the table of dates out of the district's PDF or web page, paste it, press *Read this table*. The preview is
+  the `.ics` import's own (every date that would change, now and after; the lines it could not read, each with its
+  line number and why), and nothing is stored until *Add these days*, after which the box closes and empties and the
+  notice bar offers Undo. "Labor Day - Schools Closed" becomes a closure, "1/2 Day for Students" a half day, "Teacher
+  Workday" a workday, by the same title guesses a file's events get.
+- **`readTable(text, { start, end })`** in `Tools/school-calendar/scv-ics.js` (pure; no new file, so no precache entry)
+  returns `readIcs()`'s `{ ok, events, skipped }`, so `planIcsImport()` and the page's `renderIcsPreview()` take it
+  unchanged (the preview gained a third argument for where it goes and its wording: "table", "name", "lines").
+  A line is cells split on tabs, runs of two or more spaces and bars; the one date or range is found anywhere in it
+  (ISO, `M/D[/YY[YY]]`, `Month D[, YYYY]`, an optional weekday, an ordinal; a range by `-`, `–`, `—`, `to`, `through`
+  or `thru`, its end a full date or a bare day), and the other cells, less a weekday column, are the name.
+- **Calls made.** (1) *Never guess a date.* A line is skipped and listed when it has no date, two dates that are not a
+  range (a PDF's two columns run together), a weekday that is not its date's (held at both ends of a range), a date
+  that is not real, or no name. (2) *A yearless date takes the one year that puts it in the school year*; it is
+  skipped when no year does ("Jul 4 has no year, and it is not in this school year") and when two do (a 14-month year
+  holds Aug 31 twice). A range's end may cross into the next year only when its month comes earlier ("Dec 21 – Jan 1");
+  "Oct 12 - 2" and "Oct 12 - Oct 2" are "ends before it starts", not stretched to next October. A yearless start lends
+  its year from the end ("Dec 21 – Jan 1, 2027"). (3) *"1/2 Day" is a half day, not January 2*: it is hidden from the
+  date search only, so the label keeps the teacher's words, and the half-day guess reads `1/2 day` and `½ day` (a change
+  `planIcsImport` also applies to a file's titles). (4) *Text no line of which can be read is refused in words* rather
+  than shown as "nothing would change". (5) *The "Load 2026–27 CCPS Calendar" preset button stays.* The P4 bullet said
+  the pasted table "replaces" it; removing it would take the one-click start away from every teacher on this year's
+  calendar while the paste covers next year's, so it is kept and the paste is what a teacher uses when it expires. Reversing
+  this is deleting one button and its handler.
+- **Checks.** New `npm run test:school-calendar-table` (`table.test.mjs`, pure Node, 46 checks, 8 breaks caught, again
+  under `TZ=Pacific/Kiritimati`): four table shapes (tabs with a header and weekday column; spaced, yearless, three range
+  spellings; name first, numeric, two-digit years; bars and ISO), every skip reason, the refusals, and the result through
+  `planIcsImport()` (types guessed, a label kept, a second paste changing nothing, a dated line outside the year skipped
+  by the plan). New `npm run test:school-calendar-table-page` (`smoke-ics-table.mjs`, Chromium, port 8550, 27 checks, 5
+  breaks caught; green in America/New_York and `TZ=UTC`): the box, the preview against the module's plan, nothing stored
+  before Add, Add stores exactly the plan, Undo the old bytes, a second paste, a refusal, one preview at a time, axe.
+  `ics.test.mjs` 81/81 unchanged. Guards, lint, `check:precache --base origin/main`, `check:adoption --check`.
+- **What did not work.** The first draft rewrote "1/2 Day" to "half Day" in the text, which put words in the label the
+  teacher never typed; it masks it now. The first rollover rule let "Oct 12 - 2" become an 11-month range (it tried next
+  year for any end before the start). Two of my own fixtures were wrong, not the reader: a 14-month year holds Sep 2
+  twice, too.
+- **Not verified.** No real district PDF was copied: the four shapes are written the way such tables paste, not taken
+  from one, and a PDF whose text comes out a column at a time (all the dates, then all the names) reads as dates with no
+  name and is skipped line by line, which is honest but not useful; a day-first date ("7 September") is not read.
+
+## Path 9 P4: `.ics` export and import, and the one-page wall calendar (2026-10-25, AI-18, `CACHE_VERSION` v317)
+
+BACKLOG rank 15 kept and rewritten (now ¼): `.ics` and the wall calendar are built; the pasted-table import the P4 bullet
+also names is what the row holds now. With that, every Path 9 row the audit's AI-18 entry named has shipped.
+
+- **What changed for a teacher.** In 032, *Export Calendar (.ics)* writes one event per run of days (Winter Break is one
+  event, not eight), one per grading period ("Quarter 1", Aug 31 to Nov 4) and, while the new "with paced lessons" box is
+  ticked (ticked by default once a course has something planned), each course's lesson on the date saved for it ("Math
+  7: U1-01-A Integers"). *Import Calendar (.ics)* no longer replaces a date's label behind a `confirm()`: it shows a
+  table of every date that would change, what it has now and what it would get, and a list of what it skips and why (a
+  repeating event, a cancelled one, a date outside the school year, this page's own grading-period and lesson events),
+  and stores only on "Add these days", with Undo on the notice bar. Types are added, never removed; a label already there
+  stays and the file's title goes into the note ("Also: Labor Day Holiday"). A file that is not a calendar is refused in
+  words. The print choices gained *Wall calendar (one page)*: the year on one landscape Letter page, every day its number
+  and its types' abbreviations, a no-school weekday hatched, each month's named days under it, the legend and the
+  grading periods with their school days, with a "Preview pages" button (the print kit's preview).
+- **`Tools/school-calendar/scv-ics.js`** (new, pure, precached in both tiers): `writeIcs`, `readIcs`, `planIcsImport`,
+  `dayRuns`, `guessTypes` and the text, folding and date helpers. The page's old inline `buildIcs`/`parseIcs` are gone.
+  The wall sheet is built from elements in 032 (`renderWallSheet()`), kept current by `render()` so Ctrl+P prints it.
+- **Calls made.** (1) *A file this page wrote comes back exactly*: each day event carries `X-SCV-KIND`, `X-SCV-TYPES` and
+  `X-SCV-LABEL`, so a title made up for a label-less day ("Testing Window") never becomes a label, and an untyped day
+  called "Staff holiday party" is not guessed into a closure. The suite holds the round trip both ways. (2) *A timed
+  event is the date it starts on*: in its own `TZID` the date as written, and a UTC time (`…Z`) in the browser's zone;
+  `RRULE` is skipped, not expanded (a district's closure list is single events). (3) *Title guesses* only when the file
+  names no type the legend knows, and "before"/"after", an early dismissal or a workday stop a break being read as a
+  closure ("Early Dismissal — Last Day Before Winter Break" is a half day). (4) *Lessons come from the stamped dates*
+  (`SchoolDay.lessonsOn`), as 044 and 045 read them, not from the placer: the file says what was saved. The first `.ics`
+  export used the active course's placement and its raw text; `smoke-plan.mjs`'s two assertions about it were rewritten to
+  the new shape (each lesson on its old date, named by its course, code and title; one event per run of days), not
+  loosened. (5) *The wall calendar does not link `print-area.css`* and has no `#printArea`: 032 has five print views and
+  its own `@media print`, which print-area.css would break. It links `print-kit.css`/`print-kit.js`, writes its landscape
+  `@page` with `PrintKit.setPage()` only while it is the print choice (and removes the kit's style element after, so the
+  other views keep `size: auto`), and previews with `PrintKit.preview({ area })`. So it is **not** in
+  `smoke-preview-adopters.mjs`, which is built around `#printArea`; its own suite holds the preview to Chromium's PDF.
+  (6) *Caps, not heights*, keep it to one page: at most five named days a month (each one line, an ellipsis past the
+  width), "+N more", eight grading periods, twelve months (a longer year says "The first 12 months of 14 are shown").
+  Pasted-table import was left for a later row rather than squeezed in.
+- **Checks.** New `npm run test:school-calendar-ics` (`ics.test.mjs`, pure Node, 81 checks, 17 breaks caught, again under
+  `TZ=Pacific/Kiritimati`): escaping, folding at 75 octets on a code-point boundary, the seed's file (CRLF, runs, DTSTAMP
+  handed in, a golden SHA-256), the round trip onto the same and a blank calendar, a Google-shaped district file
+  (VTIMEZONE, multi-day, TZID, a UTC time that is the day before in New York, RRULE, CANCELLED, a folded title,
+  DURATION, a known category, a date outside the year) imported twice with nothing changing the second time, ten files
+  refused, the guesses. New `npm run test:school-calendar-ics-wall` (`smoke-ics-wall.mjs`, Chromium, port 8549, 41
+  checks, 7 breaks caught; green in America/New_York and `TZ=UTC`): the export read back with the module's reader, the
+  import preview, Add, Undo and a refusal, the wall sheet, its `@page`, Chromium's PDF at one page for the seed, a
+  calendar with a long name on every school day and a 14-month year, the preview's "Page 1 of 1", axe on both.
+  `run-suites --only school-calendar` 17 green (20.2 min, `smoke-weeks` golden included), `--only service-worker` 3,
+  `--only tool-registry` 1; the a11y sweep on 032 (and seeded) clean; `test:theme` 966; `path7:next --only 032` 0;
+  lint; every guard, `check:precache --base origin/main`, `check:adoption --check` (`print-kit.css`/`.js` 14).
+- **What did not work.** The first wall sheet was two pages for the dense calendar: the footer listed a grading period
+  for every third day (the fixture tags `mpend` that often), and long names wrapped. Hence the period cap and one-line
+  names. The first test fixture wrote a plan with no stamped dates, which no 032 save leaves, and so exported no lessons;
+  it is stamped with `scv-plan.js` now. The out-of-year cells printed borders (a print rule's `!important` beat
+  `.wempty`).
+- **Not verified.** No district's real `.ics` was imported (the fixture is written in Google Calendar's shape, not
+  downloaded: no network); no file was opened in Google Calendar, Outlook or Apple Calendar; the wall calendar was read in
+  Chromium's PDF and a screenshot, never printed; `audit-print.mjs` does not reach the wall view (a radio, not a "print"
+  tab), so only its own suite covers it.
+
+## Path 9 P3 increment 3: 044 and 045 read the school-year spine (2026-10-25, AI-18, `CACHE_VERSION` v316)
+
+BACKLOG rank 14 deleted (a gap, ranks not renumbered): Path 9 P3 is whole. Rank 15 (P4, `.ics` and the wall calendar) is next.
+
+- **What changed for a teacher.** With 032's calendar saved on the device: *044 Sub Plan Builder* shows a box under "First
+  day out" for the day being edited: "From the School Calendar, Tuesday, Sep 8: A day.", a grading-deadline line when that
+  day, or the school day after it, is the last school day of a quarter, and "From the pacing plan:" with each course's
+  lesson ("U1-06-B Lesson 6"), catch-up day, day it does not meet or unit day ("Cells, day 4 of 20"). A day new to the
+  page gets its lesson as the title when that lesson is all the plan has on the day; otherwise each lesson has a "Use as
+  title" button. *045 Sub Binder Generator*'s Today card says the same for the packet's day (and prints it on each day's
+  page), and its section list says when the pacing plan is there. Without a calendar both pages are what they were.
+- **`_shared/school-day.js` gained five read functions**, pure-Node tested: `nextSchoolDay`, `gradingDeadline`,
+  `gradingPeriodName`, `lessonsOn` and `describeLesson`. Neither page writes 032's data; `lessonsOn` reads only the dates
+  032 stamped at its last save and never runs the placer.
+- **Calls made.** (1) *A grading deadline is a period's last **school** day*, not the day its tag sits on: the seed's
+  second marking period ends on a workday (2027-01-22), which no "next school day" can ever be, so the design's test as
+  written would never fire for Quarter 2. (2) *"Is tomorrow a deadline" is asked of the day out*, and of the school day
+  after it: a sub plan's date is the day that matters, and it is usually written the day before. (3) *The title is filled
+  only on a day new to the page, and only when one lesson is all the day holds*: two courses, or a lesson beside another
+  course's unit day, is ambiguous, so it gets buttons. A day the teacher has been on keeps what they left, an emptied
+  title included. 044's plan is not saved, so nothing stored changes. (4) *A course is named only when the plan has two
+  or more*: "Course 1: …" on every line of a one-course plan is noise. (5) *A typed unit's day number* is counted from
+  the unit's stamped start with `dayValue()`'s rule copied into `school-day.js` (a classic script cannot import the ES
+  module); the suite holds the two equal on every date of every unit. (6) *A plan newer than v1, or a calendar 032 has
+  not re-saved since v309* (only the old `pacing` field), reads as no lessons, not as a guess. (7) *045's deadline line
+  prints on the packet*: it is a fact about the day, and the Today card prints whole. (8) *044's box is built with DOM
+  text*, so `check:inline-sinks` holds 044 at 5.
+- **Checks.** `npm run test:school-day` 185 checks, 51 breaks caught, two zones (new: next school day; one deadline per
+  period on its last school day; `gradingPeriodName`; `lessonsOn` against a plan placed and stamped by `scv-plan.js`
+  itself, three courses, every date of the year: lessons with code and title, bumps with reason, lost dates per course,
+  typed unit days n of m as the placement numbers them, an A-only course, a skipped day type, unstamped/newer/broken
+  plans; `describeLesson`). New `npm run test:school-day-sub-plans` (`smoke-consumers-sub-plans.mjs`, Chromium, port
+  8548): 47 checks and 10 breaks of the pages and `school-day.js` altered on the wire, each caught; also green under
+  `TZ=UTC`. `run-suites --only` school-calendar 15 (all, with the new one; 18.2 min), sub-plan-builder 1,
+  sub-binder-generator 1, classroom-timer 4, command-center 2, hall-pass-log 2, final-grade-checker 5,
+  schedule-visualizer 5, service-worker 3, tool-registry 1; the a11y sweep on 044 (and seeded) and 045 clean;
+  `test:theme` 966; `path7:next --only` 044 and 045 0 findings; lint; every guard, `check:inline-sinks` (044 still 5),
+  `check:precache --base origin/main` and `check:adoption --check` (`school-day.js` 8).
+- **What did not work.** The first fixture filled 044's title on the two-course day: the rule counted lessons, and the
+  other course had a unit day, not a lesson. The rule now counts everything the plan has on the day. `run-suites.mjs
+  --help` is not an option: it starts the whole list (it died when its pipe closed, in its third suite; nothing was left running).
+- **Not verified.** No teacher has written a sub plan against a real pacing plan; the printed packet was read as text,
+  not on paper; neither box was read by a screen reader.
+
+## Path 9 P3 increment 2: 001 and 036 read the school-year spine (2026-10-25, AI-18, `CACHE_VERSION` v315)
+
+BACKLOG rank 14 kept and rewritten (now ½): only 044/045 is left.
+
+- **What changed for a teacher.** *001 Hall Pass Log*: with 032's calendar saved on the device, every trip is named by
+  the period it happened in: a Period column in the history and on the printed log, the period beside each trip's time in
+  today's log, a Period column in the range export's detail, and a **By period** table in the long-range report (passes and
+  minutes per period, on screen, on paper, in the CSV and as its own Excel sheet). A trip in a passing time, before or after
+  school is named so; a trip on a closed day, a day with no schedule, or an old row with no time shows "—". *036 Final
+  Grade Checker*: the "What do I need" tab says "From the School Calendar: today is in Quarter 2 (Nov 5 to Jan 22), 30
+  school days left, 2 of them half days." and marks Quarter 2 as the one still open; the teacher can pick another. Before
+  or after the year it says when the year starts or ended and marks nothing.
+- **Calls made.** (1) *001 works the period out each time it shows a trip and stores nothing*: the trip's time is the
+  fact, and a calendar edited later (a schedule fixed, a snow day entered) relabels old trips, which is what a teacher
+  reading the report would want. (2) *No calendar, no column*: the page is byte for byte what it was, so `smoke-export.mjs`
+  and the a11y sweep hold unchanged. (3) *Outside a period has words* ("Passing time", "Before school", "After school")
+  rather than "—", which the design kept for a day with no schedule: a trip between bells is the likeliest kind and a
+  dash hides it. (4) *The By period table puts periods first*, most passes first, ties by name, then the non-period
+  rows the same way; it is a second table under the per-student one, not a regrouping of it, so the totals a counselor
+  conversation starts from are where they were. (5) *036 marks the quarter only on load*; a calendar arriving from
+  another tab updates the note and leaves the radios alone. (6) *Only a year of four grading periods is read as
+  quarters*: 036 is a four-quarter tool, and a calendar with six periods gets "grading period 3 of 6" and no mark.
+  (7) *037 is counted done with nothing built*: it charts one assignment's scores and has no quarter, date or window a
+  grading period could fill; inventing one (a "Quarter 2" caption) would be decoration. Reverse by adding it back to rank 14.
+  (8) *036's target select and percentage box got `aria-label`s*: axe found the select unnamed (serious) once the new suite
+  scanned the need tab, which the page sweep never opens because the tab is hidden at load; it predates this change.
+- **Checks.** New `npm run test:school-day-trips-grades` (`smoke-consumers-trips-grades.mjs`, Chromium, port 8547): 43
+  checks (001 with no calendar everywhere, the B and A schedules giving one time two answers, the half day over its
+  letter, passing/before/after, Labor Day, a row with no time, today's log, the printed day, the By period table on
+  screen and on paper, the CSV's table and column, another tab's save; 036 with no calendar, Dec 1 against school days
+  counted off the seed, the marked quarter and the teacher changing it, before and after the year, six periods, another
+  tab; neither page writes the calendar; axe on 001's history and 036's need tab) and 10 breaks of the pages and
+  `school-day.js` altered on the wire, each caught; also green under `TZ=UTC`. `run-suites --only` hall-pass-log 2,
+  final-grade-checker 5, tool-registry 1, service-worker 3; school-calendar 12 of its 14 before a time cap I set cut the
+  run (no failure), the 13th, `test:school-day-consumers`, green alone and the 14th is the new suite; `test:tool-restore` 34
+  (001 hosts the card); the a11y sweep on 001 and 036 clean; `test:theme` 966; `path7:next --only 001` 0; lint; every guard,
+  `check:precache --base origin/main` and `check:adoption --check` (`school-day.js` 6).
+- **What did not work.** My first runs wrapped `flock` in `timeout`, so the time spent waiting for the shared suite lock
+  counted against the cap and two runs were killed with their output lost; put `timeout` inside `flock`.
+- **Not verified.** No real trip has been logged against a real bell schedule; the Excel "By period" sheet was not
+  opened in a spreadsheet (the CSV was read); 036's note was not read by a screen reader.
+
+## Path 9 P3 increment 1: 004 and 010 read the school-year spine (2026-10-25, AI-18, `CACHE_VERSION` v314)
+
+BACKLOG rank 14 kept and rewritten (now 1): 001, 036/037 and 044/045 are left. The P3 design, per consumer, is in its bullet.
+
+- **What changed for a teacher.** *004 Classroom Timer*: with 032's calendar saved on the device, the Countdown card has a
+  **Rest of this period** button and a line beside it ("B day. Period 2 ends at 9:40 AM (40 min left)."); the button sets
+  the card's own "Count down to a specific time" to the period's end and starts. It is off in a passing time, before or
+  after the day, on a day with no schedule and on a day with no school, and the line says which. A half day reads its own
+  schedule. *010 Command Center*: the strip names the day ("B day", "No school: Labor Day") and, on a day 032 has a
+  schedule for, runs 032's periods: the period, minutes left, the next one, the roster switch and the seating panel's
+  memory. The Bell Schedule panel shows today's schedule from the calendar above the page's own rows, with "Use the School
+  Calendar's bell times" to turn that off; the Today panel adds the letter and the schedule's name.
+- **Calls made.** (1) *004's row is made by script and only while a calendar exists*, so a teacher without one has the card
+  byte for byte as before and `golden-single-view.json` holds unchanged. (2) *004 goes through the "until" setting* rather
+  than a new kind of countdown, so the end time shows in the card and survives a reload the way "until" always did; it
+  does leave "until" ticked afterwards, as a teacher who ticked it by hand would. (3) *004 offers nothing in a passing
+  time* (no "until the next period starts"): the row says when the next period starts, and the button is about the
+  period in front of the class. (4) *010 keeps its own rows* (they predate 032's schedules and hold the roster mapping):
+  032 wins on a day it has a schedule for; the rows run on a day it has none for (no calendar, a school day without a
+  schedule, outside the year); a weekend or closed day runs no period at all, even where the rows would. (5) *A calendar
+  period borrows a page row's roster and id by name* (trimmed, any case), so "Period 2" in 032 brings up the roster
+  mapped to a row called "period 2"; with no such row the period has no roster, and its seating memory is kept under
+  `cal:<name>`. (6) *010's switch is one optional settings field*, `bellSource: 'page'` when unticked, absent otherwise,
+  so a saved settings blob from before reads as "use the calendar". (7) *The day in words is one function*,
+  `SchoolDay.describe()` (with `typeLabel()`), so 004, 010 and every later consumer say a day the same way: the letter,
+  the day's types in legend order, then the day's own name; a closed day by its own name, else its type's. (8) *032's
+  "multi-course pacing side by side" is counted done* by v313's lanes and the day editor's "Other courses"; nothing more
+  is planned for it in P3. Reverse by adding it back to rank 14.
+- **Checks.** `npm run test:school-day` 145 checks, 35 breaks (4 new for `describe`/`typeLabel`), two zones. New `npm run
+  test:school-day-consumers` (`smoke-consumers.mjs`, Chromium, port 8546): 45 checks (004 with no calendar, a B day, a
+  half day, a passing time, a closed day, another tab's save, the button's "until" and the running timer; 010's strip,
+  panels, roster by name, closed day, no schedule, the switch, another tab's save; neither page writes the calendar; axe
+  on the new parts) and 10 breaks of the pages and `school-day.js` altered on the wire, each caught; also green under
+  `TZ=UTC`. `run-suites --only` classroom-timer 4 green (the single-view golden included), command-center 2, school-calendar
+  13, service-worker 3, tool-registry 1; the a11y sweep on 004 and 010 clean; `test:theme` 966; lint; every guard,
+  `check:precache --base origin/main` and `check:adoption --check` (`school-day.js` 4).
+- **What did not work.** The first axe pass on 004 failed colour contrast: it scanned after the button was pressed, when a
+  running timer dims the whole settings panel to half opacity (as it always has). The scan now runs before the press; the
+  dimmed panel is unchanged and not this row's to fix.
+- **Not verified.** Neither page has been used in a real period; the minute-by-minute refresh was checked with a fixed
+  clock, not across a real bell; 010's roster switch was checked on load, not at a bell during the day; nothing was read
+  by a screen reader. 004's mirror and the timer board do not show the row.
+
 ## Path 9 P2 finished: unit bands for every course (2026-10-24, AI-18, `CACHE_VERSION` v313)
 
 BACKLOG rank 13 deleted: Path 9 P2 is whole (increments 1–4 in v309–v312, this piece in v313). A gap, ranks not renumbered,

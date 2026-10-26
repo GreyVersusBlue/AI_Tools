@@ -28,6 +28,7 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/grouping.js"></script>
 <script src="../_shared/student-flags.js"></script>
 <!-- Path 6 P4's roster chain: share.js receives 002's groups (?labgroups=),
      and the registry and handoff table send this page's groups to 005 as a
@@ -428,7 +429,8 @@
 
   // state: { name, students: "raw text", roles: [{name, description}, ...],
   //   stations: [{name, equipment}, ...], mode: 'count'|'size', splitValue,
-  //   history: { studentName: [roleName,...] (most recent last) },
+  //   history: { studentName: [roleName,...] (most recent last) }, written from
+  //   groupHistory, the engine's role memory (setRoleMemory(), v342),
   //   lastGroups: [{ station: {name, equipment}|null, members: [{name, role}] }, ...],
   //   checkoutLog: [{ outAt: iso|null, inAt: iso|null }, ...] parallel to lastGroups,
   //   absent: [studentName, ...] — marked absent on the *current* shuffle only;
@@ -567,11 +569,7 @@
       role records would quietly make both look over-served. */
   function renameStudentData(from, to) {
     var moved = false;
-    if (state.history[from] !== undefined && state.history[to] === undefined) {
-      state.history[to] = state.history[from];
-      delete state.history[from];
-      moved = true;
-    }
+    if (renameInMemory(from, to)) moved = true;
     ['absent', 'lastExcludedForSafety'].forEach(function (bag) {
       var i = state[bag].indexOf(from);
       if (i === -1) return;
@@ -954,15 +952,26 @@
   }
 
   // Assign groups of students by random split, then best-effort resolve any
-  // keep-apart pairs (same swap-based local search as 002-group-team-generator.html).
+  // keep-apart pairs. Both are _shared/grouping.js's since Path 13 P2 (v340):
+  // the split is the one this page had, draw for draw, and the repair is
+  // 002-group-team-generator.html's swap search, which fails no more often
+  // than this page's own did (Tools/grouping/test/parity.test.mjs measures it
+  // over 14,000 classes). Members are keyed by position, so two students of
+  // one name stay two; a pair names the first of them, as groupIndexOf() does.
   function makeGroups(names) {
-    var k = groupCountFor(names.length);
-    var groups = [];
-    for (var i = 0; i < k; i++) groups.push([]);
-    var shuffled = shuffle(names);
-    shuffled.forEach(function (name, idx) { groups[idx % k].push(name); });
-    resolveKeepApart(groups);
-    return groups;
+    var members = names.map(function (n, i) { return { key: String(i), name: n }; });
+    var first = {};
+    names.forEach(function (n, i) { if (!Object.prototype.hasOwnProperty.call(first, n)) first[n] = String(i); });
+    var apart = [];
+    (state.keepApart || []).forEach(function (pair) {
+      if (Array.isArray(pair) && Object.prototype.hasOwnProperty.call(first, pair[0]) &&
+          Object.prototype.hasOwnProperty.call(first, pair[1])) apart.push([first[pair[0]], first[pair[1]]]);
+    });
+    var opts = { count: groupCountFor(names.length) };
+    if (apart.length) opts.apart = apart;
+    return Grouping.formGroups(members, opts).groups.map(function (g) {
+      return g.map(function (key) { return names[+key]; });
+    });
   }
 
   function groupIndexOf(groups, name) {
@@ -980,84 +989,114 @@
     });
   }
 
-  // Randomized local search: repeatedly swap a member of a violating group
-  // with a member of another group, keeping the swap only if it doesn't make
-  // things worse. Best-effort — some constraint sets can't all be satisfied.
-  function resolveKeepApart(groups) {
-    var pairs = state.keepApart || [];
-    if (!pairs.length || groups.length < 2) return;
-    var attempts = 0, maxAttempts = 600;
-    var bestCount = findApartViolations(groups).length;
-    while (bestCount > 0 && attempts < maxAttempts) {
-      attempts++;
-      var violations = findApartViolations(groups);
-      if (!violations.length) break;
-      var offender = violations[Math.floor(Math.random() * violations.length)];
-      var groupIdx = groupIndexOf(groups, offender[0]);
-      var otherIdx = Math.floor(Math.random() * groups.length);
-      if (otherIdx === groupIdx || !groups[otherIdx].length) continue;
-      var fromArr = groups[groupIdx];
-      var swapOutIdx = fromArr.indexOf(offender[1]);
-      if (swapOutIdx === -1) continue;
-      var toArr = groups[otherIdx];
-      var swapInIdx = Math.floor(Math.random() * toArr.length);
-      var a = fromArr[swapOutIdx], b = toArr[swapInIdx];
-      fromArr[swapOutIdx] = b; toArr[swapInIdx] = a;
-      var newCount = findApartViolations(groups).length;
-      if (newCount > bestCount) { fromArr[swapOutIdx] = a; toArr[swapInIdx] = b; }
-      else { bestCount = newCount; }
-    }
+  // ── Role-fairness memory ────────────────────────────────────────────────
+  // Within each group a student takes the open role they held longest ago (or
+  // never), with a random tie-break: Grouping.rotateRoles() since Path 13 P2,
+  // draw for draw the picker this page had (parity.test.mjs). Since the P2
+  // storage step (v342) the memory itself is state.groupHistory, the
+  // engine's (_shared/grouping.js), roles only: this page has never remembered
+  // partners. state.history, { name: [role, ...] } oldest first, the map every
+  // other line here reads, is written from it on every change by
+  // setRoleMemory(), because an older cached copy of this page reads that map
+  // and drops groupHistory when it saves; roleMemoryOf() takes back what such
+  // a copy wrote. Keys come from Grouping.history.identify(), one per name as
+  // the map had one entry per name: since v345 a student's roster id where
+  // Class Roster Hub has one ('i:<id>'), so the memory follows a rename it
+  // sees by itself. followRenames() still moves a rename trackRenames()
+  // reports (renameInMemory()), under the rules it always had, and the id map
+  // keys a memory saved by name before then (roleMemoryOf()).
+  function setRoleMemory(h) {
+    state.groupHistory = h;
+    state.history = Grouping.history.toLegacyRoles(h);
   }
 
-  // Role-fairness memory: for each student, state.history[name] is an array
-  // of role names they've held in past shuffles, oldest first. We bias
-  // assignment within each group by weighting each candidate role's random
-  // "score" against how recently that student held it — a role never held
-  // (or held longest ago) sorts to the top of the preference order.
-  function roleRecencyScore(studentName, role) {
-    var hist = (state.history && state.history[studentName]) || [];
-    var idxFromEnd = -1;
-    for (var i = hist.length - 1; i >= 0; i--) {
-      if (hist[i] === role) { idxFromEnd = hist.length - 1 - i; break; }
-    }
-    // Never held this role -> best possible score (very low = most preferred).
-    if (idxFromEnd === -1) return -1;
-    // Held it before -> higher score the more recently it was held
-    // (idxFromEnd 0 = held it last time = worst score).
-    return idxFromEnd === 0 ? 1000 : (100 - Math.min(idxFromEnd, 99));
-  }
-
-  // Assign distinct roles within one group, preferring for each student the
-  // role they've had least recently. Greedy: try students in random order,
-  // each picks their most-preferred still-available role, with some
-  // randomness among near-equal preferences so it doesn't feel robotic.
-  function assignRolesForGroup(members, roles) {
-    var order = shuffle(members);
-    var available = roles.slice();
-    var assignment = {}; // name -> role or null (Team Member)
-
-    order.forEach(function (name) {
-      if (!available.length) { assignment[name] = null; return; }
-      // Rank available roles by recency score (lower = more preferred),
-      // then break ties randomly.
-      var ranked = available.map(function (role) {
-        return { role: role, score: roleRecencyScore(name, role) + Math.random() * 0.5 };
-      }).sort(function (a, b) { return a.score - b.score; });
-      var chosen = ranked[0].role;
-      assignment[name] = chosen;
-      available.splice(available.indexOf(chosen), 1);
+  /** A memory holding only the members at `idx`, in that order, so the map
+      written from it keeps the order the old map's entries had. */
+  function pickMembers(h, idx) {
+    var out = { v: h.v, gen: h.gen, keys: [], names: [], seen: [], pairs: {}, roles: {} };
+    idx.forEach(function (i, j) {
+      out.keys.push(h.keys[i]); out.names.push(h.names[i]); out.seen.push(h.seen[i]);
+      if (h.roles[i]) out.roles[j] = h.roles[i].slice();
     });
+    return Grouping.history.normalize(out);
+  }
 
+  /** The memory a saved record holds. Its groupHistory with the old map
+      absorbed into it, or, on a record from before the field (or one an older
+      page saved), the memory made from the old map. The old map is what an
+      older page wrote last, so it decides who has a list and in what order: a
+      list it no longer has (that page's Reset, or a rename it moved) leaves the
+      memory too. */
+  function roleMemoryOf(loaded) {
+    var H = Grouping.history;
+    var legacy = loaded && loaded.history && typeof loaded.history === 'object' && !Array.isArray(loaded.history) ? loaded.history : {};
+    var h = H.absorbLegacy(loaded ? loaded.groupHistory : null, { roles: legacy, idNames: loaded ? loaded.idNames : null });
+    var idx = [];
+    Object.keys(legacy).forEach(function (n) {
+      for (var i = 0; i < h.names.length; i++) {
+        if (h.names[i] === n) { if (h.roles[i] && idx.indexOf(i) === -1) idx.push(i); return; }
+      }
+    });
+    return pickMembers(h, idx);
+  }
+
+  /** Hands out this group's roles from the memory and records them, before
+      the next group is handed out, as the page always did. Returns
+      { name: role|null } (null is "Team Member", which is not remembered). */
+  function handOutRoles(members, roles) {
+    var H = Grouping.history;
+    var names = members.filter(function (n, i) { return members.indexOf(n) === i; });
+    var keyOf = {};
+    var ided = H.identify(state.groupHistory, names, Roster.idsFor(names, state.rosterName || ''));
+    ided.members.forEach(function (m) { keyOf['#' + m.name] = m.key; });
+    var keys = members.map(function (name) { return keyOf['#' + name]; });
+    var assignment = {};
+    Grouping.rotateRoles([keys], roles, ided.history).byGroup[0].forEach(function (x, i) {
+      assignment[members[i]] = x.role;
+    });
+    // One entry per member in group order, so a name that is in the group
+    // twice is pushed twice, as the old recordHistory() pushed it.
+    var h = H.record(ided.history, [], { pairs: false, roles: [members.map(function (name, i) {
+      return { key: keys[i], role: assignment[name] };
+    })] });
+    members.forEach(function (name, i) { var at = h.keys.indexOf(keys[i]); if (at !== -1) h.names[at] = name; });
+    /* identify() makes a member of every student it keys; the memory holds
+       only those with a role, as it always has, so a student who has only
+       been "Team Member" joins the map when they first get one, where they did. */
+    setRoleMemory(pickMembers(h, h.keys.map(function (k, i) { return i; }).filter(function (i) { return h.roles[i] && h.roles[i].length; })));
     return assignment;
   }
 
-  function recordHistory(name, role) {
-    if (!role) return; // "Team Member" isn't tracked as a rotating role
-    if (!state.history) state.history = {};
-    if (!state.history[name]) state.history[name] = [];
-    state.history[name].push(role);
-    // Cap history length per student so storage doesn't grow unbounded.
-    if (state.history[name].length > 30) state.history[name].shift();
+  /** A rename for the memory: the roles move when `to` has none, and the
+      entry goes to the end of the map, where the old move put it. A student
+      keyed by id keeps the key. When `to` has roles the move is refused, as it
+      always was, and a student keyed by id is unbound from it, so identify()
+      does not merge the two later: the roles stay under the old name and the
+      student reads the ones `to` has, which is what the refusal always did. */
+  function renameInMemory(from, to) {
+    if (state.history[from] === undefined) return false;
+    var H = Grouping.history, h = H.normalize(state.groupHistory);
+    var i = h.names.indexOf(from);
+    if (i === -1) return false;
+    function nameKey(n) {
+      var k = 'n:' + n, c = 1;
+      while (h.keys.indexOf(k) !== -1) { c++; k = 'n:' + n + '#' + c; }
+      return k;
+    }
+    if (state.history[to] !== undefined) {
+      if (h.keys[i].indexOf('i:') === 0) setRoleMemory(H.rekey(h, h.keys[i], nameKey(from)));
+      return false;
+    }
+    var key = h.keys[i];
+    if (key.indexOf('i:') !== 0) {
+      key = nameKey(to);
+      h = H.rekey(h, h.keys[i], key);
+    }
+    i = h.keys.indexOf(key);
+    h.names[i] = to;
+    var idx = h.keys.map(function (k, j) { return j; }).filter(function (j) { return j !== i; });
+    setRoleMemory(pickMembers(h, idx.concat([i])));
+    return true;
   }
 
   // Assigns a station to each group. Shuffles the station order and cycles
@@ -1117,14 +1156,13 @@
       }
     }
 
-    undoSnapshot = { lastGroups: deepClone(state.lastGroups), history: deepClone(state.history), checkoutLog: deepClone(state.checkoutLog), absent: deepClone(state.absent), lastExcludedForSafety: deepClone(state.lastExcludedForSafety) };
+    undoSnapshot = { lastGroups: deepClone(state.lastGroups), groupHistory: state.groupHistory, checkoutLog: deepClone(state.checkoutLog), absent: deepClone(state.absent), lastExcludedForSafety: deepClone(state.lastExcludedForSafety) };
 
     var groups = makeGroups(names);
     var violations = findApartViolations(groups);
     var stationInfo = assignStationsToGroups(groups.length);
     var result = groups.map(function (members, i) {
-      var assignment = assignRolesForGroup(members, roleNames);
-      members.forEach(function (name) { recordHistory(name, assignment[name]); });
+      var assignment = handOutRoles(members, roleNames);
       return {
         station: stationInfo.assignments[i] || null,
         members: members.map(function (name) { return { name: name, role: assignment[name] }; })
@@ -1169,7 +1207,7 @@
   els.undoBtn.addEventListener('click', function () {
     if (!undoSnapshot) return;
     state.lastGroups = undoSnapshot.lastGroups;
-    state.history = undoSnapshot.history || {};
+    setRoleMemory(undoSnapshot.groupHistory);
     state.checkoutLog = undoSnapshot.checkoutLog || [];
     state.absent = undoSnapshot.absent || [];
     state.lastExcludedForSafety = undoSnapshot.lastExcludedForSafety || [];
@@ -1186,7 +1224,7 @@
 
   els.resetHistoryBtn.addEventListener('click', function () {
     if (!confirm('Clear role history for "' + state.name + '"? Everyone will look brand-new to the fairness algorithm.')) return;
-    state.history = {};
+    setRoleMemory(Grouping.history.empty());
     saveCurrent();
     renderHistoryHint();
     showMsg('Role history reset for this roster.', true);
@@ -1252,26 +1290,13 @@
   // group (cursor keeps advancing even when a slot is reused, so multiple
   // absences spread out rather than piling every vacancy on one student).
   function computeEffectiveMembers(group) {
+    // Grouping.coverRoles() since Path 13 P2 (v340), keyed by position.
     var members = group.members;
-    var presentIdx = [];
-    members.forEach(function (m, i) { if (!isAbsentNow(m.name)) presentIdx.push(i); });
-    var coverage = {};
-    if (presentIdx.length) {
-      var cursor = 0;
-      members.forEach(function (m, i) {
-        if (isAbsentNow(m.name) && m.role) {
-          var targetIdx = presentIdx[cursor % presentIdx.length];
-          cursor++;
-          (coverage[targetIdx] = coverage[targetIdx] || []).push(m.role);
-        }
-      });
-    }
+    var absentKeys = [];
+    members.forEach(function (m, i) { if (isAbsentNow(m.name)) absentKeys.push(String(i)); });
+    var covered = Grouping.coverRoles(members.map(function (m, i) { return { key: String(i), role: m.role }; }), absentKeys);
     return members.map(function (m, i) {
-      var isAbsent = isAbsentNow(m.name);
-      var extra = coverage[i] || [];
-      var effectiveRole = m.role || null;
-      if (extra.length) effectiveRole = (effectiveRole ? [effectiveRole] : []).concat(extra).join(' + ');
-      return { name: m.name, role: m.role, effectiveRole: isAbsent ? null : effectiveRole, absent: isAbsent, fromHub: !!hubAbsent[m.name] };
+      return { name: m.name, role: m.role, effectiveRole: covered[i].effectiveRole, absent: covered[i].absent, fromHub: !!hubAbsent[m.name] };
     });
   }
 
@@ -1467,8 +1492,8 @@
   // is deliberately comprehensive: every current roster name (even with no
   // history) x every currently-defined role (even with a zero count), plus
   // any legacy role names still sitting in old history so past data isn't
-  // dropped. Same recency-memory source (`state.history`) as roleRecencyScore
-  // and recordHistory — this is a read-only view of that data, nothing new
+  // dropped. Same recency-memory source (`state.history`) as the role picker
+  // and handOutRoles — this is a read-only view of that data, nothing new
   // is tracked.
   function fairnessGridHtml() {
     var rosterNames = studentNames();
@@ -1652,6 +1677,7 @@
       browser's storage, a JSON import) so every field a older/partial
       record might be missing still has a safe value. */
   function normalizeRosterData(loaded, name) {
+    var memory = roleMemoryOf(loaded);
     var lastGroups = normalizeLastGroups(loaded.lastGroups);
     var checkoutLog = Array.isArray(loaded.checkoutLog) ? loaded.checkoutLog : [];
     if (lastGroups) {
@@ -1672,7 +1698,10 @@
       equipment: Array.isArray(loaded.equipment)
         ? loaded.equipment.map(function (e) { return { item: String(e && e.item || ''), count: e && e.count != null ? e.count : '' }; })
         : [],
-      history: (loaded.history && typeof loaded.history === 'object') ? loaded.history : {},
+      /* The role memory and the map written from it (setRoleMemory()); a
+         roster saved, or a roster file written, before v342 has the map only. */
+      history: Grouping.history.toLegacyRoles(memory),
+      groupHistory: memory,
       lastGroups: lastGroups,
       checkoutLog: checkoutLog,
       keepApart: Array.isArray(loaded.keepApart) ? loaded.keepApart : [],
@@ -1801,8 +1830,7 @@
     state.students = groups.map(function (g) { return g.join('\n'); }).join('\n');
     var roleNames = state.roles.map(function (r) { return r.name; });
     state.lastGroups = groups.map(function (members) {
-      var assignment = assignRolesForGroup(members, roleNames);
-      members.forEach(function (name) { recordHistory(name, assignment[name]); });
+      var assignment = handOutRoles(members, roleNames);
       return { station: null, members: members.map(function (name) { return { name: name, role: assignment[name] }; }) };
     });
     state.checkoutLog = state.lastGroups.map(function () { return { outAt: null, inAt: null }; });

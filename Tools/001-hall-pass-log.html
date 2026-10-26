@@ -22,6 +22,7 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/school-day.js"></script>
 <script src="../_shared/export.js"></script>
 <script src="../_shared/tool-registry.js"></script>
 <script src="../_shared/restore-kit.js"></script>
@@ -296,6 +297,7 @@
   .history-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
   .history-table th, .history-table td { border-top: 1px solid var(--line); padding: .3rem .6rem; text-align: left; }
   .history-table th { color: var(--muted); font-weight: 600; }
+  .range-period-head { margin: .9rem 0 .3rem; font-size: .85rem; }
 
   /* ── Weekly frequency ─────────────────────────────────────────────── */
   .weekly-grid { display: flex; gap: 1rem; flex-wrap: wrap; }
@@ -501,7 +503,7 @@
   <h2 id="printTitle">Hall Pass Log</h2>
   <p class="p-sub" id="printSub"></p>
   <table>
-    <thead><tr><th>Student</th><th>Destination</th><th>Time Out</th><th>Time In</th><th>Duration</th><th>Note</th></tr></thead>
+    <thead id="printHead"><tr><th>Student</th><th>Destination</th><th>Time Out</th><th>Time In</th><th>Duration</th><th>Note</th></tr></thead>
     <tbody id="printBody"></tbody>
   </table>
 </div>
@@ -524,6 +526,7 @@
     <thead><tr><th>Student</th><th>Passes</th><th>Total Minutes</th></tr></thead>
     <tbody id="rangePrintBody"></tbody>
   </table>
+  <div id="rangePrintPeriods"></div>
 </div>
 
 <script>
@@ -542,14 +545,14 @@
    'rosterSelect', 'loadRosterBtn', 'namesInput', 'nameCount',
    'destsEditor', 'addDestBtn', 'archiveBtn', 'historyWrap', 'weeklyWrap', 'flyerThreshold',
    'destChips', 'studentGrid', 'liveBoard', 'undoBar', 'alertSoundToggle', 'printSelect', 'printBtn', 'activityFeed',
-   'printArea', 'printTitle', 'printSub', 'printBody', 'msg',
+   'printArea', 'printTitle', 'printSub', 'printHead', 'printBody', 'msg',
    'oneOutToggle', 'weeklyBudget', 'teacherInitials', 'approvalList',
    'projectorBtn', 'projectorView', 'projClock', 'projOutCount', 'projDests', 'projAlert', 'projSyncNote', 'projectorCloseBtn',
    'syncBtn', 'syncStopBtn', 'syncStatusLine', 'syncOverlay', 'syncBody', 'syncCloseBtn',
    'passOverlay', 'passCode', 'passName', 'passDest', 'passTime', 'passInitials', 'passPrintBtn', 'passCloseBtn',
    'passPrintArea', 'passPrintCode', 'passPrintName', 'passPrintDest', 'passPrintTime', 'passPrintInitials',
    'rangeFrom', 'rangeTo', 'buildRangeBtn', 'rangeReportWrap',
-   'rangePrintArea', 'rangePrintTitle', 'rangePrintSub', 'rangePrintBody'
+   'rangePrintArea', 'rangePrintTitle', 'rangePrintSub', 'rangePrintBody', 'rangePrintPeriods'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var DEFAULT_DESTS = [
@@ -1257,6 +1260,35 @@
       '<div class="weekly-col"><h4>By student</h4>' + studentList(studentTop) + '</div>';
   }
 
+  // ── The period a trip fell in (Path 9 P3) ────────────────────────────────
+  /* Read from 032 School Calendar's bell schedules through SchoolDay at display
+     time and never stored: the trip's time is the fact, and the calendar can
+     change after it. With no calendar saved on this device there is no Period
+     column anywhere and the page is what it was. periodCtx() is built once per
+     render, because every periodAt() call would otherwise rework the year's
+     A/B letters. */
+  function periodCtx() {
+    var cal = (window.SchoolDay && SchoolDay.read(localStorage)) || null;
+    if (!cal) return null;
+    return { cal: cal, opts: { letters: SchoolDay.abLetters(cal), bell: SchoolDay.cleanBell(cal.bell).bell } };
+  }
+  var PERIOD_STATE_WORDS = { between: 'Passing time', before: 'Before school', after: 'After school' };
+  /** The period in progress at outMs, in words; '\u2014' for a day with no schedule
+      (or no school, or a trip with no time); null when there is no calendar. */
+  function tripPeriod(ctx, outMs) {
+    if (!ctx) return null;
+    if (typeof outMs !== 'number' || !isFinite(outMs)) return '\u2014';
+    var d = new Date(outMs);
+    var at = SchoolDay.periodAt(ctx.cal, SchoolDay.localISO(d), ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2), ctx.opts);
+    if (at.state === 'in') return at.period.label;
+    return PERIOD_STATE_WORDS[at.state] || '\u2014';
+  }
+  window.addEventListener('storage', function (e) {
+    if (!state || (e.key !== null && !(window.SchoolDay && e.key === SchoolDay.KEY))) return;
+    renderTodayLog();
+    renderHistory();
+  });
+
   // ── Today's log (combined, newest first) ─────────────────────────────────
   function combinedTodayItems() {
     var items = state.log.map(function (e) {
@@ -1276,14 +1308,16 @@
       refreshPrintSelect();
       return;
     }
+    var ctx = periodCtx();
     els.activityFeed.innerHTML = items.slice(0, 60).map(function (it) {
+      var period = tripPeriod(ctx, it.outMs);
       var right = it.stillOut
         ? '<span class="a-delta out">still out</span>'
         : ('<span class="a-delta">' + it.durationMin + ' min</span>');
       var noteMark = it.note ? (' <span title="' + escapeAttr(it.note) + '">&#128221;</span>') : '';
       return '<div class="activity-item">' +
         '<span><span class="a-who">' + escapeHtml(it.name) + '</span>' + flyerBadge(it.name) + ' <span class="a-what">&mdash; ' + escapeHtml(it.destLabel) + '</span>' + noteMark + '</span>' +
-        '<span>' + right + ' <span class="a-time">' + escapeHtml(it.outStr) + '</span></span>' +
+        '<span>' + right + ' <span class="a-time">' + escapeHtml(it.outStr) + (period ? ' \u00b7 <span class="a-period">' + escapeHtml(period) + '</span>' : '') + '</span></span>' +
         '</div>';
     }).join('');
     refreshPrintSelect();
@@ -1320,13 +1354,16 @@
 
   function renderHistory() {
     if (!state.history.length) { els.historyWrap.innerHTML = ''; refreshPrintSelect(); return; }
+    var ctx = periodCtx();
     els.historyWrap.innerHTML = state.history.map(function (h, i) {
       var rowsHtml = h.rows.map(function (r) {
-        return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.destLabel) + '</td><td>' + escapeHtml(r.outStr) + '</td><td>' + escapeHtml(r.inStr) + '</td><td>' + r.durationMin + ' min</td><td>' + escapeHtml(r.note || '') + '</td></tr>';
+        return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.destLabel) + '</td>' +
+          (ctx ? '<td>' + escapeHtml(tripPeriod(ctx, r.outMs)) + '</td>' : '') +
+          '<td>' + escapeHtml(r.outStr) + '</td><td>' + escapeHtml(r.inStr) + '</td><td>' + r.durationMin + ' min</td><td>' + escapeHtml(r.note || '') + '</td></tr>';
       }).join('');
       return '<details class="history-entry"' + (i === 0 ? ' open' : '') + '>' +
         '<summary><b>' + escapeHtml(h.date) + '</b> &middot; ' + h.rows.length + ' sign-out' + (h.rows.length === 1 ? '' : 's') + '</summary>' +
-        '<table class="history-table"><thead><tr><th>Student</th><th>Destination</th><th>Out</th><th>In</th><th>Duration</th><th>Note</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
+        '<table class="history-table"><thead><tr><th>Student</th><th>Destination</th>' + (ctx ? '<th>Period</th>' : '') + '<th>Out</th><th>In</th><th>Duration</th><th>Note</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
         '</details>';
     }).join('');
     refreshPrintSelect();
@@ -1352,24 +1389,28 @@
     if (sel === 'today' || !sel) {
       var items = combinedTodayItems().slice().sort(function (a, b) { return a.outMs - b.outMs; });
       rows = items.map(function (it) {
-        return { name: it.name, destLabel: it.destLabel, outStr: it.outStr, inStr: it.stillOut ? '\u2014 still out \u2014' : it.inStr, durationMin: it.stillOut ? '\u2014' : (it.durationMin + ' min'), note: it.note || '' };
+        return { name: it.name, destLabel: it.destLabel, outMs: it.outMs, outStr: it.outStr, inStr: it.stillOut ? '\u2014 still out \u2014' : it.inStr, durationMin: it.stillOut ? '\u2014' : (it.durationMin + ' min'), note: it.note || '' };
       });
       sub = new Date().toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' }) + ' (Today)';
     } else {
       var h = state.history[parseInt(sel, 10)];
       if (!h) return;
       rows = h.rows.map(function (r) {
-        return { name: r.name, destLabel: r.destLabel, outStr: r.outStr, inStr: r.inStr, durationMin: r.durationMin + ' min', note: r.note || '' };
+        return { name: r.name, destLabel: r.destLabel, outMs: r.outMs, outStr: r.outStr, inStr: r.inStr, durationMin: r.durationMin + ' min', note: r.note || '' };
       });
       sub = h.date;
     }
     els.printTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Hall Pass Log';
     els.printSub.textContent = sub;
+    var ctx = periodCtx();
+    els.printHead.innerHTML = '<tr><th>Student</th><th>Destination</th>' + (ctx ? '<th>Period</th>' : '') + '<th>Time Out</th><th>Time In</th><th>Duration</th><th>Note</th></tr>';
     els.printBody.innerHTML = rows.length
       ? rows.map(function (r) {
-          return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.destLabel) + '</td><td>' + escapeHtml(r.outStr) + '</td><td>' + escapeHtml(r.inStr) + '</td><td>' + escapeHtml(String(r.durationMin)) + '</td><td>' + escapeHtml(r.note) + '</td></tr>';
+          return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.destLabel) + '</td>' +
+            (ctx ? '<td>' + escapeHtml(tripPeriod(ctx, r.outMs)) + '</td>' : '') +
+            '<td>' + escapeHtml(r.outStr) + '</td><td>' + escapeHtml(r.inStr) + '</td><td>' + escapeHtml(String(r.durationMin)) + '</td><td>' + escapeHtml(r.note) + '</td></tr>';
         }).join('')
-      : '<tr><td colspan="6">No sign-outs recorded.</td></tr>';
+      : '<tr><td colspan="' + (ctx ? 7 : 6) + '">No sign-outs recorded.</td></tr>';
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
     els.printArea.classList.add('active');
     window.print();
@@ -1845,12 +1886,12 @@
      (it's read at a glance during a conversation); this is what an export
      needs, because "12 passes, 96 minutes" is the start of a counselor
      conversation and the individual trips are the rest of it. */
-  function buildRangeDetail(fromMs, toMs) {
+  function buildRangeDetail(fromMs, toMs, ctx) {
     var out = [];
     var todayLabel = new Date().toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
     state.log.forEach(function (e) {
       if (e.outMs >= fromMs && e.outMs <= toMs) {
-        out.push({ date: todayLabel, dateMs: e.outMs, name: e.name, dest: e.destLabel,
+        out.push({ date: todayLabel, dateMs: e.outMs, name: e.name, dest: e.destLabel, period: tripPeriod(ctx, e.outMs),
                    out: e.outStr, back: e.inStr || '', minutes: e.durationMin, note: e.note || '' });
       }
     });
@@ -1858,11 +1899,35 @@
       var ms = (h.dateMs != null) ? h.dateMs : Date.parse(h.date);
       if (isNaN(ms) || ms < fromMs || ms > toMs) return;
       h.rows.forEach(function (r) {
-        out.push({ date: h.date, dateMs: (r.outMs != null ? r.outMs : ms), name: r.name, dest: r.destLabel,
+        out.push({ date: h.date, dateMs: (r.outMs != null ? r.outMs : ms), name: r.name, dest: r.destLabel, period: tripPeriod(ctx, r.outMs),
                    out: r.outStr, back: r.inStr || '', minutes: r.durationMin, note: r.note || '' });
       });
     });
     return out.sort(function (a, b) { return b.dateMs - a.dateMs || a.name.localeCompare(b.name); });
+  }
+
+  /* The range's trips grouped by the period each fell in: [{ period, count, minutes }],
+     most passes first; the rows that are not a period (passing time, before or
+     after school, a day with no schedule) after every period. */
+  function rangeByPeriod(detail) {
+    var by = {}, order = [];
+    detail.forEach(function (d) {
+      var k = d.period || '\u2014';
+      if (!by[k]) { by[k] = { period: k, count: 0, minutes: 0 }; order.push(k); }
+      by[k].count++;
+      by[k].minutes += (d.minutes || 0);
+    });
+    function notPeriod(k) { return k === '\u2014' || Object.keys(PERIOD_STATE_WORDS).some(function (s) { return PERIOD_STATE_WORDS[s] === k; }); }
+    return order.map(function (k) { return by[k]; }).sort(function (a, b) {
+      return (notPeriod(a.period) - notPeriod(b.period)) || (b.count - a.count) || a.period.localeCompare(b.period);
+    });
+  }
+  function periodTableHtml(periods) {
+    if (!periods || !periods.length) return '';
+    return '<h4 class="range-period-head">By period</h4>' +
+      '<table class="history-table range-periods"><thead><tr><th>Period</th><th>Passes</th><th>Total Minutes</th></tr></thead><tbody>' +
+      periods.map(function (p) { return '<tr><td>' + escapeHtml(p.period) + '</td><td>' + p.count + '</td><td>' + p.minutes + ' min</td></tr>'; }).join('') +
+      '</tbody></table>';
   }
 
   els.buildRangeBtn.addEventListener('click', function () {
@@ -1871,14 +1936,16 @@
     var toMs = new Date(els.rangeTo.value + 'T23:59:59').getTime();
     if (isNaN(fromMs) || isNaN(toMs) || fromMs > toMs) { showMsg('That date range doesn’t look right.', 'error'); return; }
     var totals = buildRangeTotals(fromMs, toMs);
+    var ctx = periodCtx();
     var rows = Object.keys(totals).map(function (n) { return { name: n, count: totals[n].count, minutes: totals[n].minutes }; })
       .sort(function (a, b) { return b.count - a.count || a.name.localeCompare(b.name); });
     lastRangeReport = {
       fromLabel: new Date(fromMs).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }),
       toLabel: new Date(toMs).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }),
       rows: rows,
-      detail: buildRangeDetail(fromMs, toMs),
+      detail: buildRangeDetail(fromMs, toMs, ctx),
     };
+    lastRangeReport.periods = ctx ? rangeByPeriod(lastRangeReport.detail) : null;
     if (!rows.length) {
       els.rangeReportWrap.innerHTML = '<p class="empty-hint">No sign-outs recorded in that range.</p>';
       return;
@@ -1886,7 +1953,7 @@
     els.rangeReportWrap.innerHTML =
       '<table class="history-table"><thead><tr><th>Student</th><th>Passes</th><th>Total Minutes</th></tr></thead><tbody>' +
       rows.map(function (r) { return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + r.count + '</td><td>' + r.minutes + ' min</td></tr>'; }).join('') +
-      '</tbody></table><div class="btn-row" style="margin-top:.6rem;">' +
+      '</tbody></table>' + periodTableHtml(lastRangeReport.periods) + '<div class="btn-row" style="margin-top:.6rem;">' +
       '<button class="secondary" type="button" id="printRangeBtn">Print Range Report</button>' +
       '<button class="secondary" type="button" id="csvRangeBtn">Export CSV</button>' +
       '<button class="secondary" type="button" id="xlsxRangeBtn">Export Excel</button>' +
@@ -1928,10 +1995,15 @@
       lastRangeReport.rows.map(function (r) { return [r.name, r.count, r.minutes]; }));
   }
   function detailAoa() {
-    return [['Date', 'Student', 'Destination', 'Out', 'Back', 'Minutes', 'Note']].concat(
+    var withPeriod = !!lastRangeReport.periods;
+    return [['Date', 'Student', 'Destination'].concat(withPeriod ? ['Period'] : [], ['Out', 'Back', 'Minutes', 'Note'])].concat(
       (lastRangeReport.detail || []).map(function (d) {
-        return [d.date, d.name, d.dest, d.out, d.back, d.minutes, d.note];
+        return [d.date, d.name, d.dest].concat(withPeriod ? [d.period] : [], [d.out, d.back, d.minutes, d.note]);
       }));
+  }
+  function periodAoa() {
+    return [['Period', 'Passes', 'Total minutes']].concat(
+      lastRangeReport.periods.map(function (p) { return [p.period, p.count, p.minutes]; }));
   }
 
   function exportRangeCsv() {
@@ -1941,7 +2013,7 @@
       ['Hall pass log', (state && state.name) || ''],
       ['Range', lastRangeReport.fromLabel + ' to ' + lastRangeReport.toLabel],
       []
-    ].concat(summaryAoa(), [[]], detailAoa());
+    ].concat(summaryAoa(), [[]], lastRangeReport.periods ? periodAoa().concat([[]]) : [], detailAoa());
     // toCsv writes the BOM that makes Excel open UTF-8 names correctly on Windows.
     ExportKit.download(ExportKit.toCsv(rows), exportFilename('csv'), 'text/csv;charset=utf-8');
     showMsg('Exported ' + lastRangeReport.rows.length + ' student' + (lastRangeReport.rows.length !== 1 ? 's' : '') + ' as CSV.', 'info');
@@ -1951,9 +2023,10 @@
     showMsg('Building the spreadsheet…', 'info');
     loadXlsx().then(function () {
       ExportKit.toXlsx([
-        { name: 'Totals', rows: summaryAoa() },
+        { name: 'Totals', rows: summaryAoa() }
+      ].concat(lastRangeReport.periods ? [{ name: 'By period', rows: periodAoa() }] : [], [
         { name: 'Every pass', rows: detailAoa() }
-      ], { filename: exportFilename('xlsx') });
+      ]), { filename: exportFilename('xlsx') });
       showMsg('Exported ' + lastRangeReport.rows.length + ' student' + (lastRangeReport.rows.length !== 1 ? 's' : '') +
         ' and ' + (lastRangeReport.detail || []).length + ' pass' + ((lastRangeReport.detail || []).length !== 1 ? 'es' : '') + ' to Excel.', 'info');
     }).catch(function () {
@@ -1971,6 +2044,7 @@
     els.rangePrintBody.innerHTML = lastRangeReport.rows.length
       ? lastRangeReport.rows.map(function (r) { return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + r.count + '</td><td>' + r.minutes + ' min</td></tr>'; }).join('')
       : '<tr><td colspan="3">No sign-outs recorded.</td></tr>';
+    els.rangePrintPeriods.innerHTML = periodTableHtml(lastRangeReport.periods);
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
     els.rangePrintArea.classList.add('active');
     window.print();

@@ -35,9 +35,9 @@
 //      touched (rule 3 then applies to those pages) — unless the only files
 //      touched in the folder are under its test/, which no page can load, so
 //      that edit runs the folder's own suites and stops. The second half is what
-//      the first draft of --changed lacked: an edit to Tools/schedule/*.js was
-//      selecting schedule's own suite and not schedule-visualizer's, although
-//      035-schedule-visualizer.html imports from Tools/schedule/, and an edit
+//      the first draft of --changed lacked: an edit to a module 035 imports
+//      (Tools/schedule-visualizer/*.js) was selecting that folder's own suites
+//      and not the suites that open 035-schedule-visualizer.html, and an edit
 //      to Tools/seating-chart/ was skipping the store suite that opens 005.
 //
 //   3. PAGE       — a changed .html selects every suite whose source names it

@@ -31,8 +31,10 @@
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
+<link rel="stylesheet" href="../_shared/print-kit.css">
 <script src="../_shared/store.js"></script>
 <script src="../_shared/school-day.js"></script>
+<script src="../_shared/print-kit.js"></script>
 <style>
   /* Path 5 P3. --ok is the "on pace" green, --accent-deep the darker navy a
      primary button goes to on hover (in dark the accent is already light, so
@@ -371,6 +373,50 @@
     .ymonth { border: 1px solid #999; }
     .ymonth h4 { background: #eee !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
+  /* --- the wall calendar (Path 9 P4): the year on one landscape Letter page, through the
+     print kit (PrintKit.setPage writes the @page rule when this print choice is picked).
+     Sized in inches and points so the screen shows what the paper gets; every box grows
+     with min-height and nothing is clipped, and the names under a month are capped in
+     the script, not by a height. A no-school weekday is hatched, so it reads in black and
+     white; a type is its abbreviation in text, never a colour alone. */
+  .wall-sheet { display: none; }
+  body.view-wall .wall-sheet { display: block; }
+  body.view-wall .months, body.view-wall .year-grid, body.view-wall .week-strip, body.view-wall .units-print { display: none; }
+  .wall-sheet { width: 10.2in; max-width: 100%; box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; font-size: 7pt; line-height: 1.2; color: var(--ink); }
+  .wall-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-bottom: 1.5pt solid currentColor; padding-bottom: 2pt; margin-bottom: 5pt; }
+  .wall-head h2 { margin: 0; font-size: 15pt; }
+  .wall-head p { margin: 0; font-size: 8pt; }
+  .wall-months { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5pt 8pt; }
+  .wmonth { break-inside: avoid; }
+  .wmonth h3 { margin: 0 0 1pt; font-size: 8.5pt; text-align: center; border-bottom: 0.75pt solid currentColor; }
+  .wgrid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .wgrid .wdow { font-size: 6pt; font-weight: 700; text-align: center; }
+  .wcell { min-height: 0.19in; border: 0.5pt solid var(--line-strong); margin: 0 -0.5pt -0.5pt 0; padding: 0.5pt 1pt; font-size: 6.5pt; }
+  .wcell.wempty { border-color: transparent; }
+  .wcell.wwknd { color: var(--muted); }
+  .wcell.woff { background-image: repeating-linear-gradient(135deg, transparent 0 2.5pt, var(--line-strong) 2.5pt 3.2pt); }
+  .wcell .wn { font-weight: 700; }
+  .wcell .wt { display: block; font-size: 5.5pt; font-weight: 700; letter-spacing: 0.02em; }
+  .wnames { list-style: none; margin: 1.5pt 0 0; padding: 0; font-size: 6pt; }
+  .wnames li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* one line a name: a wall calendar names, the day editor says */
+  .wnames b { display: inline-block; min-width: 2.2em; }
+  .wall-foot { display: flex; flex-wrap: wrap; gap: 3pt 12pt; margin-top: 5pt; border-top: 0.75pt solid currentColor; padding-top: 3pt; font-size: 6.5pt; }
+  .wall-foot span { white-space: nowrap; }
+  .wall-foot .wk { display: inline-block; min-width: 1.6em; border: 0.5pt solid currentColor; text-align: center; font-weight: 700; margin-right: 2pt; }
+  .wall-foot .wk.woff { background-image: repeating-linear-gradient(135deg, transparent 0 2.5pt, var(--line-strong) 2.5pt 3.2pt); }
+  .ics-opt { display: inline-flex; align-items: center; gap: 4px; font-size: 0.82rem; color: var(--muted); }
+  .ics-skips { font-size: 0.78rem; }
+  #pastePanel label { display: block; font-size: 0.8rem; font-weight: 600; margin-top: 6px; }
+  #pasteText { width: 100%; box-sizing: border-box; font: 0.8rem/1.4 ui-monospace, Consolas, monospace; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 6px; }
+  @media print {
+    body.view-wall { padding: 0; }
+    body.view-wall .wrap { padding: 0; margin: 0; max-width: none; }
+    body.view-wall .wrap > h1, body.view-wall .wrap > .sub, body.view-wall #printTitle { display: none !important; }
+    body.view-wall .wall-sheet { width: auto; }
+    .wcell:not(.wempty), .wall-foot .wk { border-color: #555 !important; }
+    .wcell.woff, .wall-foot .wk.woff { background-image: repeating-linear-gradient(135deg, transparent 0 2.5pt, #888 2.5pt 3.2pt) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .wcell.wwknd { color: #555 !important; }
+  }
   .back-link { display: inline-block; color: var(--muted); text-decoration: none; font-size: .88rem; padding: .3rem .5rem .3rem 0; margin-bottom: .2rem; }
 </style>
 </head>
@@ -401,8 +447,10 @@
     <button id="btnImport">Import Backup</button>
     <input type="file" id="fileImport" accept="application/json" hidden>
     <button id="btnExportIcs">Export Calendar (.ics)</button>
+    <label class="ics-opt"><input type="checkbox" id="icsLessons"> with paced lessons</label>
     <button id="btnImportIcs">Import Calendar (.ics)</button>
     <input type="file" id="fileImportIcs" accept=".ics,text/calendar" hidden>
+    <button id="btnPasteTable" aria-expanded="false" aria-controls="pastePanel">Paste a Date Table…</button>
     <select id="jumpMonth" aria-label="Jump to month" title="Jump to month"></select>
     <button id="btnJumpToday">Jump to Today</button>
     <select id="viewCols" aria-label="Months across" title="Months across">
@@ -415,6 +463,7 @@
       <label><input type="radio" name="printMode" value="year"> Whole year</label>
       <label><input type="radio" name="printMode" value="week"> One week</label>
       <label><input type="radio" name="printMode" value="units"> Unit pacing calendar</label>
+      <label><input type="radio" name="printMode" value="wall"> Wall calendar (one page)</label>
     </span>
     <span class="print-mode" id="weekPickWrap" style="display:none;">
       <label for="weekPick">Week of</label>
@@ -424,7 +473,22 @@
       <button type="button" id="btnAllWeeks" class="small">Every week of the year</button>
       <span id="weekCount" role="status" aria-live="polite"></span>
     </span>
+    <button id="btnWallPreview" type="button" hidden>Preview pages</button>
     <button id="btnPrint" class="primary">Print / Save PDF</button>
+  </div>
+  <div id="icsPreview" class="no-print"></div>
+  <div id="pastePanel" class="plan-preview no-print" role="region" aria-labelledby="pasteTitle" hidden>
+    <h3 id="pasteTitle">Paste a district calendar's date table</h3>
+    <p id="pasteHelp">Copy the table of dates out of the district's PDF or web page and paste it here, one date or range a line, with its name beside it
+      (“Nov 25-27  Thanksgiving Break”, “12/21/2026 - 1/1/2027  Winter Break”). A date without a year takes the one that puts it in this school year.
+      You see every date that would change before anything is stored; types are added, never taken off, and a line that cannot be read is listed, never guessed.</p>
+    <label for="pasteText">Date table</label>
+    <textarea id="pasteText" rows="8" spellcheck="false" aria-describedby="pasteHelp"></textarea>
+    <div class="unit-actions">
+      <button type="button" class="primary small" id="pasteRead">Read this table</button>
+      <button type="button" class="small" id="pasteClose">Close</button>
+    </div>
+    <div id="pastePreview"></div>
   </div>
 
   <div class="card meta-card no-print">
@@ -579,6 +643,7 @@
   <div class="year-grid" id="yearGrid"></div>
   <div class="week-strip" id="weekStrip"></div>
   <div class="units-print" id="unitsPrint"></div>
+  <section class="wall-sheet pk-page pk-paper" id="wallSheet" aria-label="Wall calendar"></section>
 </div>
 
 <div id="drawer">
@@ -616,6 +681,7 @@ import {
   setBaseline, wantsBaseline, slip, describeSlip,
   splitPreview, carryForward,
 } from './school-calendar/scv-plan.js';
+import { writeIcs, readIcs, planIcsImport, readTable } from './school-calendar/scv-ics.js';
 
 Store.configure({ toolName: 'School Calendar Visualizer' });
 
@@ -1075,7 +1141,7 @@ function renderStats() {
   el.innerHTML = text;
 }
 
-function render() { computePlacement(); renderLegend(); renderBell(); renderMonths(); renderYearGrid(); renderWeekStrip(); syncMeta(); syncAbControls(); renderJumpControl(); renderStats(); renderPacing(); renderUnits(); renderUnitsPrint(); }
+function render() { computePlacement(); renderLegend(); renderBell(); renderMonths(); renderYearGrid(); renderWeekStrip(); syncMeta(); syncAbControls(); renderJumpControl(); renderStats(); renderPacing(); renderUnits(); renderUnitsPrint(); renderWallSheet(); syncIcsLessons(); }
 
 /* ── Week-at-a-glance ────────────────────────────────────────────────────────
    The month grid answers "where does this fall in the year". A planner page
@@ -2600,49 +2666,44 @@ document.getElementById("fileImport").addEventListener("change", e => {
   e.target.value = "";
 });
 
-/* --- ICS export --- */
-function icsEscape(s) {
-  return String(s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
-}
-
-function icsDateStamp(dateISO, dayOffset) {
-  const d = new Date(dateISO + "T00:00:00");
-  if (dayOffset) d.setDate(d.getDate() + dayOffset);
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function buildIcs() {
-  computePlacement(); // buildIcs can run outside a render; use a fresh placement
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//AsPerMyLessonPlan.com//School Calendar Visualizer//EN", "CALSCALE:GREGORIAN"];
-  const dates = new Set([...Object.keys(cal.days), ...Object.keys(placement.byDate)]);
-  [...dates].sort().forEach(dateISO => {
-    const entry = cal.days[dateISO] || { types: [], label: "", note: "", lesson: "" };
-    const placed = placement.byDate[dateISO];
-    // Days with only a free-text lesson/other note still aren't calendar-worthy
-    // on their own, but a placed pacing lesson is.
-    if (!entry.types.length && !entry.label && !placed) return;
-    const typeLabels = entry.types.map(id => { const t = typeById(id); return t ? t.label : null; }).filter(Boolean);
-    const summary = entry.label || (placed ? placed.raw : "") || typeLabels.join(" / ") || "Tagged Day";
-    const descParts = [];
-    if (typeLabels.length) descParts.push(typeLabels.join(", "));
-    if (placed && summary !== placed.raw) descParts.push("Pacing: " + placed.raw);
-    if (entry.lesson) descParts.push("Lesson: " + entry.lesson);
-    if (entry.note) descParts.push(entry.note);
-    lines.push("BEGIN:VEVENT");
-    lines.push("UID:" + dateISO + "-scv@aspermylessonplan.com");
-    lines.push("DTSTART;VALUE=DATE:" + icsDateStamp(dateISO, 0));
-    lines.push("DTEND;VALUE=DATE:" + icsDateStamp(dateISO, 1));
-    lines.push("SUMMARY:" + icsEscape(summary));
-    if (descParts.length) lines.push("DESCRIPTION:" + icsEscape(descParts.join(" — ")));
-    lines.push("END:VEVENT");
+/* --- .ics export and import (Path 9 P4) — the writer and reader are scv-ics.js, which
+   BACKLOG.md's Path 9 P4 bullet and its own header describe. The export holds the days (one
+   event per run of dates), the grading periods and, while "with paced lessons" is ticked, each
+   course's lesson on the date saved for it. The import is shown before it is stored and adds:
+   a type is never removed and a label never replaced; Undo on the notice bar takes it back. --- */
+function icsPeriods() {
+  return SchoolDay.gradingPeriods(cal).map(p => {
+    const name = SchoolDay.gradingPeriodName(cal, p);
+    return { ...p, name: name.charAt(0).toUpperCase() + name.slice(1) };
   });
-  lines.push("END:VCALENDAR");
-  return lines.join("\r\n");
 }
+function icsLessons() {
+  const out = [];
+  if (cal.meta.start > cal.meta.end) return out;
+  for (let ms = isoToMs(cal.meta.start), end = isoToMs(cal.meta.end); ms <= end; ms += 86400000) {
+    const d = new Date(ms).toISOString().slice(0, 10);
+    SchoolDay.lessonsOn(cal, d).forEach(item => {
+      const text = SchoolDay.describeLesson(item);
+      if (text) out.push({ date: d, courseId: item.courseId, course: item.course, text });
+    });
+  }
+  return out;
+}
+function buildIcs() {
+  const withLessons = document.getElementById("icsLessons").checked;
+  return writeIcs(cal, { periods: icsPeriods(), lessons: withLessons ? icsLessons() : [], stamp: new Date() });
+}
+/** "with paced lessons" starts ticked once a course has something planned. */
+function syncIcsLessons() {
+  const box = document.getElementById("icsLessons");
+  if (box.dataset.touched) return;
+  const r = readPlan(cal);
+  box.checked = r.state === "ok" && r.plan.courses.some(c => (c.lessons || []).length || (c.units || []).length);
+}
+document.getElementById("icsLessons").addEventListener("change", e => { e.target.dataset.touched = "1"; });
 
 document.getElementById("btnExportIcs").addEventListener("click", () => {
-  const ics = buildIcs();
-  const blob = new Blob([ics], { type: "text/calendar" });
+  const blob = new Blob([buildIcs()], { type: "text/calendar" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -2651,91 +2712,243 @@ document.getElementById("btnExportIcs").addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 
-/* --- ICS import — a district calendar is usually published as .ics. Only
-   single, non-recurring, all-day VEVENTs are handled (no RRULE, no
-   VALUE=DATE-TIME); a district calendar's holiday/closure list is almost
-   always exactly that shape. --- */
-function unfoldIcsLines(text) {
-  // RFC 5545 line folding: a continuation line starts with a space or tab
-  // and is appended to the previous line with that leading character dropped.
-  const out = [];
-  text.split(/\r\n|\n|\r/).forEach(line => {
-    if ((line.startsWith(" ") || line.startsWith("\t")) && out.length) {
-      out[out.length - 1] += line.slice(1);
-    } else {
-      out.push(line);
-    }
-  });
-  return out;
+function entryWords(e) {
+  const parts = [];
+  const types = e.types.map(id => { const t = typeById(id); return t ? t.label : id; });
+  if (types.length) parts.push(types.join(", "));
+  if (e.label) parts.push("“" + e.label + "”");
+  if (e.note) parts.push("note: " + e.note.replace(/\n/g, " / "));
+  if (e.lesson) parts.push("lesson: " + e.lesson);
+  return parts.join("; ") || "nothing";
 }
 
-function icsUnescape(s) {
-  return String(s || "").replace(/\\n/gi, "\n").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\");
-}
-
-function parseIcs(text) {
-  const lines = unfoldIcsLines(text);
-  const events = [];
-  let cur = null;
-  lines.forEach(line => {
-    if (/^BEGIN:VEVENT/i.test(line)) { cur = {}; return; }
-    if (/^END:VEVENT/i.test(line)) { if (cur && cur.date) events.push(cur); cur = null; return; }
-    if (!cur) return;
-    const idx = line.indexOf(":");
-    if (idx === -1) return;
-    const key = line.slice(0, idx).split(";")[0].toUpperCase();
-    const value = line.slice(idx + 1);
-    if (key === "DTSTART") {
-      const m = value.match(/(\d{4})(\d{2})(\d{2})/);
-      if (m) cur.date = `${m[1]}-${m[2]}-${m[3]}`;
-    } else if (key === "SUMMARY") {
-      cur.summary = icsUnescape(value);
-    } else if (key === "DESCRIPTION") {
-      cur.description = icsUnescape(value);
-    }
-  });
-  return events;
-}
-
-/** A light touch, not a real classifier: if a district's own event name says
-    "holiday"/"break"/"closed" and this calendar already has a day type that
-    looks like a holiday type, tag it — so an imported closure list doesn't
-    land completely untagged. Anything else imports as a label only, which
-    is still exactly what the "paste the table off the district PDF" quick
-    win asked for. */
-function guessTypeForSummary(summary) {
-  if (!summary) return null;
-  if (!/holiday|break|closed|no school/i.test(summary)) return null;
-  const holidayType = cal.dayTypes.find(t => t.id === "holiday") || cal.dayTypes.find(t => /holiday/i.test(t.label));
-  return holidayType ? holidayType.id : null;
+/** The plan for an imported file, shown in #icsPreview, or for a pasted table (`pasted`),
+    shown under the paste box; nothing is stored until "Add these days". */
+function renderIcsPreview(result, fileName, pasted) {
+  document.getElementById("icsPreview").textContent = "";
+  document.getElementById("pastePreview").textContent = "";
+  const wrap = document.getElementById(pasted ? "pastePreview" : "icsPreview");
+  if (!result) return;
+  const where = pasted ? "table" : "file";
+  const box = document.createElement("div");
+  box.className = "plan-preview"; box.id = "icsBox";
+  box.setAttribute("role", "region"); box.setAttribute("aria-labelledby", "icsTitle");
+  const h = document.createElement("h3"); h.id = "icsTitle"; h.textContent = pasted ? "Add the pasted table's dates" : "Import “" + fileName + "”"; box.appendChild(h);
+  const row = document.createElement("div"); row.className = "unit-actions";
+  const cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "small"; cancel.id = "icsCancel";
+  cancel.addEventListener("click", () => { renderIcsPreview(null); if (pasted) document.getElementById("pasteText").focus(); });
+  if (!result.ok) {
+    const p = document.createElement("p"); p.className = "refused"; p.setAttribute("role", "alert");
+    p.textContent = result.error + " Nothing was imported.";
+    box.appendChild(p);
+    cancel.textContent = "Close"; row.appendChild(cancel); box.appendChild(row);
+    wrap.appendChild(box);
+    return;
+  }
+  const plan = planIcsImport(cal, result);
+  const p = document.createElement("p");
+  p.textContent = plan.rows.length
+    ? `${plan.rows.length === 1 ? "1 date" : plan.rows.length + " dates"} would change. Types are added, never taken off; a label already here stays, and the ${where}'s ${pasted ? "name" : "title"} goes into the note.` +
+      (plan.same ? ` ${plan.same === 1 ? "1 date" : plan.same + " dates"} in the ${where} already say${plan.same === 1 ? "s" : ""} what it says.` : "")
+    : `Nothing would change: every date in this ${where} already says what it says.`;
+  p.id = "icsSummary";
+  box.appendChild(p);
+  if (plan.rows.length) {
+    const t = document.createElement("table"); t.className = "unit-table"; t.id = "icsTable";
+    const cap = document.createElement("caption"); cap.textContent = "Dates that would change"; t.appendChild(cap);
+    const head = t.createTHead().insertRow();
+    ["Date", "Now", "After the import"].forEach(x => { const th = document.createElement("th"); th.scope = "col"; th.textContent = x; head.appendChild(th); });
+    const body = t.createTBody();
+    plan.rows.forEach(r => {
+      const tr = body.insertRow();
+      tr.insertCell().textContent = fmtShort(r.date);
+      tr.insertCell().textContent = entryWords(r.before);
+      tr.insertCell().textContent = entryWords(r.after);
+    });
+    box.appendChild(t);
+  }
+  if (plan.skipped.length) {
+    const det = document.createElement("details"); det.className = "ics-skips";
+    const sum = document.createElement("summary");
+    const noun = pasted ? "line" : "event";
+    sum.textContent = (plan.skipped.length === 1 ? "1 " + noun + " is" : plan.skipped.length + " " + noun + "s are") + " not imported";
+    det.appendChild(sum);
+    const ul = document.createElement("ul");
+    plan.skipped.forEach(k => { const li = document.createElement("li"); li.textContent = (k.date ? fmtShort(k.date) + ", " : "") + k.summary + ": " + k.reason + "."; ul.appendChild(li); });
+    det.appendChild(ul);
+    box.appendChild(det);
+  }
+  if (plan.rows.length) {
+    const ok = document.createElement("button"); ok.type = "button"; ok.className = "primary small"; ok.id = "icsApply";
+    ok.textContent = "Add these days";
+    ok.addEventListener("click", () => {
+      const n = plan.rows.length;
+      cal = plan.cal;
+      renderIcsPreview(null);
+      if (pasted) {
+        showPastePanel(false);
+        document.getElementById("pasteText").value = "";
+        save("Adding the pasted table", `Added ${n === 1 ? "1 date" : n + " dates"} from the pasted table.`);
+      } else {
+        save("Importing “" + fileName + "”", `Imported ${n === 1 ? "1 date" : n + " dates"} from “${fileName}”.`);
+      }
+      render();
+    });
+    row.appendChild(ok);
+  }
+  cancel.textContent = plan.rows.length ? "Cancel" : "Close";
+  row.appendChild(cancel); box.appendChild(row);
+  wrap.appendChild(box);
 }
 
 document.getElementById("btnImportIcs").addEventListener("click", () => document.getElementById("fileImportIcs").click());
+
+/* --- a pasted table (Path 9 P4, the rest): a district PDF's date table, read by readTable()
+   into the events a file gives and previewed and added through the same planIcsImport(). --- */
+function showPastePanel(open) {
+  const panel = document.getElementById("pastePanel"), btn = document.getElementById("btnPasteTable");
+  panel.hidden = !open;
+  btn.setAttribute("aria-expanded", String(open));
+  if (open) { renderIcsPreview(null); document.getElementById("pasteText").focus(); }
+  else { document.getElementById("pastePreview").textContent = ""; btn.focus(); }
+}
+document.getElementById("btnPasteTable").addEventListener("click", () => showPastePanel(document.getElementById("pastePanel").hidden));
+document.getElementById("pasteClose").addEventListener("click", () => showPastePanel(false));
+document.getElementById("pasteRead").addEventListener("click", () => {
+  renderIcsPreview(readTable(document.getElementById("pasteText").value, { start: (cal.meta || {}).start, end: (cal.meta || {}).end }), "", true);
+  const b = document.getElementById("icsApply") || document.getElementById("icsCancel");
+  if (b) b.focus();
+});
 document.getElementById("fileImportIcs").addEventListener("change", e => {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
-    let events;
-    try { events = parseIcs(reader.result); } catch (err) { alert("Couldn't read that file as a calendar (.ics)."); e.target.value = ""; return; }
-    if (!events.length) { alert("No dated events found in that file."); e.target.value = ""; return; }
-    if (!confirm(`Import ${events.length} event${events.length === 1 ? "" : "s"} from this file?\n\nEach date's label is replaced with the event's title; any existing type tags and notes on that date are kept. Recurring events aren't supported — only the events listed individually in the file are imported.`)) {
-      e.target.value = "";
-      return;
-    }
-    events.forEach(ev => {
-      const existing = cal.days[ev.date] || { types: [], label: "", note: "", lesson: "" };
-      const guessed = guessTypeForSummary(ev.summary);
-      const types = guessed && !existing.types.includes(guessed) ? [...existing.types, guessed] : existing.types;
-      const note = ev.description ? (existing.note ? existing.note + " / " + ev.description : ev.description) : existing.note;
-      cal.days[ev.date] = { types, label: ev.summary || existing.label, lesson: existing.lesson, note };
-    });
-    save(); render();
-    alert(`Imported ${events.length} event${events.length === 1 ? "" : "s"}.`);
+    renderIcsPreview(readIcs(String(reader.result)), file.name);
+    const b = document.getElementById("icsApply") || document.getElementById("icsCancel");
+    if (b) b.focus();
     e.target.value = "";
   };
-  reader.onerror = () => { alert("Couldn't read that file."); e.target.value = ""; };
+  reader.onerror = () => { renderIcsPreview({ ok: false, error: "That file could not be read." }, file.name); e.target.value = ""; };
   reader.readAsText(file);
+});
+
+/* --- the wall calendar (Path 9 P4): the year on one landscape page, built from elements
+   (every name a teacher typed goes in through textContent). Kept current by render(), so
+   Ctrl+P with this print choice picked prints what is on the screen. --- */
+const WALL_MAX_MONTHS = 12;
+const WALL_MAX_NAMES = 5;
+const WALL_MAX_PERIODS = 8;
+function wallEl(tag, cls, text) {
+  const el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (text !== undefined) el.textContent = text;
+  return el;
+}
+/** A month's named days, a run of the same name as one line: [{ from, to, name }]. */
+function wallNames(y, m) {
+  const out = [];
+  const last = new Date(y, m + 1, 0).getDate();
+  for (let d = 1; d <= last; d++) {
+    const key = iso(y, m, d);
+    if (key < cal.meta.start || key > cal.meta.end) continue;
+    const e = cal.days[key];
+    if (!e) continue;
+    const name = e.label || e.types.map(id => { const t = typeById(id); return t ? t.label : ""; }).filter(Boolean).join(" / ");
+    if (!name) continue;
+    const prev = out[out.length - 1];
+    if (prev && prev.name === name && prev.to === d - 1) prev.to = d;
+    else out.push({ from: d, to: d, name });
+  }
+  return out;
+}
+function wallDate(dateISO, year) {
+  return new Date(dateISO + "T00:00:00").toLocaleDateString(undefined, year ? { month: "short", day: "numeric", year: "numeric" } : { month: "short", day: "numeric" });
+}
+function renderWallSheet() {
+  const sheet = document.getElementById("wallSheet");
+  sheet.textContent = "";
+  if (cal.meta.start > cal.meta.end) return;
+  const head = wallEl("header", "wall-head");
+  head.appendChild(wallEl("h2", "", cal.meta.yearLabel || "School Year"));
+  const whole = weekdayStats(cal.meta.start, cal.meta.end);
+  head.appendChild(wallEl("p", "", wallDate(cal.meta.start, true) + " \u2013 " + wallDate(cal.meta.end, true) + " \u00b7 " +
+    whole.instructional + " school day" + (whole.instructional === 1 ? "" : "s")));
+  sheet.appendChild(head);
+
+  const all = monthsBetween(cal.meta.start, cal.meta.end);
+  const list = all.slice(0, WALL_MAX_MONTHS);
+  const grid = wallEl("div", "wall-months");
+  list.forEach(({ y, m }) => {
+    const box = wallEl("div", "wmonth");
+    box.appendChild(wallEl("h3", "", MONTH_NAMES[m] + " " + y));
+    const g = wallEl("div", "wgrid");
+    WEEKDAYS.forEach(w => g.appendChild(wallEl("div", "wdow", w[0])));
+    const lead = new Date(y, m, 1).getDay();
+    for (let i = 0; i < lead; i++) g.appendChild(wallEl("div", "wcell wempty"));
+    const days = new Date(y, m + 1, 0).getDate();
+    for (let d = 1; d <= days; d++) {
+      const key = iso(y, m, d);
+      const dow = new Date(y, m, d).getDay();
+      const cell = wallEl("div", "wcell");
+      if (key < cal.meta.start || key > cal.meta.end) { cell.classList.add("wempty"); g.appendChild(cell); continue; }
+      const e = cal.days[key];
+      const types = e ? e.types.map(typeById).filter(Boolean) : [];
+      if (dow === 0 || dow === 6) cell.classList.add("wwknd");
+      else if (types.some(t => t.noSchool)) cell.classList.add("woff");
+      cell.appendChild(wallEl("span", "wn", String(d)));
+      if (types.length) cell.appendChild(wallEl("span", "wt", types.map(t => t.abbr || t.label.slice(0, 2)).join(" ")));
+      g.appendChild(cell);
+    }
+    box.appendChild(g);
+    const names = wallNames(y, m);
+    if (names.length) {
+      const ul = wallEl("ul", "wnames");
+      const shown = names.length > WALL_MAX_NAMES ? names.slice(0, WALL_MAX_NAMES - 1) : names;
+      shown.forEach(n => {
+        const li = wallEl("li");
+        li.appendChild(wallEl("b", "", n.from === n.to ? String(n.from) : n.from + "–" + n.to));
+        li.appendChild(document.createTextNode(" " + n.name));
+        ul.appendChild(li);
+      });
+      if (shown.length < names.length) ul.appendChild(wallEl("li", "", "+" + (names.length - shown.length) + " more"));
+      box.appendChild(ul);
+    }
+    grid.appendChild(box);
+  });
+  sheet.appendChild(grid);
+
+  const foot = wallEl("footer", "wall-foot");
+  cal.dayTypes.forEach(t => {
+    const s = wallEl("span");
+    s.appendChild(wallEl("b", "wk" + (t.noSchool ? " woff" : ""), t.abbr || t.label.slice(0, 2)));
+    s.appendChild(document.createTextNode(t.label));
+    foot.appendChild(s);
+  });
+  const off = wallEl("span"); off.appendChild(wallEl("b", "wk woff", " ")); off.appendChild(document.createTextNode("No school")); foot.appendChild(off);
+  sheet.appendChild(foot);
+  const periods = SchoolDay.gradingPeriods(cal);
+  if (periods.length || all.length > list.length) {
+    const pf = wallEl("footer", "wall-foot wall-periods");
+    const shownPeriods = periods.length > WALL_MAX_PERIODS ? periods.slice(0, WALL_MAX_PERIODS - 1) : periods;
+    shownPeriods.forEach(p => {
+      const name = SchoolDay.gradingPeriodName(cal, p);
+      pf.appendChild(wallEl("span", "", name.charAt(0).toUpperCase() + name.slice(1) + ": " + wallDate(p.start) + " – " + wallDate(p.end) + ", " + p.days + " day" + (p.days === 1 ? "" : "s")));
+    });
+    if (shownPeriods.length < periods.length) pf.appendChild(wallEl("span", "", "+" + (periods.length - shownPeriods.length) + " more grading periods"));
+    if (all.length > list.length) pf.appendChild(wallEl("span", "", "The first " + WALL_MAX_MONTHS + " months of " + all.length + " are shown."));
+    sheet.appendChild(pf);
+  }
+}
+
+/** The wall calendar's page, written while it is the print choice and taken away after. */
+function setWallPage(on) {
+  if (on) PrintKit.setPage({ paper: "letter", orientation: "landscape", margin: "0.4in" });
+  else { const el = document.getElementById("pk-page-style"); if (el) el.remove(); }
+}
+document.getElementById("btnWallPreview").addEventListener("click", e => {
+  renderWallSheet();
+  PrintKit.preview({ area: document.getElementById("wallSheet"), trigger: e.currentTarget, title: "Wall calendar", onPrint: () => window.print() });
 });
 
 document.querySelectorAll('input[name="printMode"]').forEach(el => {
@@ -2757,6 +2970,10 @@ document.querySelectorAll('input[name="printMode"]').forEach(el => {
       renderWeekStrip();
     }
     if (mode === "units") renderUnitsPrint();
+    document.body.classList.toggle("view-wall", mode === "wall");
+    document.getElementById("btnWallPreview").hidden = mode !== "wall";
+    setWallPage(mode === "wall");
+    if (mode === "wall") renderWallSheet();
   });
 });
 

@@ -17,6 +17,8 @@
 //      sort implementation and heavily favours leaving elements near where they
 //      started. In V8 that means the first name in the roster lands in group 1
 //      far more often than one in twelve. Fisher-Yates below is uniform.
+//      (makeGroups() itself moved to _shared/grouping.js in Path 13 P2, v336; the
+//      page calls Grouping.formGroups(names, { count, min: 2, allowEmpty: true }).)
 //
 // DOM-free. Imported by the page and by the Node suite.
 
@@ -186,18 +188,6 @@ export function pickMany(state, eligible, count, { fair = true, rng = Math.rando
 }
 
 /**
- * Split a roster into `n` groups as evenly as the count allows. Uniform shuffle,
- * then deal round-robin, so group sizes differ by at most one.
- */
-export function makeGroups(names, n, rng = Math.random) {
-  const count = Math.max(2, Math.floor(n) || 2);
-  const pool = shuffle(Array.from(new Set((names || []).filter(x => typeof x === "string" && x))), rng);
-  const groups = Array.from({ length: count }, () => []);
-  pool.forEach((name, i) => groups[i % count].push(name));
-  return groups;
-}
-
-/**
  * Who is due. Reads np_stats so the panel can say it, rather than the counts
  * being recorded and never used.
  */
@@ -209,6 +199,6 @@ export function leastPicked(names, stats = {}) {
 }
 
 export default {
-  shuffle, freshRotation, fairPick, uniformPick, pickOne, pickMany, makeGroups, leastPicked,
+  shuffle, freshRotation, fairPick, uniformPick, pickOne, pickMany, leastPicked,
   weightedChoice, fairnessWeights
 };

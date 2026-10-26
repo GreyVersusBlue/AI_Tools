@@ -26,7 +26,11 @@
 //   1. MISSING   — every same-origin src/href on a live page resolves to a file
 //                  that exists AND is listed in PRECACHE_URLS. So does every URL
 //                  in a srcset (since v206: the landing hero's 2x files are named
-//                  only there, and a src/href scan could not see them).
+//                  only there, and a src/href scan could not see them). And,
+//                  since v323 (Path 11 P2 increment 8), every module a page's
+//                  <script type="module"> imports, followed through each
+//                  module's own imports: 035's sv-routes.js imports sv-graph.js,
+//                  which no page names, so a src/href scan could not see it.
 //   2. MANIFEST  — every local file manifest.json names (icons, screenshots,
 //                  shortcut icons) is listed too. This is a separate check on
 //                  purpose: the maskable icons were missed for exactly this
@@ -45,6 +49,8 @@
 //                  a <link href>, an <img src> or srcset) is in SHELL_URLS too. A shell page
 //                  whose script arrives with the deferred pass is broken, not slow,
 //                  for a teacher who installs and goes offline inside that window.
+//                  A module a shell page imports statically counts too (an
+//                  import() does not: it is on demand, as below).
 //                  Only eager tags count: a library injected on demand behind a
 //                  click (SheetJS in 001/006/032) is deliberately NOT shell, which
 //                  is what moved jsPDF and SheetJS out of the install in v151 —
@@ -166,6 +172,47 @@ function refsIn(html) {
 }
 const missing = new Map();
 
+/* Module imports (since v323). A static `import … from`, `export … from` or
+   bare `import '…'` at the start of a line, and an `import('…')` with a
+   literal specifier; only relative ones, which is all this site writes. */
+const STATIC_IMPORT = /^[ \t]*(?:import|export)\b[^'";]*?\bfrom\s*['"]([^'"]+)['"]|^[ \t]*import\s*['"]([^'"]+)['"]/gm;
+const DYNAMIC_IMPORT = /\bimport\(\s*['"]([^'"]+)['"]\s*\)/g;
+const MODULE_TAG = /<script\b([^>]*\btype\s*=\s*["']?module\b[^>]*)>([\s\S]*?)<\/script>/gi;
+const relSpec = s => /^\.{1,2}\//.test(s);
+const resolveFrom = (fromFile, spec) => path.posix.normalize(path.posix.join(path.posix.dirname(fromFile), decodeURIComponent(spec)));
+/** [{ spec, dynamic }] imported by a module's text. */
+function importsIn(code) {
+  const out = [];
+  for (const m of code.matchAll(STATIC_IMPORT)) out.push({ spec: m[1] || m[2], dynamic: false });
+  for (const m of code.matchAll(DYNAMIC_IMPORT)) out.push({ spec: m[1], dynamic: true });
+  return out.filter(i => relSpec(i.spec));
+}
+/** Every module file a page reaches: { file → { dynamic, via } }. dynamic is
+ *  true when every path to the file passes through an import(). */
+function moduleGraphOf(page, html) {
+  const reached = new Map();
+  const queue = [];
+  const reach = (file, dynamic, via) => {
+    const had = reached.get(file);
+    if (had && (had.dynamic === false || dynamic)) return;
+    reached.set(file, { dynamic, via });
+    queue.push(file);
+  };
+  for (const m of html.matchAll(MODULE_TAG)) {
+    const srcAttr = /\bsrc\s*=\s*["']([^"']+)["']/i.exec(m[1]);
+    if (srcAttr) { if (relSpec('./' + srcAttr[1].replace(/^\.\//, ''))) reach(resolveFrom(page, srcAttr[1]), false, page); }
+    for (const i of importsIn(m[2])) reach(resolveFrom(page, i.spec), i.dynamic, page);
+  }
+  while (queue.length) {
+    const file = queue.shift();
+    const abs = path.join(SITE, file);
+    if (!/\.m?js$/.test(file) || !fs.existsSync(abs)) continue;
+    const dyn = reached.get(file).dynamic;
+    for (const i of importsIn(fs.readFileSync(abs, 'utf8'))) reach(resolveFrom(file, i.spec), dyn || i.dynamic, file);
+  }
+  return reached;
+}
+
 for (const page of livePages()) {
   const abs = path.join(SITE, page);
   if (!fs.existsSync(abs)) continue;
@@ -182,6 +229,11 @@ for (const page of livePages()) {
     if (listedSet.has(resolved)) continue;
     if (!missing.has(resolved)) missing.set(resolved, new Set());
     missing.get(resolved).add(page);
+  }
+  for (const [file, { via }] of moduleGraphOf(page, html)) {
+    if (file.startsWith('..') || !fs.existsSync(path.join(SITE, file)) || listedSet.has(file)) continue;
+    if (!missing.has(file)) missing.set(file, new Set());
+    missing.get(file).add(via === page ? page : `${page} (imported by ${via})`);
   }
 }
 
@@ -236,6 +288,10 @@ if (fs.existsSync(manifestPath)) {
     const html = fs.readFileSync(abs, 'utf8');
     const eager = [...html.matchAll(SUBRESOURCE)].map(m => m[1]);
     for (const m of html.matchAll(SUBSET)) eager.push(...srcsetUrls(m[1]));
+    // Statically imported modules, as page-relative paths so the loop below resolves them.
+    for (const [file, { dynamic }] of moduleGraphOf(page, html)) {
+      if (!dynamic) eager.push(path.posix.relative(path.posix.dirname(page), file));
+    }
     for (const raw of eager) {
       if (/^(https?:|data:|mailto:|tel:|#|javascript:|blob:)/i.test(raw)) continue;
       const clean = decodeURIComponent(raw.split('#')[0].split('?')[0]);

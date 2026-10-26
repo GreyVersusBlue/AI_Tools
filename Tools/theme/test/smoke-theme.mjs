@@ -110,8 +110,8 @@ for (const rel of pages) {
 // The combination Path 5 asks about: a page whose own CSS paints dark while
 // a11y.js is also inverting it. Only a page that loads a11y.js can be in it —
 // 035 has its own four-palette `data-theme` system and no a11y.js at all, so
-// it is not double-darkened, it is simply a third theme owner (recorded under
-// Path 5 in UPGRADE_PATHS.md, not fixed here).
+// it is not double-darkened; it is the one documented exception to "a11y.js
+// owns theme" (OWN_THEME below).
 const doubled = report.filter(p => p.a11y && p.ungated.length && !p.flag);
 ok(doubled.length === 0,
    'no page ships an ungated dark palette without opting out of the invert filter: '
@@ -140,6 +140,26 @@ const rival = report.filter(p => p.a11y &&
   /setAttribute\(\s*['"]data-theme['"]/.test(fs.readFileSync(path.join(SITE, p.rel), 'utf8')));
 ok(rival.length === 0,
    'no page that loads a11y.js also writes data-theme itself: ' + JSON.stringify(rival.map(p => p.rel)));
+
+// The other kind of second owner: a page that writes data-theme with no
+// a11y.js at all. There is exactly one, by Devon's decision of 2026-10-03
+// ("bless and document"; BACKLOG.md's Standing decisions, HISTORY.md "035's
+// theme, a documented exception"): 035's four-palette switcher (default,
+// green-gold, dark, green-gold-dark) on its own `palette` setting, which
+// predates a11y.js and whose two dark palettes its embedded browser follows.
+// Adopting a11y.js cold would re-skin a 20,000-line tool for nothing a
+// teacher sees. The list fails both ways: a new page here is a new theme
+// owner (link a11y.js instead), and an entry whose page stopped writing the
+// attribute (035 adopted a11y.js after all) must be deleted with it.
+const OWN_THEME = {
+  'Tools/035-schedule-visualizer.html': 'its own four-palette switcher; Devon, 2026-10-03: bless and document',
+};
+const ownTheme = report.filter(p => !p.a11y &&
+  /setAttribute\(\s*['"]data-theme['"]/.test(fs.readFileSync(path.join(SITE, p.rel), 'utf8')))
+  .map(p => p.rel);
+ok(JSON.stringify(ownTheme) === JSON.stringify(Object.keys(OWN_THEME).sort()),
+   'the pages that own data-theme without a11y.js are exactly OWN_THEME: '
+   + JSON.stringify(ownTheme));
 
 // One tag per shared file. 014 and 033 linked a11y.js and a11y.css twice
 // until AI-08, and both a11y.js loads queued buildWidget on DOMContentLoaded,

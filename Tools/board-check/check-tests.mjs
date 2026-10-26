@@ -133,12 +133,14 @@ for (const [p, from] of referenced) {
    reason — the whole value of the check is that the default answer is "wire
    it up or delete it". */
 const NOT_A_SUITE = {
-  'Tools/schedule/test/fixture-northwind.mjs':
+  'Tools/schedule-visualizer/test/fixture-northwind.mjs':
     'fixture data, imported by the suites that use it',
   'Tools/image-to-pdf/test/make-fixtures.mjs':
     'writes the PNG fixtures smoke.mjs feeds to the file input; run once, output committed',
-  'Tools/schedule/test/publish.mjs':
+  'Tools/schedule-visualizer/test/publish.mjs':
     'a regression-baseline generator taking an output path in argv, not an assertion suite',
+  'Tools/schedule-visualizer/test/published-contract.mjs':
+    "the published data's contract, imported by check:publisher, its test and smoke-publish-baseline.mjs",
 };
 
 const onDisk = [];

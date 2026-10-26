@@ -1,0 +1,665 @@
+{
+ "school": "Northwind Middle",
+ "publishedOn": "2026-01-15",
+ "dept": {
+  "ELA": {
+   "c": "#2563eb",
+   "name": "English / ELA"
+  },
+  "MATH": {
+   "c": "#c2520f",
+   "name": "Mathematics"
+  },
+  "SCI": {
+   "c": "#0d7c69",
+   "name": "Science"
+  },
+  "SS": {
+   "c": "#7c3aa8",
+   "name": "Social Studies"
+  },
+  "SCI/SS": {
+   "c": "#71641f",
+   "name": "Science / Social Studies"
+  }
+ },
+ "order": {
+  "ELA": 0,
+  "MATH": 1,
+  "SCI": 2,
+  "SS": 3,
+  "SCI/SS": 4
+ },
+ "teachers": {
+  "Ashdown": {
+   "dept": "ELA",
+   "room": "101",
+   "plan": "A2 / A4 / B1 / B2",
+   "sec": [
+    "6-1",
+    "6-2"
+   ],
+   "A": [
+    "6-1",
+    "Planning",
+    "6-2",
+    "Planning"
+   ],
+   "B": [
+    "Planning",
+    "Planning",
+    "6-1",
+    "6-2"
+   ],
+   "co": [
+    "Berrycloth",
+    "Coldwater",
+    "Dunmore",
+    "Eastbrook",
+    "Fernwood"
+   ]
+  },
+  "Berrycloth": {
+   "dept": "MATH",
+   "room": "102",
+   "plan": "A3 / A4 / B1 / B2",
+   "sec": [
+    "6-2",
+    "6-1"
+   ],
+   "A": [
+    "6-2",
+    "6-1",
+    "Planning",
+    "Planning"
+   ],
+   "B": [
+    "Planning",
+    "Planning",
+    "6-2",
+    "6-1"
+   ],
+   "co": [
+    "Ashdown",
+    "Coldwater",
+    "Dunmore",
+    "Eastbrook",
+    "Fernwood"
+   ]
+  },
+  "Coldwater": {
+   "dept": "SCI",
+   "room": "103",
+   "plan": "A1 / A4 / B1 / B2 / B3 / B4",
+   "sec": [
+    "6-2",
+    "6-1"
+   ],
+   "A": [
+    "Planning",
+    "6-2",
+    "6-1",
+    "Planning"
+   ],
+   "B": [
+    "Planning",
+    "Planning",
+    "Planning",
+    "Planning"
+   ],
+   "co": [
+    "Ashdown",
+    "Berrycloth",
+    "Dunmore",
+    "Eastbrook",
+    "Fernwood"
+   ]
+  },
+  "Dunmore": {
+   "dept": "SS",
+   "room": "104",
+   "plan": "A1 / A2 / A3 / A4 / B3 / B4",
+   "sec": [
+    "6-1",
+    "6-2"
+   ],
+   "A": [
+    "Planning",
+    "Planning",
+    "Planning",
+    "Planning"
+   ],
+   "B": [
+    "6-1",
+    "6-2",
+    "Planning",
+    "Planning"
+   ],
+   "co": [
+    "Ashdown",
+    "Berrycloth",
+    "Coldwater",
+    "Eastbrook",
+    "Fernwood"
+   ]
+  },
+  "Eastbrook": {
+   "dept": "SCI/SS",
+   "room": "105",
+   "plan": "A1 / A2 / A3 / A4 / B3 / B4",
+   "sec": [
+    "6-2",
+    "6-1"
+   ],
+   "A": [
+    "Planning",
+    "Planning",
+    "Planning",
+    "Planning"
+   ],
+   "B": [
+    "6-2",
+    "6-1",
+    "Planning",
+    "Planning"
+   ],
+   "co": [
+    "Ashdown",
+    "Berrycloth",
+    "Coldwater",
+    "Dunmore",
+    "Fernwood"
+   ]
+  },
+  "Fernwood": {
+   "dept": "ELA",
+   "room": "106",
+   "plan": "A3 / B1 / B2",
+   "sec": [
+    "7-1",
+    "7-2",
+    "6-2"
+   ],
+   "A": [
+    "7-1",
+    "7-2",
+    "Planning",
+    "6-2"
+   ],
+   "B": [
+    "Planning",
+    "Planning",
+    "7-1",
+    "7-2"
+   ],
+   "co": [
+    "Ashdown",
+    "Berrycloth",
+    "Coldwater",
+    "Dunmore",
+    "Eastbrook",
+    "Greenhollow",
+    "Hartwell",
+    "Ivywood",
+    "Jessamine"
+   ]
+  },
+  "Greenhollow": {
+   "dept": "MATH",
+   "room": "107",
+   "plan": "A3 / A4 / B1 / B2",
+   "sec": [
+    "7-2",
+    "7-1"
+   ],
+   "A": [
+    "7-2",
+    "7-1",
+    "Planning",
+    "Planning"
+   ],
+   "B": [
+    "Planning",
+    "Planning",
+    "7-2",
+    "7-1"
+   ],
+   "co": [
+    "Fernwood",
+    "Hartwell",
+    "Ivywood",
+    "Jessamine"
+   ]
+  },
+  "Hartwell": {
+   "dept": "SCI",
+   "room": "108",
+   "plan": "A1 / A2 / B1 / B2 / B3 / B4",
+   "sec": [
+    "7-1",
+    "7-2"
+   ],
+   "A": [
+    "Planning",
+    "Planning",
+    "7-1",
+    "7-2"
+   ],
+   "B": [
+    "Planning",
+    "Planning",
+    "Planning",
+    "Planning"
+   ],
+   "co": [
+    "Fernwood",
+    "Greenhollow",
+    "Ivywood",
+    "Jessamine"
+   ]
+  },
+  "Ivywood": {
+   "dept": "SS",
+   "room": "201",
+   "plan": "A1 / A2 / A3 / B3 / B4",
+   "sec": [
+    "7-1",
+    "7-2"
+   ],
+   "A": [
+    "Planning",
+    "Planning",
+    "Planning",
+    "7-1"
+   ],
+   "B": [
+    "7-1",
+    "7-2",
+    "Planning",
+    "Planning"
+   ],
+   "co": [
+    "Fernwood",
+    "Greenhollow",
+    "Hartwell",
+    "Jessamine"
+   ]
+  },
+  "Jessamine": {
+   "dept": "ELA",
+   "room": "202",
+   "plan": "A1 / A2 / A4 / B3 / B4",
+   "sec": [
+    "7-2",
+    "7-1"
+   ],
+   "A": [
+    "Planning",
+    "Planning",
+    "7-2",
+    "Planning"
+   ],
+   "B": [
+    "7-2",
+    "7-1",
+    "Planning",
+    "Planning"
+   ],
+   "co": [
+    "Fernwood",
+    "Greenhollow",
+    "Hartwell",
+    "Ivywood"
+   ]
+  }
+ },
+ "sections": {
+  "6-1": [
+   "Ashdown",
+   "Berrycloth",
+   "Coldwater",
+   "Dunmore",
+   "Eastbrook"
+  ],
+  "6-2": [
+   "Berrycloth",
+   "Coldwater",
+   "Ashdown",
+   "Fernwood",
+   "Eastbrook",
+   "Dunmore"
+  ],
+  "7-1": [
+   "Fernwood",
+   "Greenhollow",
+   "Hartwell",
+   "Ivywood",
+   "Jessamine"
+  ],
+  "7-2": [
+   "Greenhollow",
+   "Fernwood",
+   "Jessamine",
+   "Hartwell",
+   "Ivywood"
+  ]
+ },
+ "room2teacher": {
+  "101": "Ashdown",
+  "102": "Berrycloth",
+  "103": "Coldwater",
+  "104": "Dunmore",
+  "105": "Eastbrook",
+  "106": "Fernwood",
+  "107": "Greenhollow",
+  "108": "Hartwell",
+  "201": "Ivywood",
+  "202": "Jessamine"
+ },
+ "groupRooms": {
+  "6-1": {
+   "A": [
+    "101",
+    "102",
+    "103",
+    "Library"
+   ],
+   "B": [
+    "104",
+    "105",
+    "101",
+    "102"
+   ]
+  },
+  "6-2": {
+   "A": [
+    "102",
+    "103",
+    "101",
+    "106"
+   ],
+   "B": [
+    "105",
+    "104",
+    "102",
+    "101"
+   ]
+  },
+  "7-1": {
+   "A": [
+    "106",
+    "107",
+    "108",
+    "201"
+   ],
+   "B": [
+    "201",
+    "202",
+    "106",
+    "107"
+   ]
+  },
+  "7-2": {
+   "A": [
+    "107",
+    "106",
+    "202",
+    "108"
+   ],
+   "B": [
+    "202",
+    "201",
+    "107",
+    "106"
+   ]
+  }
+ },
+ "modCount": 4,
+ "modLabel": "block",
+ "bell": null,
+ "geometry": {
+  "floors": [
+   {
+    "id": "floor_0",
+    "label": "Floor 1",
+    "cols": 20,
+    "rows": 12,
+    "hall": [
+     [
+      1,
+      4
+     ],
+     [
+      2,
+      4
+     ],
+     [
+      3,
+      4
+     ],
+     [
+      4,
+      4
+     ],
+     [
+      5,
+      4
+     ],
+     [
+      6,
+      4
+     ],
+     [
+      7,
+      4
+     ],
+     [
+      8,
+      4
+     ],
+     [
+      9,
+      4
+     ],
+     [
+      10,
+      4
+     ],
+     [
+      11,
+      4
+     ],
+     [
+      12,
+      4
+     ],
+     [
+      13,
+      4
+     ],
+     [
+      14,
+      4
+     ]
+    ],
+    "stair": [
+     [
+      0,
+      4
+     ],
+     [
+      15,
+      4
+     ]
+    ],
+    "rooms": [
+     {
+      "rn": "101",
+      "dept": "ELA",
+      "teacher": "Ashdown",
+      "cells": [
+       [
+        2,
+        3
+       ]
+      ]
+     },
+     {
+      "rn": "102",
+      "dept": "MATH",
+      "teacher": "Berrycloth",
+      "cells": [
+       [
+        4,
+        3
+       ]
+      ]
+     },
+     {
+      "rn": "103",
+      "dept": "SCI",
+      "teacher": "Coldwater",
+      "cells": [
+       [
+        6,
+        3
+       ]
+      ]
+     },
+     {
+      "rn": "104",
+      "dept": "SS",
+      "teacher": "Dunmore",
+      "cells": [
+       [
+        8,
+        3
+       ]
+      ]
+     },
+     {
+      "rn": "105",
+      "dept": "SCI/SS",
+      "teacher": "Eastbrook",
+      "cells": [
+       [
+        10,
+        3
+       ]
+      ]
+     },
+     {
+      "rn": "Library",
+      "dept": null,
+      "teacher": null,
+      "cells": [
+       [
+        12,
+        3
+       ]
+      ]
+     },
+     {
+      "rn": "106",
+      "dept": "ELA",
+      "teacher": "Fernwood",
+      "cells": [
+       [
+        3,
+        5
+       ]
+      ]
+     },
+     {
+      "rn": "107",
+      "dept": "MATH",
+      "teacher": "Greenhollow",
+      "cells": [
+       [
+        5,
+        5
+       ]
+      ]
+     },
+     {
+      "rn": "108",
+      "dept": "SCI",
+      "teacher": "Hartwell",
+      "cells": [
+       [
+        8,
+        5
+       ],
+       [
+        9,
+        5
+       ]
+      ]
+     }
+    ]
+   },
+   {
+    "id": "floor_1",
+    "label": "Floor 2",
+    "cols": 20,
+    "rows": 12,
+    "hall": [
+     [
+      1,
+      4
+     ],
+     [
+      2,
+      4
+     ],
+     [
+      3,
+      4
+     ],
+     [
+      4,
+      4
+     ],
+     [
+      5,
+      4
+     ],
+     [
+      6,
+      4
+     ]
+    ],
+    "stair": [
+     [
+      0,
+      4
+     ]
+    ],
+    "rooms": [
+     {
+      "rn": "201",
+      "dept": "SS",
+      "teacher": "Ivywood",
+      "cells": [
+       [
+        2,
+        3
+       ]
+      ]
+     },
+     {
+      "rn": "202",
+      "dept": "ELA",
+      "teacher": "Jessamine",
+      "cells": [
+       [
+        4,
+        3
+       ]
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

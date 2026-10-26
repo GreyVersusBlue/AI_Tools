@@ -96,6 +96,9 @@
      rather than becoming --accent-ink, which is near-black in dark. */
   .day-badge { display: inline-block; padding: .3rem .7rem; border-radius: 999px; font-size: .8rem; font-weight: 700; color: #fff; }
   .today-note { background: var(--card-2); border-radius: 8px; padding: .7rem .8rem; font-size: .88rem; white-space: pre-wrap; }
+  .cal-day { margin: 0 0 .4rem; font-size: .88rem; }
+  .cal-deadline { margin: 0 0 .5rem; font-size: .88rem; font-weight: 600; }
+  .paced-list { margin: 0 0 .6rem; padding-left: 1.2rem; font-size: .88rem; }
   .today-note-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: .3rem; }
 
   .checkbox-row { display: flex; align-items: flex-start; gap: .5rem; font-size: .85rem; margin: .4rem 0; padding-bottom: .4rem; border-bottom: 1px solid var(--line); }
@@ -253,6 +256,7 @@
 
 <div class="print-only" id="printArea"></div>
 
+<script src="../_shared/school-day.js"></script>
 <script>
 (function () {
   'use strict';
@@ -499,12 +503,14 @@
       '</div>';
   }
 
-  /* ==================== Today (School Calendar Visualizer) ==================== */
+  /* ==================== Today (School Calendar Visualizer) ====================
+     Read through _shared/school-day.js (Path 9 P3), never written: the day in
+     032's words, what its pacing plan has on the date (the dates 032 stamped,
+     SchoolDay.lessonsOn()), and whether the date or the school day after it is
+     the last school day of a grading period. The same HTML prints on each
+     day's page of the packet. */
   function loadCalendar() {
-    try {
-      var parsed = JSON.parse(localStorage.getItem('scv_calendar_v1') || 'null');
-      return (parsed && parsed.dayTypes && parsed.days) ? parsed : null;
-    } catch (e) { return null; }
+    return window.SchoolDay ? SchoolDay.read(localStorage) : null;
   }
 
   var calCache = loadCalendar();
@@ -514,18 +520,38 @@
     return calCache.days[dateStr] || null;
   }
 
+  function pacedItems(dateStr) {
+    return calCache ? SchoolDay.lessonsOn(calCache, dateStr) : [];
+  }
+
+  // [{ date, period, next }]: the date itself, then the next school day, when either
+  // is the last school day of a grading period.
+  function deadlinesFor(dateStr) {
+    if (!calCache) return [];
+    var out = [];
+    var g = SchoolDay.gradingDeadline(calCache, dateStr);
+    if (g) out.push({ date: dateStr, period: g, next: false });
+    var nx = SchoolDay.nextSchoolDay(calCache, dateStr);
+    var g2 = nx && SchoolDay.gradingDeadline(calCache, nx);
+    if (g2) out.push({ date: nx, period: g2, next: true });
+    return out;
+  }
+
   function evalToday() {
     if (!calCache) return { available: false, status: 'No school calendar saved yet.' };
-    var entry = calEntryFor(selectedDate());
-    if (!entry) return { available: false, status: 'Calendar saved, but nothing tagged for ' + selectedDate() + ' — a regular day, or nothing entered yet.' };
-    return { available: true, status: 'Saved.' };
+    var date = selectedDate();
+    var entry = calEntryFor(date);
+    var paced = pacedItems(date).length;
+    if (!entry && !paced) return { available: false, status: 'Calendar saved, but nothing tagged or paced for ' + date + ' — a regular day, or nothing entered yet.' };
+    return { available: true, status: paced ? 'Saved, with the pacing plan for this date.' : 'Saved.' };
   }
 
   function todayCalHtml() {
     if (!calCache) {
       return '<p class="empty-hint">No school calendar saved yet. Set one up in the <a href="032-School%20Calendar%20Visualizer.html">School Calendar Visualizer</a> to see this day&rsquo;s type and pacing note here.</p>';
     }
-    var entry = calEntryFor(selectedDate());
+    var date = selectedDate();
+    var entry = calEntryFor(date);
     var badgesHtml = '';
     if (entry && Array.isArray(entry.types) && entry.types.length) {
       badgesHtml = '<div class="day-badges">' + entry.types.map(function (id) {
@@ -534,11 +560,26 @@
         return '<span class="day-badge" style="background:' + escapeHtml(t.color || '#555') + ';">' + escapeHtml(t.label || t.abbr || 'Tagged') + '</span>';
       }).join('') + '</div>';
     }
+    var words = SchoolDay.describe(calCache, SchoolDay.dayOf(calCache, date));
+    var dayHtml = words ? '<p class="cal-day">' + escapeHtml(words) + '</p>' : '';
+    var items = pacedItems(date);
+    var many = calCache.plan && Array.isArray(calCache.plan.courses) && calCache.plan.courses.length > 1;
+    var pacedHtml = items.length
+      ? '<div class="today-note-label">From the pacing plan</div><ul class="paced-list">' + items.map(function (it) {
+          return '<li>' + (many ? '<strong>' + escapeHtml(it.course) + ':</strong> ' : '') + escapeHtml(SchoolDay.describeLesson(it)) + '</li>';
+        }).join('') + '</ul>'
+      : '';
+    var deadHtml = deadlinesFor(date).map(function (d) {
+      var name = SchoolDay.gradingPeriodName(calCache, d.period);
+      return '<p class="cal-deadline">' + escapeHtml(d.next
+        ? 'Grading deadline: the next school day, ' + dayLabelShort(d.date) + ', is the last school day of ' + name + '.'
+        : 'Grading deadline: this is the last school day of ' + name + '.') + '</p>';
+    }).join('');
     var noteText = entry && (entry.lesson || entry.note) ? [entry.lesson, entry.note].filter(Boolean).join('\n\n') : '';
     var noteHtml = noteText
       ? '<div class="today-note-label">Lesson / pacing note</div><div class="today-note">' + escapeHtml(noteText) + '</div>'
-      : '<p class="empty-hint">Nothing tagged for ' + escapeHtml(dayLabelShort(selectedDate())) + ' &mdash; a regular day, or nothing entered yet.</p>';
-    return badgesHtml + noteHtml;
+      : (pacedHtml ? '' : '<p class="empty-hint">Nothing tagged for ' + escapeHtml(dayLabelShort(date)) + ' &mdash; a regular day, or nothing entered yet.</p>');
+    return badgesHtml + dayHtml + deadHtml + pacedHtml + noteHtml;
   }
 
   function renderTodayCard() {

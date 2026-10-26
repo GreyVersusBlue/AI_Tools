@@ -57,6 +57,16 @@
    what follows the last boundary is a final period to meta.end, if it holds a
    school day.
 
+   TODAY'S LESSON (Path 9 P3, for 044/045) is read off the dates 032 stamps into
+   its pacing record, `cal.plan` (Tools/school-calendar/scv-plan.js has the
+   shape): each lesson's and bump's `on`, each course's `lost` dates, and each
+   typed unit's `start`/`end`. lessonsOn() never runs the placer, so it says
+   what the teacher last saved in 032, and a calendar 032 has not opened since
+   v309 (only the old `pacing` field) has no lessons here. A plan with a newer
+   version than 1 is not read. A typed unit's day number counts the course's
+   class days from the unit's start with the same rule as scv-plan.js's
+   dayValue(), which the suite holds the two to.
+
    Never throws on what it reads: a missing, truncated or hand-edited blob is
    no calendar, and a bell schedule it cannot read is no schedule. */
 (function (global) {
@@ -260,6 +270,34 @@
 
   function scheduleFor(cal, iso, opts) { return dayOf(cal, iso, opts).schedule; }
 
+  /** A day type's label, or '' when the calendar has no type with that id. */
+  function typeLabel(cal, id) {
+    if (!isCalendar(cal)) return '';
+    for (var i = 0; i < cal.dayTypes.length; i++) {
+      var t = cal.dayTypes[i];
+      if (isObj(t) && t.id === id) return text(t.label);
+    }
+    return '';
+  }
+
+  /** dayOf()'s result in a few words, the one wording every page that shows the day uses
+      (Path 9 P3): 'B day · Half Day / Early Dismissal', 'No school: Labor Day' (the day's
+      own name, else its type's), 'No school (weekend)', 'Outside the school year', or
+      'A school day' when nothing is tagged and the cycle is off. '' for no calendar. */
+  function describe(cal, day) {
+    if (!isCalendar(cal) || !isObj(day) || !isIso(day.date) || day.why === 'invalid') return '';
+    var entry = isObj(cal.days[day.date]) ? cal.days[day.date] : {};
+    var name = text(entry.label);
+    if (day.why === 'outside') return 'Outside the school year';
+    if (day.why === 'weekend') return 'No school (weekend)';
+    if (day.why === 'closed') return 'No school: ' + (name || typeLabel(cal, day.closedBy) || 'closed');
+    var parts = [];
+    if (day.letter) parts.push(day.letter + ' day');
+    (day.types || []).forEach(function (id) { var l = typeLabel(cal, id); if (l) parts.push(l); });
+    if (name) parts.push(name);
+    return parts.length ? parts.join(' \u00b7 ') : 'A school day';
+  }
+
   /** Where `hm` ('HH:MM') falls in the day's schedule. Returns
       { state, period, index, next, minutesLeft, minutesUntil, day }, state one of
       'noschool' (not a school day), 'noschedule' (a school day with no periods),
@@ -340,6 +378,127 @@
       if (typesOn(cal, iso).some(isHalfType)) out.half++;
     }
     return out;
+  }
+
+  /** The first school day after `iso` (strictly) inside the year, or null. */
+  function nextSchoolDay(cal, iso) {
+    if (!isCalendar(cal) || !isIso(iso)) return null;
+    var from = iso < cal.meta.start ? isoToMs(cal.meta.start) : isoToMs(iso) + DAY_MS;
+    for (var ms = from, end = isoToMs(cal.meta.end); ms <= end; ms += DAY_MS) {
+      var d = msToIso(ms);
+      if (isSchoolDay(cal, d)) return d;
+    }
+    return null;
+  }
+
+  /** The grading period whose last school day is `iso`, or null: what "is this day a
+      grading deadline" asks. The last *school* day, because a boundary tag may sit on a
+      day with no students (the 2026-27 seed's second period ends on a workday). */
+  function gradingDeadline(cal, iso) {
+    if (!isCalendar(cal) || !isSchoolDay(cal, iso)) return null;
+    var gp = gradingPeriodOf(cal, iso);
+    if (!gp) return null;
+    for (var ms = isoToMs(iso) + DAY_MS, end = isoToMs(gp.end); ms <= end; ms += DAY_MS) {
+      if (isSchoolDay(cal, msToIso(ms))) return null;
+    }
+    return gp;
+  }
+
+  /** 'Quarter 2' in a year of four grading periods, else 'grading period 2 of 3' (036's
+      words). '' for no period. */
+  function gradingPeriodName(cal, period) {
+    if (!isObj(period) || typeof period.n !== 'number') return '';
+    var of = gradingPeriods(cal).length;
+    return of === 4 ? 'Quarter ' + period.n : 'grading period ' + period.n + (of ? ' of ' + of : '');
+  }
+
+  /* ---- today's lesson, from 032's stamped pacing (Path 9 P3) ---- */
+
+  var PLAN_VERSION = 1;
+  var MAX_LESSON_TEXT = 160;
+
+  function longText(v) { return typeof v === 'string' ? v.trim().slice(0, MAX_LESSON_TEXT) : ''; }
+
+  /** Whether `course` meets on `iso`: scv-plan.js's dayValue(), reduced to its answer. */
+  function courseMeets(cal, course, iso, letters) {
+    // Its range test is left out: a stamped unit lies inside the course's range.
+    if (!isIso(iso) || !isWeekday(iso)) return false;
+    var types = typesOn(cal, iso);
+    var pace = isObj(course.pace) ? course.pace : {};
+    for (var i = 0; i < types.length; i++) {
+      if (types[i].noSchool) return false;
+      if ((pace[types[i].id] || types[i].pace || 'count') === 'skip') return false;
+    }
+    var cycle = !!(cal.abCycle && cal.abCycle.enabled);
+    if ((course.meets === 'A' || course.meets === 'B') && cycle && letters[iso] !== course.meets) return false;
+    var lost = Array.isArray(course.lost) ? course.lost : [];
+    for (var j = 0; j < lost.length; j++) if (isObj(lost[j]) && lost[j].date === iso) return false;
+    return true;
+  }
+
+  function lessonCode(l) {
+    return /^\d+$/.test(String(l.unit)) && /^[A-Za-z0-9]+$/.test(String(l.num)) && /^[AB]$/.test(String(l.letter))
+      ? 'U' + l.unit + '-' + l.num + '-' + l.letter : '';
+  }
+
+  /** What each course in 032's plan has on `iso`, in the plan's order:
+      [{ courseId, course, kind, code, title, unit, n, of, reason }], kind one of
+      'lesson' (a lesson stamped on the date: its code 'U3-06-A' and title),
+      'gap' (a bump stamped there: the lesson it was for, and its reason),
+      'lost' (the course did not meet: its reason),
+      'unit' (a course with no lessons whose typed unit covers a class day: the unit's
+      name, and day n of the unit's `of` days, as 032's drawer counts them).
+      [] for no calendar, no plan, a plan this file cannot read, or nothing that day. */
+  function lessonsOn(cal, iso) {
+    var out = [];
+    if (!isCalendar(cal) || !isIso(iso)) return out;
+    var plan = cal.plan;
+    if (!isObj(plan) || plan.v !== PLAN_VERSION || !Array.isArray(plan.courses)) return out;
+    var letters = null;
+    plan.courses.forEach(function (c) {
+      if (!isObj(c)) return;
+      var base = { courseId: typeof c.id === 'string' ? c.id : '', course: text(c.name) || 'Course',
+        kind: '', code: '', title: '', unit: '', n: 0, of: 0, reason: '' };
+      function push(o) { var r = {}; for (var k in base) r[k] = base[k]; for (var k2 in o) r[k2] = o[k2]; out.push(r); }
+      var lessons = Array.isArray(c.lessons) ? c.lessons.filter(isObj) : [];
+      lessons.forEach(function (l) {
+        if (l.on === iso) push({ kind: 'lesson', code: lessonCode(l), title: longText(l.title) });
+      });
+      (Array.isArray(c.adjustments) ? c.adjustments : []).forEach(function (a) {
+        if (!isObj(a) || a.on !== iso) return;
+        var before = null;
+        for (var i = 0; i < lessons.length; i++) if (lessons[i].id === a.beforeLessonId) before = lessons[i];
+        push({ kind: 'gap', code: before ? lessonCode(before) : '', title: before ? longText(before.title) : '', reason: longText(a.reason) });
+      });
+      (Array.isArray(c.lost) ? c.lost : []).forEach(function (x) {
+        if (isObj(x) && x.date === iso) push({ kind: 'lost', reason: longText(x.reason) });
+      });
+      if (lessons.length) return;
+      (Array.isArray(c.units) ? c.units : []).forEach(function (u) {
+        if (!isObj(u) || !isIso(u.start) || !isIso(u.end) || iso < u.start || iso > u.end) return;
+        if (letters === null) letters = abLetters(cal);
+        if (!courseMeets(cal, c, iso, letters)) return;
+        var n = 0;
+        for (var ms = isoToMs(u.start), end = isoToMs(iso); ms <= end; ms += DAY_MS) {
+          if (courseMeets(cal, c, msToIso(ms), letters)) n++;
+        }
+        push({ kind: 'unit', unit: text(u.name) || 'Unit', n: n, of: Math.max(n, Math.floor(Number(u.days)) || 0) });
+      });
+    });
+    return out;
+  }
+
+  /** One lessonsOn() item in words, without its course's name, the one wording 044 and 045
+      use: 'U3-06-A Fractions review', 'Catch-up day: Ran long (U1-05-A is next)',
+      'Does not meet: Assembly', 'Cells, day 3 of 15'. '' for anything else. */
+  function describeLesson(item) {
+    if (!isObj(item)) return '';
+    var why = item.reason ? ': ' + item.reason : '';
+    if (item.kind === 'lesson') return [item.code, item.title].filter(Boolean).join(' ') || 'A lesson';
+    if (item.kind === 'gap') return 'Catch-up day' + why + (item.code ? ' (' + item.code + ' is next)' : '');
+    if (item.kind === 'lost') return 'Does not meet' + why;
+    if (item.kind === 'unit') return item.unit + ', day ' + item.n + ' of ' + item.of;
+    return '';
   }
 
   /* ---- 035 Schedule Visualizer's bell times ---- */
@@ -485,11 +644,18 @@
     cleanBell: cleanBell,
     dayOf: dayOf,
     scheduleFor: scheduleFor,
+    typeLabel: typeLabel,
+    describe: describe,
     periodAt: periodAt,
     today: today,
     gradingPeriods: gradingPeriods,
     gradingPeriodOf: gradingPeriodOf,
     daysRemaining: daysRemaining,
+    nextSchoolDay: nextSchoolDay,
+    gradingDeadline: gradingDeadline,
+    gradingPeriodName: gradingPeriodName,
+    lessonsOn: lessonsOn,
+    describeLesson: describeLesson,
     fromScheduleVisualizer: fromScheduleVisualizer,
     addImported: addImported,
     forScheduleVisualizer: forScheduleVisualizer

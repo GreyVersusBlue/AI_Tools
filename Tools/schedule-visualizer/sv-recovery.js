@@ -68,11 +68,15 @@ export async function isAvailable() {
  * picker so listing never has to parse a multi-megabyte payload.
  * Resolves to the stored record, or null if storage refused it.
  */
+// Two points written in one millisecond with the same random part would share
+// an id, and the second put() would overwrite the first; the count stops that.
+let pointCount = 0;
+
 export async function putPoint(data, meta = {}) {
   let db;
   try { db = await openDB(); } catch (e) { return null; }
   const record = {
-    id: 'rp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+    id: 'rp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '-' + (++pointCount),
     savedAt: new Date().toISOString(),
     reason: meta.reason || 'periodic',
     rooms: Number(meta.rooms) || 0,

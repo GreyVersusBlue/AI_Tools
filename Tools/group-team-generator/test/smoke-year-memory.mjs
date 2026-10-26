@@ -86,8 +86,16 @@ if (want('1')) {
     const r = await runScenario(page, BASE, sc);
     const g = gold.scenarios[sc.id];
     ok(JSON.stringify(r.steps) === JSON.stringify(g.steps), `${sc.id}: five rounds of groups and floaters match the page recorded at ${gold.recordedAt}`);
-    eq(sha(r.saved), g.savedSha256, `${sc.id}: the saved string is the same bytes`);
+    /* Since Path 13 P2 (v341) a shuffle also saves groupHistory, the engine's memory, and writes pairHistory and
+       pairGen from it. Taken out, the rest of the string must be the old page's bytes, and what it mirrors must be
+       exactly the pairHistory and pairGen saved beside it. */
     const st = JSON.parse(r.saved);
+    const gh = st.groupHistory;
+    delete st.groupHistory;
+    eq(sha(JSON.stringify(st)), g.savedSha256, `${sc.id}: the saved string, less groupHistory, is the same bytes`);
+    const mirror = await page.evaluate(h => Grouping.history.toLegacyPairs(h), gh);
+    ok(gh && JSON.stringify(mirror) === JSON.stringify({ pairHistory: st.pairHistory, pairGen: st.pairGen }),
+      `${sc.id}: pairHistory and pairGen are what groupHistory mirrors, key for key`);
     ok(!('longMemory' in st) && !('rolesText' in st) && !('roleHistory' in st), `${sc.id}: the save gained none of the new fields`);
     ok(page.__errs.length === 0, `${sc.id}: no page errors (${page.__errs.slice(0, 2).join(' | ')})`);
     await page.context().close();
@@ -111,6 +119,29 @@ if (want('1')) {
   ok(!('longMemory' in after) && !('rolesText' in after) && !('roleHistory' in after), 'an old save shuffled gains none of the new fields');
   eq(after.pairGen, 4, 'and its generation moves on as it always did');
   eq(after.pairHistory[K(names[2], names[3])].count >= 4, true, 'and its counts carried on from 4');
+  /* Path 13 P2 (v341): the shuffle saved the engine's memory, and pairHistory is written from it. */
+  ok(after.groupHistory && after.groupHistory.gen === 4, 'an old save shuffled gains groupHistory, at the same generation');
+  same(await page.evaluate(h => Grouping.history.toLegacyPairs(h), after.groupHistory), { pairHistory: after.pairHistory, pairGen: after.pairGen },
+    'and pairHistory/pairGen are what it mirrors');
+  /* An older cached page then shuffles once: it keeps groupHistory as it was (it does not know the field) and moves
+     pairHistory and pairGen on. Opening the class here takes that shuffle in. */
+  const older = JSON.parse(JSON.stringify(after));
+  older.pairGen = 5;
+  older.pairHistory[K(names[0], names[7])] = { gen: 5, count: (older.pairHistory[K(names[0], names[7])] || { count: 0 }).count + 1 };
+  await page.evaluate(s => localStorage.setItem('gtg:data:Old Block', JSON.stringify(s)), older);
+  await page.reload({ waitUntil: 'networkidle' }); await settle(page, 300);
+  const absorbed = await readState(page);
+  eq(absorbed.groupHistory.gen, 5, 'a shuffle an older page made since is taken into groupHistory on opening');
+  same(absorbed.pairHistory[K(names[0], names[7])], older.pairHistory[K(names[0], names[7])], 'with its pair');
+  /* Undo puts the memory back as it was, both fields. */
+  await makeFirst(page); await settle(page, 150);
+  await page.click('#regenerate-btn'); await settle(page, 150);
+  eq((await readState(page)).groupHistory.gen, 7, 'two more shuffles: generation 7');
+  await page.click('#undo-btn'); await settle(page, 150);
+  const undone = await readState(page);
+  eq(undone.groupHistory.gen, 6, 'Undo takes groupHistory back one shuffle');
+  same(await page.evaluate(h => Grouping.history.toLegacyPairs(h), undone.groupHistory), { pairHistory: undone.pairHistory, pairGen: undone.pairGen },
+    'and pairHistory/pairGen with it');
   ok((await cards(page)).every(c => c.members.every(m => m.role === '')), 'no role shows anywhere without a role list');
   await page.context().close();
 }
@@ -223,9 +254,9 @@ if (want('2')) {
     ok(want.every(w => li.includes(w)), `${first}'s line names everyone they have not met (${want.join(', ')})`);
     ok(li.includes('has worked with ' + (5 - want.length) + ' of 5'), 'and says how many of the five they have');
     await p.keyboard.press('Escape');
-    // every pair met → the sentence
+    // every pair met → the sentence (a save as a page before v341 wrote it, with no groupHistory)
     const all = {}; for (let i = 0; i < 6; i++) for (let j = i + 1; j < 6; j++) all[K(ns[i], ns[j])] = { gen: 1, count: 1 };
-    await p.evaluate(h => { const k = 'gtg:data:' + localStorage.getItem('gtg:current'); const s = JSON.parse(localStorage.getItem(k)); s.pairHistory = h; localStorage.setItem(k, JSON.stringify(s)); }, all);
+    await p.evaluate(h => { const k = 'gtg:data:' + localStorage.getItem('gtg:current'); const s = JSON.parse(localStorage.getItem(k)); s.pairHistory = h; delete s.groupHistory; localStorage.setItem(k, JSON.stringify(s)); }, all);
     await p.reload({ waitUntil: 'networkidle' }); await settle(p, 300);
     await p.click('#view-pairing-grid-btn'); await settle(p, 100);
     ok(/Everyone on the roster has worked with everyone else at least once/.test(await p.textContent('#grid-content')), 'when every pair has met the list says so');
@@ -256,6 +287,9 @@ if (want('2')) {
     p.once('dialog', d => d.accept());
     await p.click('#reset-pair-history-btn'); await settle(p, 100);
     eq(Object.keys((await readState(p)).pairHistory).length, 0, 'Reset pairing memory: OK clears it');
+    ok(!('groupHistory' in (await readState(p))), 'and the engine\'s memory with it (v341)');
+    await makeFirst(p); await settle(p, 100);
+    eq((await readState(p)).groupHistory.gen, 1, 'and the next shuffle starts it again at generation 1');
     await p.context().close();
   }
 }

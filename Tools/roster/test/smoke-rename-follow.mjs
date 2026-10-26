@@ -67,7 +67,7 @@ async function stage(file, seed) {
     return window.Roster.getStudents(roster).map(r => r.id);
   }, [ROSTER, OLD]);
 
-  await page.evaluate(seed.script, { ids, roster: ROSTER, old: OLD });
+  await page.evaluate(seed.script, seed.args ? [{ ids, roster: ROSTER, old: OLD }, ...seed.args] : { ids, roster: ROSTER, old: OLD });
 
   await page.evaluate(([roster, next]) => {
     window.Roster.setRoster(roster, next);
@@ -77,6 +77,11 @@ async function stage(file, seed) {
   await page.reload({ waitUntil: 'networkidle' });
   await settle(page, 350);
   return { page, ids, errors };
+}
+
+/** stage(), with `args` handed to the seed script after the ids. */
+async function stageArgs(file, seed, args) {
+  return stage(file, { script: seed.script, args });
 }
 
 /** Picks the roster in `sel` and presses `btn`. */
@@ -194,6 +199,10 @@ async function loadRoster(page, sel, btn) {
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('lgrr_rosters'))['Block A']);
   eq(saved.history['Aiden Smith'], ['Recorder', 'Recorder'], '022: the role history followed the rename');
   ok(!saved.history['Smith, Aiden'], '022: ...and is not left under the old name');
+  // Since v342/v343 the map is written from groupHistory, the engine's memory,
+  // which a save from before it (as here) gets on load; the rename moves it there.
+  ok(saved.groupHistory && saved.groupHistory.names.indexOf('Aiden Smith') !== -1 && saved.groupHistory.names.indexOf('Smith, Aiden') === -1,
+    '022: the role memory (groupHistory) followed it too');
   eq(saved.absent, ['Aiden Smith'], '022: the absence mark followed it');
   eq(saved.keepApart[0], ['Aiden Smith', 'Grace Hopper'], '022: and so did the keep-apart pair');
   ok(errors.length === 0, `022: no page errors (${errors.slice(0, 2).join(' | ')})`);
@@ -225,6 +234,8 @@ async function loadRoster(page, sel, btn) {
   await loadRoster(page, '#rosterHubSelect', '#rosterHubLoadBtn');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('novel-study-circles'))['Holes']);
   eq(saved.history['Aiden Smith'], ['Discussion Director'], '027: the circle role history followed the rename');
+  ok(saved.groupHistory && saved.groupHistory.names.indexOf('Aiden Smith') !== -1 && saved.groupHistory.names.indexOf('Smith, Aiden') === -1,
+    '027: the role memory (groupHistory) followed it too');
   eq(saved.groups[0].members, ['Aiden Smith', 'Grace Hopper'], '027: the current circle followed it');
   eq(saved.meetings[0].groups[0].assignment[0].name, 'Aiden Smith', '027: and so did the recorded meeting');
   ok(errors.length === 0, `027: no page errors (${errors.slice(0, 2).join(' | ')})`);
@@ -258,6 +269,125 @@ async function loadRoster(page, sel, btn) {
   eq(saved.absentNames, ['Aiden Smith'], '002: the absence mark followed the rename');
   ok(errors.length === 0, `002: no page errors (${errors.slice(0, 2).join(' | ')})`);
   await page.close();
+}
+
+/* ── 002, a class saved by v341–v343: groupHistory keyed by name ──────────────
+   Since v344 002's memory is keyed by roster id. One saved before that keys
+   each student 'n:' + name; the id map keys it on load, so a rename made in
+   Class Roster Hub before then is followed too, and the memory is saved by id. */
+{
+  const { page, ids, errors } = await stage('002-group-team-generator.html', {
+    script: ({ ids, roster, old }) => {
+      const key = old[0] < old[1] ? old[0] + '␟' + old[1] : old[1] + '␟' + old[0];
+      localStorage.setItem('gtg:list', JSON.stringify(['Block A']));
+      localStorage.setItem('gtg:current', 'Block A');
+      localStorage.setItem('gtg:data:Block A', JSON.stringify({
+        name: 'Block A', names: old.join('\n'), mode: 'count', splitValue: 2,
+        balance: false, keepApart: [[old[0], 'Lovelace, Ada']], keepTogether: [],
+        strategy: 'coverage', oddMode: 'extra', namingMode: 'number', customNames: '',
+        absentNames: [old[0]],
+        pairHistory: { [key]: { gen: 3, count: 4 } }, pairGen: 3,
+        groupHistory: { v: 1, gen: 3, keys: ['n:' + old[0], 'n:' + old[1]], names: [old[0], old[1]], seen: [3, 3], pairs: { '0.1': [3, 4] }, roles: {} },
+        rosterName: roster,
+        idNames: { [ids[0]]: old[0], [ids[1]]: old[1] },
+      }));
+    },
+  });
+  await loadRoster(page, '#roster-select', '#load-roster-btn');
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('gtg:data:Block A')));
+  const wantKey = NEW[0] < NEW[1] ? NEW[0] + '␟' + NEW[1] : NEW[1] + '␟' + NEW[0];
+  eq(saved.pairHistory, { [wantKey]: { gen: 3, count: 4 } }, '002 (v343 save): the pairs followed the rename');
+  eq(saved.groupHistory && saved.groupHistory.keys, ['i:' + ids[0], 'i:' + ids[1]], '002 (v343 save): the memory is keyed by roster id now');
+  eq(saved.groupHistory && saved.groupHistory.names, NEW, '002 (v343 save): ...under the new names');
+  eq(saved.absentNames, ['Aiden Smith'], '002 (v343 save): the absence mark followed the rename');
+  eq(saved.keepApart, [['Aiden Smith', 'Lovelace, Ada']], '002 (v343 save): the keep-apart pair followed it');
+  eq(saved.idNames, { [ids[0]]: NEW[0], [ids[1]]: NEW[1] }, '002 (v343 save): the id map is written, as before');
+  ok(errors.length === 0, `002 (v343 save): no page errors (${errors.slice(0, 2).join(' | ')})`);
+
+  /* Renamed again, with no id map at all (an older page can lose it): the
+     memory follows the id it now holds, by itself. */
+  await page.evaluate(([roster, next]) => {
+    const d = JSON.parse(localStorage.getItem('gtg:data:Block A'));
+    d.idNames = {};
+    localStorage.setItem('gtg:data:Block A', JSON.stringify(d));
+    window.Roster.setRoster(roster, next);
+    window.Roster.syncRecords(roster, next);
+  }, [ROSTER, ['Smith Aiden', NEW[1]]]);
+  await page.reload({ waitUntil: 'networkidle' });
+  await settle(page, 350);
+  await loadRoster(page, '#roster-select', '#load-roster-btn');
+  const again = await page.evaluate(() => JSON.parse(localStorage.getItem('gtg:data:Block A')));
+  const k2 = 'Smith Aiden' < NEW[1] ? 'Smith Aiden␟' + NEW[1] : NEW[1] + '␟Smith Aiden';
+  eq(again.pairHistory, { [k2]: { gen: 3, count: 4 } }, '002 (by id): a second rename is followed with no id map');
+  eq(again.groupHistory && again.groupHistory.keys, ['i:' + ids[0], 'i:' + ids[1]], '002 (by id): ...on the same keys');
+  ok(errors.length === 0, `002 (by id): no page errors (${errors.slice(0, 2).join(' | ')})`);
+  await page.close();
+}
+
+/* ── 022 and 027 since v345/v346: the role memory keyed by roster id ────────
+   (A) a save from v342–v344, its groupHistory keyed by name, across a rename:
+   the id map keys it on load, the rename moves it, and the press that hands
+   out roles saves it by id. (B) a rename onto a name that already has roles is
+   refused, as it always was: the roles stay under the old name, the student
+   reads the ones the new name has, and the press after it does not merge the
+   two (the refused student is unbound from the id). */
+const ROLE_TOOLS = [
+  { tool: '022', file: '022-lab-group-role-randomizer.html', key: 'lgrr_rosters', current: 'lgrr_current', cls: 'Block A', press: '#shuffleBtn',
+    record: (old, history, groupHistory, idNames, roster) => ({
+      name: 'Block A', students: old.join('\n'), roles: [{ name: 'Recorder', description: '' }, { name: 'Materials', description: '' }], stations: [],
+      mode: 'count', splitValue: 1, equipment: [], history, groupHistory, lastGroups: null, checkoutLog: [],
+      keepApart: [], absent: [], rosterName: roster, idNames }) },
+  { tool: '027', file: '027-novel-study-circles-manager.html', key: 'novel-study-circles', current: 'novel-study-circles-current', cls: 'Holes', press: '#logMeetingBtn',
+    record: (old, history, groupHistory, idNames, roster) => ({
+      name: 'Holes', students: old.join('\n'), bookTitle: 'Holes', mode: 'count', splitValue: 1,
+      groups: [{ id: 'g1', label: 'Group 1', members: [old[0], old[1]] }],
+      roles: [{ name: 'Recorder', prompts: '' }, { name: 'Materials', prompts: '' }], together: true,
+      history, groupHistory, meetings: [], schedule: null, rosterName: roster, idNames }) },
+];
+for (const T of ROLE_TOOLS) {
+  const seedWith = () => ({
+    script: ([{ ids, roster, old }, T2, history, groupHistory]) => {
+      const fn = src => new Function('return (' + src + ')')();
+      const rec = fn(T2.record)(old, history, fn(groupHistory)(ids, old), { [ids[0]]: old[0], [ids[1]]: old[1] }, roster);
+      localStorage.setItem(T2.key, JSON.stringify({ [T2.cls]: rec }));
+      localStorage.setItem(T2.current, T2.cls);
+    },
+  });
+  const T2 = { key: T.key, current: T.current, cls: T.cls, record: T.record.toString() };
+  const read = page => page.evaluate(([k, c]) => JSON.parse(localStorage.getItem(k))[c], [T.key, T.cls]);
+
+  // (A)
+  {
+    const gh = (ids, old) => ({ v: 1, gen: 2, keys: ['n:' + old[0]], names: [old[0]], seen: [0], pairs: {}, roles: { 0: ['Recorder', 'Recorder'] } });
+    const { page, ids, errors } = await stageArgs(T.file, seedWith(), [T2, { [OLD[0]]: ['Recorder', 'Recorder'] }, gh.toString()]);
+    await loadRoster(page, '#rosterHubSelect', '#rosterHubLoadBtn');
+    let saved = await read(page);
+    eq(saved.history[NEW[0]], ['Recorder', 'Recorder'], `${T.tool} (v344 save): the roles followed the rename`);
+    eq(saved.groupHistory && saved.groupHistory.keys, ['i:' + ids[0]], `${T.tool} (v344 save): the memory is keyed by roster id now`);
+    await page.click(T.press);
+    await settle(page, 250);
+    saved = await read(page);
+    ok(saved.groupHistory && saved.groupHistory.keys.length === 2 && saved.groupHistory.keys.every(k => k.indexOf('i:') === 0),
+      `${T.tool} (v344 save): after a press every student is keyed by id (${JSON.stringify(saved.groupHistory && saved.groupHistory.keys)})`);
+    eq(saved.history[NEW[0]] && saved.history[NEW[0]].slice(0, 2), ['Recorder', 'Recorder'], `${T.tool} (v344 save): ...with the history kept`);
+    ok(errors.length === 0, `${T.tool} (v344 save): no page errors (${errors.slice(0, 2).join(' | ')})`);
+    await page.close();
+  }
+  // (B)
+  {
+    const gh = (ids, old) => ({ v: 1, gen: 2, keys: ['i:' + ids[0], 'n:Aiden Smith'], names: [old[0], 'Aiden Smith'], seen: [0, 0], pairs: {}, roles: { 0: ['Recorder'], 1: ['Materials'] } });
+    const { page, errors } = await stageArgs(T.file, seedWith(), [T2, { [OLD[0]]: ['Recorder'], 'Aiden Smith': ['Materials'] }, gh.toString()]);
+    await loadRoster(page, '#rosterHubSelect', '#rosterHubLoadBtn');
+    await page.click(T.press);
+    await settle(page, 250);
+    const saved = await read(page);
+    eq(saved.history[OLD[0]], ['Recorder'], `${T.tool} (refused): the roles stay under the old name`);
+    eq(saved.history[NEW[0]] && saved.history[NEW[0]][0], 'Materials', `${T.tool} (refused): the student reads the new name's roles`);
+    const names = saved.groupHistory ? saved.groupHistory.names : [];
+    ok(names.length === new Set(names).size, `${T.tool} (refused): no name is in the memory twice (${JSON.stringify(names)})`);
+    ok(errors.length === 0, `${T.tool} (refused): no page errors (${errors.slice(0, 2).join(' | ')})`);
+    await page.close();
+  }
 }
 
 /* ── 068 Parent Contact Log — entries, and the only tool that needed a key ── */

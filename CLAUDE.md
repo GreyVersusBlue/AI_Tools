@@ -181,6 +181,17 @@ every edit. The deduplication work that established them is summarised in
   for an external `<use>` under `file://`. Its test is `npm run test:blender-art`. Keep art
   out of any folder named `test/`: `make-offline-copy.mjs` drops every such path
   from the offline zip, which is why the P1 test tile is not in it. It runs in CI.
+- **`npm run check:publisher` guards 035's publisher (Path 11 P1, 2026-10-25).** Publish
+  builds 034-style browsers by `.toString()`-ing live functions, so a refactor of 035
+  silently changes what staff are emailed. The guard reads the publisher statically and
+  holds 034's copies of the published pieces to `Tools/schedule-visualizer/test/publisher-ledger.json`
+  (034 is its own page for good, Devon 2026-10-07; a fix to a `same` piece goes into both
+  files). Its browser half, `npm run test:schedule-publish`, diffs a pinned-clock publish
+  against the committed `baseline-northwind.html`; a change you meant is `--update` and the
+  baseline's diff in the same commit. Since v323 the publisher is a module,
+  `Tools/schedule-visualizer/sv-browser.js`, and the guard reads every module 035's module
+  script imports (`moduleSources()`); its exports are copied onto `window`, which is the
+  global surface the old classic script had. It runs in CI.
 - **`npm run lint`** (ESLint, Path 2 P5) covers `_shared/*.js`, the per-tool
   modules, `sw.js`, the tooling and every suite — not inline `<script>` in the
   tool pages. Rules that matter: `no-undef`, `no-unused-vars`, `eqeqeq`. A new
@@ -188,7 +199,8 @@ every edit. The deduplication work that established them is summarised in
   tool-private page global a suite reads inside `page.evaluate()` is declared
   at the top of that suite with `/* global name -- why */`. It runs in CI.
 - **`npm run check:precache` enforces this.** It fails if a live page's
-  `src`/`href`, or a local file `manifest.json` names, is missing from
+  `src`/`href`, a module its `<script type="module">` imports (followed through each
+  module's own imports, since v323), or a local file `manifest.json` names, is missing from
   `PRECACHE_URLS`, or if a listed URL is dead or duplicated. It runs in CI.
   The `CACHE_VERSION` bump is checked only on request, because it needs a
   base to compare against: `npm run check:precache -- --base origin/main`
@@ -222,6 +234,13 @@ copy of the boilerplate:
   (`_shared/theme-toggle.js`, a second toggle on its own `gvb-tools-theme`
   key, was deleted in Path 5 P1 — its key is still migrated once by a11y.js.
   Read `_shared/ink-paper.css`'s header before touching any of this.)
+  **One page is the documented exception: 035** (Devon, 2026-10-03, "bless and
+  document"). It loads no a11y.js and writes `data-theme` from its own
+  four-palette switcher (the `palette` field of its settings: default,
+  green-gold, dark, green-gold-dark), which its embedded schedule browser
+  follows. Leave it alone; do not adopt a11y.js there cold. `test:theme`'s
+  `OWN_THEME` list names it and fails if any other page writes `data-theme`
+  without a11y.js, or if 035 stops (delete the entry then).
 - `<script src="../_shared/sw-register.js" defer></script>` — service-worker
   registration, the update bar, the deferred precache pass, and (since v180) the
   request for persistent storage. It exists and is precached; link it rather than
@@ -265,8 +284,8 @@ files must be added there too.
   tool's suites; `--changed` runs the suites covering your working-tree diff
   and commits since `origin/main` (`--base <ref>` picks another base).
 - **CI runs `--changed` on pull requests and the full list on a push to
-  `main`** (`.github/workflows/ci.yml`, since 2026-09-05). The full pass is
-  ~21 minutes and was the measured bottleneck of every PR while most PRs touch
+  `main`** (`.github/workflows/ci.yml`, since 2026-09-05). The full pass was
+  ~21 minutes then, and the measured bottleneck of every PR while most PRs touch
   one or two tools; the push-to-main run is the safety net that catches
   anything the selector under-selected before the site deploys. Which suites
   cover which files is decided by `Tools/board-check/select-suites.mjs`, four
@@ -293,6 +312,22 @@ files must be added there too.
   `--changed` against `origin/main`, and CI's `--base origin/<base branch>` —
   and adds the case to that test. The guards are not scoped: all eleven
   together take about twelve seconds, so there is nothing to save.
+- **Since 2026-10-26 CI runs the suites as six parallel jobs** (AI-34). One job
+  could no longer hold the list: the last green full run took 97 minutes, and
+  #372, a wave touching `_shared/`, was cancelled at the 120-minute timeout in
+  suite 307 of 330. The workflow now has a `guards` job (the read-only checks,
+  no browser), a `suites` matrix whose jobs each run the same selection with
+  `run-suites.mjs --shard i/6`, and a `test` job that is green only if every
+  other job was, so "the test check" still means everything. `--shard` keeps
+  the i-th share of whatever `--only`/`--changed`/the full list selected,
+  balanced longest-first by `Tools/board-check/suite-durations.json`; every
+  suite is in exactly one shard and each log prints the whole plan
+  (`Tools/board-check/shard-suites.mjs`; `npm run test:shard-suites` proves
+  the partition against the real list). The table only steers the balance; a
+  new suite is costed at the median until it is refreshed with
+  `node Tools/board-check/suite-durations.mjs <job logs>` (its header has the
+  `gh api` line). A suite must not depend on another suite having run first:
+  shards run on different machines, which `--changed` already assumed.
 - A known-red assertion goes in `suites.json`'s `expectedFailures` with its exact
   text and a reason — **never** by loosening the assertion. The runner prints
   every expected failure on every run, still goes red if the same suite fails a
@@ -475,7 +510,9 @@ files must be added there too.
   of the printable page, with the page's own print rules applied there (`flipMedia`), so the page itself is
   never changed. Do not write a second preview and do not measure breaks by height (that was tried and
   miscounts). 074 was the first adopter (`npm run test:safety-label-preview`, which pins the dialog itself); since v259 076, 077,
-  051, 042, 064 and 043 have it too, and since v263 070, 023, 040, 018, 017 and 016: every page that prints through the kit.
+  051, 042, 064 and 043 have it too, and since v263 070, 023, 040, 018, 017 and 016: every page that prints through the kit. 032's wall calendar (v317) is the one
+  that prints through the kit without `print-area.css`: its sheet is one of 032's own print views, so it calls `setPage()` only
+  while that view is picked and previews with `preview({ area })`; it is held by its own suite, not `smoke-preview-adopters.mjs`.
   The next adopter adds a "Preview pages" button in front of its print button,
   renders its sheet, calls `preview()`, and gets an entry in `Tools/print-kit/test/smoke-preview-adopters.mjs`'s `TOOLS`
   (`npm run test:preview-adopters`), which holds the preview's count to Chromium's PDF in every state. A page with

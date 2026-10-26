@@ -2,8 +2,8 @@
 //
 // Written from scratch for Round 1c of REFACTOR_PLAN.md: the original
 // board-check folder was never committed to this repository (verified with
-// `git log --all`), but three suites import from here — schedule/test/smoke.mjs,
-// schedule/test/publish.mjs and seating-chart/test/drive-seating.mjs — so the
+// `git log --all`), but three suites import from here — schedule-visualizer/test/smoke.mjs,
+// schedule-visualizer/test/publish.mjs and seating-chart/test/drive-seating.mjs — so the
 // exports below are shaped to match those call sites exactly, not the other
 // way around.
 //

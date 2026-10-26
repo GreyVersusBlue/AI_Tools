@@ -21,6 +21,7 @@
 // seeded 2026-27 calendar by the page's own modules, not typed by hand. Nothing here describes
 // a real class. Exits 1 on any failure.
 
+import { dayRuns } from '../scv-ics.js';
 import { serve, launch, prepPage, settle, a11yScan, downloadText } from '../../board-check/harness.mjs';
 import { seedCalendar2026 } from '../scv-seed.js';
 import { parseLessonList, placeLessons, isTeachableDay } from '../scv-pacing.js';
@@ -160,13 +161,16 @@ await scenario(page, 'migration');
   eq(units, [['Unit 1', '15, 1 half day'], ['Unit 2', '14'], ['Unit 3', '12, 1 half day']], 'the unit table lists the three runs with their class days (the bump counts in U1)');
   const ics = await downloadText(page, '#btnExportIcs', { what: 'the .ics' });
   const events = ics.split('BEGIN:VEVENT').slice(1);
+  // Since Path 9 P4 a lesson is its own event (X-SCV-KIND:lesson), named by its course, its
+  // code and its title, on the date stamped for it; the days are one event per run of dates.
+  const lessonEvents = events.filter((e) => e.includes('X-SCV-KIND:lesson'));
   const missing = Object.entries(OLD.dateByLessonId).filter(([id, d]) => {
-    const raw_ = OLD.byDate[d].raw;
-    return !events.some((e) => e.includes('DTSTART;VALUE=DATE:' + d.replace(/-/g, '')) && e.includes(raw_.replace(/,/g, '\\,')));
+    const [u, n, l, ...title] = OLD.byDate[d].raw.split('-');
+    return !lessonEvents.some((e) => e.includes('DTSTART;VALUE=DATE:' + d.replace(/-/g, '')) && e.includes(`SUMMARY:Course 1: ${u}-${n}-${l} ${title.join('-')}`));
   });
   eq(missing.length, 0, 'the .ics lists every lesson on the date the old page gave it');
-  const tagged = Object.keys(LEGACY.days).filter((d) => LEGACY.days[d].types.length || LEGACY.days[d].label);
-  eq(events.length, new Set([...tagged, ...Object.keys(OLD.byDate)]).size, 'and has the old page\'s number of events');
+  eq([lessonEvents.length, events.filter((e) => e.includes('X-SCV-KIND:day')).length], [Object.keys(OLD.dateByLessonId).length + 1, dayRuns(LEGACY).length],
+    'and has one event per lesson, one for the bump\'s catch-up day and one per run of tagged days');
   await page.click('#planUndo');
   await settle(page, 300);
   eq(await raw(page), legacyBytes, 'Undo of the migration writes the old bytes back');

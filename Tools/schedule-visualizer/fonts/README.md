@@ -53,7 +53,7 @@ base64-encoded into one CSS string, 103,058 bytes of JavaScript. Base64 costs
 Rebuild it after changing any woff2 file in this folder:
 
 ```bash
-node Tools/schedule/fonts/build-published-fonts.mjs
+node Tools/schedule-visualizer/fonts/build-published-fonts.mjs
 ```
 
 A published Schedule Browser is therefore about 100 KB bigger than it used to
