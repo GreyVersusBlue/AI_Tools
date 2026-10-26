@@ -42,7 +42,8 @@ const SEEDS = [1, 7, 42, 20261025, 3735928559];
 
 /* Each adopter: the page, how to load a class, anything to open first, how to
    ask for one case (a count, or [by, n]) and press the button, how to read the
-   groups back, and the old splitter for the same case. */
+   groups back, and the old splitter for the same case (or, where there is more
+   than groups to compare, a compare() that runs the old code itself). */
 const ADOPTERS = [
   {
     tool: '007',
@@ -107,6 +108,55 @@ const ADOPTERS = [
     },
     cases: [1, 2, 4, 5, 13, 20],
     legacy: (names, k, rng) => L.pe021(names, String(k), rng)
+  },
+  {
+    // a split, then three meetings' roles, and the role memory they leave
+    tool: '027',
+    url: '/Tools/027-novel-study-circles-manager.html',
+    names: CLASS.concat(['Ada Lovelace']),
+    async load() {},
+    async split(page, [mode, v], seed) {
+      return page.evaluate(([mode, v, seed, names]) => {
+        const cur = () => JSON.parse(localStorage.getItem('novel-study-circles'))[localStorage.getItem('novel-study-circles-current')];
+        const ta = document.getElementById('namesInput');
+        ta.value = names.join('\n');
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+        const radio = document.getElementById(mode === 'size' ? 'mode-size' : 'mode-count');
+        radio.checked = true;
+        radio.dispatchEvent(new Event('change', { bubbles: true }));
+        const sv = document.getElementById('splitValue');
+        sv.value = String(v);
+        sv.dispatchEvent(new Event('input', { bubbles: true }));
+        const before = cur().history || {};
+        window.Grouping.pin(seed);
+        document.getElementById('splitBtn').click();
+        for (let m = 0; m < 3; m++) document.getElementById('logMeetingBtn').click();
+        window.Grouping.pin(null);
+        const st = cur();
+        return {
+          before, roles: st.roles.map(r => r.name.trim()).filter(Boolean),
+          groups: st.groups.map(g => g.members),
+          meetings: st.meetings.slice(0, 3).reverse().map(mt => mt.groups.map(g => g.assignment)),
+          history: st.history
+        };
+      }, [mode, v, seed, this.names]);
+    },
+    compare(got, names, [mode, v], rng) {
+      const groups = L.nsc027(names, { mode, splitValue: String(v) }, rng);
+      const legacyState = { history: JSON.parse(JSON.stringify(got.before)) };
+      const meetings = [];
+      for (let m = 0; m < 3; m++) {
+        const picker = L.rolePicker(legacyState, rng);
+        meetings.push(groups.map(g => {
+          const asg = picker.assignRolesForGroup(g, got.roles);
+          g.forEach(nm => picker.recordHistory(nm, asg[nm]));
+          return g.map(nm => ({ name: nm, role: asg[nm] }));
+        }));
+      }
+      return [got.meetings.length === 3 && Object.keys(got.history).length > 0 && J(got.groups) === J(groups) && J(got.meetings) === J(meetings) && J(got.history) === J(legacyState.history),
+        `groups ${J(got.groups)} vs ${J(groups)}; meetings ${J(got.meetings)} vs ${J(meetings)}`];
+    },
+    cases: [['count', 3], ['count', 5], ['size', 4], ['size', 3], ['count', 20]]
   }
 ];
 
@@ -129,6 +179,11 @@ try {
     for (const c of a.cases) {
       for (const seed of SEEDS) {
         const got = await a.split(page, c, seed);
+        if (a.compare) {
+          const [same, detail] = a.compare(got, names.slice(), c, G.rng(seed));
+          ok(same, `${a.tool}: ${J(c)}, seed ${seed} (${detail})`);
+          continue;
+        }
         const want = a.legacy(names.slice(), c, G.rng(seed));
         ok(J(got) === J(want), `${a.tool}: ${J(c)}, seed ${seed} (got ${J(got)}, want ${J(want)})`);
       }

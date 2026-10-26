@@ -28,6 +28,7 @@
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/grouping.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -895,25 +896,17 @@
     return Math.max(1, Math.min(count, n));
   }
 
-  // ── Shuffle / grouping helpers ───────────────────────────────────────────
-  function shuffle(arr) {
-    var a = arr.slice();
-    for (var i = a.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
-      var t = a[i]; a[i] = a[j]; a[j] = t;
-    }
-    return a;
-  }
-
-  // Pure random split into groups, same mechanics as lab-group-role-randomizer
-  // / group-team-generator (no skill-balancing / keep-apart here).
+  // ── Grouping ─────────────────────────────────────────────────────────────
+  // A pure random split, by _shared/grouping.js since Path 13 P2 (v339): the
+  // same shuffle and deal as before, and Tools/grouping/test/parity.test.mjs
+  // holds it to the old code. Members are keyed by position, so two students of
+  // one name stay two, as they did.
   function makeGroups(names) {
     var k = groupCountFor(names.length);
-    var groups = [];
-    for (var i = 0; i < k; i++) groups.push({ id: makeId(), label: 'Group ' + (i + 1), members: [] });
-    var shuffled = shuffle(names);
-    shuffled.forEach(function (name, idx) { groups[idx % k].members.push(name); });
-    return groups;
+    var members = names.map(function (n, i) { return { key: String(i), name: n }; });
+    return Grouping.formGroups(members, { count: k }).groups.map(function (g, i) {
+      return { id: makeId(), label: 'Group ' + (i + 1), members: g.map(function (key) { return names[+key]; }) };
+    });
   }
 
   els.splitBtn.addEventListener('click', function () {
@@ -986,35 +979,25 @@
   }
 
   // ── Role-fairness memory ────────────────────────────────────────────────
-  // Adapted directly from 022-lab-group-role-randomizer.html: for each student,
-  // state.history[name] is an array of role names they've held in past
-  // meetings, oldest first. We bias assignment within each group toward
-  // whichever role a student has held least recently (or never).
-  function roleRecencyScore(studentName, role) {
-    var hist = (state.history && state.history[studentName]) || [];
-    var idxFromEnd = -1;
-    for (var i = hist.length - 1; i >= 0; i--) {
-      if (hist[i] === role) { idxFromEnd = hist.length - 1 - i; break; }
-    }
-    if (idxFromEnd === -1) return -1; // never held -> most preferred
-    return idxFromEnd === 0 ? 1000 : (100 - Math.min(idxFromEnd, 99));
-  }
-
+  // For each student, state.history[name] is an array of role names they've
+  // held in past meetings, oldest first. Within each group a student takes the
+  // open role they held longest ago (or never). The picker is
+  // Grouping.rotateRoles() since Path 13 P2 (v339), reading this same map, draw
+  // for draw the one this page had (parity.test.mjs); the memory is still this
+  // page's and recordHistory() below still writes it.
   function assignRolesForGroup(members, roles) {
-    var order = shuffle(members);
-    var available = roles.slice();
-    var assignment = {}; // name -> role or null (Group Member)
-
-    order.forEach(function (name) {
-      if (!available.length) { assignment[name] = null; return; }
-      var ranked = available.map(function (role) {
-        return { role: role, score: roleRecencyScore(name, role) + Math.random() * 0.5 };
-      }).sort(function (a, b) { return a.score - b.score; });
-      var chosen = ranked[0].role;
-      assignment[name] = chosen;
-      available.splice(available.indexOf(chosen), 1);
+    // Keys are 'n:' + name, so no name ("keys", "constructor") can be read as
+    // anything but a student; a repeated name is one key, as it was one entry.
+    var held = {};
+    members.forEach(function (name) {
+      var h = state.history && Object.prototype.hasOwnProperty.call(state.history, name) ? state.history[name] : null;
+      if (Array.isArray(h)) held['n:' + name] = h;
     });
-
+    var assignment = {}; // name -> role or null (Group Member)
+    var keys = members.map(function (name) { return 'n:' + name; });
+    Grouping.rotateRoles([keys], roles, held).byGroup[0].forEach(function (x) {
+      assignment[x.key.slice(2)] = x.role;
+    });
     return assignment;
   }
 
