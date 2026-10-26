@@ -9,6 +9,52 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 13 P2 increment 3: 022's and 027's role memory is `groupHistory` (2026-10-26, AI-21, `CACHE_VERSION` v342–v343)
+
+**Shipped.** The storage step for 022 (v342, c84bd6c) and 027 (v343, 6d630aa), one commit each, then the tests
+(a7870ba). Each page's role memory is now **`state.groupHistory`**, the engine's memory, roles only (neither page
+remembers partners, Devon's P13-3). `state.history`, the `{ name: [role] }` map every other line of the page reads
+(the hint, the role-history and fairness tables, the print), is written from it by `setRoleMemory()` on every change,
+because an older cached copy of the page reads that map and drops the field when it saves. Loading goes through
+`roleMemoryOf()`: `absorbLegacy()` over the stored field, then **the old map decides who has a list and in what
+order** (a list it no longer has, from an older page's Reset or rename, leaves the memory; the members are put in the
+map's order, so the map written back has the old key order). So a save from before the field, a roster or project
+file from before it, and a pair the map has since overtaken all hand out roles exactly as before. 022's
+`normalizeRosterData()` (storage, its roster file, a link) and 027's `loadProjectByName()`, project import and
+`newProject()` carry the field, and an exported file includes it. `handOutRoles()` replaces the old
+`assignRolesForGroup()` + `recordHistory()` pair: keys from `identify()`, `rotateRoles()` on the memory itself, and
+`record(..., { pairs: false })` once per group, before the next group is handed out, as the page always did (a name
+twice in one group is pushed twice). Undo keeps the memory object; Reset writes an empty one.
+
+**The call (no question for Devon).** Keys come from `identify()` **by name alone** (no roster ids) in this step, one
+key per name as the map had one entry per name. With ids, `identify()` would follow a rename by itself while
+`followRenames()` (`trackRenames()` and `renameStudentData()`) also follows it by name, and the two disagree on a
+rename onto a name that already has roles (the old page refuses to merge; an id key would carry the renamed student's
+roles onto it). So `renameStudentData()` moves the memory by name (`renameInMemory()`: the same refusal, the entry
+moved to the end of the map, where the old move put it), and moving 022 and 027 onto roster ids goes with 002's key
+step, which has to settle the same question. `record()` is called once per group, so `gen` counts groups, not
+shuffles; nothing in these two pages reads `gen`.
+
+**How it is held.** `test:grouping-adopters` (187 → 221): every 022 and 027 case now asserts that the saved map is
+exactly `toLegacyRoles(groupHistory)`; and for each page three stored records of the old shapes (the map alone; a
+`groupHistory` the map has since overtaken; a map an older page reset to `{}`) and an old file (imported, then
+exported and imported again) hand out roles over three presses exactly as the old picker would from the old map.
+Removing `roleMemoryOf()`'s map-wins step fails two of them. `smoke-rename-follow.mjs` (36 → 38) asserts the memory
+follows a rename in both pages (its fixtures are the old format).
+
+**Checked:** lint; all thirteen `check:*` guards and `check:precache -- --base main`; `run-suites --changed --base main`
+(25 suites, 19.3 min, all green, including the parity suite's 122,352, the adopters, rename-follow, the a11y sweep and
+the service-worker suites). **Not verified:** a full `npm test`; anything on a phone; a real 009 backup restored beside
+an older page's save.
+
+**Not done, and why: 002's keys onto `identify()`** (rank 32's other half). Read, not built: driving
+`followRenames()`/`renameStudentData()` from `identify()`'s `moved` and writing `idNames` no more loses a case
+`trackRenames()` covers today. A student in `idNames` with no pair yet (a class that has not shuffled, or a new
+student) is not in the memory, because `fromLegacy()` adds members only from `pairHistory` and roles, so a rename
+produces no `moved` and their absent mark and keep-apart pairs stay under the old name. The step needs either
+`fromLegacy()`/`absorbLegacy()` to seed members from `idNames`, or `trackRenames()` kept as the fallback. Building the
+first is an engine change with its own golden; that and the 002 suites did not fit before the night's deadline.
+
 ## Path 13 P2 increment 2: 002 forms groups through the engine (2026-10-26, AI-21, `CACHE_VERSION` v341)
 
 **Shipped.** 002's port alone (commit 10dd5f4). `makeGroups()` calls `Grouping.formGroups()` with the page's count or
