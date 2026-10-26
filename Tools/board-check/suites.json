@@ -306,6 +306,7 @@
     "Tools/question-bank/test/question-bank-sets.test.mjs",
     "Tools/grouping/test/grouping.test.mjs",
     "Tools/grouping/test/parity.test.mjs",
+    "Tools/grouping/test/smoke-adopters.mjs",
     "Tools/review-game-board/test/smoke-named-sets.mjs",
     "Tools/question-bank/test/smoke-seed-sets.mjs",
     "Tools/export/test/export.test.mjs",

@@ -63,6 +63,20 @@ for (let s = 0; s < 300; s++) {
   ok(J(old) === J(neu.groups) && sameEnd(a, b), '007 makeGroups', `seed ${s} n ${n} k ${k}`);
 }
 
+{ // name-picker/test/smoke.mjs's six assertions on np-pick.js's makeGroups(),
+  // moved here with the function (Path 13 P2, v336): the page's own call.
+  const C28 = names(28);
+  const g007 = (list, k) => G.formGroups(list, { count: k, min: 2, allowEmpty: true, seed: 8 }).groups;
+  const groups = g007(C28, 4);
+  const sizes = groups.map(g => g.length);
+  ok(groups.length === 4, '007: four groups requested, four returned');
+  ok(Math.max(...sizes) - Math.min(...sizes) <= 1, '007: group sizes differ by at most one');
+  ok(sizes.reduce((x, y) => x + y, 0) === 28, '007: everybody is in exactly one group');
+  ok(new Set(groups.flat()).size === 28, '007: nobody is in two groups');
+  const odd = g007(C28.slice(0, 27), 4).map(g => g.length);
+  ok(Math.max(...odd) - Math.min(...odd) <= 1, '007: 27 into 4 still differs by at most one');
+  ok(g007(C28, 1).length === 2, '007: a group count below 2 is clamped to 2');
+}
 lap('007');
 // ── 087, both rules ────────────────────────────────────────────────────
 for (const by of ['count', 'size']) {
