@@ -164,6 +164,20 @@
 #app-browser .br-dir-none{font-size:15px;font-weight:700;color:var(--br-alert-ink);margin:4px 0 14px}
 #app-browser .br-dir-map{margin:0 0 16px}
 #app-browser .br-dir-map figcaption{font-weight:700;color:var(--br-forest-ink);margin:0 0 6px}
+/* Path 11 P6: the Sub Plan tab */
+#app-browser .br-cover-pick input,#app-browser .br-cover-pick select{font:inherit;font-size:15px;padding:9px 12px;border:1px solid var(--br-gold-soft);
+  border-radius:10px;background:var(--br-card);color:var(--br-ink);min-width:160px}
+#app-browser .br-cover-table{width:100%;border-collapse:collapse;margin:0 0 16px;font-size:14.5px;color:var(--br-ink)}
+#app-browser .br-cover-table th,#app-browser .br-cover-table td{text-align:left;vertical-align:top;padding:9px 10px;border-bottom:1px solid var(--br-line)}
+#app-browser .br-cover-table th{font-size:12.5px;font-weight:700;color:var(--br-forest-ink)}
+#app-browser .br-cover-table tr.plan td{color:var(--br-muted);font-style:italic;background:var(--br-plan-bg)}
+#app-browser .br-cover-table input{font:inherit;font-size:14.5px;padding:7px 10px;border:1px solid var(--br-gold-soft);border-radius:8px;
+  background:var(--br-card);color:var(--br-ink);width:100%;min-width:140px;box-sizing:border-box}
+#app-browser .br-cover-acts{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 12px}
+#app-browser .br-cover-text{width:100%;min-height:180px;box-sizing:border-box;font:13.5px/1.5 ui-monospace,monospace;padding:10px;
+  border:1px solid var(--br-gold-soft);border-radius:10px;background:var(--br-card);color:var(--br-ink)}
+@media print{#app-browser .br-cover-pick,#app-browser .br-cover-acts,#app-browser .br-cover-text,#app-browser .br-cover-say{display:none!important}
+  #app-browser .br-cover-table input{border:none;border-bottom:1px solid #000;border-radius:0;padding:4px 0}}
 #app-browser .stale-banner::before{content:"⚠ "}
 #app-browser .stage{padding:34px 34px 30px}
 #app-browser .br-empty{text-align:center;color:var(--br-muted);padding:40px 20px}
@@ -671,11 +685,11 @@ function brSetMode(mo) {
   if (dt) { dt.classList.toggle('on', mo==='dir'); dt.setAttribute('aria-selected', mo==='dir' ? 'true' : 'false'); dt.tabIndex = mo==='dir' ? 0 : -1; }
   if (dt && mo==='dir') document.getElementById('br-stage').setAttribute('aria-labelledby', 'br-mDir');
   const sf = document.getElementById('br-searchField');
-  if (mo==='map' || mo==='dir') {
+  if (mo==='map' || mo==='dir' || mo==='sub') {
     sf.style.display='none';
     document.getElementById('br-empty').style.display='none';
     const v=document.getElementById('br-view'); v.classList.remove('show'); void v.offsetWidth;
-    if (mo==='map') brRenderMap(); else brRenderDirections();
+    if (mo==='map') brRenderMap(); else if (mo==='dir') brRenderDirections(); else brRenderCover();
     v.classList.add('show');
     return;
   }
@@ -1266,6 +1280,96 @@ function brDirMapsHTML(path, from, to) {
     const svg = brGeoFloorSVG(fg, { highlights: hi, clickable: false, px }).replace(/<\/svg>$/, lines + '</svg>');
     return '<figure class="br-dir-map"><figcaption>' + escHtml(fg.label) + '</figcaption><div class="mapscroll">' + svg + '</div></figure>';
   }).join('');
+}
+
+function brCoverRows(n, day) {
+  const t = BR_TEACHERS[n]; if (!t) return [];
+  const arr = (day === 'B' ? t.B : t.A) || [];
+  const bell = BR_BELL ? (day === 'B' ? BR_BELL.B : BR_BELL.A) : null;
+  const planning = (name, i) => { const d = (day === 'B' ? BR_TEACHERS[name].B : BR_TEACHERS[name].A) || []; return !d[i] || d[i] === 'Planning'; };
+  const rows = [];
+  for (let i = 0; i < BR_MODCOUNT; i++) {
+    const sec = arr[i] && arr[i] !== 'Planning' ? arr[i] : null;
+    const free = sec ? Object.keys(BR_TEACHERS).filter(m => m !== n && planning(m, i))
+      .sort((a, b) => (brOrderOf(brTDept(a)) - brOrderOf(brTDept(b))) || a.localeCompare(b)) : [];
+    rows.push({ i, time: bell && typeof bell[i] === 'string' ? bell[i] : '', sec, room: t.room, free });
+  }
+  return rows;
+}
+
+function brCoverText(school, n, day, date, rows, covers) {
+  const t = BR_TEACHERS[n];
+  const lines = ['Sub plan' + (school ? ' — ' + school : ''),
+    'Absent: ' + n + (t ? ' (Room ' + t.room + ')' : ''), 'Day: ' + day + ' day' + (date ? ', ' + date : ''), ''];
+  for (const r of rows) {
+    const head = BR_MOD_LABEL + ' ' + (r.i + 1) + (r.time ? ' (' + r.time + ')' : '') + ': ';
+    if (!r.sec) { lines.push(head + 'Planning, nothing to cover.'); continue; }
+    const who = String(covers[r.i] || '').trim();
+    lines.push(head + 'Class ' + r.sec + ', Room ' + r.room + '. '
+      + (who ? 'Covered by ' + who + '.' : 'Not covered yet' + (r.free.length ? ' (free: ' + r.free.join(', ') + ').' : ' (no one is free).')));
+  }
+  return lines.join('\n');
+}
+
+function brRenderCover() {
+  const v = document.getElementById('br-view');
+  const names = Object.keys(BR_TEACHERS).sort((a, b) => a.localeCompare(b));
+  if (!names.length) {
+    v.innerHTML = '<div class="br-empty"><div class="big">This schedule has no teachers yet.</div></div>';
+    return;
+  }
+  const opts = '<option value="">Choose a teacher</option>'
+    + names.map(n => '<option value="' + escHtml(n) + '">' + escHtml(n) + ' · Room ' + escHtml(BR_TEACHERS[n].room) + '</option>').join('');
+  v.innerHTML = `
+   <div class="maptop"><div><h2>Sub Plan</h2></div></div>
+   <div class="br-dir-pick br-cover-pick">
+     <div class="br-field"><label for="br-cover-who">Absent teacher</label><select id="br-cover-who" onchange="brShowCover()">${opts}</select></div>
+     <div class="br-field"><label for="br-cover-day">Day</label><select id="br-cover-day" onchange="brShowCover()"><option value="A">A day</option><option value="B">B day</option></select></div>
+     <div class="br-field"><label for="br-cover-date">Date (optional)</label><input id="br-cover-date" type="text" autocomplete="off" placeholder="Like Tuesday, March 3"></div>
+   </div>
+   <div id="br-cover-out"></div>`;
+  brShowCover();
+}
+
+function brShowCover() {
+  const out = document.getElementById('br-cover-out');
+  const n = document.getElementById('br-cover-who').value, day = document.getElementById('br-cover-day').value === 'B' ? 'B' : 'A';
+  if (!n || !BR_TEACHERS[n]) { out.innerHTML = '<p class="maphint">Choose the teacher who is out.</p>'; return; }
+  const rows = brCoverRows(n, day);
+  const body = rows.map(r => {
+    const mod = escHtml(BR_MOD_LABEL) + ' ' + (r.i + 1) + (r.time ? '<span class="bt"> · ' + escHtml(r.time) + '</span>' : '');
+    if (!r.sec) return '<tr class="plan"><td>' + mod + '</td><td colspan="4">Planning, nothing to cover</td></tr>';
+    const free = r.free.length ? r.free.map(escHtml).join(', ') : 'No one is free. Check with the office.';
+    const id = 'br-cover-in-' + r.i;
+    return '<tr><td>' + mod + '</td><td>Class ' + escHtml(r.sec) + '</td><td>Room ' + escHtml(r.room) + '</td><td>' + free + '</td>'
+      + '<td><input id="' + id + '" type="text" autocomplete="off" aria-label="Who covers ' + escHtml(BR_MOD_LABEL) + ' ' + (r.i + 1) + '"'
+      + (r.free.length ? ' list="' + id + '-free"' : '') + '>'
+      + (r.free.length ? '<datalist id="' + id + '-free">' + r.free.map(m => '<option value="' + escHtml(m) + '">').join('') + '</datalist>' : '')
+      + '</td></tr>';
+  }).join('');
+  const classes = rows.filter(r => r.sec).length;
+  out.innerHTML = '<p class="factline">Absent: <b>' + escHtml(n) + '</b>, Room ' + escHtml(BR_TEACHERS[n].room) + ', ' + day + ' day. '
+    + (classes ? classes + ' class' + (classes === 1 ? '' : 'es') + ' to cover.' : 'No classes that day, so nothing to cover.') + '</p>'
+    + '<div class="tscroll"><table class="br-cover-table"><thead><tr><th scope="col">' + escHtml(BR_MOD_LABEL) + '</th><th scope="col">Class</th>'
+    + '<th scope="col">Room</th><th scope="col">Free to cover (on Planning)</th><th scope="col">Covered by</th></tr></thead><tbody>' + body + '</tbody></table></div>'
+    + '<div class="br-cover-acts"><button class="btn-print" type="button" onclick="brCopyCover()">Copy the plan</button>'
+    + '<button class="btn-print" type="button" onclick="window.print()">Print the plan</button>'
+    + '<span class="br-cover-say" id="br-cover-say" role="status"></span></div>'
+    + '<textarea id="br-cover-text" class="br-cover-text" readonly hidden aria-label="The plan as text"></textarea>';
+}
+
+function brCopyCover() {
+  const n = document.getElementById('br-cover-who').value, day = document.getElementById('br-cover-day').value === 'B' ? 'B' : 'A';
+  const rows = brCoverRows(n, day), covers = {};
+  for (const r of rows) { const el = document.getElementById('br-cover-in-' + r.i); if (el) covers[r.i] = el.value; }
+  const text = brCoverText(document.getElementById('br-mast-school').textContent, n, day,
+    document.getElementById('br-cover-date').value.trim(), rows, covers);
+  const box = document.getElementById('br-cover-text'), say = document.getElementById('br-cover-say');
+  box.value = text; box.hidden = false; box.focus(); box.select();
+  const fallback = () => { say.textContent = 'Select the text below and copy it.'; };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => { say.textContent = 'Copied. Paste it into an email.'; }, fallback);
+  } else fallback();
 }
 brWireDocClick();
 brWireTabKeys();

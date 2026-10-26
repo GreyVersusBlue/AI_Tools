@@ -50,6 +50,11 @@
     "brDirSteps": "Path 11 P6 increment 2: a route's moves in sv-routes.js routeSteps()'s words; 034 has no directions.",
     "brRenderDirections": "Path 11 P6 increment 2: the Directions tab; 034 has no such tab.",
     "brShowRoute": "Path 11 P6 increment 2: the Directions tab's room lists' handler; 034 has no such tab.",
-    "brDirMapsHTML": "Path 11 P6 increment 2: the floor maps with the route drawn on them; 034 has no directions."
+    "brDirMapsHTML": "Path 11 P6 increment 2: the floor maps with the route drawn on them; 034 has no directions.",
+    "brCoverRows": "Path 11 P6 increment 3: the sub plan's rows, who is on Planning each mod; 034's Substitute Plan is its own (brSubCoverageHTML).",
+    "brCoverText": "Path 11 P6 increment 3: the sub plan as plain text for an email; 034 copies nothing.",
+    "brRenderCover": "Path 11 P6 increment 3: the Sub Plan tab; 034's Substitute Plan tab is its own (brSubHTML).",
+    "brShowCover": "Path 11 P6 increment 3: the Sub Plan tab's lists' handler; 034 picks its teacher from the search box.",
+    "brCopyCover": "Path 11 P6 increment 3: the Copy the plan button; 034 has none."
   }
 }

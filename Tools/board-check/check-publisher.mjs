@@ -81,7 +81,9 @@ export const LEDGER = 'Tools/schedule-visualizer/test/publisher-ledger.json';
 /** Outside names a published script may read. Seeded with what it reads
  *  today. ESLint's whole browser set would wave through a bare `name`,
  *  `status` or `event`, so this is a list, not `globals.browser`. */
-export const PUBLISHED_GLOBALS = ['document'];
+export const PUBLISHED_GLOBALS = ['document',
+  // Path 11 P6 increment 3: the Sub Plan's "Copy the plan" (navigator.clipboard), behind a feature test.
+  'navigator'];
 /** Free names that are known holes, each with why. Fails if one stops being free. */
 export const KNOWN_FREE = {
   brRenderMapLegacy: 'behind a dead door: brRenderMap() calls it only when typeof BR_WINGS !== "undefined", '

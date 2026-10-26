@@ -35,7 +35,7 @@ console.log('check-publisher — the guard on the tree');
 const real = check();
 ok(real.failures.length === 0, 'the tree passes: ' + JSON.stringify(real.failures));
 const pub = readPublisher(html035);
-ok(pub.fns.length === 39, `39 listed functions (got ${pub.fns.length})`);
+ok(pub.fns.length === 44, `44 listed functions (got ${pub.fns.length})`);
 ok(pub.consts.length === 7, `7 .toString() constants (got ${pub.consts.length})`);
 ok(pub.json.filter(j => j.name !== 'BR_STALE_DAYS' && j.name !== 'BR_READS_FORMAT').length === 2, '2 JSON constants');
 ok(pub.json.some(j => j.name === 'BR_READS_FORMAT' && j.value === FORMAT), 'BR_READS_FORMAT is read, and is FORMAT');
@@ -49,12 +49,12 @@ ok(pub.plan.items.find(e => e.kind === 'data').escaped === true, "PUBLISHED_DATA
 ok(assemble(pub, { school: '</script><b>' }).includes('"school":"\\u003c/script>\\u003cb>"'),
   'assemble() escapes < in the data as the page does');
 const c = s => real.fork.filter(f => f.state === s).length;
-ok(c('same') === 21 && c('forked') === 12 && c('absent') === 13, `034: 21 same, 12 forked, 13 absent (got ${c('same')}/${c('forked')}/${c('absent')})`);
+ok(c('same') === 21 && c('forked') === 12 && c('absent') === 18, `034: 21 same, 12 forked, 18 absent (got ${c('same')}/${c('forked')}/${c('absent')})`);
 const script = assemble(pub, {});
 ok(script.startsWith("'use strict';\n"), 'the assembled script is strict');
 const free = freeNames(script);
-ok(JSON.stringify([...new Set(free.map(f => f.name))].sort()) === '["brRenderMapLegacy","document"]',
-  'the only free names are document and brRenderMapLegacy: ' + JSON.stringify([...new Set(free.map(f => f.name))]));
+ok(JSON.stringify([...new Set(free.map(f => f.name))].sort()) === '["brRenderMapLegacy","document","navigator"]',
+  'the only free names are document, navigator and brRenderMapLegacy: ' + JSON.stringify([...new Set(free.map(f => f.name))]));
 
 /* ── breaks on purpose ──────────────────────────────────────────────── */
 
@@ -155,6 +155,23 @@ expect('the directions remembering the last route', ['LIVE'], {
   b35: edit(browser035, "  const sfBox = document.getElementById('br-dir-sf');", "  const sfBox = document.getElementById('br-dir-sf');\n  localStorage.setItem('br-dir', from);", 'live'),
   mention: 'localStorage',
 });
+// Path 11 P6 increment 3: the Sub Plan tab.
+expect('br-cover-out renamed in the markup the tab writes', ['ID'], {
+  b35: edit(browser035, '<div id="br-cover-out"></div>', '<div id="br-cover-output"></div>', 'id'),
+  mention: 'br-cover-out',
+});
+expect('brCoverText left out of the function list', ['FREE'], {
+  b35: edit(browser035, 'brCoverRows, brCoverText, brRenderCover,', 'brCoverRows, brRenderCover,', 'list'),
+  led: ledgerWithout('brCoverText'), mention: 'brCoverText',
+});
+expect('the sub plan remembering who covers', ['LIVE'], {
+  b35: edit(browser035, "  const box = document.getElementById('br-cover-text')", "  sessionStorage.setItem('br-cover', text);\n  const box = document.getElementById('br-cover-text')", 'live'),
+  mention: 'sessionStorage',
+});
+expect('a bare location read by the copy', ['FREE'], {
+  b35: edit(browser035, "  const fallback = () =>", "  const here = location.href;\n  const fallback = () =>", 'free'),
+  mention: 'location',
+});
 expect("brGrpDay = 'B' in the preamble only", ['STATE'], {
   b35: edit(browser035, `"let brGrpDay = 'A', brMapFloorIdx = 0;",`, `"let brGrpDay = 'B', brMapFloorIdx = 0;",`, 'state'),
   mention: 'brGrpDay',
@@ -174,7 +191,7 @@ expect('a <link> in the published head', ['HEAD'], {
   b35: edit(browser035, `+ '<meta charset="UTF-8">\\n'`, `+ '<meta charset="UTF-8">\\n<link rel="icon" href="x.png">\\n'`, 'head'),
 });
 expect('a spread in the function list', ['SHAPE'], {
-  b35: edit(browser035, 'brShowRoute, brDirMapsHTML\n  ];', 'brShowRoute, brDirMapsHTML, ...[]\n  ];', 'spread'),
+  b35: edit(browser035, 'brShowCover, brCopyCover\n  ];', 'brShowCover, brCopyCover, ...[]\n  ];', 'spread'),
 });
 expect('a ternary in consts', ['SHAPE'], {
   b35: edit(browser035, "    'const BR_STALE_DAYS = ' + BR_STALE_DAYS + ';'", "    (1 ? 'const BR_STALE_DAYS = ' + BR_STALE_DAYS + ';' : '')", 'ternary'),

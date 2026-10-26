@@ -1961,6 +1961,15 @@
               </span>
             </label>
           </div>
+          <div class="form-row">
+            <label style="display:flex;align-items:flex-start;gap:var(--sp-2);cursor:pointer;user-select:none;">
+              <input type="checkbox" id="setting-publish-sub-plan" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent);" />
+              <span>
+                <span class="form-label" style="display:block;">Published copies show a sub plan</span>
+                <span class="form-hint" style="display:block;">Adds a Sub Plan tab to the files Publish for Teachers makes from now on: pick the teacher who is out and the day, and the copy lists each class with who is on Planning then, a box to type who covers it, "Copy the plan" for an email, and one page to print. It is made from the schedule only and keeps nothing. Off, a published copy looks exactly as before. Copies already sent do not change.</span>
+              </span>
+            </label>
+          </div>
         </div>
 
         <!-- R59: Subjects / Departments editor -->
@@ -3868,6 +3877,7 @@ const els = {
   lockdownNoteInput: document.getElementById('setting-lockdown-note'),         // Path 11 P4
   publishCanOpenInput: document.getElementById('setting-publish-can-open'),    // Path 11 P6
   publishDirectionsInput: document.getElementById('setting-publish-directions'), // Path 11 P6
+  publishSubPlanInput: document.getElementById('setting-publish-sub-plan'),    // Path 11 P6
   modPreviewChips:  document.getElementById('mod-preview-chips'),
   headerSchoolName: document.getElementById('header-school-name'),
   headerModCount:   document.getElementById('header-mod-count'),
@@ -3907,6 +3917,7 @@ function populateSettingsForm() {
   if (els.lockdownNoteInput) els.lockdownNoteInput.value = typeof AppState.settings.lockdownNote === 'string' ? AppState.settings.lockdownNote : '';
   if (els.publishCanOpenInput) els.publishCanOpenInput.checked = AppState.settings.publishCanOpen === true;
   if (els.publishDirectionsInput) els.publishDirectionsInput.checked = AppState.settings.publishDirections === true;
+  if (els.publishSubPlanInput) els.publishSubPlanInput.checked = AppState.settings.publishSubPlan === true;
   renderBellScheduleEditor();
   renderSubjectsEditor();
 
@@ -4085,6 +4096,10 @@ els.btnSave.addEventListener('click', () => {
   if (els.publishDirectionsInput) {
     if (els.publishDirectionsInput.checked) AppState.settings.publishDirections = true;
     else delete AppState.settings.publishDirections;
+  }
+  if (els.publishSubPlanInput) {
+    if (els.publishSubPlanInput.checked) AppState.settings.publishSubPlan = true;
+    else delete AppState.settings.publishSubPlan;
   }
   saveSettings();
   saveLastSavedTime();

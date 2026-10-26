@@ -203,7 +203,7 @@ async function increment2(run, pub, html) {
   //    clock 90 days past publishing so the out-of-date banner shows too.
   {
     const pieces = pub.fns.map(f => f.name).concat(pub.consts.map(c => c.name));
-    ok(pieces.length === 46, `46 published pieces to cover (got ${pieces.length})`);
+    ok(pieces.length === 51, `51 published pieces to cover (got ${pieces.length})`);
     // Path 11 P6 increment 2: the file the walk opens carries directions, so the
     // Directions tab (driven by name: a default publish has no such tab) routes.
     const dirGeom = await run.page.evaluate(() => brRouteGeometry(brBuildGeometrySnapshot(AppState.blueprint), AppState.blueprint, AppState.settings));
@@ -242,6 +242,11 @@ async function increment2(run, pub, html) {
       await p.selectOption('#br-dir-from', dirFrom);
       await p.selectOption('#br-dir-to', dirTo);
       await p.waitForSelector('#br-dir-out figure.br-dir-map polyline');
+      // Path 11 P6 increment 3: the Sub Plan, driven by name the same way.
+      await p.evaluate(() => brSetMode('sub'));
+      await p.selectOption('#br-cover-who', { index: 1 });
+      await p.click('#br-cover-out button[onclick="brCopyCover()"]');
+      await p.waitForFunction(() => document.getElementById('br-cover-say').textContent !== '');
       await p.click('#br-open-back');
       await p.waitForFunction(() => document.getElementById('br-open-note').hidden);
       const cov = await p.coverage.stopJSCoverage();
@@ -337,6 +342,7 @@ async function increment2(run, pub, html) {
 
   await increment6(run, pub, html);
   await increment6Directions(run, pub, html);
+  await increment6SubPlan(run, pub, html);
 }
 
 /* Path 11 P6 increment 1: a published copy opens a newer schedule file, but
@@ -542,6 +548,143 @@ async function increment6Directions(run, pub, html) {
       ok((await viewText(ol.page)).includes('Take the elevator to Floor 2.'), 'step-free directions take the elevator');
       ok(ol.page.__errs.length === 0, 'no page errors: ' + JSON.stringify(ol.page.__errs));
     } finally { await ol.close(); }
+  }
+}
+
+/* Path 11 P6 increment 3: a published copy shows a sub plan, but only one
+   whose publisher ticked Settings → Publishing → "show a sub plan". */
+async function increment6SubPlan(run, pub, html) {
+  const browser = run.browser;
+  const cssStart = pub.css.split('\n')[0];
+  const tabs = page => page.evaluate(() => [...document.querySelectorAll('#app-browser .mode [role="tab"]')]
+    .map(b => b.id + ':' + b.getAttribute('aria-selected')));
+  ok(!html.includes('id="br-mSub"'), 'a default publish has no Sub Plan tab');
+
+  // Ticked: the markup gains the tab; the data does not move at all.
+  const project = fixtureProject();
+  project.settings.publishSubPlan = true;
+  const h = await republish(run.page, { project });
+  const d = compare(stripFonts(html, cssStart), stripFonts(h, cssStart)).map(x => x.section);
+  ok(JSON.stringify(d) === '["markup"]', 'ticking the box moves the markup only: ' + JSON.stringify(d));
+  const saved = await run.page.evaluate(() => ({ box: !!document.getElementById('setting-publish-sub-plan'), key: AppState.settings.publishSubPlan }));
+  ok(saved.box && saved.key === true, 'Settings → Publishing has the box, and the project carries the setting: ' + JSON.stringify(saved));
+
+  // What the plan should say, worked out here from the published data.
+  const data = readEmbedded(h);
+  const plan = (t, i, day) => { const x = data.teachers[t][day][i]; return !x || x === 'Planning'; };
+  const names = Object.keys(data.teachers).sort((a, b) => a.localeCompare(b));
+  const who = names.find(n => data.teachers[n].A.filter(x => x && x !== 'Planning').length >= 2 && data.teachers[n].A.some((x, i) => i < data.modCount && plan(n, i, 'A')));
+  const t = data.teachers[who];
+  const want = day => Array.from({ length: data.modCount }, (_, i) => {
+    const sec = t[day][i] && t[day][i] !== 'Planning' ? t[day][i] : null;
+    return sec ? names.filter(m => m !== who && plan(m, i, day)) : null;
+  });
+
+  const o = await openPublished(browser, h, { at: NOW });
+  const p = o.page;
+  try {
+    ok(await p.isVisible('#br-mSub'), 'the ticked copy shows a Sub Plan tab');
+    await p.focus('#br-mTeacher');
+    await p.keyboard.press('End');
+    ok(JSON.stringify(await tabs(p)) === '["br-mTeacher:false","br-mGroup:false","br-mMap:false","br-mSub:true"]', 'End reaches it, and it alone is selected');
+    ok(await p.evaluate(() => document.getElementById('br-stage').getAttribute('aria-labelledby')) === 'br-mSub', 'the panel is labelled by it');
+    ok(!(await p.isVisible('#br-searchField')), 'the name search is hidden, as on the map');
+    ok((await viewText(p)).includes('Choose the teacher who is out'), 'with no teacher chosen it says what to do');
+
+    await p.selectOption('#br-cover-who', who);
+    await p.waitForSelector('#br-cover-out table');
+    const rows = () => p.evaluate(() => [...document.querySelectorAll('#br-cover-out tbody tr')].map(tr =>
+      tr.classList.contains('plan') ? null : tr.children[3].textContent));
+    // Who is free is listed by department, as the overview orders; compared here as a set.
+    const asSet = list => list.map(x => x === null ? null : x.split(', ').sort().join(', '));
+    const wanted = day => want(day).map(f => f === null ? null : (f.length ? f.slice().sort().join(', ') : 'No one is free. Check with the office.'));
+    const shownA = await rows();
+    ok(JSON.stringify(asSet(shownA)) === JSON.stringify(wanted('A')), `${who}, A day: one row a mod, Planning rows plain, and who is free each class mod: ` + JSON.stringify(shownA));
+    const classMods = want('A').map((f, i) => f ? i : -1).filter(i => i >= 0);
+    const [first, second] = classMods;
+    ok(classMods.length >= 2, 'the teacher has two classes to cover on A day');
+
+    // Who covers, typed; Copy the plan copies it as text.
+    await p.fill('#br-cover-in-' + first, 'Mr. Example');
+    await p.fill('#br-cover-date', 'Tuesday, March 3');
+    await p.click('#br-cover-out button[onclick="brCopyCover()"]');
+    await p.waitForFunction(() => document.getElementById('br-cover-say').textContent !== '');
+    const text = await p.evaluate(() => document.getElementById('br-cover-text').value);
+    const lines = text.split('\n');
+    const tm = i => data.bell && data.bell.A && data.bell.A[i] ? ` (${data.bell.A[i]})` : '';
+    ok(lines[0] === 'Sub plan — ' + data.school && lines[1] === `Absent: ${who} (Room ${t.room})` && lines[2] === 'Day: A day, Tuesday, March 3',
+      'the text names the school, the teacher, the room, the day and the date: ' + JSON.stringify(lines.slice(0, 3)));
+    ok(lines.length === 4 + data.modCount, `one line a mod (${data.modCount}) after the head: ${lines.length}`);
+    ok(lines[4 + first] === `${data.modLabel} ${first + 1}${tm(first)}: Class ${t.A[first]}, Room ${t.room}. Covered by Mr. Example.`,
+      'a mod with a cover typed says who: ' + lines[4 + first]);
+    ok(lines[4 + second] === `${data.modLabel} ${second + 1}${tm(second)}: Class ${t.A[second]}, Room ${t.room}. `
+      + (want('A')[second].length ? `Not covered yet (free: ${shownA[second]}).` : 'Not covered yet (no one is free).'),
+      'a mod with none typed says who is free: ' + lines[4 + second]);
+    const planMod = want('A').indexOf(null);
+    ok(planMod < 0 || lines[4 + planMod].endsWith(': Planning, nothing to cover.'), 'a Planning mod says so');
+    const scan = await a11yScan(p, { impact: 'serious', include: '#br-view' });
+    ok(scan.length === 0, 'the Sub Plan tab with a plan has no serious or critical axe finding: ' + JSON.stringify(scan.map(x => [x.id, x.nodes])));
+    await p.emulateMedia({ colorScheme: 'dark' });
+    const dark = await a11yScan(p, { impact: 'serious', include: '#br-view' });
+    await p.emulateMedia({ colorScheme: 'light' });
+    ok(dark.length === 0, 'nor in a dark colour scheme: ' + JSON.stringify(dark.map(x => [x.id, x.nodes])));
+
+    // B day reads the teacher's B day.
+    await p.selectOption('#br-cover-day', 'B');
+    ok(JSON.stringify(asSet(await rows())) === JSON.stringify(wanted('B')), 'B day lists the B day');
+
+    // Print: the controls go, the plan stays, and it is one page.
+    await p.emulateMedia({ media: 'print' });
+    const vis = await p.evaluate(() => ['.br-cover-pick', '.br-cover-acts', '.br-cover-table', '.toolbar']
+      .map(s => getComputedStyle(document.querySelector('#app-browser ' + s)).display !== 'none'));
+    ok(JSON.stringify(vis) === '[false,false,true,false]', 'in print the lists, buttons and toolbar are hidden and the table shows: ' + JSON.stringify(vis));
+    await p.emulateMedia({ media: 'screen' });
+    const pdf = await p.pdf({ format: 'Letter' });
+    const pages = (pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+    ok(pages === 1, `the plan prints on one Letter page (${pages})`);
+
+    // Names that need escaping, in a schedule swapped in by name.
+    const odd = 'O"Neil & <b>Co</b>';
+    await p.evaluate(([d0, n]) => {
+      const t0 = Object.keys(d0.teachers)[0];
+      d0.teachers[n] = d0.teachers[t0]; delete d0.teachers[t0];
+      brUseSchedule(d0, 'odd.html'); brSetMode('sub');
+    }, [JSON.parse(JSON.stringify(data)), odd]);
+    await p.selectOption('#br-cover-who', odd);
+    await p.waitForSelector('#br-cover-out table');
+    ok((await p.evaluate(() => document.querySelector('#br-cover-out .factline b').textContent)) === odd
+      && !(await p.$('#br-cover-out b b')), 'a name with quotes, & and markup is shown as typed, not run');
+    // An empty slot is Planning, as By Teacher reads it (Northwind writes every Planning out).
+    const t0 = Object.keys(data.teachers)[0];
+    const mod = data.teachers[t0].A.findIndex((x, i) => i < data.modCount && x && x !== 'Planning');
+    const busy = names.find(m => m !== t0 && !plan(m, mod, 'A'));
+    await p.evaluate(([d0, n, m, i]) => {
+      d0.teachers[n] = d0.teachers[Object.keys(d0.teachers)[0]]; delete d0.teachers[Object.keys(d0.teachers)[0]];
+      d0.teachers[m].A[i] = '';
+      brUseSchedule(d0, 'gap.html'); brSetMode('sub');
+    }, [JSON.parse(JSON.stringify(data)), odd, busy, mod]);
+    await p.selectOption('#br-cover-who', odd);
+    await p.waitForSelector('#br-cover-out table');
+    ok((await rows())[mod].split(', ').includes(busy), `a teacher with nothing in ${data.modLabel} ${mod + 1} is free then (${busy})`);
+    ok(p.__errs.length === 0, 'no page errors in the ticked copy: ' + JSON.stringify(p.__errs));
+  } finally { await o.close(); }
+
+  // Both of the tab boxes ticked: five tabs, in order.
+  {
+    const both = fixtureProject();
+    both.settings.publishSubPlan = true; both.settings.publishDirections = true;
+    const hb = await republish(run.page, { project: both });
+    const ob = await openPublished(browser, hb, { at: NOW });
+    try {
+      await ob.page.focus('#br-mTeacher');
+      await ob.page.keyboard.press('ArrowLeft');
+      ok(JSON.stringify(await tabs(ob.page)) === '["br-mTeacher:false","br-mGroup:false","br-mMap:false","br-mDir:false","br-mSub:true"]',
+        'with directions too there are five tabs, Sub Plan last');
+      await ob.page.keyboard.press('ArrowLeft');
+      ok(JSON.stringify(await tabs(ob.page)) === '["br-mTeacher:false","br-mGroup:false","br-mMap:false","br-mDir:true","br-mSub:false"]',
+        'and the arrow keys move from it to Directions');
+      ok(ob.page.__errs.length === 0, 'no page errors: ' + JSON.stringify(ob.page.__errs));
+    } finally { await ob.close(); }
   }
 }
 
