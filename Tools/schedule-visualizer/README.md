@@ -156,6 +156,15 @@ they were and the tab is not in the markup at all. The copy routes with
 `brDirGraph()`/`brDirRoute()`, and `npm run test:schedule-directions` (pure Node)
 holds every room pair's route cost to `sv-graph.js`'s, ordinary and step-free.
 
+Since v334 (increment 3, the last of P6) a published file can show a sub plan.
+Settings → Publishing → "Published copies show a sub plan"
+(`settings.publishSubPlan`, off by default) adds a Sub Plan tab (mode `'sub'`,
+id `br-mSub`): pick the absent teacher and the day, and each mod lists the
+class, the room, the bell time and who is on Planning then, with a box to type
+who covers it; "Copy the plan" copies it as text and "Print the plan" prints the
+tab. It reads the teacher day as By Teacher does (`brCoverRows()`), so ticking
+the box moves the markup only, and nothing is stored.
+
 `npm run check:publisher` reads 035's publisher as text and fails on a listed
 function that is not one top-level declaration, a free name, a construct that
 is not strict, a handler or element id the published file lacks, a preamble

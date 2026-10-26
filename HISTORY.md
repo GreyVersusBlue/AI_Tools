@@ -9,6 +9,62 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P6 increment 3: a published copy shows a sub plan; P6, P5 and Path 11 are whole (2026-10-25, AI-20, `CACHE_VERSION` v334)
+
+**Built.** A third box in 035's Settings → Publishing, "Published copies show a sub plan" (`settings.publishSubPlan`,
+absent when off). Ticked, a published file has a Sub Plan tab: "Absent teacher" (every teacher, with their room), "Day"
+(A or B) and an optional typed date; below them one row a mod with the class, the room and the bell time, and on a class
+mod who is on Planning then ("No one is free. Check with the office." when nobody is) and a "Covered by" box with a
+datalist of those names; a Planning mod reads "Planning, nothing to cover". "Copy the plan" copies plain text (the
+school; "Absent: name (Room r)"; "Day: A day, date"; a line a mod, "Covered by X." or "Not covered yet (free: …)." or
+"Planning, nothing to cover.") and shows the same text selected below; "Print the plan" prints the tab with the lists,
+buttons and toolbar hidden. Nothing is stored. Commit e3c1a5a.
+
+**The teacher day.** It is the publisher's own, read exactly as By Teacher shows it: a slot that is empty or
+`'Planning'` is Planning, the room is the teacher's one published room. Devon answered P5 increment 2's question "No"
+(2026-10-25, about 21:05 ET), so `deriveScheduleData` keeps its rule and no published teacher day changed.
+
+**Calls made here.** (1) The tab is mode `'sub'` with id `br-mSub`, both of which `brSyncTabs` (a `same` piece) already
+listed for 034's own Substitute Plan, so the tab's selected state needs no new code and no shared piece moved; the
+renderers are new `brCover…` names, so 034's `brSub*` rows did not move either. (2) A date box the design did not name:
+a plan pasted into an email is no use without its date. Typed, never stored or checked. (3) `navigator` added to
+`check:publisher`'s `PUBLISHED_GLOBALS` (it held only `document`) rather than a deprecated `execCommand('copy')`;
+`navigator.clipboard` is feature-tested and the text is always shown selected, because a file opened from disk may
+refuse the clipboard. (4) Who is free is listed by department, then name, as 034's coverage list and the overview
+order them. (5) The Planning rows use `--br-muted` on `--br-plan-bg`: By Teacher's `--br-plan-ink` on that background
+failed axe's colour contrast in a table cell (By Teacher's own Planning rows were not changed). No new question for
+Devon; P6's (4) (name who covers, or only list who is free) and (5) (copied text, or a Path 6 link) stay open on
+what is built.
+
+**What changed in the published output, exactly.** `baseline-northwind.html` regenerated with `--update` (78,100 →
+85,794 bytes, +106 −2 lines): BR_CSS gains the `.br-cover-*` rules and their `@media print` block; `brSetMode`'s
+map/dir branch takes `'sub'` too (the two removed lines are that `if` and its render line); five new functions. The
+data and markup sections are byte-identical. A ticked publish differs from the default in the markup only (the tab),
+which the suite asserts.
+
+**Guards.** Ledger `absent` +5 (18 now; 21 same, 12 forked). `test:check-publisher` 84 → 88 (counts; free names now
+`document`, `navigator`, `brRenderMapLegacy`; the spread fixture moved; four new breaks: `br-cover-out` renamed fails
+ID, `brCoverText` dropped from the list fails FREE, the copy writing sessionStorage fails LIVE, a bare `location` read
+fails FREE). `test:schedule-publish` 78 → 104: the coverage walk is 51 pieces and drives the Sub Plan and its copy; a
+new section checks the default file has no tab, the ticked copy's markup-only move and saved setting, the tab's keys
+and panel label, every row's free list against the data, the copied text line by line, B day, an empty slot read as
+Planning, a name with quotes, `&` and markup shown as text, axe (0 serious) in light and dark schemes, print
+visibility, one Letter page, and five tabs in order with directions ticked too. Five code breaks were made on purpose
+(the name unescaped, the tab always on, the print rule lost, the typed covers ignored, an empty slot not read as
+Planning): each failed a behaviour check, not only the baseline; the last one needed the empty-slot case, which
+Northwind (every Planning written out) could not reach. Size ledger: 035 is 297,900 bytes, under 300 KB.
+
+**Bookkeeping.** BACKLOG ranks 25 (P5, holding only the closed increment 2) and 26 (P6) deleted, leaving gaps; P5's
+question struck with Devon's answer; Path 11's section says it has no row left, only Devon's open questions.
+
+**Ran green:** lint; all thirteen `check:*` guards (`check:precache --base origin/main`); `test:check-publisher` (88);
+`test:schedule-publish` (104, ET and `TZ=UTC`); `run-suites --only schedule-visualizer` (24), `--only schedule-browser`
+(4), `--only theme` (3); a11y sweep `--only 035`; `audit-print --only 035` (0 findings); `test:select-suites` (93);
+`offline:build` + `offline:verify` (035 passes, all 44 published functions are source text; 046 still fails with
+`Invalid URL`, unchanged). **Not run:** full `npm test`. **Not verified:** a plan on paper (the page count is Chromium's
+PDF); a real building; a phone; whether a teacher's mail client keeps the copied text's line breaks; the clipboard from
+a file opened in Safari or Firefox (headless Chromium took the fallback or the copy, and the test accepts either).
+
 ## Path 11 P6 increment 2: a published copy shows directions (2026-10-25, AI-20, `CACHE_VERSION` v333)
 
 **Built.** A second box in 035's Settings → Publishing, "Published copies show directions"

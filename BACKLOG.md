@@ -87,6 +87,11 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-20 (v334), ranks 25 and 26 DELETED (gaps): Path 11 P6 is whole, and Path 11 with it.** Increment 3: a published
+  copy can show a Sub Plan tab (behind 035's third Settings → Publishing box, off: data and markup unchanged; ticked,
+  only the markup moves), with who is on Planning each mod, a box per mod, "Copy the plan" as text and one printed page.
+  P5 increment 2 is closed (Devon, "No"). `test:schedule-publish` 104, `test:check-publisher` 88; no new port (**next
+  free 8555**). **Path 11 has no buildable row left**: only Devon's open P3, P4 and P6 questions, on their defaults.
 - **AI-20 (v333), rank 26 (kept, cut to 1, rewritten), Path 11 P6 increment 2 of 3: a published copy can show
   directions.** Behind 035's second Settings → Publishing box (off: a published file's data and markup are unchanged).
   A Directions tab routes room to room on the published geometry (door cells, steps and staircase pairs added only
@@ -101,12 +106,11 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
   `sv-suggest.js` (`suggestFor()`: swaps of a group's own slots, the teacher's other room or a teacherless room, in two
   stages, the second through a path cache; never a move that gives a group to another teacher) and the banner's "Fix…"
   list with "Try in What-If", which writes the change as the lab's overrides. New pure suite `test:schedule-suggest`;
-  `smoke-checks.mjs` 66 → 82; no new port (**next free 8555**). **Only increment 2 is left, and it waits on Devon.**
+  `smoke-checks.mjs` 66 → 82; no new port (**next free 8555**). Only increment 2 was left; Devon answered "No" (v334's entry).
 - **AI-20 (v330), rank 25 (kept, 2+, rewritten), Path 11 P5 increment 4 of 4: 035's printed checks report (findings
   and the teacher day grid), printed congestion report and "Compare with a Project File…"** (new view `sv-reports.js`;
   pure `checksReport()`, `congestionReport()`, `compareProject()`). New pure suite `test:schedule-reports`; no new port
-  (**next free 8555**). **Increment 2 waits on Devon** (P5 bullet, "A question for Devon, increment 2"); increment 3 has since
-  shipped (v331).
+  (**next free 8555**). Increment 2 waited on Devon, who answered "No" (it will not be built); increment 3 shipped (v331).
 - **AI-20 (v329), rank 25 (kept, 2+, rewritten), Path 11 P5 increment 1 of 4: 035's schedule checks.** New pure
   `sv-check.js` (fourteen kinds: two errors, six warnings, six notes; fingerprints of names, never ids; one sentence per
   kind) and view `sv-checks-view.js`: the Schedules tab's banner is the checks banner ("1 problem on A days", Notes and
@@ -700,8 +704,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 18 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 25 | Path 11 P5 — master-schedule assistance. **Increments 1, 3 and 4 of 4 built (v329, v331, v330, AI-20):** the fourteen checks (`sv-check.js`), the checks banner with Accept, the bulk editor's marked cells, Capacity, the lab's checks diff and Publish's warning; the suggestions (`sv-suggest.js`: the banner's Fix… and "Try in What-If", never a teacher's class changed); the printed checks and congestion reports and "Compare with a Project File…" (`sv-reports.js`). **Left: only (2)**, `teacherDays` into the publisher's `deriveScheduleData`, which **waits on Devon** (the P5 bullet's "A question for Devon, increment 2": unifying the two rules changes the published teacher day in five measured cases, though not on Northwind). Devon's P11-12..19 are settled on the defaults | 035 | ½ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 26 | Path 11 P6 — published browser. **Designed; increments 1 and 2 of 3 built (v332, v333, AI-20):** a published copy can open a newer schedule file, and show directions between rooms (step-free too), each behind its own Settings → Publishing box (off by default). **Left:** increment 3, a sub plan (a "Sub Plan" tab behind its own box: the absent teacher's day with who has Planning each mod, printable, "Copy the plan" as text). Five P6 questions for Devon in the bullet; built on their defaults | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Increment 5 (AI-14, v300): named sets on 030, an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section, and its storage design under it): made from ticked questions of the bank or a built-in set, a question in a set more than once if wanted; reordered, trimmed, renamed, deleted, printed and pulled into a board whole from “Questions from”; carried in the bank file and imported beside a set already here, never over it; and a Tag filter on 030's list (the chosen source's tags).** **Left:** 018 and 019 pull station questions from it. 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 32 | Path 13 P2 — adopt in 002, 022, 027, 007; seating-aware grouping and project teams | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -3545,6 +3547,10 @@ rounds).
 
 ### Path 11 — Schedule Visualizer: modularize, guard the publisher, route accessibly
 
+**Status (2026-10-25, v334): P1 to P6 are all built, and Path 11 has no row left in Tier 1.** What is left is only
+Devon's open questions, each built on its stated default: P3's five, P4's four and P6's (1), (2), (3), (4) and (5),
+in their bullets below. P5's increment 2 was closed by his "No" and will not be built.
+
 **Why.** `035-schedule-visualizer.html` is 936 KB and ~20,000 lines of hand-written
 code (428 top-level functions in one script; 68 titled sections), four times the
 next largest tool. Its publisher builds `034-schedule-browser.html` by
@@ -4448,8 +4454,11 @@ a real pathfinder that the published browser never exposes.
   survivors) so a cut list says "5 of the 8"; the cache is the view's, one `Map` per graph object in a `WeakMap`, so a new
   graph after an edit starts empty without a call to `invalidate()`. M3 exists behind `kinds` and the page never asks for
   it (P11-15).
-  **A question for Devon, increment 2 (2026-10-25, not answered).** Should the published browser (034's data, what staff
-  are emailed) show a teacher's day by the checks' rule? The two rules agree on Northwind, so P1's committed baseline and
+  **Increment 2 is closed and will not be built (Devon, 2026-10-25, about 21:05 ET, verbatim: "No").** The publisher's
+  `deriveScheduleData` keeps its own teacher-day rule and nothing published changes; P6's sub plan (v334) reads the
+  teacher day as the publisher derives it. The question, as it was put (kept for the record):
+  ~~**A question for Devon, increment 2 (2026-10-25).** Should the published browser (034's data, what staff
+  are emailed) show a teacher's day by the checks' rule?~~ The two rules agree on Northwind, so P1's committed baseline and
   the 034 ledger would not move, but they differ on five built cases (a probe of `brDeriveScheduleData` against
   `checkSchedule(...).teachers`, not committed):
   - *A teacher on two rooms* (Ms. Okafor on 204 and 118; 7-1 in 204 then 118 on A). Published today: room 204 only, A day
@@ -4465,8 +4474,8 @@ a real pathfinder that the published browser never exposes.
   The options: **(a)** leave the publisher's rule (increment 2 becomes a refactor that keeps every published byte, or is
   dropped); **(b)** adopt the checks' rule for all five (a published change, with the baseline regenerated and a
   `TOOL_VERSION` bump); **(c)** adopt only some of them (the trimming and the B fallback look like plain fixes; the
-  two-room teacher and the double booking change 034's shape). Increment 2 is not built until this is answered; the
-  publisher, its drift guard and `test:schedule-publish` are unchanged.
+  two-room teacher and the double booking change 034's shape). **Answered "No": in effect (a) without the refactor;**
+  the publisher, its drift guard and `test:schedule-publish` are unchanged by it. **P5 is finished.**
   **The design as written (2026-10-06):** It sits on the
   P1 and P2 designs above and changes neither: every function it names from them is taken at the surface P2 wrote.
   Read from the code at v61 (`TOOL_VERSION`; site `CACHE_VERSION` v261): the schedules tab (`computeScheduleConflicts`,
@@ -4807,7 +4816,8 @@ a real pathfinder that the published browser never exposes.
 - **P6 — Published browser.** Runtime-swappable `PUBLISHED_DATA` (one browser file,
   many buildings), expose the pathfinder as "how do I get from here to there", and
   sub coverage marked and returned by link (Path 6).
-  **P6 designed (AI-20, 2026-10-25); increment 1 built (v332).** Written from the code at v331 (`TOOL_VERSION` v62): the
+  **P6 is whole (AI-20, 2026-10-25): increments 1, 2 and 3 built (v332, v333, v334; `HISTORY.md`, "Path 11 P6
+  increment 3").** Designed the same day. Written from the code at v331 (`TOOL_VERSION` v62): the
   publisher in `sv-browser.js`, `check-publisher.mjs`, the contract, the ledger and 034's own sub and free tabs. "The
   published browser" here is what 035's Publish writes. **034 is not touched by P6** (it is its own page for good,
   P11 question 1); a piece P6 adds is absent from 034 and goes in the ledger's `absent` with its sentence.
@@ -4847,7 +4857,7 @@ a real pathfinder that the published browser never exposes.
     `test:schedule-directions` to `sv-graph.js`'s route **cost** (not cells: 0-cost pairs make ties) on seven blueprints
     and six step-free variants. Rooms are picked from two lists, not the search box. Unticked, the tab is left out of
     the markup (a hidden tab would still catch the arrow keys), so a default file's data and markup are unchanged.
-  - *Increment 3, sub coverage (not built).* Box: "Published copies show a sub plan". A tab, "Sub Plan": pick the
+  - *Increment 3, sub coverage (built, v334).* Box: "Published copies show a sub plan". A tab, "Sub Plan": pick the
     absent teacher and the day; it lists each mod with the group, the room, the bell time and the teachers whose own
     day has Planning in that mod (the colleagues free to cover, read off `teachers[n].A/B`), and prints one page.
     From the schedule only: no student, no attendance, nothing stored. 034's `brSubHTML()` is the reference for the
@@ -4855,6 +4865,17 @@ a real pathfinder that the published browser never exposes.
     "Returned by link (Path 6)": a published file is a local file with no address to link back to, so the return
     is a "Copy the plan" button that copies plain text (absent teacher, day, each mod and who covers it, as typed in
     a box per mod) for an email. A real Path 6 handoff link is a question for Devon below.
+    *As built* (HISTORY has the detail): box "Published copies show a sub plan" (`settings.publishSubPlan`); the tab is
+    mode `'sub'` with id `br-mSub`, which `brSyncTabs` (a piece 034 shares) already knew, so no shared piece moved, and
+    like Directions it is left out of the markup when unticked. Ticked, **only the markup moves**: the plan is made from
+    the data every file carries. Pieces `brCoverRows`, `brCoverText`, `brRenderCover`, `brShowCover`, `brCopyCover`. A
+    mod is Planning when the slot is empty or `'Planning'`, exactly as By Teacher reads it; who is free is listed by
+    department as the overview orders; each class mod has a box with a datalist of the free names; a date may be typed
+    (not in the design: a plan copied into an email needs one); "Copy the plan" uses `navigator.clipboard` (so
+    `check:publisher`'s `PUBLISHED_GLOBALS` gained `navigator`) and also shows the text selected, for a browser that will
+    not copy from a file; "Print the plan" hides the controls and fits one Letter page on Northwind. The room is the
+    teacher's one published room, so a teacher on two rooms shows the publisher's (P5 increment 2's closed question).
+    No new question; (4) and (5) below stay open on what is built.
   - *Questions for Devon (P6), each with what is built or assumed until he answers.* (1) Should any of the three
     boxes be on by default, i.e. should a new published copy show its new button or tab without the publisher
     choosing it? Assumed: no, all off. (2) A file of a newer format than the reader: refuse (built), or show it with
