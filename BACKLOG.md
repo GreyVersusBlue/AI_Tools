@@ -87,10 +87,13 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-21 (v336–v340), rank 32 (kept, rewritten), Path 13 P2 increment 1: five tools split through the engine.** 007,
+  087, 021, 027 and 022 call `Grouping` (one commit and `CACHE_VERSION` each, behaviour unchanged; 022 with keep-apart
+  pairs takes 002's repair, the measured claim). New browser suite `test:grouping-adopters` (port 8555, **next free
+  8556**). **Next on Path 13: rank 32's 002 port**, then the 022/027 storage step and the improvements.
 - **AI-21 (v335), rank 31 DELETED (a gap): Path 13 P1 is built.** `_shared/grouping.js` (`Grouping`: `plan`, `formGroups`,
   `rotateRoles`, `coverRoles`, the id-keyed memory and its mirror of the old fields) and `Roster.idsFor`; no page loads it.
-  New pure suites `test:grouping` and `test:grouping-parity`; no new port (**next free 8555**). **Next on Path 13: rank 32,
-  P2, the six adopters**, starting with the smallest (007, 087, 021) as the P1 bullet's *What each adopter changes* says.
+  New pure suites `test:grouping` and `test:grouping-parity`; no new port.
 - **AI-20 (v334), ranks 25 and 26 DELETED (gaps): Path 11 P6 is whole, and Path 11 with it.** Increment 3: a published
   copy can show a Sub Plan tab (behind 035's third Settings → Publishing box, off: data and markup unchanged; ticked,
   only the markup moves), with who is on Planning each mod, a box per mod, "Copy the plan" as text and one printed page.
@@ -566,7 +569,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **220 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 15 · `print-kit.css` 15 · `print-kit.js` 15 · `stage.js` 11 · `tool-registry.js` 11 · `qr-scan.js` 10 · `school-day.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `student-flags.js` 5 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 15 · `print-kit.css` 15 · `print-kit.js` 15 · `stage.js` 11 · `tool-registry.js` 11 · `qr-scan.js` 10 · `school-day.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `grouping.js` 5 · `student-flags.js` 5 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **169**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -709,7 +712,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Increment 5 (AI-14, v300): named sets on 030, an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section, and its storage design under it): made from ticked questions of the bank or a built-in set, a question in a set more than once if wanted; reordered, trimmed, renamed, deleted, printed and pulled into a board whole from “Questions from”; carried in the bank file and imported beside a set already here, never over it; and a Tag filter on 030's list (the chosen source's tags).** **Left:** 018 and 019 pull station questions from it. 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
-| 32 | Path 13 P2 — adopt `_shared/grouping.js` (P1 built, v335) in 007, 087, 021, 027, 022 and 002, one PR each: the first commit of each is the port, held by `test:grouping-parity`'s copies of that tool, and each improvement is a later commit with its own `CACHE_VERSION`. 002 keeps `gtg-memory.js` (long memory, roles) after `formGroups()`; the memory is a `groupHistory` field mirrored to the old fields (the P1 bullet's *Storage*). Then seating-aware grouping (`cost` from `SeatingRead`) and project teams on 002 | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
+| 32 | Path 13 P2 — the rest. **007, 087, 021, 027 and 022 split through `_shared/grouping.js` (v336–v340, the P2 bullet's increment 1).** Left: (1) **002**, the port alone, held by `test:grouping-parity`'s 002 grid and an entry in `test:grouping-adopters`: `gtg-memory.js` (long memory, roles) kept after `formGroups()`, the memory a `groupHistory` field mirrored to the old fields (the P1 bullet's *Storage*); (2) the **storage step for 022 and 027**: role memory into `groupHistory` through `identify()`, mirrored to `state.history`, `normalizeRosterData()`/`loadProjectByName()` and 022's roster file taught the field; (3) the improvements, each its own commit and `CACHE_VERSION`: 002's floater fix (`sizeRule: 'floor'`), `keepStrategy`, `together: 'units'`, `restarts`, and `method: 'best'` for 022 and 027; (4) seating-aware grouping (`cost` from `SeatingRead`) and project teams on 002 | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 33 | Path 13 P3 — `_shared/bracket.js` + `_shared/rotation.js`; fix 021’s silent overwrite bug | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 34 | Path 13 P4 — bracket completeness: double elimination, pools, Swiss, ties, consolation | 020 | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 35 | Path 14 P3 — seating constraint solver that explains which soft constraints it broke (**designed 2026-10-05, not built**: the design and eleven questions for Devon are under the P3 bullet) | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
@@ -5566,7 +5569,7 @@ match; 021 silently overwrites a saved unit on a name collision (a real bug).
   setting, not a constant. *Fable for reconciling four tools' constraint semantics
   into one API without changing any tool's results for existing inputs.*
   **Built (AI-21, 2026-10-25, `CACHE_VERSION` v335): `_shared/grouping.js`, as designed below, with the changes in
-  *As built*. No page loads it; that is P2.** The design was written by AI-21 on 2026-10-05 (no code, nothing run in a
+  *As built*. No page loaded it at P1; P2 increment 1 (v336–v340) ported five, see the P2 bullet.** The design was written by AI-21 on 2026-10-05 (no code, nothing run in a
   browser); everything from here to *As built* is that design, and Devon's answers to its ten questions are at its end.
   - *As built (2026-10-25).* `npm run test:grouping` (27 named checks, each also run against a copy of the engine with
     its rule broken on purpose, which must fail it, and `golden.json`, twelve fixed-seed results) and `npm run
@@ -5591,7 +5594,7 @@ match; 021 silently overwrites a saved unit on a name collision (a real bug).
     002 grid runs 100 seeds a configuration by default (10,380 groupings, about two minutes; 002's own copy is the slow
     side); `GTG_SEEDS=300` runs the design's figure, which passed once in the build. **Found in the build:** a
     `{ __proto__: true }` literal makes no key, so the first draft's `normalize()` kept `__proto__`; the suite caught it.
-    **Not verified:** no page has loaded the module; `identify()` against a sidecar 006 wrote; anything on a phone. Read from the tree at v248: 002, 022, 027 and 021's pages, 007's page and
+    **Not verified:** (no page had loaded the module at P1; five do since P2 increment 1, below); `identify()` against a sidecar 006 wrote; anything on a phone. Read from the tree at v248: 002, 022, 027 and 021's pages, 007's page and
   `Tools/name-picker/np-pick.js`, 087's `Tools/class-screen/cs-core.js`, 020's pools, `_shared/roster.js`
   (`trackRenames`, `reconcile`, `idIndex`), `_shared/seating-read.js`, the registry rows and the suites behind
   `test:groups`, `test:lab-groups`, `test:novel-study` and `test:name-picker`. Figures marked *measured* came
@@ -5884,6 +5887,22 @@ match; 021 silently overwrites a saved unit on a name collision (a real bug).
   seating-aware grouping (groups that are physically possible given
   `seating-chart-v1`) and project-team mode (longer-lived named teams with a
   printable contract) to 002 once the engine is shared.
+  **Increment 1 (AI-21, 2026-10-25, v336–v340): 007, 087, 021, 027 and 022 split through the engine**, one commit and
+  one `CACHE_VERSION` each, each the port alone. 002 is not ported. Held by `test:grouping-parity` (the copies, plus
+  087's real `cs-core.js` with repeated and blank names) and a new browser suite, `npm run test:grouping-adopters`
+  (`Tools/grouping/test/smoke-adopters.mjs`, port 8555): it pins the engine in the page, presses the tool's own button,
+  and compares what the page shows or saves with the old code fed the same numbers; 027 and 022 include roles over three
+  presses and the role memory, and a repeated name in the class. The next adopter gets an entry in its `ADOPTERS`.
+  *As ported*, the calls (`HISTORY.md` has the reasons): (a) **members keyed by position** in 087, 021, 027 and 022, so a
+  repeated name is still two students and a blank still takes a place (the engine drops a repeated key; 007 always
+  dropped them); (b) **027 and 022 keep their role memory as it was**: `rotateRoles()` reads the page's `state.history`
+  map (keys `'n:' + name`, so a student called "keys" is not read as an engine memory), and the page's own
+  `recordHistory()` still writes it. The design's `groupHistory` field, `identify()` keys and the `renameStudentData()`
+  cut are the storage step, not done; (c) 022 keeps `findApartViolations()`/`groupIndexOf()` for the warning on a
+  restored grouping, and `shuffle()` for stations; with two students of one name, a pair means the first in the roster
+  to the engine and the first found in a group to that warning, which can disagree, as the old repair and warning
+  already could; (d) 022 with keep-apart pairs takes 002's repair (the measured claim), so its draws differ there.
+  No new question for Devon.
 - **P3 — `_shared/bracket.js` + `_shared/rotation.js`.** Extract 020's bracket and
   scheduling code and 021's rotation timer; 004's round-robin mode and 017/069's
   station timers adopt rotation. Fix the 021 overwrite bug in the same PR.

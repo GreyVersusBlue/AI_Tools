@@ -9,6 +9,52 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 13 P2 increment 1: 007, 087, 021, 027 and 022 split through the engine (2026-10-25, AI-21, `CACHE_VERSION` v336–v340)
+
+**Shipped.** Five of the six adopters, one commit and one `CACHE_VERSION` each, each the port alone: 007 (v336, commit
+5208dd0: Make Random Groups calls `Grouping.formGroups(names, { count, min: 2, allowEmpty: true })`; `np-pick.js` loses
+`makeGroups()` and the name-picker suite's six assertions on it move to `parity.test.mjs`), 087 (v337, 20d900a:
+`cs-core.js`'s `makeGroups()` keeps its signature and calls the engine with `{ count }` or `{ size, sizeRule: 'near' }`;
+`core.test.mjs` loads `grouping.js`), 021 (v338, a851bb8: the roster split, `{ count, allowEmpty: true }`, still saved
+as comma-joined text), 027 (v339, 7745f17: the split, and the role picker through `rotateRoles()`) and 022 (v340,
+98d7387: the split with keep-apart pairs, the role picker, and `computeEffectiveMembers()` through `coverRoles()`). 002
+is not ported. BACKLOG rank 32 rewritten to what is left.
+
+**How it is held.** `test:grouping-parity` as before, plus 300 cases of 087's real `cs-core.js` against the old function
+with repeated and blank names, and 007's six moved assertions (122,352 checks). A new browser suite,
+`npm run test:grouping-adopters` (`Tools/grouping/test/smoke-adopters.mjs`, Chromium, port 8555): for each page it pins
+the engine (`Grouping.pin(seed)`), presses the tool's own button, reads the groups off the screen or out of storage, and
+compares them with `_legacy.mjs`'s copy fed the same seed's numbers, five seeds a case; 027 logs three meetings and 022
+presses Shuffle three times, and both compare roles and the role memory too, with a repeated name in the class; 022's
+last case adds four keep-apart pairs through the page's own controls and checks the page passes them to the engine,
+keeps them and does not warn. 160 checks.
+
+**Calls made here.** (1) **Members keyed by position** in 087, 021, 027 and 022: the engine drops a repeated key, and
+those four pages kept two students of one name as two (007 always dropped repeats, so it passes names). (2) **The role
+memory stays where it was.** 027 and 022 hand `rotateRoles()` the page's `state.history` as a plain map with keys
+`'n:' + name` (a bare map is read as an engine memory if it has an array called `keys`, so a student named "keys" would
+have been misread; `'n:'` also makes "constructor" an ordinary name), and the page's `recordHistory()` still writes it.
+The design's `groupHistory` field, `identify()` keys and the cut of `renameStudentData()` change what is stored, which
+is not a port, so they are rank 32's storage step. (3) 022 keeps `findApartViolations()` and `groupIndexOf()` (the
+warning on a restored grouping reads saved names against the current pairs, which no engine result covers) and
+`shuffle()` (stations). (4) With two students of one name, a keep-apart pair means the first in the roster to the
+engine and the first found in a group to that warning; the suite found the two disagreeing on one seed of five and its pairs
+now avoid the repeated name. The old page's repair and warning used the same first-found rule and could not disagree,
+but neither could tell the two students apart either; nobody can say which one a pair by name means. (5) 022 with
+keep-apart pairs takes 002's repair, so its draws differ there, as the P1 design said (the failure rate is measured in
+`parity.test.mjs`). No new question for Devon.
+
+**Ran green:** lint; all twelve `check:*` guards, `check:precache --base origin/main`, `check:adoption --check` (after
+pasting the row: `grouping.js` 5); `test:grouping-parity` (122,352); `test:grouping-adopters` (160); `run-suites --only`
+name-picker (3), pe-tournament-stations (2), novel-study-circles-manager (1), lab-group-role-randomizer (2), roster (16),
+share (22), backup-restore (10), stage (3), store (15), service-worker (3); `test:theme` (966); the a11y sweep `--only`
+each of the five pages; `test:select-suites` (93); `offline:build` and `offline:verify` (007 ok; fails only on 046's
+"Invalid URL", as before). **Red, not mine:** `class-screen`'s `smoke-widgets.mjs` and `smoke-periods.mjs` crash on
+huginn (the `.a11y-widget` intercepts a click on the dock) and crash identically on a worktree of origin/main, as
+earlier entries record; their group-maker assertions sit after the crash, so 087's widget is held here by
+`test:grouping-adopters` only. **Not run:** full `npm test`. **Not verified:** any of the five on a phone or a board;
+CI's Chromium.
+
 ## Path 13 P1: the one grouping engine, `_shared/grouping.js` (2026-10-25, AI-21, `CACHE_VERSION` v335)
 
 **Built.** `_shared/grouping.js`, a classic script publishing `Grouping`, to the design AI-21 wrote on 2026-10-05
