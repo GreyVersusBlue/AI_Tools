@@ -985,9 +985,12 @@
   // other line here reads, is written from it on every change by
   // setRoleMemory(), because an older cached copy of this page reads that map
   // and drops groupHistory when it saves; roleMemoryOf() takes back what such
-  // a copy wrote. Keys come from Grouping.history.identify() by name alone,
-  // one per name as the map had one entry per name, so followRenames() is
-  // still the one way a rename moves a student's roles (renameInMemory()).
+  // a copy wrote. Keys come from Grouping.history.identify(), one per name as
+  // the map had one entry per name: since v346 a student's roster id where
+  // Class Roster Hub has one ('i:<id>'), so the memory follows a rename it
+  // sees by itself. followRenames() still moves a rename trackRenames()
+  // reports (renameInMemory()), under the rules it always had, and the id map
+  // keys a memory saved by name before then (roleMemoryOf()).
   function setRoleMemory(h) {
     state.groupHistory = h;
     state.history = Grouping.history.toLegacyRoles(h);
@@ -1013,7 +1016,7 @@
   function roleMemoryOf(loaded) {
     var H = Grouping.history;
     var legacy = loaded && loaded.history && typeof loaded.history === 'object' && !Array.isArray(loaded.history) ? loaded.history : {};
-    var h = H.absorbLegacy(loaded ? loaded.groupHistory : null, { roles: legacy });
+    var h = H.absorbLegacy(loaded ? loaded.groupHistory : null, { roles: legacy, idNames: loaded ? loaded.idNames : null });
     var idx = [];
     Object.keys(legacy).forEach(function (n) {
       for (var i = 0; i < h.names.length; i++) {
@@ -1030,32 +1033,51 @@
     var H = Grouping.history;
     var names = members.filter(function (n, i) { return members.indexOf(n) === i; });
     var keyOf = {};
-    H.identify(state.groupHistory, names, {}).members.forEach(function (m) { keyOf['#' + m.name] = m.key; });
+    var ided = H.identify(state.groupHistory, names, Roster.idsFor(names, state.rosterName || ''));
+    ided.members.forEach(function (m) { keyOf['#' + m.name] = m.key; });
     var keys = members.map(function (name) { return keyOf['#' + name]; });
     var assignment = {};
-    Grouping.rotateRoles([keys], roles, state.groupHistory).byGroup[0].forEach(function (x, i) {
+    Grouping.rotateRoles([keys], roles, ided.history).byGroup[0].forEach(function (x, i) {
       assignment[members[i]] = x.role;
     });
     // One entry per member in group order, so a name that is in the group
     // twice is pushed twice, as the old recordHistory() pushed it.
-    var h = H.record(state.groupHistory, [], { pairs: false, roles: [members.map(function (name, i) {
+    var h = H.record(ided.history, [], { pairs: false, roles: [members.map(function (name, i) {
       return { key: keys[i], role: assignment[name] };
     })] });
     members.forEach(function (name, i) { var at = h.keys.indexOf(keys[i]); if (at !== -1) h.names[at] = name; });
-    setRoleMemory(h);
+    /* identify() makes a member of every student it keys; the memory holds
+       only those with a role, as it always has, so a student who has only
+       been "Group Member" joins the map when they first get one, where they did. */
+    setRoleMemory(pickMembers(h, h.keys.map(function (k, i) { return i; }).filter(function (i) { return h.roles[i] && h.roles[i].length; })));
     return assignment;
   }
 
   /** A rename for the memory: the roles move when `to` has none, and the
-      entry goes to the end of the map, where the old move put it. */
+      entry goes to the end of the map, where the old move put it. A student
+      keyed by id keeps the key. When `to` has roles the move is refused, as it
+      always was, and a student keyed by id is unbound from it, so identify()
+      does not merge the two later: the roles stay under the old name and the
+      student reads the ones `to` has, which is what the refusal always did. */
   function renameInMemory(from, to) {
-    if (state.history[from] === undefined || state.history[to] !== undefined) return false;
+    if (state.history[from] === undefined) return false;
     var H = Grouping.history, h = H.normalize(state.groupHistory);
     var i = h.names.indexOf(from);
     if (i === -1) return false;
-    var key = 'n:' + to, c = 1;
-    while (h.keys.indexOf(key) !== -1) { c++; key = 'n:' + to + '#' + c; }
-    h = H.rekey(h, h.keys[i], key);
+    function nameKey(n) {
+      var k = 'n:' + n, c = 1;
+      while (h.keys.indexOf(k) !== -1) { c++; k = 'n:' + n + '#' + c; }
+      return k;
+    }
+    if (state.history[to] !== undefined) {
+      if (h.keys[i].indexOf('i:') === 0) setRoleMemory(H.rekey(h, h.keys[i], nameKey(from)));
+      return false;
+    }
+    var key = h.keys[i];
+    if (key.indexOf('i:') !== 0) {
+      key = nameKey(to);
+      h = H.rekey(h, h.keys[i], key);
+    }
     i = h.keys.indexOf(key);
     h.names[i] = to;
     var idx = h.keys.map(function (k, j) { return j; }).filter(function (j) { return j !== i; });
