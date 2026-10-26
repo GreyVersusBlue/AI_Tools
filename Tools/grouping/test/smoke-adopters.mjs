@@ -84,6 +84,29 @@ const ADOPTERS = [
     },
     cases: [['size', 2], ['size', 3], ['size', 4], ['size', 5], ['size', 12], ['count', 2], ['count', 4], ['count', 12]],
     legacy: (names, [by, n], rng) => L.cs087(names, by, n, rng)
+  },
+  {
+    tool: '021',
+    url: '/Tools/021-pe-tournament-stations.html',
+    // a pasted roster is not de-duplicated: two students of one name stay two
+    names: CLASS.concat(['Ada Lovelace']),
+    async load() {},
+    async split(page, k, seed) {
+      return page.evaluate(([k, seed, names]) => {
+        window.confirm = () => true;
+        const ta = document.getElementById('rosterText');
+        ta.value = names.join('\n');
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+        document.getElementById('splitCount').value = String(k);
+        window.Grouping.pin(seed);
+        document.getElementById('splitBtn').click();
+        window.Grouping.pin(null);
+        const store = JSON.parse(localStorage.getItem('pe-tournament-stations'));
+        return store.projects[store.current].groups.map(g => g.members === '' ? [] : g.members.split(', '));
+      }, [k, seed, this.names]);
+    },
+    cases: [1, 2, 4, 5, 13, 20],
+    legacy: (names, k, rng) => L.pe021(names, String(k), rng)
   }
 ];
 
@@ -96,7 +119,8 @@ try {
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     await page.goto(BASE + a.url, { waitUntil: 'networkidle' });
-    await a.load(page, CLASS);
+    const names = a.names || CLASS;
+    await a.load(page, names);
     await page.reload({ waitUntil: 'networkidle' });
     await settle(page, 400);
     ok(await page.evaluate(() => typeof window.Grouping === 'object' && typeof window.Grouping.formGroups === 'function'),
@@ -105,7 +129,7 @@ try {
     for (const c of a.cases) {
       for (const seed of SEEDS) {
         const got = await a.split(page, c, seed);
-        const want = a.legacy(CLASS.slice(), c, G.rng(seed));
+        const want = a.legacy(names.slice(), c, G.rng(seed));
         ok(J(got) === J(want), `${a.tool}: ${J(c)}, seed ${seed} (got ${J(got)}, want ${J(want)})`);
       }
     }
