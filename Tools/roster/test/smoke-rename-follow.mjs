@@ -266,6 +266,59 @@ async function loadRoster(page, sel, btn) {
   await page.close();
 }
 
+/* ── 002, a class saved by v341–v343: groupHistory keyed by name ──────────────
+   Since v344 002's memory is keyed by roster id. One saved before that keys
+   each student 'n:' + name; the id map keys it on load, so a rename made in
+   Class Roster Hub before then is followed too, and the memory is saved by id. */
+{
+  const { page, ids, errors } = await stage('002-group-team-generator.html', {
+    script: ({ ids, roster, old }) => {
+      const key = old[0] < old[1] ? old[0] + '␟' + old[1] : old[1] + '␟' + old[0];
+      localStorage.setItem('gtg:list', JSON.stringify(['Block A']));
+      localStorage.setItem('gtg:current', 'Block A');
+      localStorage.setItem('gtg:data:Block A', JSON.stringify({
+        name: 'Block A', names: old.join('\n'), mode: 'count', splitValue: 2,
+        balance: false, keepApart: [[old[0], 'Lovelace, Ada']], keepTogether: [],
+        strategy: 'coverage', oddMode: 'extra', namingMode: 'number', customNames: '',
+        absentNames: [old[0]],
+        pairHistory: { [key]: { gen: 3, count: 4 } }, pairGen: 3,
+        groupHistory: { v: 1, gen: 3, keys: ['n:' + old[0], 'n:' + old[1]], names: [old[0], old[1]], seen: [3, 3], pairs: { '0.1': [3, 4] }, roles: {} },
+        rosterName: roster,
+        idNames: { [ids[0]]: old[0], [ids[1]]: old[1] },
+      }));
+    },
+  });
+  await loadRoster(page, '#roster-select', '#load-roster-btn');
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('gtg:data:Block A')));
+  const wantKey = NEW[0] < NEW[1] ? NEW[0] + '␟' + NEW[1] : NEW[1] + '␟' + NEW[0];
+  eq(saved.pairHistory, { [wantKey]: { gen: 3, count: 4 } }, '002 (v343 save): the pairs followed the rename');
+  eq(saved.groupHistory && saved.groupHistory.keys, ['i:' + ids[0], 'i:' + ids[1]], '002 (v343 save): the memory is keyed by roster id now');
+  eq(saved.groupHistory && saved.groupHistory.names, NEW, '002 (v343 save): ...under the new names');
+  eq(saved.absentNames, ['Aiden Smith'], '002 (v343 save): the absence mark followed the rename');
+  eq(saved.keepApart, [['Aiden Smith', 'Lovelace, Ada']], '002 (v343 save): the keep-apart pair followed it');
+  eq(saved.idNames, { [ids[0]]: NEW[0], [ids[1]]: NEW[1] }, '002 (v343 save): the id map is written, as before');
+  ok(errors.length === 0, `002 (v343 save): no page errors (${errors.slice(0, 2).join(' | ')})`);
+
+  /* Renamed again, with no id map at all (an older page can lose it): the
+     memory follows the id it now holds, by itself. */
+  await page.evaluate(([roster, next]) => {
+    const d = JSON.parse(localStorage.getItem('gtg:data:Block A'));
+    d.idNames = {};
+    localStorage.setItem('gtg:data:Block A', JSON.stringify(d));
+    window.Roster.setRoster(roster, next);
+    window.Roster.syncRecords(roster, next);
+  }, [ROSTER, ['Smith Aiden', NEW[1]]]);
+  await page.reload({ waitUntil: 'networkidle' });
+  await settle(page, 350);
+  await loadRoster(page, '#roster-select', '#load-roster-btn');
+  const again = await page.evaluate(() => JSON.parse(localStorage.getItem('gtg:data:Block A')));
+  const k2 = 'Smith Aiden' < NEW[1] ? 'Smith Aiden␟' + NEW[1] : NEW[1] + '␟Smith Aiden';
+  eq(again.pairHistory, { [k2]: { gen: 3, count: 4 } }, '002 (by id): a second rename is followed with no id map');
+  eq(again.groupHistory && again.groupHistory.keys, ['i:' + ids[0], 'i:' + ids[1]], '002 (by id): ...on the same keys');
+  ok(errors.length === 0, `002 (by id): no page errors (${errors.slice(0, 2).join(' | ')})`);
+  await page.close();
+}
+
 /* ── 068 Parent Contact Log — entries, and the only tool that needed a key ── */
 {
   const { page, errors } = await stage('068-parent-contact-log.html', {

@@ -659,7 +659,7 @@
        page wrote to pairHistory since, and writes pairHistory from it again.
        One without it is left alone until its next shuffle. */
     if ('groupHistory' in state) {
-      setPairMemory(Grouping.history.absorbLegacy(state.groupHistory, { pairHistory: state.pairHistory, pairGen: state.pairGen }));
+      setPairMemory(Grouping.history.absorbLegacy(state.groupHistory, { pairHistory: state.pairHistory, pairGen: state.pairGen, idNames: state.idNames }));
     }
     if (!state.strategy) state.strategy = state.balance ? 'balanced' : 'random';
     if (!state.oddMode) state.oddMode = 'extra';
@@ -745,14 +745,28 @@
      strategy would then cheerfully pair that student with the same three
      people again. _shared/roster.js's trackRenames() does the id bookkeeping;
      re-keying the pair table is the part only this tool can do. Best-effort:
-     no Class Roster Hub, no ids, nothing moves. */
+     no Class Roster Hub, no ids, nothing moves.
+     Since Path 13 P2 (v344) the memory is keyed by roster id where there is
+     one ('i:<id>', identifyStudents()) and follows a rename by itself; the
+     id map is what keys a memory saved before that (absorbLegacy, fromLegacy),
+     so the memory is read before trackRenames() moves the map on. The map and
+     trackRenames() still move everything else, which is kept by name: the
+     absence marks, the keep-apart and keep-together pairs and the roles. */
   function followRenames() {
     if (!state) return 0;
     var names = parseNames(els.namesInput.value).map(function (s) { return s.name; });
+    var known = 'groupHistory' in state || Object.keys(state.pairHistory).length > 0;
+    var ided = known ? identifyStudents(names) : null;
     var tracked = Roster.trackRenames(state.rosterName, names, state.idNames);
     state.idNames = tracked.idNames;
+    /* A class with no memory field gets one only when something moved: one
+       never shuffled, or saved before v341, is otherwise left as it is. */
+    if (ided && ('groupHistory' in state || ided.moved.length)) setPairMemory(ided.history);
     var moved = 0;
-    tracked.renames.forEach(function (r) { if (renameStudentData(r.from, r.to)) moved++; });
+    tracked.renames.forEach(function (r) {
+      var withPairs = ided && hasPairs(ided.history, 'i:' + r.id);
+      if (renameStudentData(r.from, r.to) || withPairs) moved++;
+    });
     /* Saved even when nothing moved, and that is not belt-and-braces: the map
        IS the record of what each id was called last time, so a boot that seeds
        it and does not write it leaves the next rename invisible. */
@@ -760,31 +774,11 @@
     return moved;
   }
 
-  /** Re-keys every pairing naming `from`, and moves the absent mark and the
-      keep-apart / keep-together pairs with it. The pairings are the memory's
-      rekey() since Path 13 P2 (v341), which keeps this page's rule: where the
-      rename collapses two pairs into one — "A␟B" can land on an existing
-      "B␟C" — the counts are added and the more recent generation kept,
-      because both pairs really did happen, and a student renamed onto their
-      own partner loses that pair. */
+  /** Moves the role history, the absent mark and the keep-apart /
+      keep-together pairs from `from` to `to`. The pairings are not here
+      since Path 13 P2 (v344): the memory follows the student's id. */
   function renameStudentData(from, to) {
-    var moved = Object.keys(state.pairHistory).some(function (k) {
-      var parts = k.split('\u241F');
-      return parts.length === 2 && (parts[0] === from || parts[1] === from);
-    });
-    if (moved) {
-      /* rekey() moves the key and keeps the stored name, which is right for an
-         id; this page's keys are names, so the name moves too (the memory's
-         names[] is what pairHistory is written from). */
-      var h = Grouping.history.rekey(pairMemory(), 'n:' + from, 'n:' + to);
-      var at = h.keys.indexOf('n:' + to);
-      if (at !== -1 && h.names[at] !== to) {
-        h = Object.assign({}, h, { names: h.names.slice() });
-        h.names[at] = to;
-      }
-      setPairMemory(h);
-    }
-
+    var moved = false;
     if (state.roleHistory && Object.prototype.hasOwnProperty.call(state.roleHistory, from)) {
       state.roleHistory = GtgMemory.renameRoles(state.roleHistory, from, to);
       moved = true;
@@ -1082,18 +1076,19 @@
   // _shared/grouping.js's since Path 13 P2 (v341): the same groups this page
   // made, draw for draw, from the same Math.random (parity.test.mjs's 002
   // grid). Long memory's refine and the roles are gtg-memory.js's and run
-  // after it, as they did. Each student is keyed 'n:' + name, a second
-  // student of one name 'n:' + name + '#2' (one student to every rule that
-  // names them, as before; neither is dropped).
+  // after it, as they did. Each student is keyed by identifyStudents(): their
+  // roster id, 'i:<id>', or else 'n:' + name, a second student of one name
+  // '#2' on the key (one student to every rule that names them, as before;
+  // neither is dropped). Keys never move a draw: the engine works on places.
   function keyStudents(list) {
-    var used = {}, out = [];
-    list.forEach(function (s) {
-      var base = 'n:' + s.name, k = base, c = 1;
-      while (used['#' + k]) { c++; k = base + '#' + c; }
-      used['#' + k] = true;
-      out.push({ key: k, name: s.name, attrs: s.skill === null ? {} : { skill: s.skill }, st: s });
-    });
-    return out;
+    var ided = identifyStudents(list.map(function (s) { return s.name; }));
+    return {
+      history: ided.history,
+      members: ided.members.map(function (m, i) {
+        var s = list[i];
+        return { key: m.key, name: s.name, attrs: s.skill === null ? {} : { skill: s.skill }, st: s };
+      })
+    };
   }
 
   // opts.lockedFlags: booleans parallel to the previous lastGroups.groups —
@@ -1101,11 +1096,11 @@
   // Returns { groups, violations, togetherViolations, repeatViolations, floaters, meta }
   function makeGroups(opts) {
     opts = opts || {};
-    var members = keyStudents(students);
+    var keyed = keyStudents(students), members = keyed.members;
     // Roster-membership GC for the retained pairing memory — see the
     // retention-policy note above pairKey. Run once per deliberate
     // generation, not per keystroke.
-    var history = Grouping.history.prune(pairMemory(), members.map(function (m) { return m.key; }), { departed: 'drop' });
+    var history = Grouping.history.prune(keyed.history, members.map(function (m) { return m.key; }), { departed: 'drop' });
     setPairMemory(history);
     if (state && state.roleHistory) {
       state.roleHistory = GtgMemory.pruneRoles(state.roleHistory, students.map(function (x) { return x.name; }));
@@ -1115,13 +1110,20 @@
     var isSize = document.getElementById('mode-size').checked;
     var v = Math.max(1, parseInt(els.splitValue.value, 10) || 1);
 
-    var keyOfName = {}, objOfKey = {}, absent = [];
+    var keysOfName = {}, objOfKey = {}, absent = [];
     members.forEach(function (m) {
-      if (!Object.prototype.hasOwnProperty.call(keyOfName, m.name)) keyOfName[m.name] = m.key;
+      (keysOfName['#' + m.name] = keysOfName['#' + m.name] || []).push(m.key);
       objOfKey[m.key] = m.st;
       if (activeStudents.indexOf(m.st) === -1) absent.push(m.key);
     });
-    function keyOf(name) { return Object.prototype.hasOwnProperty.call(keyOfName, name) ? keyOfName[name] : 'n:' + name; }
+    /* The nth student of a name; one no longer on the list keeps the key
+       it would have had by name, which no member holds. */
+    function keyOf(name, nth) {
+      var ks = keysOfName['#' + name];
+      nth = nth || 1;
+      if (ks && ks[nth - 1]) return ks[nth - 1];
+      return nth === 1 ? 'n:' + name : 'n:' + name + '#' + nth;
+    }
     function keyPairs(list) { return list.map(function (p) { return [keyOf(p[0]), keyOf(p[1])]; }); }
     // The previous groups by key: the nth student of a name in them is the
     // nth student of that name now.
@@ -1131,7 +1133,7 @@
       previous = lastGroups.groups.map(function (g) {
         return g.map(function (s) {
           nth[s.name] = (nth[s.name] || 0) + 1;
-          return nth[s.name] === 1 ? keyOf(s.name) : 'n:' + s.name + '#' + nth[s.name];
+          return keyOf(s.name, nth[s.name]);
         });
       });
     }
@@ -1290,7 +1292,7 @@
   // co-membership at the new generation.
   //
   // Since Path 13 P2 (v341) the memory itself is state.groupHistory,
-  // _shared/grouping.js's (keyed 'n:' + name, see keyStudents), and
+  // _shared/grouping.js's (keyed by roster id since v344, see keyStudents), and
   // pairHistory and pairGen are written from it on every change: they are
   // what gtg-memory.js, the grid and the hint read, and what a page from an
   // older cache reads and writes. That page drops groupHistory when it saves,
@@ -1319,7 +1321,21 @@
   /** The class's pairing memory: groupHistory, or, on a class no shuffle has
    *  saved one for, the same memory read from pairHistory. */
   function pairMemory() {
-    return state.groupHistory || Grouping.history.fromLegacy({ pairHistory: state.pairHistory, pairGen: state.pairGen });
+    return state.groupHistory || Grouping.history.fromLegacy({ pairHistory: state.pairHistory, pairGen: state.pairGen, idNames: state.idNames });
+  }
+  /** The memory with every name in `names` given its key: identify() with
+   *  the ids Class Roster Hub has for them (none without it). */
+  function identifyStudents(names) {
+    return Grouping.history.identify(pairMemory(), names, Roster.idsFor(names, state.rosterName));
+  }
+  /** Whether the member `key` has met anyone in memory `h`. */
+  function hasPairs(h, key) {
+    var i = h.keys.indexOf(key);
+    if (i === -1) return false;
+    return Object.keys(h.pairs).some(function (pk) {
+      var ab = pk.split('.');
+      return +ab[0] === i || +ab[1] === i;
+    });
   }
   /** Stores a new memory and writes pairHistory and pairGen from it. */
   function setPairMemory(h) {

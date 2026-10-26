@@ -409,6 +409,27 @@ const CHECKS = {
     if (J(f.members.map(m => m.key)) !== J(['i:id1', 'n:Bo', 'n:Bo#2']) || J(f.duplicates) !== J(['Bo'])) return 'two of one name ' + J(f.members);
     return true;
   },
+  'history: absorbLegacy keys a name-keyed memory by idNames, so a rename made before then is followed'(G) {
+    const H = G.history;
+    // A memory a P2 port keyed by name, and the id map the page wrote with it.
+    const h = H.record(H.identify(H.empty(), ['Ann', 'Bo', 'Cy'], {}).history, [['n:Ann', 'n:Bo'], ['n:Cy']]);
+    const legacy = { pairHistory: H.toLegacyPairs(h).pairHistory, pairGen: h.gen, idNames: { id1: 'Ann', id2: 'Bo' } };
+    const a = H.absorbLegacy(h, legacy);
+    if (J(a.keys) !== J(['i:id1', 'i:id2', 'n:Cy']) || H.count(a, 'i:id1', 'i:id2') !== 1) return 'not keyed by id ' + J(a);
+    if (J(H.toLegacyPairs(a)) !== J(H.toLegacyPairs(h))) return 'the old fields moved ' + J(H.toLegacyPairs(a));
+    // Ann is Annie in the roster now: identify() follows her by id.
+    const b = H.identify(a, ['Annie', 'Bo', 'Cy'], { Annie: 'id1', Bo: 'id2' });
+    if (H.count(b.history, b.members[0].key, b.members[1].key) !== 1 || !b.moved.some(x => x.why === 'renamed' && x.toName === 'Annie')) return 'rename lost ' + J(b);
+    // An older page followed the rename and wrote the map: the id takes its name.
+    const c = H.absorbLegacy(a, { pairHistory: legacy.pairHistory, pairGen: h.gen, idNames: { id1: 'Annie', id2: 'Bo' } });
+    if (c.names[c.keys.indexOf('i:id1')] !== 'Annie') return 'the map’s name not taken ' + J(c);
+    // No map, a bad map, a name the memory does not hold: nothing changes, nothing added.
+    for (const m of [undefined, null, [], { id7: 'Dee' }, { id1: 5 }, { '': 'Ann' }]) {
+      const d = H.absorbLegacy(h, { pairHistory: legacy.pairHistory, pairGen: h.gen, idNames: m });
+      if (J(d.keys) !== J(h.keys)) return 'changed by ' + J(m) + ': ' + J(d.keys);
+    }
+    return true;
+  },
   'history: coverage against a count written here'(G) {
     const H = G.history;
     let h = H.empty();
@@ -494,6 +515,7 @@ const MUTANTS = [
   ['history: prune under the three policies', "if (d === 'drop' || (gens !== null && e.gen - e.mem['#' + k].seen >= gens)) delete e.mem['#' + k];", "if (d === 'drop') delete e.mem['#' + k];"],
   ['history: rekey onto an existing key adds counts and keeps the target’s roles', "e.pairs[p] = cur ? [Math.max(cur[0], v[0]), cur[1] + v[1]] : v.slice();", "e.pairs[p] = cur ? cur : v.slice();"],
   ['history: identify follows ids, names, a remade roster, and two of one name', "if (!claimed['#' + k] && e.mem['#' + k].name === n) hit = k;", "if (e.mem['#' + k].name === n) hit = k;"],
+  ['history: absorbLegacy keys a name-keyed memory by idNames, so a rename made before then is followed', "var e = expand(byIdNames(normalize(h), legacy.idNames));", "var e = expand(normalize(h));"],
   ['history: coverage against a count written here', "if (c) met++; else never.push([ks[i], ks[j]]);", "if (c > 1) met++; else never.push([ks[i], ks[j]]);"],
   ['golden: twelve fixed-seed results', "var j = Math.floor(next() * (i + 1));", "var j = Math.floor(next() * i);"]
 ];

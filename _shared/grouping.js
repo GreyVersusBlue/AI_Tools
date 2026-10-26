@@ -585,15 +585,43 @@
     return out;
   }
 
+  /* byIdNames(h, idNames): the tool's { id: name } map, as
+     Roster.trackRenames keeps it, applied to a memory. An 'i:<id>' member takes
+     the map's name for it (an older page that followed a rename wrote that
+     name, and moved the old fields to it). A member keyed by name, not by id,
+     whose name is the map's name for an id it does not hold, is re-keyed to
+     'i:<id>': a memory keyed by name (the P2 ports before roster ids) then
+     follows a rename that happened before identify() first saw the id, which
+     identify() alone cannot, since the name it would match is the old one.
+     One id per name, the map's first. Adds no member. */
+  function byIdNames(h, idNames) {
+    if (!isObj(idNames)) return h;
+    var names = h.names.slice(), rekeys = [], done = {};
+    Object.keys(idNames).forEach(function (id) {
+      var n = idNames[id], k = 'i:' + id;
+      if (typeof n !== 'string' || !n || !id || isBad(id) || own(done, '#' + n)) return;
+      done['#' + n] = true;
+      var at = h.keys.indexOf(k);
+      if (at !== -1) { names[at] = n; return; }
+      for (var x = 0; x < h.keys.length; x++) {
+        if (h.keys[x].indexOf('i:') !== 0 && h.names[x] === n) { rekeys.push([h.keys[x], k]); return; }
+      }
+    });
+    var out = Object.assign({}, h, { names: names });
+    rekeys.forEach(function (r) { out = rekey(out, r[0], r[1]); });
+    return out;
+  }
+
   /* absorbLegacy(h, legacy): the load-time merge. An older cached page drops
      the memory field when it saves and keeps writing the old ones, so the old
-     ones win where they are ahead. No memory: fromLegacy(). pairGen above the
-     memory's gen: each pair with a newer gen adds its count difference and
-     takes that gen. A role list that differs from the memory's replaces it. */
+     ones win where they are ahead. No memory: fromLegacy(). idNames first (see
+     byIdNames). pairGen above the memory's gen: each pair with a newer gen
+     adds its count difference and takes that gen. A role list that differs
+     from the memory's replaces it. */
   function absorbLegacy(h, legacy) {
     legacy = isObj(legacy) ? legacy : {};
     if (!isObj(h) || !Array.isArray(h.keys)) return fromLegacy(legacy);
-    var e = expand(h);
+    var e = expand(byIdNames(normalize(h), legacy.idNames));
     var byName = {};
     e.order.forEach(function (k) { var n = e.mem['#' + k].name; if (!own(byName, '#' + n)) byName['#' + n] = k; });
     function keyFor(n) {

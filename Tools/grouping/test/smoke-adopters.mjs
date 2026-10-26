@@ -242,12 +242,15 @@ const ADOPTERS = [
     // which they are written from). Long memory and roles are gtg-memory.js's
     // and stay off here (smoke-year-memory.mjs holds them). No repeated name:
     // that is the named exception (the old page counted one pair for both).
+    // A case ending in true has the class in Class Roster Hub, so since v344
+    // every student is keyed by roster id: keys never move a draw.
     tool: '002',
     url: '/Tools/002-group-team-generator.html',
     async load(page) { await page.evaluate(() => localStorage.clear()); },
     async split(page, c, seed) {
-      const [strategy, odd, mode, v, apart, together, absent] = c;
+      const [strategy, odd, mode, v, apart, together, absent, ids] = c;
       await page.evaluate(() => localStorage.clear());
+      if (ids) await page.evaluate(names => { window.Roster.setRoster('Ids', names); window.Roster.syncRecords('Ids', names); }, CLASS);
       await page.reload({ waitUntil: 'networkidle' });
       await settle(page, 200);
       const skills = strategy !== 'random' && strategy !== 'coverage';
@@ -275,7 +278,7 @@ const ADOPTERS = [
       const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('gtg:data:' + localStorage.getItem('gtg:current'))));
       return { presses, saved, mirror: await page.evaluate(h => Grouping.history.toLegacyPairs(h), saved.groupHistory) };
     },
-    compare(got, names, [strategy, odd, mode, v, apart, together, absent], rng) {
+    compare(got, names, [strategy, odd, mode, v, apart, together, absent, ids], rng) {
       const skills = strategy !== 'random' && strategy !== 'coverage';
       const students = CLASS.map((n, i) => ({ name: n, skill: skills ? 1 + ((i * 3) % 5) : null }));
       const absentSet = {}; absent.forEach(i => { absentSet[CLASS[i]] = true; });
@@ -295,14 +298,18 @@ const ADOPTERS = [
       const sorted = o => J(Object.keys(o).sort().map(k => [k, o[k]]));
       const sameMemory = got.saved.pairGen === 3 && sorted(got.saved.pairHistory) === sorted(state.pairHistory) &&
         J(got.mirror) === J({ pairHistory: got.saved.pairHistory, pairGen: got.saved.pairGen });
-      return [sameGroups && sameMemory, `groups ${sameGroups}, memory ${sameMemory}; ${J(gotShape)} vs ${J(want)}`];
+      const keys = got.saved.groupHistory ? got.saved.groupHistory.keys : [];
+      const keyed = keys.length === CLASS.length && keys.every(k => k.indexOf(ids ? 'i:' : 'n:') === 0);
+      return [sameGroups && sameMemory && keyed, `groups ${sameGroups}, memory ${sameMemory}, keys ${keyed} ${J(keys.slice(0, 2))}; ${J(gotShape)} vs ${J(want)}`];
     },
     cases: [
       ['random', 'extra', 'count', 3, [], [], []],
       ['balanced', 'floater', 'size', 4, [], [], [2]],
       ['heterogeneous', 'extra', 'count', 4, [[0, 1], [2, 3]], [[4, 5]], []],
       ['homogeneous', 'floater', 'count', 5, [], [], []],
-      ['coverage', 'pair', 'size', 3, [[6, 7]], [], [9]]
+      ['coverage', 'pair', 'size', 3, [[6, 7]], [], [9]],
+      ['heterogeneous', 'extra', 'count', 4, [[0, 1], [2, 3]], [[4, 5]], [], true],
+      ['coverage', 'pair', 'size', 3, [[6, 7]], [], [9], true]
     ]
   }
 ];
