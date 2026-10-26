@@ -40,8 +40,9 @@ const CLASS = ['Ada Lovelace', 'Marco Polo', 'Nellie Bly', 'Zheng He', 'Grace Ho
   'Mae Jemison', 'Alan Turing', 'Rosa Parks', 'Carl Sagan', 'Mary Seacole', 'Nikola Tesla', 'Katherine Johnson'];
 const SEEDS = [1, 7, 42, 20261025, 3735928559];
 
-/* Each adopter: the page, how to load a class, how to ask for k groups and
-   press the button, how to read the groups back, and the old splitter. */
+/* Each adopter: the page, how to load a class, anything to open first, how to
+   ask for one case (a count, or [by, n]) and press the button, how to read the
+   groups back, and the old splitter for the same case. */
 const ADOPTERS = [
   {
     tool: '007',
@@ -59,8 +60,30 @@ const ADOPTERS = [
           .map(el => el.textContent === '' ? [] : el.textContent.split(', '));
       }, [k, seed]);
     },
-    counts: [2, 3, 4, 5, 12],
+    cases: [2, 3, 4, 5, 12],
     legacy: (names, k, rng) => L.np007(names, k, rng)
+  },
+  {
+    tool: '087',
+    url: '/Tools/087-class-screen.html',
+    async load(page, names) {
+      await page.evaluate(r => { localStorage.clear(); localStorage.setItem('np_rosters', JSON.stringify({ 'Period 2': r })); }, names);
+    },
+    async ready(page) {
+      await page.click('#dock button[data-add="groups"]');
+      await settle(page, 150);
+    },
+    async split(page, [by, n], seed) {
+      const gm = page.locator('#board .w[data-type="groups"]');
+      await gm.getByLabel('Group by').selectOption(by);
+      await gm.getByLabel('How many').selectOption(String(n));
+      await page.evaluate(seed => window.Grouping.pin(seed), seed);
+      await gm.getByRole('button', { name: 'Make groups' }).click();
+      await page.evaluate(() => window.Grouping.pin(null));
+      return gm.locator('.group').evaluateAll(gs => gs.map(g => Array.from(g.querySelectorAll('li'), li => li.textContent)));
+    },
+    cases: [['size', 2], ['size', 3], ['size', 4], ['size', 5], ['size', 12], ['count', 2], ['count', 4], ['count', 12]],
+    legacy: (names, [by, n], rng) => L.cs087(names, by, n, rng)
   }
 ];
 
@@ -78,11 +101,12 @@ try {
     await settle(page, 400);
     ok(await page.evaluate(() => typeof window.Grouping === 'object' && typeof window.Grouping.formGroups === 'function'),
       `${a.tool}: the page loads _shared/grouping.js`);
-    for (const k of a.counts) {
+    if (a.ready) await a.ready(page);
+    for (const c of a.cases) {
       for (const seed of SEEDS) {
-        const got = await a.split(page, k, seed);
-        const want = a.legacy(CLASS.slice(), k, G.rng(seed));
-        ok(J(got) === J(want), `${a.tool}: ${k} groups, seed ${seed} (got ${J(got)}, want ${J(want)})`);
+        const got = await a.split(page, c, seed);
+        const want = a.legacy(CLASS.slice(), c, G.rng(seed));
+        ok(J(got) === J(want), `${a.tool}: ${J(c)}, seed ${seed} (got ${J(got)}, want ${J(want)})`);
       }
     }
     ok(errors.length === 0, `${a.tool}: no page errors (${errors.join(' | ')})`);

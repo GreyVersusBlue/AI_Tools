@@ -294,32 +294,27 @@
   }
 
   /**
-   * Splits `names` into groups, shuffled by `rng` (Math.random by default).
+   * Splits `names` into groups, shuffled by `rng` (a fresh seed by default).
    * by 'size': groups of n, and a remainder too small to stand alone (under
    * half of n) is spread one each over the other groups rather than left as
    * a group of one. by 'count': exactly n groups (fewer if there are fewer
    * names), sizes differing by at most one.
+   *
+   * The split is _shared/grouping.js's since Path 13 P2 (v337): `sizeRule:
+   * 'near'` is this rule, and Tools/grouping/test/parity.test.mjs holds it to
+   * the old function. Members are keyed by position, so a name that appears
+   * twice (two students of one name) is still two people, and a blank still
+   * takes a place, as before; the engine would drop a repeated key.
    */
   function makeGroups(names, by, n, rng) {
-    rng = rng || Math.random;
     var list = (names || []).slice();
-    for (var i = list.length - 1; i > 0; i--) {
-      var j = Math.floor(rng() * (i + 1));
-      var t = list[i]; list[i] = list[j]; list[j] = t;
-    }
     n = Math.max(1, Math.floor(n) || 1);
-    if (!list.length) return [];
-    var count;
-    if (by === 'count') count = Math.min(n, list.length);
-    else {
-      count = Math.max(1, Math.floor(list.length / n));
-      var rem = list.length - count * n;
-      if (rem >= Math.ceil(n / 2) || count === 0) count += 1;
-    }
-    var groups = [];
-    for (var g = 0; g < count; g++) groups.push([]);
-    list.forEach(function (name, k) { groups[k % count].push(name); });
-    return groups;
+    var opts = by === 'count' ? { count: n } : { size: n, sizeRule: 'near' };
+    if (rng) opts.rng = rng;
+    var members = list.map(function (nm, i) { return { key: String(i), name: nm }; });
+    return global.Grouping.formGroups(members, opts).groups.map(function (g) {
+      return g.map(function (k) { return list[+k]; });
+    });
   }
 
   function normalizeWidget(w) {

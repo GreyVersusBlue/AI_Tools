@@ -96,6 +96,21 @@ for (const by of ['count', 'size']) {
   ok(J(L.cs087([], 'count', 3, a)) === J(G.formGroups([], { count: 3, rng: b }).groups), '087 no names');
 }
 
+{ // 087's cs-core.js as the page calls it (Path 13 P2, v337): it keys members
+  // by position, so a repeated or blank name still takes its place as it did.
+  vm.runInContext(fs.readFileSync(path.join(site, 'Tools/class-screen/cs-core.js'), 'utf8'), ctx);
+  const C = ctx.window.ClassScreenCore;
+  const POOL = ['Ann', 'Bo', '', 'Cy', 'Ann', 'Di', 'Ed', 'Bo'];
+  for (let s = 0; s < 300; s++) {
+    const cfg = G.rng('087cs:' + s);
+    const list = Array.from({ length: Math.floor(cfg() * 30) }, () => POOL[Math.floor(cfg() * POOL.length)]);
+    const by = cfg() < 0.5 ? 'count' : 'size';
+    const v = [0, 1, 2, 3, 4, 5, 7, NaN, 40][Math.floor(cfg() * 9)];
+    const [a, b] = pair(s + 1500);
+    ok(J(L.cs087(list, by, v, a)) === J(C.makeGroups(list, by, v, b)) && sameEnd(a, b),
+      '087 cs-core makeGroups, repeated and blank names', `seed ${s} n ${list.length} ${by} ${v}`);
+  }
+}
 lap('087');
 // ── 021 ────────────────────────────────────────────────────────────────
 for (let s = 0; s < 300; s++) {
