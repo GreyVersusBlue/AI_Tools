@@ -9,6 +9,47 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 CI fix: the published browser's axe scans raced its fade-in (2026-10-26, AI-20, no `CACHE_VERSION`)
+
+**What failed.** The wave PR AI_Tools#372 went red on GitHub's runner in `smoke-publish-baseline.mjs` (103 passed,
+1 failed): "the Directions tab with a route has no serious or critical axe finding", color-contrast on the two room
+labels and both map captions. The same suite was 104/0 on huginn.
+
+**The cause was the test, not the colours.** A published view fades in: `#br-view` has `animation: br-rise .4s`,
+opacity 0 to 1, restarted each time a tab is shown. The suite opens a published file with `page.clock.setFixedTime()`,
+and under that clock the animation sat at `currentTime 0`, so on huginn every scan of `#br-view` saw a view at
+**opacity 0, which axe skips as invisible**. Those scans passed having checked nothing (Directions since v333, Sub
+Plan light and dark since v334). On the runner the animation had moved part of the way, so axe measured the text
+half-blended into the white card and failed it. It listed only the first four nodes (`harness.mjs` cuts there).
+The first four were the forest-ink text. The darker `--br-ink` of the moves and the large heading sat closer to the
+line. A probe showed it: pausing the fade at 120 ms (opacity 0.45) failed 13 nodes on huginn, and the same run's
+Sub Plan scan failed `.factline` and the Planning rows the same way. Nothing about fonts or the runner's theme was
+involved.
+
+**What changed.** Only `Tools/schedule-visualizer/test/smoke-publish-baseline.mjs`, so no precached file, no
+`CACHE_VERSION`. The prompt asked for a bump; the repo bumps only when a precached file changes, so this follows the
+repo. The published browser, `sv-browser.js`, the Northwind baseline and the 034 ledger are untouched, and
+`check:publisher`'s output did not move. That holds for unticked and ticked output alike.
+- `settledScan(page)` replaces the suite's three `a11yScan(p, …'#br-view')` calls: it finishes every finite
+  animation and transition first, then **throws if `#br-view` and its ancestors are still not opacity 1**. With the
+  finish taken out it throws on huginn ("still at opacity 0"), which is the check that would have caught this here.
+- `contrastOf(page, selectors)` works out WCAG contrast from computed styles, without axe: the text colour with its
+  alpha and every ancestor's opacity folded in, over the stacked background colours, and a background image makes it
+  unmeasurable, which fails. Font plays no part. It is asserted at 4.5:1 for the Directions heading, labels, moves and
+  captions (light and now dark too, with a dark axe scan added), Sub Plan's head line, column heads and Planning rows
+  (light and dark), and the open-a-file button, note and Back link (increment 1, which axe never scanned).
+  Measured: Directions 10.16 light / 8.88 dark (moves 12.35 / 13.85); open-a-file 10.16 / 8.69; Sub Plan's
+  `--br-muted` text is the thinnest margin, **4.92 (`.factline`) and 4.70 (Planning row on `--br-plan-bg`) in light**,
+  7.61 / 6.88 in dark. Those pass, but a future tweak to either token will reach the line first.
+- The open-a-file button first measured 3.05. The test had just clicked it, so it was mid-way through its `.18s`
+  hover transition, which the fixed clock never advances. `contrastOf` finishes transitions too, for that reason.
+- Broken on purpose: the captions set to `#9aa89f` failed both the axe scan and the direct measure (2.48); the
+  settle step removed made the suite throw.
+
+**Not checked.** The run on GitHub's runner itself (it lands with the next wave). `Tools/schedule-browser/test/smoke-dark-theme.mjs`
+scans 034, which has the same `br-rise` fade, with plain `a11yScan`; it is green on CI and was not changed here. It
+may share the blind spot, if its clock leaves the fade at 0.
+
 ## Path 13 P2 increment 3: 022's and 027's role memory is `groupHistory` (2026-10-26, AI-21, `CACHE_VERSION` v342–v343)
 
 **Shipped.** The storage step for 022 (v342, c84bd6c) and 027 (v343, 6d630aa), one commit each, then the tests
