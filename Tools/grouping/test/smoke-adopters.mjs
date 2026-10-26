@@ -226,6 +226,78 @@ const ADOPTERS = [
     },
     cases: [['count', 3, []], ['count', 5, []], ['size', 4, []], ['size', 3, []], ['count', 20, []],
       ['count', 4, [[1, 2], [3, 4], [5, 6], [1, 7]]]]
+  },
+  {
+    // 002 draws from Math.random, which its own golden suite seeds, so here the
+    // page's Math.random is the seeded generator for three presses: Make
+    // Groups, Reshuffle, and Reshuffle with group 1 locked. Compared with the
+    // old makeGroups() on the same numbers: the groups, the floaters, and the
+    // pairing memory the page saves (pairHistory/pairGen, and groupHistory,
+    // which they are written from). Long memory and roles are gtg-memory.js's
+    // and stay off here (smoke-year-memory.mjs holds them). No repeated name:
+    // that is the named exception (the old page counted one pair for both).
+    tool: '002',
+    url: '/Tools/002-group-team-generator.html',
+    async load(page) { await page.evaluate(() => localStorage.clear()); },
+    async split(page, c, seed) {
+      const [strategy, odd, mode, v, apart, together, absent] = c;
+      await page.evaluate(() => localStorage.clear());
+      await page.reload({ waitUntil: 'networkidle' });
+      await settle(page, 200);
+      const skills = strategy !== 'random' && strategy !== 'coverage';
+      const lines = CLASS.map((n, i) => skills ? n + ', ' + (1 + ((i * 3) % 5)) : n);
+      await page.fill('#names-input', lines.join('\n'));
+      await page.dispatchEvent('#names-input', 'input');
+      await page.click(mode === 'size' ? 'label[for="mode-size"]' : 'label[for="mode-count"]');
+      await page.fill('#split-value', String(v));
+      await page.selectOption('#strategy-select', strategy);
+      await page.selectOption('#odd-mode-select', odd);
+      for (const [a, b] of apart) { await page.selectOption('#pair-a', CLASS[a]); await page.selectOption('#pair-b', CLASS[b]); await page.click('#add-pair-btn'); }
+      for (const [a, b] of together) { await page.selectOption('#together-a', CLASS[a]); await page.selectOption('#together-b', CLASS[b]); await page.click('#add-together-btn'); }
+      for (const i of absent) await page.locator('#absent-list label').nth(i).click();
+      await page.evaluate(seed => { window.__rnd = Math.random; Math.random = window.Grouping.rng(seed); }, seed);
+      const grab = () => page.evaluate(() => {
+        const fl = document.querySelector('#results .floater-box');
+        return { groups: [...document.querySelectorAll('#results .group-card')].map(c => [...c.querySelectorAll('li > span:first-child')].map(x => x.textContent)),
+          floaters: fl ? fl.textContent : '' };
+      });
+      const presses = [];
+      await page.click('#generate-btn'); presses.push(await grab());
+      await page.click('#regenerate-btn'); presses.push(await grab());
+      await page.click('[data-lock="0"]'); await page.click('#regenerate-btn'); presses.push(await grab());
+      await page.evaluate(() => { Math.random = window.__rnd; });
+      const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('gtg:data:' + localStorage.getItem('gtg:current'))));
+      return { presses, saved, mirror: await page.evaluate(h => Grouping.history.toLegacyPairs(h), saved.groupHistory) };
+    },
+    compare(got, names, [strategy, odd, mode, v, apart, together, absent], rng) {
+      const skills = strategy !== 'random' && strategy !== 'coverage';
+      const students = CLASS.map((n, i) => ({ name: n, skill: skills ? 1 + ((i * 3) % 5) : null }));
+      const absentSet = {}; absent.forEach(i => { absentSet[CLASS[i]] = true; });
+      const state = { pairHistory: {}, pairGen: 0 };
+      const ctx = { students, absent: absentSet, mode, splitValue: String(v), strategy, oddMode: odd,
+        keepApart: apart.map(([a, b]) => [CLASS[a], CLASS[b]]), keepTogether: together.map(([a, b]) => [CLASS[a], CLASS[b]]), lastGroups: null, state };
+      const want = [];
+      for (let p = 0; p < 3; p++) {
+        const lockedFlags = p === 2 ? ctx.lastGroups.groups.map((_, i) => i === 0) : null;
+        const r = L.gtg002(ctx, { lockedFlags }, rng);
+        ctx.lastGroups = { groups: r.groups };
+        want.push({ groups: r.groups.map(g => g.map(st => st.name)), floaters: r.floaters.map(st => st.name) });
+      }
+      const gotShape = got.presses.map(x => ({ groups: x.groups, floaters: x.floaters }));
+      const sameGroups = got.presses.every((x, i) => J(x.groups) === J(want[i].groups) &&
+        want[i].floaters.every(n => x.floaters.includes(n)) && (want[i].floaters.length > 0) === (x.floaters !== ''));
+      const sorted = o => J(Object.keys(o).sort().map(k => [k, o[k]]));
+      const sameMemory = got.saved.pairGen === 3 && sorted(got.saved.pairHistory) === sorted(state.pairHistory) &&
+        J(got.mirror) === J({ pairHistory: got.saved.pairHistory, pairGen: got.saved.pairGen });
+      return [sameGroups && sameMemory, `groups ${sameGroups}, memory ${sameMemory}; ${J(gotShape)} vs ${J(want)}`];
+    },
+    cases: [
+      ['random', 'extra', 'count', 3, [], [], []],
+      ['balanced', 'floater', 'size', 4, [], [], [2]],
+      ['heterogeneous', 'extra', 'count', 4, [[0, 1], [2, 3]], [[4, 5]], []],
+      ['homogeneous', 'floater', 'count', 5, [], [], []],
+      ['coverage', 'pair', 'size', 3, [[6, 7]], [], [9]]
+    ]
   }
 ];
 

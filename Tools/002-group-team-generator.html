@@ -250,6 +250,7 @@
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/student-flags.js"></script>
+<script src="../_shared/grouping.js"></script>
 <script src="group-team-generator/gtg-memory.js"></script>
 </head>
 <body>
@@ -542,9 +543,10 @@
       // Retained pairing memory: pairHistory maps a sorted "nameA␟nameB" key
       // to { gen, count } — the generation number (pairGen) that pair last
       // shared a group, and how many times ever. It is kept for the whole
-      // school year (see recordPairHistory/prunePairHistoryToRoster below for
-      // the retention-policy decision), driving both the short-term
-      // recency bias and the year-long pairing grid / coverage strategy.
+      // school year (see the retention-policy note above pairKey below),
+      // driving both the short-term recency bias and the year-long pairing
+      // grid / coverage strategy. Since Path 13 P2 (v341) both are written
+      // from groupHistory, the engine's memory, added on the first shuffle.
       pairHistory: {}, pairGen: 0,
       // Path 3 P4: which saved roster this class follows, and which name each
       // stable id had last time — what lets a rename in Class Roster Hub carry
@@ -653,6 +655,12 @@
     Object.keys(state.pairHistory).forEach(function (k) {
       if (typeof state.pairHistory[k] === 'number') state.pairHistory[k] = { gen: state.pairHistory[k], count: 1 };
     });
+    /* Path 13 P2: a class with the engine's memory takes in what an older
+       page wrote to pairHistory since, and writes pairHistory from it again.
+       One without it is left alone until its next shuffle. */
+    if ('groupHistory' in state) {
+      setPairMemory(Grouping.history.absorbLegacy(state.groupHistory, { pairHistory: state.pairHistory, pairGen: state.pairGen }));
+    }
     if (!state.strategy) state.strategy = state.balance ? 'balanced' : 'random';
     if (!state.oddMode) state.oddMode = 'extra';
     if (!state.namingMode) state.namingMode = 'number';
@@ -752,35 +760,30 @@
     return moved;
   }
 
-  /** Re-keys every pairHistory entry naming `from`, and moves the absent mark
-      and the keep-apart / keep-together pairs with it. A pair key is built by
-      pairKey(), so it is rebuilt rather than string-patched: the separator is
-      sorted between the two names and a rename can change which side the
-      student falls on. Where the rename collapses two keys into one — "A␟B"
-      and "A␟C" cannot collide, but "A␟B" can land on an existing "B␟C" — the
-      counts are added and the more recent generation kept, because both pairs
-      really did happen. */
+  /** Re-keys every pairing naming `from`, and moves the absent mark and the
+      keep-apart / keep-together pairs with it. The pairings are the memory's
+      rekey() since Path 13 P2 (v341), which keeps this page's rule: where the
+      rename collapses two pairs into one — "A␟B" can land on an existing
+      "B␟C" — the counts are added and the more recent generation kept,
+      because both pairs really did happen, and a student renamed onto their
+      own partner loses that pair. */
   function renameStudentData(from, to) {
-    var moved = false;
-    var next = {};
-    Object.keys(state.pairHistory).forEach(function (k) {
+    var moved = Object.keys(state.pairHistory).some(function (k) {
       var parts = k.split('\u241F');
-      if (parts.length !== 2) { next[k] = state.pairHistory[k]; return; }
-      var a = parts[0] === from ? to : parts[0];
-      var b = parts[1] === from ? to : parts[1];
-      if (a === b) { moved = true; return; }   // renamed onto their own pair partner
-      var key = pairKey(a, b);
-      if (key !== k) moved = true;
-      var entry = state.pairHistory[k];
-      var gen = historyGen(entry);
-      var count = (entry && typeof entry === 'object' && typeof entry.count === 'number') ? entry.count : 1;
-      if (next[key]) {
-        next[key] = { gen: Math.max(historyGen(next[key]), gen), count: (next[key].count || 1) + count };
-      } else {
-        next[key] = { gen: gen, count: count };
-      }
+      return parts.length === 2 && (parts[0] === from || parts[1] === from);
     });
-    state.pairHistory = next;
+    if (moved) {
+      /* rekey() moves the key and keeps the stored name, which is right for an
+         id; this page's keys are names, so the name moves too (the memory's
+         names[] is what pairHistory is written from). */
+      var h = Grouping.history.rekey(pairMemory(), 'n:' + from, 'n:' + to);
+      var at = h.keys.indexOf('n:' + to);
+      if (at !== -1 && h.names[at] !== to) {
+        h = Object.assign({}, h, { names: h.names.slice() });
+        h.names[at] = to;
+      }
+      setPairMemory(h);
+    }
 
     if (state.roleHistory && Object.prototype.hasOwnProperty.call(state.roleHistory, from)) {
       state.roleHistory = GtgMemory.renameRoles(state.roleHistory, from, to);
@@ -1073,177 +1076,91 @@
   });
   els.splitValue.addEventListener('input', saveCurrentConfig);
 
-  function groupCountFor(n) {
-    var isSize = document.getElementById('mode-size').checked;
-    var v = Math.max(1, parseInt(els.splitValue.value, 10) || 1);
-    var count = isSize ? Math.ceil(n / v) : v;
-    return Math.max(1, Math.min(count, n));
-  }
-
-  // ── Shuffle ──────────────────────────────────────────────────────────────
-  function shuffle(arr) {
-    var a = arr.slice();
-    for (var i = a.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
-      var t = a[i]; a[i] = a[j]; a[j] = t;
-    }
-    return a;
-  }
-
-  // ── Grouping strategies ──────────────────────────────────────────────────
-  // Each strategy fills only the group indices listed in targetIdx, leaving
-  // any other (locked) groups in the array untouched.
-  function assignRandom(pool, groups, targetIdx) {
-    var k = targetIdx.length;
-    var shuffled = shuffle(pool);
-    shuffled.forEach(function (s, idx) { groups[targetIdx[idx % k]].push(s); });
-  }
-
-  // Snake draft by skill (missing ratings treated as a neutral 3) so every
-  // group ends up with a similar *average* skill rather than a similar mix.
-  function assignBalanced(pool, groups, targetIdx) {
-    var k = targetIdx.length;
-    var sorted = shuffle(pool).sort(function (a, b) { return (b.skill || 3) - (a.skill || 3); });
-    var dir = 1, gi = 0;
-    sorted.forEach(function (s) {
-      groups[targetIdx[gi]].push(s);
-      gi += dir;
-      if (gi === k) { gi = k - 1; dir = -1; }
-      else if (gi < 0) { gi = 0; dir = 1; }
-    });
-  }
-
-  // Splits the pool into thirds by skill, then round-robins each tier across
-  // every group separately — deliberately guaranteeing each group draws from
-  // the top, middle, and bottom of the roster, rather than just equalizing
-  // averages the way the snake draft above does.
-  function assignHeterogeneous(pool, groups, targetIdx) {
-    var k = targetIdx.length;
-    var sorted = shuffle(pool).sort(function (a, b) { return (b.skill || 3) - (a.skill || 3); });
-    var n = sorted.length;
-    var t1 = Math.ceil(n / 3), t2 = Math.ceil((n - t1) / 2) + t1;
-    var tiers = [shuffle(sorted.slice(0, t1)), shuffle(sorted.slice(t1, t2)), shuffle(sorted.slice(t2))];
-    tiers.forEach(function (tier) {
-      var gi = 0;
-      tier.forEach(function (s) { groups[targetIdx[gi % k]].push(s); gi++; });
-    });
-  }
-
-  // Sorts by skill and slices into contiguous chunks — one group is entirely
-  // the strongest students, the next entirely the next tier, and so on. Used
-  // for differentiation, where each group gets a targeted lesson.
-  function assignHomogeneous(pool, groups, targetIdx) {
-    var k = targetIdx.length;
-    var sorted = shuffle(pool).sort(function (a, b) { return (b.skill || 3) - (a.skill || 3); });
-    var base = Math.floor(sorted.length / k), extra = sorted.length % k, idx = 0;
-    for (var i = 0; i < k; i++) {
-      var size = base + (i < extra ? 1 : 0);
-      for (var j = 0; j < size; j++) { groups[targetIdx[i]].push(sorted[idx]); idx++; }
-    }
-  }
-
-  // "Everyone pairs with everyone": greedily places each student into the
-  // target group its members it has the *least* combined history with,
-  // according to pairHistoryCount (the full retained count, not just the
-  // last shuffle or two) — so the shuffle actively steers toward pairs that
-  // have never shared a group, rather than merely avoiding a recent repeat.
-  // Group sizes are kept within one of each other by only ever choosing
-  // among the currently-smallest target groups, the same balance guarantee
-  // assignRandom's round robin gives.
-  function assignCoverage(pool, groups, targetIdx) {
-    var sizes = {};
-    targetIdx.forEach(function (i) { sizes[i] = groups[i].length; });
-    shuffle(pool).forEach(function (s) {
-      var minSize = Math.min.apply(null, targetIdx.map(function (i) { return sizes[i]; }));
-      var candidates = shuffle(targetIdx.filter(function (i) { return sizes[i] === minSize; }));
-      var best = candidates[0], bestCost = Infinity;
-      candidates.forEach(function (i) {
-        var cost = groups[i].reduce(function (sum, m) { return sum + pairHistoryCount(s.name, m.name); }, 0);
-        if (cost < bestCost) { bestCost = cost; best = i; }
-      });
-      groups[best].push(s);
-      sizes[best]++;
-    });
-  }
-
-  function assignPool(pool, groups, targetIdx, strategy) {
-    if (!targetIdx.length) return;
-    if (strategy === 'balanced') assignBalanced(pool, groups, targetIdx);
-    else if (strategy === 'heterogeneous') assignHeterogeneous(pool, groups, targetIdx);
-    else if (strategy === 'homogeneous') assignHomogeneous(pool, groups, targetIdx);
-    else if (strategy === 'coverage') assignCoverage(pool, groups, targetIdx);
-    else assignRandom(pool, groups, targetIdx);
-  }
-
-  function getStrategy() {
-    var hasSkills = students.some(function (s) { return s.skill !== null; });
-    var v = els.strategySelect.value;
-    return (SKILL_STRATEGIES.indexOf(v) !== -1 && !hasSkills) ? 'random' : v;
-  }
-
-  // ── Odd-number handling ──────────────────────────────────────────────────
-  // Pops the overflow beyond the smallest group among targetIdx so every
-  // strategy's default "some groups get one extra" outcome can be turned
-  // into an explicit floater list or a standalone leftover group instead.
-  function applyOddHandling(groups, targetIdx, oddMode) {
-    if (!targetIdx.length || oddMode === 'extra') return { floaters: [], fallbackNote: null, bonusGroupSize: 0 };
-    var sizes = targetIdx.map(function (i) { return groups[i].length; });
-    var minSize = Math.min.apply(null, sizes);
-    var floaters = [];
-    targetIdx.forEach(function (i) {
-      while (groups[i].length > minSize) floaters.push(groups[i].pop());
-    });
-    if (oddMode === 'pair') {
-      if (floaters.length >= 2) { groups.push(floaters); return { floaters: [], fallbackNote: null, bonusGroupSize: floaters.length }; }
-      if (floaters.length === 1) return { floaters: floaters, fallbackNote: 'Only one student was left over, so they were kept as a floater — a pair needs at least two.', bonusGroupSize: 0 };
-    }
-    return { floaters: floaters, fallbackNote: null, bonusGroupSize: 0 };
-  }
-
   // ── Grouping algorithm ───────────────────────────────────────────────────
+  // The deal (the five strategies, the remainder rules, locked groups) and the
+  // swap search that repairs keep-apart, keep-together and recent repeats are
+  // _shared/grouping.js's since Path 13 P2 (v341): the same groups this page
+  // made, draw for draw, from the same Math.random (parity.test.mjs's 002
+  // grid). Long memory's refine and the roles are gtg-memory.js's and run
+  // after it, as they did. Each student is keyed 'n:' + name, a second
+  // student of one name 'n:' + name + '#2' (one student to every rule that
+  // names them, as before; neither is dropped).
+  function keyStudents(list) {
+    var used = {}, out = [];
+    list.forEach(function (s) {
+      var base = 'n:' + s.name, k = base, c = 1;
+      while (used['#' + k]) { c++; k = base + '#' + c; }
+      used['#' + k] = true;
+      out.push({ key: k, name: s.name, attrs: s.skill === null ? {} : { skill: s.skill }, st: s });
+    });
+    return out;
+  }
+
   // opts.lockedFlags: booleans parallel to the previous lastGroups.groups —
   // true keeps that group exactly as-is and only reshuffles the rest.
   // Returns { groups, violations, togetherViolations, repeatViolations, floaters, meta }
   function makeGroups(opts) {
     opts = opts || {};
-    // Roster-membership GC for the retained pairHistory — see the
-    // retention-policy note above prunePairHistoryToRoster's definition.
-    // Run once per deliberate generation, not per keystroke.
-    prunePairHistoryToRoster();
+    var members = keyStudents(students);
+    // Roster-membership GC for the retained pairing memory — see the
+    // retention-policy note above pairKey. Run once per deliberate
+    // generation, not per keystroke.
+    var history = Grouping.history.prune(pairMemory(), members.map(function (m) { return m.key; }), { departed: 'drop' });
+    setPairMemory(history);
     if (state && state.roleHistory) {
       state.roleHistory = GtgMemory.pruneRoles(state.roleHistory, students.map(function (x) { return x.name; }));
     }
     var activeStudents = getActiveStudents();
-    var strategy = getStrategy();
     var oddMode = els.oddModeSelect.value;
-    var groups, targetIdx, lockedCount = 0, reshuffledCount, usedLocks = false, lockedIdxSet = {};
+    var isSize = document.getElementById('mode-size').checked;
+    var v = Math.max(1, parseInt(els.splitValue.value, 10) || 1);
 
-    var lockedFlagsIn = opts.lockedFlags;
-    if (lockedFlagsIn && lastGroups && lockedFlagsIn.length === lastGroups.groups.length &&
-        lockedFlagsIn.some(Boolean) && locksAreValid(lockedFlagsIn, activeStudents)) {
-      usedLocks = true;
-      groups = lastGroups.groups.map(function (g) { return g.slice(); });
-      targetIdx = [];
-      var lockedNames = {};
-      groups.forEach(function (g, i) {
-        if (lockedFlagsIn[i]) { lockedCount++; lockedIdxSet[i] = true; g.forEach(function (s) { lockedNames[s.name] = true; }); }
-        else { targetIdx.push(i); groups[i] = []; }
+    var keyOfName = {}, objOfKey = {}, absent = [];
+    members.forEach(function (m) {
+      if (!Object.prototype.hasOwnProperty.call(keyOfName, m.name)) keyOfName[m.name] = m.key;
+      objOfKey[m.key] = m.st;
+      if (activeStudents.indexOf(m.st) === -1) absent.push(m.key);
+    });
+    function keyOf(name) { return Object.prototype.hasOwnProperty.call(keyOfName, name) ? keyOfName[name] : 'n:' + name; }
+    function keyPairs(list) { return list.map(function (p) { return [keyOf(p[0]), keyOf(p[1])]; }); }
+    // The previous groups by key: the nth student of a name in them is the
+    // nth student of that name now.
+    var previous;
+    if (lastGroups) {
+      var nth = {};
+      previous = lastGroups.groups.map(function (g) {
+        return g.map(function (s) {
+          nth[s.name] = (nth[s.name] || 0) + 1;
+          return nth[s.name] === 1 ? keyOf(s.name) : 'n:' + s.name + '#' + nth[s.name];
+        });
       });
-      var pool = activeStudents.filter(function (s) { return !lockedNames[s.name]; });
-      reshuffledCount = pool.length;
-      assignPool(pool, groups, targetIdx, strategy);
-    } else {
-      var k = groupCountFor(activeStudents.length);
-      groups = [];
-      for (var i = 0; i < k; i++) groups.push([]);
-      targetIdx = groups.map(function (_, idx) { return idx; });
-      assignPool(activeStudents, groups, targetIdx, strategy);
-      reshuffledCount = activeStudents.length;
     }
+    var lockedFlagsIn = opts.lockedFlags;
 
-    var oddResult = applyOddHandling(groups, targetIdx, oddMode);
+    var res = Grouping.formGroups(members, {
+      count: isSize ? undefined : v, size: isSize ? v : undefined,
+      remainder: oddMode === 'extra' || oddMode === 'pair' ? oddMode : 'floaters',
+      strategy: els.strategySelect.value,
+      absent: absent, apart: keyPairs(keepApart), together: keyPairs(keepTogether),
+      previous: previous, lock: previous && lockedFlagsIn ? lockedFlagsIn : undefined,
+      history: history, rng: Math.random
+    });
+    var lockedCount = res.stats.lockedCount, usedLocks = lockedCount > 0, lockedIdxSet = {};
+    var keyOfObj = new Map();
+    members.forEach(function (m) { keyOfObj.set(m.st, m.key); });
+    var groups = res.groups.map(function (g, i) {
+      if (usedLocks && lockedFlagsIn[i]) {
+        // A locked group keeps the very entries it had, as it always did.
+        lockedIdxSet[i] = true;
+        lastGroups.groups[i].forEach(function (s, mi) { keyOfObj.set(s, g[mi]); });
+        return lastGroups.groups[i].slice();
+      }
+      return g.map(function (k) { return objOfKey[k]; });
+    });
+    var floaters = res.floaters.map(function (k) { return objOfKey[k]; });
+    var reshuffledCount = activeStudents.length;
+    if (usedLocks) groups.forEach(function (g, i) { if (lockedIdxSet[i]) reshuffledCount -= g.length; });
 
-    resolveConstraints(groups, lockedIdxSet);
     var longMemory = state && state.longMemory === true;
     if (longMemory) {
       GtgMemory.refine(groups, {
@@ -1251,15 +1168,19 @@
         locked: lockedIdxSet, rng: Math.random, spread: true
       });
     }
+    // Read from the groups as they end up, which long memory may have moved
+    // students in since the engine counted them.
     var violations = findApartViolations(groups);
     var togetherViolations = findTogetherViolations(groups);
     var repeatViolations = findRecentPairViolations(groups);
-    // Read BEFORE recordPairHistory bumps the counts, so "brand new" means
+    // Read BEFORE the memory records this shuffle, so "brand new" means
     // genuinely never-before-seen going into this shuffle.
     var pairStats = countPairingsInGroups(groups);
     var busiest = longMemory ? busiestPairing(groups) : 0;
     var roleResult = assignGroupRoles(groups);
-    recordPairHistory(groups);
+    setPairMemory(Grouping.history.record(history, groups.map(function (g) {
+      return g.map(function (s) { return keyOfObj.get(s); });
+    }), { members: members }));
     if (roleResult) {
       state.roleHistory = GtgMemory.recordRoles(state.roleHistory || {}, roleResult.names, roleResult.flat, state.pairGen);
     }
@@ -1269,14 +1190,15 @@
       violations: violations,
       togetherViolations: togetherViolations,
       repeatViolations: repeatViolations,
-      floaters: oddResult.floaters,
+      floaters: floaters,
       roles: roleResult ? roleResult.byGroup : null,
       meta: {
         longMemory: longMemory, busiestPairing: busiest,
         rolesFresh: roleResult ? roleResult.fresh : 0, rolesTotal: roleResult ? roleResult.total : 0,
-        strategy: strategy, oddMode: oddMode, lockedCount: lockedCount, reshuffledCount: reshuffledCount,
-        usedLocks: usedLocks, totalActive: activeStudents.length, groupCountTarget: targetIdx.length,
-        fallbackNote: oddResult.fallbackNote, bonusGroupSize: oddResult.bonusGroupSize,
+        strategy: res.stats.strategy, oddMode: oddMode, lockedCount: lockedCount, reshuffledCount: reshuffledCount,
+        usedLocks: usedLocks, totalActive: activeStudents.length, groupCountTarget: res.stats.count - lockedCount,
+        fallbackNote: res.stats.note === 'one-left' ? 'Only one student was left over, so they were kept as a floater — a pair needs at least two.' : null,
+        bonusGroupSize: res.stats.ownGroup,
         newPairsThisGen: pairStats.brandNew, totalPairsThisGen: pairStats.total
       }
     };
@@ -1338,16 +1260,6 @@
     return { total: total, brandNew: brandNew };
   }
 
-  function locksAreValid(lockedFlagsIn, activeStudents) {
-    var activeNames = {};
-    activeStudents.forEach(function (s) { activeNames[s.name] = true; });
-    var ok = true;
-    lastGroups.groups.forEach(function (g, i) {
-      if (lockedFlagsIn[i]) g.forEach(function (s) { if (!activeNames[s.name]) ok = false; });
-    });
-    return ok;
-  }
-
   function groupIndexOf(groups, name) {
     for (var i = 0; i < groups.length; i++) {
       if (groups[i].some(function (s) { return s.name === name; })) return i;
@@ -1377,12 +1289,21 @@
   // many times ever. Each shuffle bumps pairGen and records every
   // co-membership at the new generation.
   //
+  // Since Path 13 P2 (v341) the memory itself is state.groupHistory,
+  // _shared/grouping.js's (keyed 'n:' + name, see keyStudents), and
+  // pairHistory and pairGen are written from it on every change: they are
+  // what gtg-memory.js, the grid and the hint read, and what a page from an
+  // older cache reads and writes. That page drops groupHistory when it saves,
+  // so a class saved without it is read from pairHistory, and on opening one
+  // with it a pairGen ahead of it (an older page shuffled since) is taken in
+  // (the P1 design's Storage section, in BACKLOG.md).
+  //
   // RETENTION-POLICY DECISION (2026-08-13): history used to be deleted the
   // moment it fell outside PAIR_MEMORY_WINDOW (2) generations — the recency
   // bias only needs the last shuffle or two, so everything older was thrown
   // away, which made a year-long "who has worked with whom" view impossible
   // by construction. That pruning is gone. What replaces it is NOT unbounded
-  // accumulation: prunePairHistoryToRoster (below), run once per generation
+  // accumulation: makeGroups's prune (departed: 'drop'), run once per generation
   // (not on every keystroke, so an in-progress roster edit can't destroy a
   // student's history mid-rename), deletes any entry naming someone no
   // longer on the roster at all. Storage is therefore bounded to at most
@@ -1393,6 +1314,19 @@
   // discard everything remains the existing "Reset pairing memory" button.
   function pairKey(a, b) {
     return a < b ? a + '␟' + b : b + '␟' + a;
+  }
+
+  /** The class's pairing memory: groupHistory, or, on a class no shuffle has
+   *  saved one for, the same memory read from pairHistory. */
+  function pairMemory() {
+    return state.groupHistory || Grouping.history.fromLegacy({ pairHistory: state.pairHistory, pairGen: state.pairGen });
+  }
+  /** Stores a new memory and writes pairHistory and pairGen from it. */
+  function setPairMemory(h) {
+    var legacy = Grouping.history.toLegacyPairs(h);
+    state.groupHistory = h;
+    state.pairHistory = legacy.pairHistory;
+    state.pairGen = legacy.pairGen;
   }
 
   // Tolerates a not-yet-migrated legacy entry (a bare generation number)
@@ -1427,18 +1361,6 @@
     return 0;
   }
 
-  function totalPairPenalty(groups) {
-    var total = 0;
-    groups.forEach(function (group) {
-      for (var i = 0; i < group.length; i++) {
-        for (var j = i + 1; j < group.length; j++) {
-          total += pairRecencyPenalty(group[i].name, group[j].name);
-        }
-      }
-    });
-    return total;
-  }
-
   // Pairs currently sharing a group that were also recently paired — treated
   // like a soft "keep apart" violation for the local search below.
   function findRecentPairViolations(groups) {
@@ -1451,113 +1373,6 @@
       }
     });
     return result;
-  }
-
-  /** GC step for the retention policy above: deletes any pairHistory entry
-   *  naming a student who is no longer on the roster at all (not merely
-   *  absent today — see getActiveStudents for that separate, non-destructive
-   *  exclusion). Bounds storage to the current roster's C(n,2) pairs without
-   *  ever pruning by age. Deliberately called once per generation (from
-   *  makeGroups) rather than from onNamesChanged, which fires on every
-   *  keystroke — pruning mid-edit would risk deleting a student's whole
-   *  history the moment their name is temporarily malformed while being
-   *  fixed or retyped. */
-  function prunePairHistoryToRoster() {
-    if (!state || !state.pairHistory) return;
-    var current = {};
-    students.forEach(function (s) { current[s.name] = true; });
-    Object.keys(state.pairHistory).forEach(function (key) {
-      var sep = key.indexOf('␟');
-      var a = key.slice(0, sep), b = key.slice(sep + 1);
-      if (!current[a] || !current[b]) delete state.pairHistory[key];
-    });
-  }
-
-  function recordPairHistory(groups) {
-    if (!state) return;
-    var newGen = (state.pairGen || 0) + 1;
-    state.pairGen = newGen;
-    if (!state.pairHistory) state.pairHistory = {};
-    groups.forEach(function (group) {
-      for (var i = 0; i < group.length; i++) {
-        for (var j = i + 1; j < group.length; j++) {
-          var key = pairKey(group[i].name, group[j].name);
-          var prevCount = historyCount(state.pairHistory[key]);
-          state.pairHistory[key] = { gen: newGen, count: prevCount + 1 };
-        }
-      }
-    });
-    // No age-based pruning here by design — see the retention-policy note
-    // above. Roster-membership pruning already ran once, up front, in
-    // makeGroups (prunePairHistoryToRoster), which is what keeps this
-    // bounded instead of literally unbounded.
-  }
-
-  // Hard constraints (apart/together) always dominate the score; the recent-
-  // pairing bias only breaks ties among solutions that satisfy them equally,
-  // so it never causes an explicit keep-apart/keep-together rule to be
-  // sacrificed just to avoid a repeat pairing.
-  var HARD_CONSTRAINT_WEIGHT = 100000;
-  function totalScore(groups) {
-    return (findApartViolations(groups).length + findTogetherViolations(groups).length) * HARD_CONSTRAINT_WEIGHT +
-      totalPairPenalty(groups);
-  }
-
-  // Randomized local search over constraint kinds AND recent-pairing bias at
-  // once: repeatedly swap a student between two groups, keeping the swap
-  // only if the combined score doesn't get worse. Best-effort — some
-  // constraint sets (e.g. 5 people who must all avoid each other, split into
-  // 2 groups) simply cannot all be satisfied, and a small roster with large
-  // groups may make some repeat pairing unavoidable; the loop just settles
-  // for whatever it found within its attempt budget.
-  function resolveConstraints(groups, lockedIdx) {
-    lockedIdx = lockedIdx || {};
-    var hasPairBias = !!(state && state.pairHistory && Object.keys(state.pairHistory).length);
-    var unlockedCount = groups.filter(function (_, i) { return !lockedIdx[i]; }).length;
-    if ((!keepApart.length && !keepTogether.length && !hasPairBias) || unlockedCount < 2) return;
-    var attempts = 0, maxAttempts = 800;
-    var bestScore = totalScore(groups);
-    while (bestScore > 0 && attempts < maxAttempts) {
-      attempts++;
-      var allViolations = findApartViolations(groups).concat(findTogetherViolations(groups));
-      if (hasPairBias) allViolations = allViolations.concat(findRecentPairViolations(groups));
-      if (!allViolations.length) break;
-      var offender = allViolations[Math.floor(Math.random() * allViolations.length)];
-      var groupIdx = groupIndexOf(groups, offender[0]);
-      if (groupIdx === -1 || lockedIdx[groupIdx]) continue;
-      var fromArr = groups[groupIdx];
-      var sameGroupIdx = fromArr.findIndex(function (s) { return s.name === offender[1]; });
-
-      if (sameGroupIdx !== -1) {
-        // offender[1] shares offender[0]'s group but shouldn't (a keep-apart
-        // violation, or two students recently paired) — swap it out for a
-        // random student in a different, unlocked group.
-        var candidates = [];
-        for (var oi = 0; oi < groups.length; oi++) { if (oi !== groupIdx && !lockedIdx[oi] && groups[oi].length) candidates.push(oi); }
-        if (!candidates.length) continue;
-        var otherIdx = candidates[Math.floor(Math.random() * candidates.length)];
-        var toArr = groups[otherIdx];
-        var swapInIdx = Math.floor(Math.random() * toArr.length);
-        var a = fromArr[sameGroupIdx], b = toArr[swapInIdx];
-        fromArr[sameGroupIdx] = b; toArr[swapInIdx] = a;
-        var newScore = totalScore(groups);
-        if (newScore > bestScore) { fromArr[sameGroupIdx] = a; toArr[swapInIdx] = b; }
-        else { bestScore = newScore; }
-      } else {
-        // A together-violation: offender[1] is in a different group — move
-        // it into offender[0]'s group by swapping with a random member there.
-        var otherGroupIdx = groupIndexOf(groups, offender[1]);
-        if (otherGroupIdx === -1 || lockedIdx[otherGroupIdx]) continue;
-        var togetherArr = groups[otherGroupIdx];
-        var moveIdx = togetherArr.findIndex(function (s) { return s.name === offender[1]; });
-        var swapInIdx2 = Math.floor(Math.random() * fromArr.length);
-        var a2 = fromArr[swapInIdx2], b2 = togetherArr[moveIdx];
-        fromArr[swapInIdx2] = b2; togetherArr[moveIdx] = a2;
-        var newScore2 = totalScore(groups);
-        if (newScore2 > bestScore) { fromArr[swapInIdx2] = a2; togetherArr[moveIdx] = b2; }
-        else { bestScore = newScore2; }
-      }
-    }
   }
 
   function avgSkill(group) {
@@ -1711,6 +1526,7 @@
     if (!confirm('Clear ALL retained pairing history for "' + state.name + '"? This also blanks the pairing grid and can\'t be undone — the next shuffle won\'t try to avoid repeating any pairing, and "everyone pairs with everyone" starts over from scratch.')) return;
     state.pairHistory = {};
     state.pairGen = 0;
+    delete state.groupHistory;
     saveCurrentConfig();
     renderPairHistoryHint();
     showMsg('Pairing memory and pairing grid reset for this class.');
@@ -1750,6 +1566,7 @@
       lastGroups: JSON.parse(JSON.stringify(lastGroups)),
       pairHistory: state && state.pairHistory ? JSON.parse(JSON.stringify(state.pairHistory)) : {},
       pairGen: state ? (state.pairGen || 0) : 0,
+      groupHistory: state ? state.groupHistory : undefined,   // never changed in place
       roleHistory: state && state.roleHistory ? JSON.parse(JSON.stringify(state.roleHistory)) : null,
       lockedFlags: lockedFlags.slice()
     };
@@ -1782,6 +1599,7 @@
     if (!undoSnapshot) return;
     if (state) {
       state.pairHistory = undoSnapshot.pairHistory; state.pairGen = undoSnapshot.pairGen;
+      if (undoSnapshot.groupHistory) state.groupHistory = undoSnapshot.groupHistory; else delete state.groupHistory;
       if (undoSnapshot.roleHistory) state.roleHistory = undoSnapshot.roleHistory; else delete state.roleHistory;
     }
     lockedFlags = undoSnapshot.lockedFlags.slice();
@@ -1897,8 +1715,7 @@
   function pairingGridHtml() {
     // The whole current roster, not just today's active students — a
     // student absent today still has pairing history worth showing. (Names
-    // no longer on the roster at all were already pruned — see
-    // prunePairHistoryToRoster.)
+    // no longer on the roster at all were already pruned — see makeGroups.)
     var names = students.map(function (s) { return s.name; });
     if (names.length < 2) {
       return '<p class="empty-hint">Add at least two names to the roster to see the pairing grid.</p>';
