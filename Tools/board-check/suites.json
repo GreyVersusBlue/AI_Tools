@@ -333,6 +333,7 @@
     "Tools/schedule-visualizer/test/check.test.mjs",
     "Tools/schedule-visualizer/test/reports.test.mjs",
     "Tools/schedule-visualizer/test/suggest.test.mjs",
+    "Tools/schedule-visualizer/test/directions.test.mjs",
     "Tools/schedule-visualizer/test/smoke-checks.mjs",
     "Tools/board-check/test/check-entities.test.mjs",
     "Tools/board-check/test/check-publisher.test.mjs",

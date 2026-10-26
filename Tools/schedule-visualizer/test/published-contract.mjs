@@ -21,6 +21,11 @@
 // does, and upgrade() gains the step in the same commit. What a reader does
 // with data above its own format: nothing is built for it (Devon, 2026-10-21,
 // P11-3: the default, no handling).
+//
+// Path 11 P6 increment 2 added optional fields, no FORMAT bump: on a room
+// `door` and `doors`, on a floor `steps`, and `geometry.links`. Publish writes
+// them only when Settings → "Published copies show directions" is ticked;
+// validate() checks them only when they are there.
 
 export const FORMAT = 1;
 
@@ -208,6 +213,14 @@ export function validate(data) {
     if (!isObj(g) || !Array.isArray(g.floors)) err('geometry', 'not { floors: [] }');
     else {
       const seen = new Set();
+      // Hallway and staircase cells by "floorIndex:col,row", for the optional door and link rules.
+      const walk = new Set(), stairs = new Set();
+      g.floors.forEach((f, fi) => {
+        if (!isObj(f)) return;
+        for (const k of ['hall', 'stair']) for (const c of (Array.isArray(f[k]) ? f[k] : [])) {
+          if (Array.isArray(c)) { walk.add(fi + ':' + c[0] + ',' + c[1]); if (k === 'stair') stairs.add(fi + ':' + c[0] + ',' + c[1]); }
+        }
+      });
       g.floors.forEach((f, fi) => {
         const p = `geometry.floors[${fi}]`;
         if (!isObj(f)) { err(p, 'not an object'); return; }
@@ -230,8 +243,43 @@ export function validate(data) {
           if (!(r.teacher === null || isStr(r.teacher))) err(rp + '.teacher', 'not a string or null');
           if (!Array.isArray(r.cells)) err(rp + '.cells', 'not an array');
           else r.cells.forEach((c, i) => { if (!inside(c)) err(`${rp}.cells[${i}]`, 'a cell outside cols by rows'); });
+          // Path 11 P6 increment 2, optional: the door cell and the corridor cells it opens onto.
+          if (own(r, 'door') || own(r, 'doors')) {
+            if (!inside(r.door) || !Array.isArray(r.cells) || !r.cells.some(c => Array.isArray(c) && c[0] === r.door[0] && c[1] === r.door[1])) {
+              err(rp + '.door', 'not one of the room\'s own cells');
+            }
+            if (!Array.isArray(r.doors)) err(rp + '.doors', 'not an array');
+            else r.doors.forEach((d, i) => {
+              const cell = Array.isArray(d) && (d.length === 2 || (d.length === 3 && d[2] === 1)) && inside(d.slice(0, 2));
+              if (!cell) err(`${rp}.doors[${i}]`, 'not [col, row] or [col, row, 1] inside cols by rows');
+              else if (!walk.has(fi + ':' + d[0] + ',' + d[1])) err(`${rp}.doors[${i}]`, 'not a hallway or staircase cell');
+            });
+          }
         });
+        if (own(f, 'steps')) {
+          if (!Array.isArray(f.steps)) err(p + '.steps', 'not an array');
+          else f.steps.forEach((c, i) => {
+            if (!inside(c) || !(Array.isArray(f.hall) && f.hall.some(h => h[0] === c[0] && h[1] === c[1]))) err(`${p}.steps[${i}]`, 'not a hallway cell');
+          });
+        }
       });
+      // Path 11 P6 increment 2, optional: the staircase pairs, each end a staircase cell of a floor here.
+      if (own(g, 'links')) {
+        const ACCESS = ['stairs', 'elevator', 'ramp'];
+        if (!Array.isArray(g.links)) err('geometry.links', 'not an array');
+        else g.links.forEach((l, i) => {
+          const lp = `geometry.links[${i}]`;
+          if (!isObj(l)) { err(lp, 'not an object'); return; }
+          for (const end of ['a', 'b']) {
+            const e = l[end];
+            const fi = Array.isArray(e) && e.length === 3 ? g.floors.findIndex(f => isObj(f) && f.id === e[0]) : -1;
+            if (fi < 0) err(`${lp}.${end}`, 'not [floorId, col, row] naming a floor');
+            else if (!stairs.has(fi + ':' + e[1] + ',' + e[2])) err(`${lp}.${end}`, 'not a staircase cell');
+          }
+          if (!ACCESS.includes(l.access)) err(lp + '.access', 'not stairs, elevator or ramp');
+          if (own(l, 'wait') && !(typeof l.wait === 'number' && isFinite(l.wait) && l.wait >= 0 && l.wait <= 999)) err(lp + '.wait', 'not a number from 0 to 999');
+        });
+      }
     }
   }
 

@@ -31,7 +31,8 @@
 // own section of the baseline. A published file it opens is written under
 // os.tmpdir() and removed after.
 
-/* global brPickScheduleFile -- a published file's own function, called inside page.evaluate() */
+/* global brPickScheduleFile, brSetMode, brUseSchedule -- a published file's own functions, called inside page.evaluate() */
+/* global brRouteGeometry, brBuildGeometrySnapshot -- 035's window copies of sv-browser.js's exports, called inside page.evaluate() */
 /* global AppState -- 035's state, read inside page.evaluate() */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -40,7 +41,7 @@ import os from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { publishFromFixture, generatorPath } from './publish.mjs';
 import { fixtureProject } from './fixture-northwind.mjs';
-import { prepPage } from '../../board-check/harness.mjs';
+import { prepPage, a11yScan } from '../../board-check/harness.mjs';
 import { readPublisher, assemble } from '../../board-check/check-publisher.mjs';
 import { readEmbedded, validate } from './published-contract.mjs';
 
@@ -202,7 +203,11 @@ async function increment2(run, pub, html) {
   //    clock 90 days past publishing so the out-of-date banner shows too.
   {
     const pieces = pub.fns.map(f => f.name).concat(pub.consts.map(c => c.name));
-    ok(pieces.length === 40, `40 published pieces to cover (got ${pieces.length})`);
+    ok(pieces.length === 46, `46 published pieces to cover (got ${pieces.length})`);
+    // Path 11 P6 increment 2: the file the walk opens carries directions, so the
+    // Directions tab (driven by name: a default publish has no such tab) routes.
+    const dirGeom = await run.page.evaluate(() => brRouteGeometry(brBuildGeometrySnapshot(AppState.blueprint), AppState.blueprint, AppState.settings));
+    const [dirFrom, dirTo] = dirGeom.floors.map(f => f.rooms.find(r => r.rn && r.door).rn);
     const o = await openPublished(browser, html, { at: '2026-04-15T17:00:00Z', coverage: true });
     const p = o.page;
     try {
@@ -230,9 +235,13 @@ async function increment2(run, pub, html) {
       // Path 11 P6: the opener is in every file, its button hidden unless the
       // publisher ticked the box, so it is driven by name here and by its
       // button in section 6.
-      const other = { ...data, school: 'Southgate Middle' };
+      const other = { ...data, school: 'Southgate Middle', geometry: dirGeom };
       await openFile(p, () => p.evaluate(() => brPickScheduleFile()), dataFile(other, 'southgate.json'));
       await p.waitForFunction(() => document.getElementById('br-mast-school').textContent === 'Southgate Middle');
+      await p.evaluate(() => brSetMode('dir'));
+      await p.selectOption('#br-dir-from', dirFrom);
+      await p.selectOption('#br-dir-to', dirTo);
+      await p.waitForSelector('#br-dir-out figure.br-dir-map polyline');
       await p.click('#br-open-back');
       await p.waitForFunction(() => document.getElementById('br-open-note').hidden);
       const cov = await p.coverage.stopJSCoverage();
@@ -327,6 +336,7 @@ async function increment2(run, pub, html) {
   }
 
   await increment6(run, pub, html);
+  await increment6Directions(run, pub, html);
 }
 
 /* Path 11 P6 increment 1: a published copy opens a newer schedule file, but
@@ -433,6 +443,106 @@ async function increment6(run, pub, html) {
     ok(await viewText(p) === ownDay, 'a format 0 data file shows the same day');
     ok(p.__errs.length === 0, 'no page errors while opening files: ' + JSON.stringify(p.__errs));
   } finally { await o.close(); }
+}
+
+/* Path 11 P6 increment 2: a published copy shows directions, but only one
+   whose publisher ticked Settings → Publishing → "show directions". */
+async function increment6Directions(run, pub, html) {
+  const browser = run.browser;
+  const cssStart = pub.css.split('\n')[0];
+  const tabs = page => page.evaluate(() => [...document.querySelectorAll('#app-browser .mode [role="tab"]')]
+    .map(b => b.id + ':' + b.getAttribute('aria-selected')));
+
+  // The default publish: three tabs, and End on them still lands on Building Map.
+  {
+    const o = await openPublished(browser, html, { at: NOW });
+    try {
+      ok(!(await o.page.$('#br-mDir')), 'a default publish has no Directions tab');
+      await o.page.focus('#br-mTeacher');
+      await o.page.keyboard.press('End');
+      ok(JSON.stringify(await tabs(o.page)) === '["br-mTeacher:false","br-mGroup:false","br-mMap:true"]', 'End on its tabs lands on Building Map, as before');
+      ok(!('links' in readEmbedded(html).geometry), 'and its geometry carries no links');
+    } finally { await o.close(); }
+  }
+
+  // Ticked: the markup gains the tab and the geometry the routing fields; nothing else moves.
+  const project = fixtureProject();
+  project.settings.publishDirections = true;
+  const h = await republish(run.page, { project });
+  const d = compare(stripFonts(html, cssStart), stripFonts(h, cssStart)).map(x => x.section);
+  ok(JSON.stringify(d) === '["markup","data"]', 'ticking the box moves the markup and the data only: ' + JSON.stringify(d));
+  const a = readEmbedded(html), b = readEmbedded(h);
+  ok(JSON.stringify({ ...a, geometry: null }) === JSON.stringify({ ...b, geometry: null }), 'in the data, only the geometry differs');
+  const geom = b.geometry;
+  ok(Array.isArray(geom.links) && geom.links.length === 1 && geom.floors.every(f => Array.isArray(f.steps)
+    && f.rooms.every(r => !r.rn || (Array.isArray(r.door) && r.doors.length))), 'and it carries links, steps and every room\'s door');
+  const v = validate(b);
+  ok(v.ok && v.warnings.length === 0, 'the ticked data meets the contract: ' + JSON.stringify(v.errors.slice(0, 3)));
+  const saved = await run.page.evaluate(() => ({ box: !!document.getElementById('setting-publish-directions'), key: AppState.settings.publishDirections }));
+  ok(saved.box && saved.key === true, 'Settings → Publishing has the box, and the project carries the setting: ' + JSON.stringify(saved));
+
+  const rooms = geom.floors.map(f => f.rooms.filter(r => r.rn && r.door).map(r => r.rn));
+  const o = await openPublished(browser, h, { at: NOW });
+  const p = o.page;
+  try {
+    ok(await p.isVisible('#br-mDir'), 'the ticked copy shows a Directions tab');
+    await p.focus('#br-mTeacher');
+    await p.keyboard.press('End');
+    ok(JSON.stringify(await tabs(p)) === '["br-mTeacher:false","br-mGroup:false","br-mMap:false","br-mDir:true"]', 'End reaches it, and it alone is selected');
+    ok(await p.evaluate(() => document.getElementById('br-stage').getAttribute('aria-labelledby')) === 'br-mDir', 'the panel is labelled by it');
+    ok(!(await p.isVisible('#br-searchField')), 'the name search is hidden, as on the map');
+    ok(await p.evaluate(() => document.getElementById('br-dir-out').innerText.includes('Choose the room')), 'with no rooms chosen it says what to do');
+    ok(!(await p.$('#br-dir-sf')), 'Northwind marks no elevator or ramp, so there is no step-free switch');
+
+    // Across the floors.
+    await p.selectOption('#br-dir-from', rooms[0][0]);
+    await p.selectOption('#br-dir-to', rooms[1][0]);
+    await p.waitForSelector('#br-dir-out .br-dir-steps li');
+    const shown = await p.evaluate(() => ({ steps: [...document.querySelectorAll('#br-dir-out .br-dir-steps li')].map(li => li.textContent),
+      maps: [...document.querySelectorAll('#br-dir-out figure.br-dir-map')].map(f => [f.querySelector('figcaption').textContent, f.querySelectorAll('polyline').length]),
+      badges: [...document.querySelectorAll('#br-dir-out svg text')].map(t => t.textContent).filter(t => t === 'Start' || t === 'End') }));
+    ok(shown.steps.includes('Take the stairs to Floor 2.') && shown.steps[shown.steps.length - 1] === `Arrive at room ${rooms[1][0]}.`,
+      `${rooms[0][0]} to ${rooms[1][0]}: the moves take the stairs and arrive: ` + shown.steps.join(' '));
+    ok(JSON.stringify(shown.maps) === '[["Floor 1",2],["Floor 2",2]]' && JSON.stringify(shown.badges) === '["Start","End"]',
+      'a map of each floor in order, the walk drawn on both, Start and End marked: ' + JSON.stringify(shown));
+    ok(!(await p.$('#br-dir-out [onclick]')), 'the route\'s maps open no teacher (nothing on them is clickable)');
+    const scan = await a11yScan(p, { impact: 'serious', include: '#br-view' });
+    ok(scan.length === 0, 'the Directions tab with a route has no serious or critical axe finding: ' + JSON.stringify(scan.map(x => [x.id, x.nodes])));
+
+    // The same room, and back to a teacher.
+    await p.selectOption('#br-dir-to', rooms[0][0]);
+    await p.waitForFunction(() => document.getElementById('br-dir-out').innerText.includes('same room'));
+    ok(true, 'from a room to itself it says so');
+    await p.click('#br-mTeacher');
+    ok(JSON.stringify(await tabs(p)) === '["br-mTeacher:true","br-mGroup:false","br-mMap:false","br-mDir:false"]' && await p.isVisible('#br-searchField'),
+      'By Teacher deselects Directions and brings the search back');
+    await pickTeacher(p, 'Fernwood');
+
+    // Data without directions (another file, published with the box off) says so.
+    await p.evaluate(d0 => { brUseSchedule(d0, 'old.html'); brSetMode('dir'); }, a);
+    ok((await viewText(p)).includes('This file has no directions.'), 'a schedule with no directions in it says so in the tab');
+    ok(p.__errs.length === 0, 'no page errors in the ticked copy: ' + JSON.stringify(p.__errs));
+  } finally { await o.close(); }
+
+  // An elevator: the switch appears and step-free directions take it.
+  {
+    const lift = fixtureProject();
+    lift.settings.publishDirections = true;
+    lift.blueprint.crossFloorPairs[0].access = 'elevator';
+    const hl = await republish(run.page, { project: lift });
+    const gl = readEmbedded(hl).geometry;
+    ok(JSON.stringify(gl.links.map(l => [l.access, l.wait])) === '[["elevator",10]]', 'an elevator is published with its wait: ' + JSON.stringify(gl.links));
+    const ol = await openPublished(browser, hl, { at: NOW });
+    try {
+      await ol.page.click('#br-mDir');
+      await ol.page.selectOption('#br-dir-from', rooms[0][0]);
+      await ol.page.selectOption('#br-dir-to', rooms[1][0]);
+      await ol.page.check('#br-dir-sf');
+      await ol.page.waitForFunction(() => /elevator/.test(document.getElementById('br-dir-out').innerText));
+      ok((await viewText(ol.page)).includes('Take the elevator to Floor 2.'), 'step-free directions take the elevator');
+      ok(ol.page.__errs.length === 0, 'no page errors: ' + JSON.stringify(ol.page.__errs));
+    } finally { await ol.close(); }
+  }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

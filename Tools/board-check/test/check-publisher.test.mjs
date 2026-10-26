@@ -35,7 +35,7 @@ console.log('check-publisher — the guard on the tree');
 const real = check();
 ok(real.failures.length === 0, 'the tree passes: ' + JSON.stringify(real.failures));
 const pub = readPublisher(html035);
-ok(pub.fns.length === 33, `33 listed functions (got ${pub.fns.length})`);
+ok(pub.fns.length === 39, `39 listed functions (got ${pub.fns.length})`);
 ok(pub.consts.length === 7, `7 .toString() constants (got ${pub.consts.length})`);
 ok(pub.json.filter(j => j.name !== 'BR_STALE_DAYS' && j.name !== 'BR_READS_FORMAT').length === 2, '2 JSON constants');
 ok(pub.json.some(j => j.name === 'BR_READS_FORMAT' && j.value === FORMAT), 'BR_READS_FORMAT is read, and is FORMAT');
@@ -49,7 +49,7 @@ ok(pub.plan.items.find(e => e.kind === 'data').escaped === true, "PUBLISHED_DATA
 ok(assemble(pub, { school: '</script><b>' }).includes('"school":"\\u003c/script>\\u003cb>"'),
   'assemble() escapes < in the data as the page does');
 const c = s => real.fork.filter(f => f.state === s).length;
-ok(c('same') === 21 && c('forked') === 12 && c('absent') === 7, `034: 21 same, 12 forked, 7 absent (got ${c('same')}/${c('forked')}/${c('absent')})`);
+ok(c('same') === 21 && c('forked') === 12 && c('absent') === 13, `034: 21 same, 12 forked, 13 absent (got ${c('same')}/${c('forked')}/${c('absent')})`);
 const script = assemble(pub, {});
 ok(script.startsWith("'use strict';\n"), 'the assembled script is strict');
 const free = freeNames(script);
@@ -142,6 +142,19 @@ expect('br-view renamed in the markup', ['ID'], {
   b35: edit(browser035, '<div id="br-view"', '<div id="br-viewport"', 'id'),
   mention: 'br-view',
 });
+// Path 11 P6 increment 2: the Directions tab's id lives only in the ticked branch of the markup.
+expect('br-mDir renamed in the markup', ['ID'], {
+  b35: edit(browser035, '<button id="br-mDir"', '<button id="br-mDirections"', 'id'),
+  mention: 'br-mDir',
+});
+expect('brDirSteps left out of the function list', ['FREE'], {
+  b35: edit(browser035, 'brDirGraph, brDirRoute, brDirSteps, brRenderDirections,', 'brDirGraph, brDirRoute, brRenderDirections,', 'list'),
+  led: ledgerWithout('brDirSteps'), mention: 'brDirSteps',
+});
+expect('the directions remembering the last route', ['LIVE'], {
+  b35: edit(browser035, "  const sfBox = document.getElementById('br-dir-sf');", "  const sfBox = document.getElementById('br-dir-sf');\n  localStorage.setItem('br-dir', from);", 'live'),
+  mention: 'localStorage',
+});
 expect("brGrpDay = 'B' in the preamble only", ['STATE'], {
   b35: edit(browser035, `"let brGrpDay = 'A', brMapFloorIdx = 0;",`, `"let brGrpDay = 'B', brMapFloorIdx = 0;",`, 'state'),
   mention: 'brGrpDay',
@@ -161,7 +174,7 @@ expect('a <link> in the published head', ['HEAD'], {
   b35: edit(browser035, `+ '<meta charset="UTF-8">\\n'`, `+ '<meta charset="UTF-8">\\n<link rel="icon" href="x.png">\\n'`, 'head'),
 });
 expect('a spread in the function list', ['SHAPE'], {
-  b35: edit(browser035, 'brPickScheduleFile, brOpenScheduleFile\n  ];', 'brPickScheduleFile, brOpenScheduleFile, ...[]\n  ];', 'spread'),
+  b35: edit(browser035, 'brShowRoute, brDirMapsHTML\n  ];', 'brShowRoute, brDirMapsHTML, ...[]\n  ];', 'spread'),
 });
 expect('a ternary in consts', ['SHAPE'], {
   b35: edit(browser035, "    'const BR_STALE_DAYS = ' + BR_STALE_DAYS + ';'", "    (1 ? 'const BR_STALE_DAYS = ' + BR_STALE_DAYS + ';' : '')", 'ternary'),
@@ -201,7 +214,7 @@ expect('brRenderMapLegacy published after all (KNOWN_FREE expired)', ['FREE', 'H
   led: ledgerWith('absent', 'brRenderMapLegacy'), mention: 'KNOWN_FREE',
 });
 expect('the publisher writes a data key the contract does not have', ['DATA'], {
-  b35: edit(browser035, 'bell: BR_BELL, geometry: BR_GEOM\n  };', 'bell: BR_BELL, geometry: BR_GEOM, extra: 1\n  };', 'data'),
+  b35: edit(browser035, 'brRouteGeometry(BR_GEOM, AppState.blueprint, AppState.settings) : BR_GEOM\n  };', 'brRouteGeometry(BR_GEOM, AppState.blueprint, AppState.settings) : BR_GEOM, extra: 1\n  };', 'data'),
 });
 expect('the publisher drops format from its data', ['DATA'], {
   b35: edit(browser035, '    format: 1, tool: TOOL_VERSION,\n', '    tool: TOOL_VERSION,\n', 'format'),

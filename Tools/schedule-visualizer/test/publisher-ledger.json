@@ -44,6 +44,12 @@
     "brReadSchedule": "Path 11 P6 increment 1: reads another published file's data; 034 opens no file.",
     "brUseSchedule": "Path 11 P6 increment 1: swaps the schedule showing; 034 shows only its own.",
     "brPickScheduleFile": "Path 11 P6 increment 1: the Open a newer schedule button; 034 has none.",
-    "brOpenScheduleFile": "Path 11 P6 increment 1: the file input's handler; 034 has none."
+    "brOpenScheduleFile": "Path 11 P6 increment 1: the file input's handler; 034 has none.",
+    "brDirGraph": "Path 11 P6 increment 2: the walk a published copy routes its Directions tab on; 034 has no directions.",
+    "brDirRoute": "Path 11 P6 increment 2: the route between two rooms, on brDirGraph; 034 has no directions.",
+    "brDirSteps": "Path 11 P6 increment 2: a route's moves in sv-routes.js routeSteps()'s words; 034 has no directions.",
+    "brRenderDirections": "Path 11 P6 increment 2: the Directions tab; 034 has no such tab.",
+    "brShowRoute": "Path 11 P6 increment 2: the Directions tab's room lists' handler; 034 has no such tab.",
+    "brDirMapsHTML": "Path 11 P6 increment 2: the floor maps with the route drawn on them; 034 has no directions."
   }
 }

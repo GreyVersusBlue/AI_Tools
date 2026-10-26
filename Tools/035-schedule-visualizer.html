@@ -1952,6 +1952,15 @@
               </span>
             </label>
           </div>
+          <div class="form-row">
+            <label style="display:flex;align-items:flex-start;gap:var(--sp-2);cursor:pointer;user-select:none;">
+              <input type="checkbox" id="setting-publish-directions" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent);" />
+              <span>
+                <span class="form-label" style="display:block;">Published copies show directions</span>
+                <span class="form-hint" style="display:block;">Adds a Directions tab to the files Publish for Teachers makes from now on: pick two rooms and the copy shows the way on the floor maps, step-free too when a staircase is marked as an elevator or ramp. Each copy then carries every room's door and the staircases, which a copy without the tab does not. Off, a published copy looks exactly as before. Copies already sent do not change.</span>
+              </span>
+            </label>
+          </div>
         </div>
 
         <!-- R59: Subjects / Departments editor -->
@@ -3858,6 +3867,7 @@ const els = {
   evacPlanInput:    document.getElementById('setting-evac-no-step-free'),       // Path 11 P4
   lockdownNoteInput: document.getElementById('setting-lockdown-note'),         // Path 11 P4
   publishCanOpenInput: document.getElementById('setting-publish-can-open'),    // Path 11 P6
+  publishDirectionsInput: document.getElementById('setting-publish-directions'), // Path 11 P6
   modPreviewChips:  document.getElementById('mod-preview-chips'),
   headerSchoolName: document.getElementById('header-school-name'),
   headerModCount:   document.getElementById('header-mod-count'),
@@ -3896,6 +3906,7 @@ function populateSettingsForm() {
   if (els.evacPlanInput) els.evacPlanInput.value = typeof AppState.settings.evacNoStepFreePlan === 'string' ? AppState.settings.evacNoStepFreePlan : '';
   if (els.lockdownNoteInput) els.lockdownNoteInput.value = typeof AppState.settings.lockdownNote === 'string' ? AppState.settings.lockdownNote : '';
   if (els.publishCanOpenInput) els.publishCanOpenInput.checked = AppState.settings.publishCanOpen === true;
+  if (els.publishDirectionsInput) els.publishDirectionsInput.checked = AppState.settings.publishDirections === true;
   renderBellScheduleEditor();
   renderSubjectsEditor();
 
@@ -4070,6 +4081,10 @@ els.btnSave.addEventListener('click', () => {
   if (els.publishCanOpenInput) {
     if (els.publishCanOpenInput.checked) AppState.settings.publishCanOpen = true;
     else delete AppState.settings.publishCanOpen;
+  }
+  if (els.publishDirectionsInput) {
+    if (els.publishDirectionsInput.checked) AppState.settings.publishDirections = true;
+    else delete AppState.settings.publishDirections;
   }
   saveSettings();
   saveLastSavedTime();

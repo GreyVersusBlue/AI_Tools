@@ -178,6 +178,15 @@ const BR_CSS = `#app-browser {
   background:var(--br-card);color:var(--br-forest-ink);font-size:14px;line-height:1.5;text-align:center}
 #app-browser .br-open-note .lnk{font:inherit;font-weight:700;background:none;border:none;padding:0;margin-left:6px;
   color:var(--br-forest-ink);text-decoration:underline;cursor:pointer}
+/* Path 11 P6: the Directions tab */
+#app-browser .br-dir-pick{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-end;margin:10px 0 16px}
+#app-browser .br-dir-pick select{font:inherit;font-size:15px;padding:9px 12px;border:1px solid var(--br-gold-soft);border-radius:10px;
+  background:var(--br-card);color:var(--br-ink);min-width:200px}
+#app-browser .br-dir-sf{display:inline-flex;align-items:center;gap:8px;font-size:14.5px;font-weight:600;color:var(--br-ink);cursor:pointer;padding-bottom:10px}
+#app-browser .br-dir-steps{margin:0 0 16px;padding-left:24px;font-size:15px;line-height:1.7;color:var(--br-ink)}
+#app-browser .br-dir-none{font-size:15px;font-weight:700;color:var(--br-alert-ink);margin:4px 0 14px}
+#app-browser .br-dir-map{margin:0 0 16px}
+#app-browser .br-dir-map figcaption{font-weight:700;color:var(--br-forest-ink);margin:0 0 6px}
 #app-browser .stale-banner::before{content:"⚠ "}
 #app-browser .stage{padding:34px 34px 30px}
 #app-browser .br-empty{text-align:center;color:var(--br-muted);padding:40px 20px}
@@ -756,6 +765,47 @@ function brBuildGeometrySnapshot(blueprint) {
   return { floors };
 }
 
+/* Path 11 P6 increment 2 (live-only): the geometry snapshot with what the
+   published Directions tab routes on (see brDirGraph), read off 035's own
+   graph (window.SVGraph, sv-graph.js) so the published walk cannot disagree
+   with it about which cell is a room's door. Only published when Settings →
+   "Published copies show directions" is ticked; null stays null. */
+function brRouteGeometry(geom, blueprint, settings) {
+  if (!geom || !Array.isArray(geom.floors)) return geom;
+  const G = window.SVGraph;
+  const graph = G.buildGraph(blueprint);
+  const marked = G.markedSteps(blueprint);
+  const stepDoor = new Set(marked.doors.map(d => d[0] + '|' + d[1]));
+  const stepHall = new Set(marked.hallways);
+  const wait = G.settingsElevatorWait(settings);
+  const floors = geom.floors.map(f => {
+    const rooms = f.rooms.map(room => {
+      const k = room.rn ? graph.roomToKey.get(room.rn) : null;
+      const p = k ? G.parseKey(k) : null;
+      if (!p || String(p.floorId) !== String(f.id) || !room.cells.some(c => c[0] === p.x && c[1] === p.y)) return room;
+      const doors = (graph.adjacency.get(k) || []).map(e => {
+        const q = G.parseKey(e.key);
+        return stepDoor.has(k + '|' + e.key) ? [q.x, q.y, 1] : [q.x, q.y];
+      });
+      return Object.assign({}, room, { door: [p.x, p.y], doors });
+    });
+    const steps = f.hall.filter(c => stepHall.has(G.floorCellKey(f.id, c[0], c[1])));
+    return Object.assign({}, f, { rooms, steps });
+  });
+  const links = [];
+  for (const pair of (blueprint.crossFloorPairs || [])) {
+    if (!pair || !pair.a || !pair.b) continue;
+    const a = G.floorCellKey(pair.a.floorId, pair.a.col, pair.a.row);
+    const b = G.floorCellKey(pair.b.floorId, pair.b.col, pair.b.row);
+    if (graph.types.get(a) !== 'staircase' || graph.types.get(b) !== 'staircase' || !G.pairInService(pair)) continue;
+    const access = G.pairAccess(pair);
+    const l = { a: [pair.a.floorId, pair.a.col, pair.a.row], b: [pair.b.floorId, pair.b.col, pair.b.row], access };
+    if (access === 'elevator') l.wait = G.elevatorWait(pair, wait);
+    links.push(l);
+  }
+  return Object.assign({}, geom, { floors, links });
+}
+
 function brLoadFromVisualizer() {
   try {
     const settings  = AppState.settings;
@@ -929,6 +979,231 @@ function brOpenScheduleFile(input) {
   }, () => say('That file could not be read.'));
 }
 
+/* === Path 11 P6 increment 2: directions ===
+   A published copy whose publisher ticked Settings → "Published copies show
+   directions" has a Directions tab: from a room to a room, as a list of
+   moves and a line on each floor the walk crosses. The walk is worked out
+   here, on the published geometry, which then carries what it needs and
+   otherwise never does (brRouteGeometry): each room's door cell (`door`) and
+   the corridor cells it opens onto (`doors`, a third element 1 marking a step
+   at that door), each floor's hallway `steps`, and the staircase pairs as
+   `links: [{ a: [floorId, c, r], b: [...], access, wait? }]`, out-of-service
+   elevators left out. The search is sv-graph.js's rules on that data: hallway
+   and staircase tiles joined side to side at a cost of 1, a pair at 0, a room
+   entered and left only through its door cell. Step-free drops every stairs
+   pair, every staircase tile that is not an end of an elevator or ramp, every
+   marked step, and makes an elevator cost its wait.
+   test/directions.test.mjs holds the cost of every route to sv-graph.js's. */
+
+/* The walk a published file routes on, or null when its geometry has no links. */
+function brDirGraph(geom, stepFree) {
+  if (!geom || !Array.isArray(geom.floors) || !Array.isArray(geom.links)) return null;
+  const key = (fi, c, r) => fi + ':' + c + ',' + r;
+  const isCell = c => Array.isArray(c) && Number.isInteger(c[0]) && Number.isInteger(c[1]);
+  const fidx = new Map();
+  geom.floors.forEach((f, i) => { if (f && !fidx.has(String(f.id))) fidx.set(String(f.id), i); });
+  const stair = new Set(), hall = new Set(), steps = new Set();
+  geom.floors.forEach((f, fi) => {
+    for (const c of (f && Array.isArray(f.hall) ? f.hall : [])) if (isCell(c)) hall.add(key(fi, c[0], c[1]));
+    for (const c of (f && Array.isArray(f.stair) ? f.stair : [])) if (isCell(c)) stair.add(key(fi, c[0], c[1]));
+    for (const c of (f && Array.isArray(f.steps) ? f.steps : [])) if (isCell(c)) steps.add(key(fi, c[0], c[1]));
+  });
+  const links = [], ends = new Set();
+  for (const l of geom.links) {
+    if (!l || !Array.isArray(l.a) || !Array.isArray(l.b)) continue;
+    const ia = fidx.get(String(l.a[0])), ib = fidx.get(String(l.b[0]));
+    if (ia === undefined || ib === undefined) continue;
+    const a = key(ia, l.a[1], l.a[2]), b = key(ib, l.b[1], l.b[2]);
+    if (!stair.has(a) || !stair.has(b)) continue;
+    const access = (l.access === 'elevator' || l.access === 'ramp') ? l.access : 'stairs';
+    const wait = (typeof l.wait === 'number' && isFinite(l.wait) && l.wait >= 0) ? l.wait : 10;
+    links.push({ a, b, access, wait });
+    if (access !== 'stairs') { ends.add(a); ends.add(b); }
+  }
+  const walkable = k => (hall.has(k) && !(stepFree && steps.has(k))) || (stair.has(k) && !(stepFree && !ends.has(k)));
+  const edges = new Map(), via = new Map();
+  const add = (a, b, cost) => { if (!edges.has(a)) edges.set(a, []); edges.get(a).push({ k: b, cost }); };
+  for (const k of hall) if (walkable(k)) edges.set(k, []);
+  for (const k of stair) if (walkable(k)) edges.set(k, []);
+  for (const k of edges.keys()) {
+    const m = /^(\d+):(-?\d+),(-?\d+)$/.exec(k);
+    const fi = m[1], c = +m[2], r = +m[3];
+    for (const [dc, dr] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+      const n = key(fi, c + dc, r + dr);
+      if (edges.has(n)) edges.get(k).push({ k: n, cost: 1 });
+    }
+  }
+  for (const l of links) {
+    if (stepFree && l.access === 'stairs') continue;
+    const cost = (stepFree && l.access === 'elevator') ? l.wait : 0;
+    add(l.a, l.b, cost); add(l.b, l.a, cost);
+    if (!via.has(l.a + '>' + l.b)) via.set(l.a + '>' + l.b, l.access);
+    if (!via.has(l.b + '>' + l.a)) via.set(l.b + '>' + l.a, l.access);
+  }
+  const rooms = new Map();
+  geom.floors.forEach((f, fi) => {
+    for (const room of (f && Array.isArray(f.rooms) ? f.rooms : [])) {
+      if (!room || typeof room.rn !== 'string' || !isCell(room.door) || !Array.isArray(room.doors) || rooms.has(room.rn)) continue;
+      const doors = room.doors.filter(d => isCell(d) && !(stepFree && d[2] === 1))
+        .map(d => key(fi, d[0], d[1])).filter(k => edges.has(k));
+      rooms.set(room.rn, { key: key(fi, room.door[0], room.door[1]), doors });
+    }
+  });
+  return { edges, rooms, via, labels: geom.floors.map((f, i) => (f && typeof f.label === 'string' && f.label) || ('Floor ' + (i + 1))) };
+}
+
+/* { path: [keys], cost, steps } from room `from` to room `to`, { same: true },
+   or { error }. */
+function brDirRoute(geom, from, to, stepFree) {
+  const g = brDirGraph(geom, stepFree);
+  if (!g) return { error: 'This file has no directions' };
+  const A = g.rooms.get(from), B = g.rooms.get(to);
+  if (!A || !B) return { error: 'This map does not show the way into that room' };
+  if (from === to) return { same: true, path: [], cost: 0, steps: [] };
+  const none = stepFree ? 'No step-free route between these rooms' : 'No route between these rooms on this map';
+  const dist = new Map(), prev = new Map(), heap = [];
+  const push = (k, d) => {
+    heap.push([d, k]);
+    let i = heap.length - 1;
+    while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; }
+  };
+  const pop = () => {
+    const top = heap[0], last = heap.pop();
+    if (heap.length) {
+      heap[0] = last;
+      let i = 0;
+      for (;;) {
+        const l = 2 * i + 1, r = l + 1;
+        let s = i;
+        if (l < heap.length && heap[l][0] < heap[s][0]) s = l;
+        if (r < heap.length && heap[r][0] < heap[s][0]) s = r;
+        if (s === i) break;
+        [heap[s], heap[i]] = [heap[i], heap[s]]; i = s;
+      }
+    }
+    return top;
+  };
+  for (const d of A.doors) if (!dist.has(d)) { dist.set(d, 1); prev.set(d, A.key); push(d, 1); }
+  const goal = new Set(B.doors);
+  let best = Infinity, last = null;
+  while (heap.length) {
+    const [d, k] = pop();
+    if (d > dist.get(k) || d + 1 >= best) continue;
+    if (goal.has(k)) { best = d + 1; last = k; continue; }
+    for (const e of g.edges.get(k) || []) {
+      const nd = d + e.cost;
+      if (nd < (dist.has(e.k) ? dist.get(e.k) : Infinity)) { dist.set(e.k, nd); prev.set(e.k, k); push(e.k, nd); }
+    }
+  }
+  if (!last) return { error: none };
+  const path = [B.key];
+  for (let k = last; k; k = prev.get(k)) path.push(k);
+  path.reverse();
+  return { path, cost: best, steps: brDirSteps(g, path).concat('Arrive at room ' + to + '.') };
+}
+
+/* The moves along a path of brDirGraph keys, in sv-routes.js routeSteps()'s words. */
+function brDirSteps(g, path) {
+  const at = k => { const m = /^(\d+):(-?\d+),(-?\d+)$/.exec(k); return { f: +m[1], c: +m[2], r: +m[3] }; };
+  const word = (dc, dr) => dc === 1 ? 'east' : dc === -1 ? 'west' : dr === 1 ? 'south' : dr === -1 ? 'north' : null;
+  const steps = [];
+  let i = 0;
+  while (i < path.length - 1) {
+    const a = at(path[i]), b = at(path[i + 1]);
+    const dc = b.c - a.c, dr = b.r - a.r;
+    if (a.f !== b.f || Math.abs(dc) + Math.abs(dr) !== 1) {
+      const access = g.via.get(path[i] + '>' + path[i + 1]);
+      const by = access === 'elevator' ? 'the elevator' : access === 'ramp' ? 'the ramp' : 'the stairs';
+      steps.push('Take ' + by + ' to ' + g.labels[b.f] + '.');
+      i++;
+      continue;
+    }
+    let count = 1, j = i + 1;
+    while (j < path.length - 1) {
+      const p = at(path[j]), q = at(path[j + 1]);
+      if (p.f !== q.f || q.c - p.c !== dc || q.r - p.r !== dr) break;
+      count++; j++;
+    }
+    steps.push('Head ' + word(dc, dr) + ' ' + count + ' tile' + (count === 1 ? '' : 's') + '.');
+    i = j;
+  }
+  return steps;
+}
+
+/* The Directions tab: two room lists, a step-free switch when the building
+   marks an elevator or a ramp, and the route below them. */
+function brRenderDirections() {
+  const v = document.getElementById('br-view');
+  if (!BR_GEOM || !Array.isArray(BR_GEOM.floors) || !Array.isArray(BR_GEOM.links)) {
+    v.innerHTML = '<div class="br-empty"><div class="big">This file has no directions.</div>'
+      + '<div>Ask for a newer copy of the schedule browser.</div></div>';
+    return;
+  }
+  const rooms = [];
+  for (const f of BR_GEOM.floors) for (const r of ((f && f.rooms) || [])) {
+    if (r && typeof r.rn === 'string' && Array.isArray(r.door) && rooms.indexOf(r.rn) < 0) rooms.push(r.rn);
+  }
+  rooms.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const opts = '<option value="">Choose a room</option>' + rooms.map(rn => {
+    const t = BR_ROOM2TEACHER[rn];
+    return '<option value="' + escHtml(rn) + '">' + escHtml(rn) + (t ? ' · ' + escHtml(t) : '') + '</option>';
+  }).join('');
+  const sf = BR_GEOM.links.some(l => l && (l.access === 'elevator' || l.access === 'ramp'));
+  v.innerHTML = `
+   <div class="maptop"><div><h2>Directions</h2></div></div>
+   <div class="br-dir-pick">
+     <div class="br-field"><label for="br-dir-from">From room</label><select id="br-dir-from" onchange="brShowRoute()">${opts}</select></div>
+     <div class="br-field"><label for="br-dir-to">To room</label><select id="br-dir-to" onchange="brShowRoute()">${opts}</select></div>
+     ${sf ? '<label class="br-dir-sf"><input type="checkbox" id="br-dir-sf" onchange="brShowRoute()"> Step-free route (no stairs or steps)</label>' : ''}
+   </div>
+   <div id="br-dir-out" role="status"></div>`;
+  brShowRoute();
+}
+
+function brShowRoute() {
+  const out = document.getElementById('br-dir-out');
+  const from = document.getElementById('br-dir-from').value, to = document.getElementById('br-dir-to').value;
+  const sfBox = document.getElementById('br-dir-sf');
+  if (!from || !to) { out.innerHTML = '<p class="maphint">Choose the room you are in and the room you are going to.</p>'; return; }
+  const r = brDirRoute(BR_GEOM, from, to, !!(sfBox && sfBox.checked));
+  if (r.error) { out.innerHTML = '<p class="br-dir-none">' + escHtml(r.error) + '.</p>'; return; }
+  if (r.same) { out.innerHTML = '<p class="maphint">Those are the same room.</p>'; return; }
+  out.innerHTML = '<ol class="br-dir-steps">' + r.steps.map(s => '<li>' + escHtml(s) + '</li>').join('') + '</ol>'
+    + brDirMapsHTML(r.path, from, to);
+}
+
+/* One floor map per floor the path crosses, in order, the walk drawn on it. */
+function brDirMapsHTML(path, from, to) {
+  const px = 26;
+  const at = k => { const m = /^(\d+):(-?\d+),(-?\d+)$/.exec(k); return { f: +m[1], c: +m[2], r: +m[3] }; };
+  const parts = [];
+  let run = [];
+  for (let i = 0; i < path.length; i++) {
+    const p = at(path[i]), q = run.length ? run[run.length - 1] : null;
+    if (q && (q.f !== p.f || Math.abs(q.c - p.c) + Math.abs(q.r - p.r) !== 1)) {
+      const last = parts[parts.length - 1];
+      if (last && last.f === q.f) last.runs.push(run); else parts.push({ f: q.f, runs: [run] });
+      run = [];
+    }
+    run.push(p);
+  }
+  if (run.length) {
+    const last = parts[parts.length - 1];
+    if (last && last.f === run[0].f) last.runs.push(run); else parts.push({ f: run[0].f, runs: [run] });
+  }
+  const hi = {}; hi[from] = 'Start'; hi[to] = 'End';
+  return parts.map(part => {
+    const fg = BR_GEOM.floors[part.f];
+    const lines = part.runs.map(rn => {
+      const pts = rn.map(p => (p.c * px + px / 2) + ',' + (p.r * px + px / 2)).join(' ');
+      return '<polyline points="' + pts + '" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>'
+        + '<polyline points="' + pts + '" fill="none" stroke="#0c4b31" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>';
+    }).join('');
+    const svg = brGeoFloorSVG(fg, { highlights: hi, clickable: false, px }).replace(/<\/svg>$/, lines + '</svg>');
+    return '<figure class="br-dir-map"><figcaption>' + escHtml(fg.label) + '</figcaption><div class="mapscroll">' + svg + '</div></figure>';
+  }).join('');
+}
+
 /* === Search menu === */
 function brBuildOpts() {
   if (brMode === 'teacher') {
@@ -1030,12 +1305,17 @@ function brWireTabKeys() {
 function brSetMode(mo) {
   brMode=mo; brCurrent=null;
   brSyncTabs(mo);
+  /* Path 11 P6: brSyncTabs (034's copy too) knows no Directions tab. */
+  const dt = document.getElementById('br-mDir');
+  if (dt) { dt.classList.toggle('on', mo==='dir'); dt.setAttribute('aria-selected', mo==='dir' ? 'true' : 'false'); dt.tabIndex = mo==='dir' ? 0 : -1; }
+  if (dt && mo==='dir') document.getElementById('br-stage').setAttribute('aria-labelledby', 'br-mDir');
   const sf = document.getElementById('br-searchField');
-  if (mo==='map') {
+  if (mo==='map' || mo==='dir') {
     sf.style.display='none';
     document.getElementById('br-empty').style.display='none';
     const v=document.getElementById('br-view'); v.classList.remove('show'); void v.offsetWidth;
-    brRenderMap(); v.classList.add('show');
+    if (mo==='map') brRenderMap(); else brRenderDirections();
+    v.classList.add('show');
     return;
   }
   sf.style.display='';
@@ -1453,15 +1733,19 @@ function brPublishFnList() {
     brGeoFindRoom, brGeoFloorSVG, brMiniMapHTML, brGroupMapHTML, brSetGrpDay,
     brOpenMapFloorIdx, brSetMapFloorIdx, brRenderMap, brRenderMapDyn,
     brFormatDateLong, brCheckStaleness,
-    brCheckSchedule, brReadSchedule, brUseSchedule, brPickScheduleFile, brOpenScheduleFile
+    brCheckSchedule, brReadSchedule, brUseSchedule, brPickScheduleFile, brOpenScheduleFile,
+    brDirGraph, brDirRoute, brDirSteps, brRenderDirections, brShowRoute, brDirMapsHTML
   ];
 }
 
 /* opts.canOpen (Settings → Publishing, Path 11 P6): show "Open a newer
-   schedule…". Off, the button is in the file but hidden. */
+   schedule…". Off, the button is in the file but hidden. opts.directions:
+   a fourth tab, Directions. Off, there is no such tab (a hidden one would
+   still be a stop for brWireTabKeys's arrow keys). */
 function brBuildPublishedMarkup(school, dateStr, opts) {
   const esc = brEscHTML(school);
   const canOpen = !!(opts && opts.canOpen);
+  const directions = !!(opts && opts.directions);
   return `<div id="app-browser">
   <div class="br-wrap">
     <header class="mast">
@@ -1477,7 +1761,8 @@ function brBuildPublishedMarkup(school, dateStr, opts) {
         <div class="mode" role="tablist" aria-label="Schedule view">
           <button id="br-mTeacher" class="on" role="tab" aria-selected="true"  aria-controls="br-stage" tabindex="0"  onclick="brSetMode('teacher')">By Teacher</button>
           <button id="br-mGroup"   role="tab" aria-selected="false" aria-controls="br-stage" tabindex="-1" onclick="brSetMode('group')">By Student Group</button>
-          <button id="br-mMap"     role="tab" aria-selected="false" aria-controls="br-stage" tabindex="-1" onclick="brSetMode('map')">Building Map</button>
+          <button id="br-mMap"     role="tab" aria-selected="false" aria-controls="br-stage" tabindex="-1" onclick="brSetMode('map')">Building Map</button>${directions ? `
+          <button id="br-mDir"     role="tab" aria-selected="false" aria-controls="br-stage" tabindex="-1" onclick="brSetMode('dir')">Directions</button>` : ''}
         </div>
         <div class="br-field" id="br-searchField">
           <label id="br-searchLabel" for="br-search">Find a teacher</label>
@@ -1531,7 +1816,9 @@ function brBuildPublishedHTML() {
     dept: BR_DEPT, order: BR_ORDER,
     teachers: BR_TEACHERS, sections: BR_SECTIONS, room2teacher: BR_ROOM2TEACHER,
     groupRooms: BR_GROUPROOMS, modCount: BR_MODCOUNT, modLabel: BR_MOD_LABEL,
-    bell: BR_BELL, geometry: BR_GEOM
+    bell: BR_BELL,
+    /* Path 11 P6: door cells and staircase pairs only when the publisher ticked "show directions". */
+    geometry: AppState.settings.publishDirections ? brRouteGeometry(BR_GEOM, AppState.blueprint, AppState.settings) : BR_GEOM
   };
 
   const consts = [
@@ -1617,7 +1904,8 @@ function brBuildPublishedHTML() {
     + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
     + '<title>' + brEscHTML(school) + ' — Schedule Browser</title>\n'
     + '<style>\n' + css + '\n</style>\n</head>\n<body class="br-published">\n'
-    + brBuildPublishedMarkup(school, dateStr, { canOpen: !!AppState.settings.publishCanOpen })
+    + brBuildPublishedMarkup(school, dateStr, { canOpen: !!AppState.settings.publishCanOpen,
+      directions: !!AppState.settings.publishDirections })
     + '\n<script>\n' + js + '\n<\/script>\n</body>\n</html>\n';
 }
 
@@ -1674,5 +1962,6 @@ export {
   brLocalISODate, brBuildPublishedHTML, brPublish, brCopyPublishedHTML, BR_CSS, BR_LEGACY_SHORT,
   BR_DEPT_FALLBACK, BR_STALE_DAYS, brDColor, brTDept, brDShort, brOrderOf, BR_A_TPL, brAR, brCR, BR_WINGS,
   BR_CTXLABEL, brWingOf, brFloorOfWing, brCheckSchedule, brReadSchedule, brUseSchedule, brPickScheduleFile,
-  brOpenScheduleFile, BR_READS_FORMAT
+  brOpenScheduleFile, BR_READS_FORMAT, brRouteGeometry, brDirGraph, brDirRoute, brDirSteps, brRenderDirections,
+  brShowRoute, brDirMapsHTML
 };
