@@ -9,6 +9,65 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P6 increment 2: a published copy shows directions (2026-10-25, AI-20, `CACHE_VERSION` v333)
+
+**Built.** A second box in 035's Settings → Publishing, "Published copies show directions"
+(`settings.publishDirections`, absent when off). Ticked, a published file has a fourth tab, Directions: "From room"
+and "To room" lists (room number · teacher, every room with a door cell), a "Step-free route (no stairs or steps)"
+switch only when a pair is marked elevator or ramp, the moves as a numbered list, and one floor map per floor the
+walk crosses, in order, the route drawn as a line and Start/End marked (`brGeoFloorSVG` unchanged, the line added
+after it; nothing on these maps is clickable). From a room to itself it says so; data with no `links` says "This file
+has no directions. Ask for a newer copy of the schedule browser."
+
+**How the copy routes.** `brDirGraph(geom, stepFree)` and `brDirRoute()` are a Dijkstra in the published file on
+`sv-graph.js`'s rules: hallway and staircase tiles joined side to side at 1, a pair at 0, a room left and entered only
+at its door cell; step-free drops stairs pairs, staircase tiles that are not an elevator or ramp end, marked hallway
+steps and doors marked as a step, and an elevator costs its wait. `brDirSteps()` is `routeSteps()`'s wording.
+The geometry gains, only when ticked, what the walk needs (optional fields, no `FORMAT` bump, contract rules for each):
+`rooms[].door` (the graph's `roomToKey` cell) and `rooms[].doors` (that cell's corridor neighbours, `[c, r, 1]` for a
+step at that door), `floors[].steps`, and `geometry.links` (`{ a: [floorId, c, r], b, access, wait? }`, only pairs
+whose ends are both staircases, out-of-service elevators left out, an elevator's `wait` resolved against Settings'
+default). The live side, `brRouteGeometry()`, reads these off 035's own graph through `window.SVGraph` (sv-browser.js
+may not import: the offline copy ships it as a classic script), so the copy cannot disagree with 035 about which cell
+is a room's door.
+
+**Calls made here.** (1) The suite holds route *cost* to `sv-graph.js`, not cell count as the design said: with a
+0-cost pair two cheapest routes can differ in cells, and A* and Dijkstra break the tie differently. It also checks
+every published route is a walk in 035's graph and that `brDirSteps` on 035's own path says what `routeSteps` says.
+(2) Unticked, the tab is left out of the markup rather than published `hidden` as increment 1's button is: a hidden
+`role="tab"` would still be a stop for `brWireTabKeys`'s arrow keys (a `same` piece, so it could not learn to skip it
+without touching 034), which would change a default file's keyboard behaviour. (3) `brSetMode` (forked, 035's own)
+sets the Directions tab's state itself, because `brSyncTabs` is `same` and 034 is not touched. (4) The tab's heading
+has no `.role` subtitle: the shared muted style failed axe colour contrast on it (the Building Map tab uses the same
+style; not changed here).
+
+**What changed in the published output, exactly.** `baseline-northwind.html` regenerated with `--update`
+(66,648 → 78,100 bytes, +218 −2 lines): BR_CSS gains nine `.br-dir-*` rules; `brSetMode` gains the `dir` branch
+(the two removed lines are its `if (mo==='map')` and `brRenderMap(); v.classList.add('show');`); six new functions.
+The data and markup sections are byte-identical. A ticked publish differs from the default in the markup (the tab)
+and the data (the geometry fields) only; the suite asserts both and that nothing else in the data moves.
+
+**Guards.** Ledger `absent` +6 (13 now). `test:check-publisher` 81 → 84 (counts; spread fixture moved; three new
+breaks: `br-mDir` renamed fails ID, `brDirSteps` dropped from the list fails FREE, the tab writing localStorage fails
+LIVE). `test:schedule-publish` 53 → 78: the coverage walk is 46 pieces and opens a file with directions to drive the
+tab; a new section checks the default file has no tab and End still lands on Building Map, the ticked copy's tabs,
+keys and panel label, a route from Floor 1 to Floor 2 (stairs, two maps with lines, Start/End), axe on the tab (0
+serious), the same room, By Teacher after it, a schedule without directions, and an elevator (published with wait 10,
+step-free takes it). New pure suite `test:schedule-directions` (42): `graph.test.mjs`'s six blueprints, Northwind, and
+a stairs/elevator/ramp building in six variants (stairs only, elevator out of service, its own wait, a hallway step, a
+door step), ordinary and step-free, every ordered room pair; plus contract checks and four data breaks. Six code breaks
+were made on purpose (stair tiles kept step-free, a pair costing 1, a door step ignored, a hallway step ignored,
+stairs pairs kept step-free, the live door cell taken as the room's first cell): each failed it. Size ledger: 035 is
+296,603 bytes (the Settings box), still under 300 KB.
+
+**Ran green:** lint; all thirteen `check:*` guards (`check:precache --base origin/main`); `test:check-publisher` (84);
+`test:schedule-publish` (78); `test:schedule-directions` (42); `run-suites --only schedule-visualizer` (24),
+`--only schedule-browser` (4), `--only theme` (3); a11y sweep `--only 035` (0 findings); `test:select-suites` (93);
+`offline:build` + `offline:verify` (035 passes, all 39 published functions are source text; 046 still fails with
+`Invalid URL`, unchanged). A screenshot of a ticked copy's step-free route was looked at. **Not run:** full `npm test`;
+`audit-print` (no print CSS changed; printing a route was not looked at). **Not verified:** a real building; a phone;
+the tab in the dark palette; whether "tiles" means anything to a teacher (it is 035's own word on its route sheets).
+
 ## Path 11 P6 designed, increment 1: a published copy opens a newer schedule file (2026-10-25, AI-20, `CACHE_VERSION` v332)
 
 **Designed** in the P6 bullet of `BACKLOG.md`'s Path 11: three increments, each behind its own box in 035's new

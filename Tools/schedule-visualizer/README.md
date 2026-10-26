@@ -145,6 +145,17 @@ masthead and the stale banner (which reads `brData`, the schedule showing),
 until Back or the tab closes. Nothing is stored. The suite drives it by name in
 the coverage walk and by its button in a ticked copy.
 
+Since v333 (increment 2) a published file can show directions. Settings →
+Publishing → "Published copies show directions" (`settings.publishDirections`,
+off by default) adds a Directions tab: two room lists, a step-free switch when a
+pair is marked elevator or ramp, the moves, and a map of each floor crossed with
+the route drawn. Only then does the published geometry carry what the walk needs
+(`rooms[].door`/`doors`, `floors[].steps`, `geometry.links`), read off 035's own
+graph by `brRouteGeometry()`; off, a published file's data and markup are what
+they were and the tab is not in the markup at all. The copy routes with
+`brDirGraph()`/`brDirRoute()`, and `npm run test:schedule-directions` (pure Node)
+holds every room pair's route cost to `sv-graph.js`'s, ordinary and step-free.
+
 `npm run check:publisher` reads 035's publisher as text and fails on a listed
 function that is not one top-level declaration, a free name, a construct that
 is not strict, a handler or element id the published file lacks, a preamble
