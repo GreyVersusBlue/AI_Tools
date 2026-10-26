@@ -87,6 +87,10 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-21 (v335), rank 31 DELETED (a gap): Path 13 P1 is built.** `_shared/grouping.js` (`Grouping`: `plan`, `formGroups`,
+  `rotateRoles`, `coverRoles`, the id-keyed memory and its mirror of the old fields) and `Roster.idsFor`; no page loads it.
+  New pure suites `test:grouping` and `test:grouping-parity`; no new port (**next free 8555**). **Next on Path 13: rank 32,
+  P2, the six adopters**, starting with the smallest (007, 087, 021) as the P1 bullet's *What each adopter changes* says.
 - **AI-20 (v334), ranks 25 and 26 DELETED (gaps): Path 11 P6 is whole, and Path 11 with it.** Increment 3: a published
   copy can show a Sub Plan tab (behind 035's third Settings → Publishing box, off: data and markup unchanged; ticked,
   only the markup moves), with who is on Planning each mod, a box per mod, "Copy the plan" as text and one printed page.
@@ -705,8 +709,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Increment 5 (AI-14, v300): named sets on 030, an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section, and its storage design under it): made from ticked questions of the bank or a built-in set, a question in a set more than once if wanted; reordered, trimmed, renamed, deleted, printed and pulled into a board whole from “Questions from”; carried in the bank file and imported beside a set already here, never over it; and a Tag filter on 030's list (the chosen source's tags).** **Left:** 018 and 019 pull station questions from it. 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
-| 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
-| 32 | Path 13 P2 — adopt in 002, 022, 027, 007; seating-aware grouping and project teams | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
+| 32 | Path 13 P2 — adopt `_shared/grouping.js` (P1 built, v335) in 007, 087, 021, 027, 022 and 002, one PR each: the first commit of each is the port, held by `test:grouping-parity`'s copies of that tool, and each improvement is a later commit with its own `CACHE_VERSION`. 002 keeps `gtg-memory.js` (long memory, roles) after `formGroups()`; the memory is a `groupHistory` field mirrored to the old fields (the P1 bullet's *Storage*). Then seating-aware grouping (`cost` from `SeatingRead`) and project teams on 002 | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 33 | Path 13 P3 — `_shared/bracket.js` + `_shared/rotation.js`; fix 021’s silent overwrite bug | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 34 | Path 13 P4 — bracket completeness: double elimination, pools, Swiss, ties, consolation | 020 | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 35 | Path 14 P3 — seating constraint solver that explains which soft constraints it broke (**designed 2026-10-05, not built**: the design and eleven questions for Devon are under the P3 bullet) | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
@@ -5562,8 +5565,33 @@ match; 021 silently overwrites a saved unit on a name collision (a real bug).
   history model keyed on student ids (Path 3) with a retention policy that is a
   setting, not a constant. *Fable for reconciling four tools' constraint semantics
   into one API without changing any tool's results for existing inputs.*
-  **Designed, not built (AI-21, 2026-10-05, a design pass: no code, nothing run in a browser). Everything from
-  here to P2 is the design.** Read from the tree at v248: 002, 022, 027 and 021's pages, 007's page and
+  **Built (AI-21, 2026-10-25, `CACHE_VERSION` v335): `_shared/grouping.js`, as designed below, with the changes in
+  *As built*. No page loads it; that is P2.** The design was written by AI-21 on 2026-10-05 (no code, nothing run in a
+  browser); everything from here to *As built* is that design, and Devon's answers to its ten questions are at its end.
+  - *As built (2026-10-25).* `npm run test:grouping` (27 named checks, each also run against a copy of the engine with
+    its rule broken on purpose, which must fail it, and `golden.json`, twelve fixed-seed results) and `npm run
+    test:grouping-parity` (copies of 002, 022, 027, 007's `np-pick.js`, 087's `cs-core.js` and 021 taken out of the
+    pages at v334 into `Tools/grouping/test/_legacy.mjs`: the same groups, floaters, violations, roles and generator
+    position, 122,046 checks). `Roster.idsFor(names, rosterName)` is in `roster.js`, tested in `roster.test.mjs` (pure)
+    and not in `smoke-rename-follow.mjs` as written below: nothing on a page calls it yet. What differs from the design,
+    each a call made in the build (`HISTORY.md` has the reasons): (1) **002 had moved on since v248**: `gtg-memory.js`
+    (v277) adds a long-memory refine and a Hungarian role rotation with its own `roleHistory` shape. Both stay 002's
+    and run after `formGroups()` where they run today; parity is held with long memory off and no roles. (2)
+    `allowEmpty` on `plan()`/`formGroups()`: 007 and 021 make empty groups when asked for more groups than names, so
+    the count's upper clamp is an option. (3) No present members is no groups (002 made `[[]]`, from a state its page
+    never reaches: Generate is off under two present). (4) `history.record(h, groups, { pairs: false })` records roles
+    only (027); `rotateRoles` also reads a plain `{ key: [role] }` map. (5) `identify()`'s `moved` entries are
+    `{ why: 'renamed'|'rekeyed', key, fromKey, fromName, toName }`. (6) Every function trusts a memory shaped as
+    `normalize()` returns it (what every function here returns) and normalizes anything else; a tool normalizes what it
+    loads, once. Without that `record()` was eight times slower than 002's own code. (7) Under `together: 'units'` the
+    blocks go first, each into the smallest group, then the strategy orders the rest and each goes to the smallest
+    group, so a strategy's balance under `units` is kept by `keepStrategy`, not by the deal. (8) The 022 keep-apart
+    claim is held to three standard deviations where 022 fails at all (30 in 3 with 20 pairs: 022 23 of 2,000, the
+    engine 24, mostly classes no search can do), and to zero where 022 never fails (five of the seven shapes). (9) The
+    002 grid runs 100 seeds a configuration by default (10,380 groupings, about two minutes; 002's own copy is the slow
+    side); `GTG_SEEDS=300` runs the design's figure, which passed once in the build. **Found in the build:** a
+    `{ __proto__: true }` literal makes no key, so the first draft's `normalize()` kept `__proto__`; the suite caught it.
+    **Not verified:** no page has loaded the module; `identify()` against a sidecar 006 wrote; anything on a phone. Read from the tree at v248: 002, 022, 027 and 021's pages, 007's page and
   `Tools/name-picker/np-pick.js`, 087's `Tools/class-screen/cs-core.js`, 020's pools, `_shared/roster.js`
   (`trackRenames`, `reconcile`, `idIndex`), `_shared/seating-read.js`, the registry rows and the suites behind
   `test:groups`, `test:lab-groups`, `test:novel-study` and `test:name-picker`. Figures marked *measured* came
@@ -5817,7 +5845,8 @@ match; 021 silently overwrites a saved unit on a name collision (a real bug).
     from this text. The probe's classes were random pairs and random skills, not a real class's constraints.
     The older-cache case was read from 022's and 027's load functions, not reproduced. `identify()`'s rule (b)
     has not been run against a sidecar written by 006.
-  - **Questions for Devon. None is answered here; each says what the design assumes until he does.**
+  - **Questions for Devon: answered 2026-10-21 (P13-1 to P13-10 on his open-questions form), "keep the default", all
+    ten. Each is settled as the assumption it states, and the build follows them.**
     1. *Skill on the shared record* (Path 3's Decisions, and 002's open question). Do skill or level values
        belong on the shared student record, or only inside the tool that asks for them? Assumed: the standing
        default, no; `attrs` is handed in by the calling tool from its own storage, and the engine stores no

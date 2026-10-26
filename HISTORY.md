@@ -9,6 +9,73 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 13 P1: the one grouping engine, `_shared/grouping.js` (2026-10-25, AI-21, `CACHE_VERSION` v335)
+
+**Built.** `_shared/grouping.js`, a classic script publishing `Grouping`, to the design AI-21 wrote on 2026-10-05
+(BACKLOG, Path 13, the P1 bullet). Devon answered its ten questions on 2026-10-21 (P13-1 to P13-10, "keep the
+default", all ten), so the build follows the assumptions as written: no skill on the shared record, a memory per tool,
+022 and 027 remember roles only, every press counts, never over the group size, each tool keeps its rounding, the
+teacher's strategy wins under `keepStrategy`, keep-together is a block once `units` is on, a departed student kept by
+each tool's rule, balance on skill only. `plan()`, `formGroups()`, `rotateRoles()`, `coverRoles()`, `rng`/`newSeed`/
+`pin`, and `history.*` (empty, normalize, record, count, lastGen, rolesOf, coverage, rekey, prune, identify,
+fromLegacy, toLegacyPairs, toLegacyRoles, absorbLegacy). `Roster.idsFor(names, rosterName)` added to `roster.js`,
+read-only. No page loads the engine; P2 (rank 32) adopts it. Commit c5f2ef3.
+
+**How it is held.** `test:grouping-parity`: `Tools/grouping/test/_legacy.mjs` holds the six splitters and the role
+picker copied out of the v334 pages (only `Math.random` made an argument and page state a context object; a
+line-by-line check against the files found nothing else), and old and new are fed two generators from one seed: 007,
+087 (both rules) and 021 for 300 seeds each; 027 and 022 for 300 classes, 60 of them over eight meetings with roles and
+role history; 022's absent-role cover; 002 across five strategies, three remainder rules, count and size, with and
+without apart and together pairs, locks and absences, one to six generations of pair memory carried on both sides
+(10,380 groupings at 100 seeds a configuration; 300 passed once); the legacy fields there and back, and
+`absorbLegacy()` on what an older page writes. 122,046 checks, about two minutes. `test:grouping`: 27 named checks
+(plan for n 0 to 60 under every rule, placement for 500 seeds, seeds and pin, locks, the three impossible shapes and
+none on 2,000 satisfiable classes, `units` against `pairs` on the two-triples case at the measured 4.5%, `keepStrategy`
+over four generations, restarts, how the repair stops, fallback and dropped options, `spread`, the memory never written
+by `formGroups`, `best` never repeating when it need not, `greedy` at about 1.1%, the memory's functions, fifteen broken
+shapes for `normalize`, `identify`'s six cases), each run again against a copy of the engine with that check's rule
+broken (27 mutants, each must fail its check), and `golden.json`, twelve fixed-seed results.
+
+**Calls made here** (the design is the default; these are where the tree or the numbers said otherwise). (1) 002 grew
+`gtg-memory.js` at v277, after the design read 002 at v248: a long-memory refine after the repair and a Hungarian role
+rotation with a `roleHistory` of its own. Folding either into the engine would change 002's draws, so both stay 002's,
+run after `formGroups()` where they run today, and parity is held with long memory off and no roles. (2) `allowEmpty`:
+007's `np-pick.js` and 021's split make empty groups when asked for more groups than there are names, which the design's
+clamp to `n` would have changed. (3) No present members is no groups; 002 returned one empty group, from a state its page
+cannot reach (Generate is off under two present), and the parity grid skips that state as the page does. (4)
+`record(..., { pairs: false })` for 027, which remembers roles and not pairs, and `rotateRoles` reading a plain
+`{ key: [role] }` map. (5) `moved` entries carry both keys and both names, since the tools' own lists are by name. (6)
+Every function trusts a memory shaped as `normalize()` returns it: profiling showed `record()` spending its time
+re-normalizing (eight times 002's own cost); it now works on indexes and the hot loop reads pair tables built once per
+call, which brought the engine to about 002's own speed. (7) Under `units`, blocks go first into the smallest group and
+the rest follow the strategy's order into the smallest group; a pop-from-the-end guard against splitting a block was
+written and removed, because a block is always dealt before any single. (8) The design's "the engine fails no more
+often than 022" is a comparison of two samples; at 30 in 3 with 20 pairs it read 022 23 against the engine 24 of 2,000,
+so it is held to three standard deviations there and to zero on the five shapes where 022 never fails. (9) The 002 grid
+runs 100 seeds a configuration (002's copy costs about 35 ms a call at 36 students with memory, spending its 800-try
+budget), with `GTG_SEEDS=300` for the design's figure. (10) `Roster.idsFor` is tested in the pure `roster.test.mjs`
+(assertion 32), not the browser `smoke-rename-follow.mjs`: no page calls it yet.
+
+**Found.** `{ __proto__: true, constructor: true, prototype: true }` as an object literal sets the object's prototype
+and makes no `__proto__` key, so the first draft's guard let `__proto__` through `normalize()`; the fifteen-shapes check
+failed on it, and the set is now built on `Object.create(null)`. Four of the first mutants passed their checks (the
+restarts check could not reach a restart, the `best` check's mutant fell through to a swap search that happened to be
+optimal, the map-history check did not need the history, the golden check returned early under `--update`); each check
+was tightened until its mutant failed.
+
+**Bookkeeping.** `_shared/grouping.js` in `PRECACHE_URLS` and `SHELL_URLS`, `CACHE_VERSION` v334 → v335; `Grouping` in
+`eslint.config.js`'s `SITE_GLOBALS`; both suites in `suites.json` with `test:grouping` and `test:grouping-parity`; no
+registry row (no key); no new port. BACKLOG rank 31 deleted (a gap, ranks not renumbered) and rank 32 rewritten for what
+P2 now inherits; the P1 bullet marked built, with *As built* and Devon's answers.
+
+**Ran green:** lint; `check:tests`, `check:precache` (and `--base origin/main`), `check:dedupe`, `check:registry`,
+`check:docs-commands`, `check:adoption`, `check:entities`, `check:hidden-flex`, `check:print-clip`,
+`check:inline-sinks`, `check:art`, `check:publisher`; `test:grouping` (81); `test:grouping-parity` (122,046);
+`roster.test.mjs` (158); `test:select-suites` (93); `run-suites --only roster` (16 suites) and `--only service-worker`
+(3). **Not run:** full `npm test`; `offline:build`/`offline:verify` (no page references the file). **Not verified:**
+the engine on any page or in a browser; `identify()` against a sidecar 006 wrote; the old-cache case of the mirror
+(read from 022's and 027's load functions in the design, still not reproduced).
+
 ## Path 11 P6 increment 3: a published copy shows a sub plan; P6, P5 and Path 11 are whole (2026-10-25, AI-20, `CACHE_VERSION` v334)
 
 **Built.** A third box in 035's Settings → Publishing, "Published copies show a sub plan" (`settings.publishSubPlan`,
