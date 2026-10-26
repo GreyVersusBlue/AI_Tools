@@ -136,6 +136,73 @@ async function openPublished(browser, html, { at, coverage = false } = {}) {
   };
 }
 
+/** axe-core, once every animation on the page has finished. A published
+ *  view fades in (`br-rise`, opacity 0 to 1 over .4s), and a scan taken during
+ *  it measures the colours half-blended into the card: at opacity 0 axe skips
+ *  the view as invisible and passes it having checked nothing (what every run
+ *  on huginn did, the page clock being fixed), part way through it fails
+ *  colours that are fine (what GitHub's runner did, 2026-10-26). So finish the
+ *  fade first and refuse to scan a view that is still not opaque. */
+async function settledScan(page) {
+  const opacity = await page.evaluate(() => {
+    for (const a of document.getAnimations()) {
+      if (a.effect && a.effect.getComputedTiming().iterations !== Infinity) a.finish();
+    }
+    let o = 1;
+    for (let el = document.getElementById('br-view'); el; el = el.parentElement) o *= +getComputedStyle(el).opacity;
+    return o;
+  });
+  if (opacity !== 1) throw new Error('#br-view is still at opacity ' + opacity + ' after its animations finished');
+  return a11yScan(page, { impact: 'serious', include: '#br-view' });
+}
+
+/** The WCAG contrast of each element's text against what is behind it, worked
+ *  out from computed styles rather than by axe: the text colour (its alpha and
+ *  every ancestor's opacity folded in) over the background colours stacked
+ *  under it, once every animation and transition has finished (a button
+ *  the test just pressed is mid-way through its hover transition, which the
+ *  page's fixed clock never advances). Font plays no part, so this reads the same on any machine. A
+ *  background image under the text makes it unmeasurable (null), which fails. */
+function contrastOf(page, selectors) {
+  return page.evaluate(sels => {
+    for (const a of document.getAnimations()) {
+      if (a.effect && a.effect.getComputedTiming().iterations !== Infinity) a.finish();
+    }
+    const rgba = c => { const m = c.match(/[\d.]+/g).map(Number); return [m[0], m[1], m[2], m.length > 3 ? m[3] : 1]; };
+    const over = (top, under) => top.slice(0, 3).map((v, i) => v * top[3] + under[i] * (1 - top[3])).concat(1);
+    const lum = c => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+      return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+    const out = {};
+    for (const sel of sels) {
+      const els = [...document.querySelectorAll(sel)];
+      if (!els.length) { out[sel] = 'missing'; continue; }
+      let worst = Infinity;
+      for (const el of els) {
+        const layers = []; let opacity = 1, img = false;
+        for (let e = el; e; e = e.parentElement) {
+          const cs = getComputedStyle(e);
+          opacity *= +cs.opacity;
+          if (layers.every(l => l[3] < 1)) {
+            if (cs.backgroundImage !== 'none') img = true;
+            const b = rgba(cs.backgroundColor);
+            if (b[3] > 0) layers.push(b);
+          }
+        }
+        if (img) { worst = null; break; }
+        let bg = [255, 255, 255, 1];
+        for (const l of layers.reverse()) bg = over(l, bg);
+        const fg0 = rgba(getComputedStyle(el).color);
+        const fg = over([fg0[0], fg0[1], fg0[2], fg0[3] * opacity], bg);
+        const [a, b] = [lum(fg), lum(bg)].sort((x, y) => y - x);
+        worst = Math.min(worst, Math.round((a + 0.05) / (b + 0.05) * 100) / 100);
+      }
+      out[sel] = worst;
+    }
+    return out;
+  }, selectors);
+}
+const allAA = got => Object.values(got).every(v => typeof v === 'number' && v >= 4.5);
+
 const viewText = page => page.evaluate(() => document.getElementById('br-view').innerText);
 
 /* Path 11 P6: files to open, in a scratch folder the run deletes at the end. */
@@ -445,6 +512,12 @@ async function increment6(run, pub, html) {
     const f0 = fs.readFileSync(path.join(HERE, 'fixture-published-format0.json'), 'utf8');
     await openFile(p, press, dataFile(f0, 'northwind-v61.json'));
     await p.waitForFunction(() => !document.getElementById('br-open-back').hidden);
+    const OPEN_TEXT = ['#br-open-btn', '#br-open-text', '#br-open-back'];
+    const openLight = await contrastOf(p, OPEN_TEXT);
+    await p.emulateMedia({ colorScheme: 'dark' });
+    const openDark = await contrastOf(p, OPEN_TEXT);
+    await p.emulateMedia({ colorScheme: 'light' });
+    ok(allAA(openLight) && allAA(openDark), 'the open button and the note that names the file are 4.5:1 or better in both, measured directly: ' + JSON.stringify([openLight, openDark]));
     await pickTeacher(p, 'Fernwood');
     ok(await viewText(p) === ownDay, 'a format 0 data file shows the same day');
     ok(p.__errs.length === 0, 'no page errors while opening files: ' + JSON.stringify(p.__errs));
@@ -512,8 +585,16 @@ async function increment6Directions(run, pub, html) {
     ok(JSON.stringify(shown.maps) === '[["Floor 1",2],["Floor 2",2]]' && JSON.stringify(shown.badges) === '["Start","End"]',
       'a map of each floor in order, the walk drawn on both, Start and End marked: ' + JSON.stringify(shown));
     ok(!(await p.$('#br-dir-out [onclick]')), 'the route\'s maps open no teacher (nothing on them is clickable)');
-    const scan = await a11yScan(p, { impact: 'serious', include: '#br-view' });
+    const scan = await settledScan(p);
     ok(scan.length === 0, 'the Directions tab with a route has no serious or critical axe finding: ' + JSON.stringify(scan.map(x => [x.id, x.nodes])));
+    const DIR_TEXT = ['#br-view h2', 'label[for="br-dir-from"]', 'label[for="br-dir-to"]', '.br-dir-steps li', '.br-dir-map figcaption'];
+    const dirLight = await contrastOf(p, DIR_TEXT);
+    ok(allAA(dirLight), 'and its labels, moves and map captions are 4.5:1 or better, measured directly: ' + JSON.stringify(dirLight));
+    await p.emulateMedia({ colorScheme: 'dark' });
+    const dirDarkScan = await settledScan(p);
+    const dirDark = await contrastOf(p, DIR_TEXT);
+    await p.emulateMedia({ colorScheme: 'light' });
+    ok(dirDarkScan.length === 0 && allAA(dirDark), 'the same in a dark colour scheme: ' + JSON.stringify([dirDarkScan.map(x => [x.id, x.nodes]), dirDark]));
 
     // The same room, and back to a teacher.
     await p.selectOption('#br-dir-to', rooms[0][0]);
@@ -622,12 +703,18 @@ async function increment6SubPlan(run, pub, html) {
       'a mod with none typed says who is free: ' + lines[4 + second]);
     const planMod = want('A').indexOf(null);
     ok(planMod < 0 || lines[4 + planMod].endsWith(': Planning, nothing to cover.'), 'a Planning mod says so');
-    const scan = await a11yScan(p, { impact: 'serious', include: '#br-view' });
+    const scan = await settledScan(p);
     ok(scan.length === 0, 'the Sub Plan tab with a plan has no serious or critical axe finding: ' + JSON.stringify(scan.map(x => [x.id, x.nodes])));
     await p.emulateMedia({ colorScheme: 'dark' });
-    const dark = await a11yScan(p, { impact: 'serious', include: '#br-view' });
+    const dark = await settledScan(p);
     await p.emulateMedia({ colorScheme: 'light' });
     ok(dark.length === 0, 'nor in a dark colour scheme: ' + JSON.stringify(dark.map(x => [x.id, x.nodes])));
+    const COVER_TEXT = ['.factline', '.factline b', '.br-cover-table th', '.br-cover-table tr.plan td'];
+    const coverLight = await contrastOf(p, COVER_TEXT);
+    await p.emulateMedia({ colorScheme: 'dark' });
+    const coverDark = await contrastOf(p, COVER_TEXT);
+    await p.emulateMedia({ colorScheme: 'light' });
+    ok(allAA(coverLight) && allAA(coverDark), 'its head line, column heads and Planning rows are 4.5:1 or better in both, measured directly: ' + JSON.stringify([coverLight, coverDark]));
 
     // B day reads the teacher's B day.
     await p.selectOption('#br-cover-day', 'B');
