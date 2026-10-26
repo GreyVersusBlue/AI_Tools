@@ -85,6 +85,59 @@ repo. The published browser, `sv-browser.js`, the Northwind baseline and the 034
 scans 034, which has the same `br-rise` fade, with plain `a11yScan`; it is green on CI and was not changed here. It
 may share the blind spot, if its clock leaves the fade at 0.
 
+## Path 13 P2 increment 4: 002, 022 and 027 keyed by roster id (2026-10-26, AI-21, `CACHE_VERSION` v344–v346)
+
+**Shipped.** 002 (v344, 02473b2, with the engine change), 022 (v345, c73c9b8) and 027 (v346, 1b35bcc), one commit
+each, then the 022/027 tests (416fd7a). Each page now keys every student through `Grouping.history.identify()` with
+the ids `Roster.idsFor()` gives (`'i:<id>'` where Class Roster Hub has the student, else `'n:' + name`, a second of
+one name `'#2'`), so the memory follows a rename in the hub by itself. Keys never move a draw: the engine works on
+places, not key strings (read in `formGroups()`, and held below).
+
+**The gap increment 3 found, settled (a technical call, no question for Devon).** Neither of rank 32's two ways was
+enough alone. The real hole was the switch itself: a v341–v343 memory is keyed by *name*, so a rename made in the hub
+before the new page first saw the id leaves `identify()` matching the *new* name against a memory that holds the
+*old* one, and the pairs are stranded. Only the id map knows the two names are one student. So: (1) **the engine's
+`absorbLegacy()` reads `idNames` first** (new `byIdNames()`): a name-keyed member whose name is the map's name for an
+id is re-keyed to `'i:<id>'`, and an `'i:<id>'` member takes the map's name (an older page that followed a rename
+wrote it). It adds no member, so "seed every member from `idNames`" was not needed; `fromLegacy()` already keyed by
+the map. `golden.json` is unchanged (it never calls `absorbLegacy()`). (2) **`trackRenames()` and `idNames` stay**
+as the detector for what each page keeps by name (002's absence marks, keep-apart/together pairs and gtg-memory
+roles; 022's absences, safety exclusions, last groups and keep-apart; 027's circles and meetings), and the map is
+still written, which an older cached page needs. Why not drive those from `identify()`'s `moved`, as the design said:
+`trackRenames()` refuses a rename whose old name is still on the list, and a case-only change, and `identify()`
+follows both; reimplementing the refusal beside it would be a second rule to keep equal to the first. Keeping it
+makes the name-keyed lists move exactly as before, by construction.
+
+**What a teacher can see differ (each the case the design lists as `identify()`'s, now right):** a student renamed in
+the hub *and* a new student given the old name in the same step keeps their own pair or role memory (the new student
+used to inherit it); a case-only rename ("sam" → "Sam") keeps the memory (it used to be dropped at the next shuffle);
+and in 002 a rename typed into the box that matches a hub student is followed by the memory at the next shuffle (it
+was lost). Absence marks and pairs typed by name do not follow those three, as before.
+
+**022 and 027, the two rules that needed care.** (a) A rename onto a name that already has roles was refused, and
+still is; a refused student keyed by id is now *unbound* from it (re-keyed `'n:' + old name`), because otherwise the
+next `identify()` would follow the id and leave two members of one name, which the map cannot hold. With the unbind,
+the student reads the new name's roles and the old ones stay under the old name, as the refusal always did; removing
+the unbind fails two checks. (b) `identify()` makes a member of everyone it keys, and the memory has only ever held
+students with a role; a student who drew "Team Member"/"Group Member" used to join the map at their first role, so
+after each hand-out the roleless members are dropped (`pickMembers()`), which keeps the map's key order. The first
+build missed this: the adopters suite caught it as four 022 failures on key order alone. `rotateRoles()` now reads
+`identify()`'s memory, not the stored one, so a student re-keyed in that call is still read.
+
+**How it is held.** `test:grouping` 84 checks (a new one for `byIdNames()`, failing with it removed); parity 122,352;
+`test:grouping-adopters` 221 → 231 (two 002 classes in Class Roster Hub, every key `i:`, same groups and memory as the
+old splitter on the same numbers); `smoke-rename-follow.mjs` 38 → 66 (002: a v343 save across a rename, then a second
+rename with the id map gone; 022 and 027: a v342–v344 save across a rename and after a press, and the refused rename).
+
+**Checked:** lint; all thirteen `check:*` guards and `check:precache -- --base origin/main`; run-suites `--only`
+group-team-generator (year-memory 175: the twelve golden classes), lab-group-role-randomizer,
+novel-study-circles-manager, name-picker, pe-tournament-stations, grouping, roster (16), theme; `class-screen`'s
+smoke-widgets/-periods crash as they do on origin/main (known), its other suite passes. **Not run:** the full
+selection (`_shared/grouping.js` makes it all 331 suites, ~1.5 h; CI runs it on landing), a full `npm test`, the a11y
+sweep. **Not verified:** a sidecar written by a real 006 session (the fixtures use `Roster.syncRecords`); anything on a
+phone; a departed student who returns renamed (002 prunes them at the shuffle, so only `idNames` remembers them, as
+before).
+
 ## Path 13 P2 increment 3: 022's and 027's role memory is `groupHistory` (2026-10-26, AI-21, `CACHE_VERSION` v342–v343)
 
 **Shipped.** The storage step for 022 (v342, c84bd6c) and 027 (v343, 6d630aa), one commit each, then the tests
