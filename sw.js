@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v334';
+const CACHE_VERSION = 'v335';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -155,6 +155,7 @@ const SHELL_URLS = [
   "_shared/print-kit.css",
   "_shared/print-kit.js",
   "_shared/export.js",
+  "_shared/grouping.js",
   "_shared/question-bank.js",
   "_shared/countdown.js",
   "_shared/qr-draw.js",
@@ -508,6 +509,7 @@ const PRECACHE_URLS = [
   "_shared/print-kit.css",
   "_shared/print-kit.js",
   "_shared/export.js",
+  "_shared/grouping.js",
   "_shared/question-bank.js",
   "_shared/countdown.js",
   "_shared/qr-draw.js",

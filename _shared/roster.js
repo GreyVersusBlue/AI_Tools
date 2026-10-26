@@ -636,6 +636,20 @@
     return null;
   }
 
+  /* { name: id|null } for a list of names, read-only: the ids Grouping's
+     history.identify() keys its memory on (Path 13 P1). Same precedence as
+     idFor() and trackRenames(): the tool's own roster first, then the first
+     roster that knows the name. A name with no id maps to null. */
+  function idsFor(names, rosterName) {
+    var index = idIndex();
+    var out = {};
+    (Array.isArray(names) ? names : []).forEach(function (n) {
+      if (typeof n !== 'string' || Object.prototype.hasOwnProperty.call(out, n)) return;
+      out[n] = idFor(index, n, rosterName);
+    });
+    return out;
+  }
+
   /* ---- fuzzy name matching --------------------------------------------- */
 
   /** Levenshtein, bounded: it stops as soon as every cell in a row exceeds
@@ -846,6 +860,7 @@
     trackRenames: trackRenames,
     idIndex: idIndex,
     idFor: idFor,
+    idsFor: idsFor,
     /* text */
     parseDelimited: parseDelimited,
     splitCells: splitCells,
