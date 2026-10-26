@@ -284,8 +284,8 @@ files must be added there too.
   tool's suites; `--changed` runs the suites covering your working-tree diff
   and commits since `origin/main` (`--base <ref>` picks another base).
 - **CI runs `--changed` on pull requests and the full list on a push to
-  `main`** (`.github/workflows/ci.yml`, since 2026-09-05). The full pass is
-  ~21 minutes and was the measured bottleneck of every PR while most PRs touch
+  `main`** (`.github/workflows/ci.yml`, since 2026-09-05). The full pass was
+  ~21 minutes then, and the measured bottleneck of every PR while most PRs touch
   one or two tools; the push-to-main run is the safety net that catches
   anything the selector under-selected before the site deploys. Which suites
   cover which files is decided by `Tools/board-check/select-suites.mjs`, four
@@ -312,6 +312,22 @@ files must be added there too.
   `--changed` against `origin/main`, and CI's `--base origin/<base branch>` —
   and adds the case to that test. The guards are not scoped: all eleven
   together take about twelve seconds, so there is nothing to save.
+- **Since 2026-10-26 CI runs the suites as six parallel jobs** (AI-34). One job
+  could no longer hold the list: the last green full run took 97 minutes, and
+  #372, a wave touching `_shared/`, was cancelled at the 120-minute timeout in
+  suite 307 of 330. The workflow now has a `guards` job (the read-only checks,
+  no browser), a `suites` matrix whose jobs each run the same selection with
+  `run-suites.mjs --shard i/6`, and a `test` job that is green only if every
+  other job was, so "the test check" still means everything. `--shard` keeps
+  the i-th share of whatever `--only`/`--changed`/the full list selected,
+  balanced longest-first by `Tools/board-check/suite-durations.json`; every
+  suite is in exactly one shard and each log prints the whole plan
+  (`Tools/board-check/shard-suites.mjs`; `npm run test:shard-suites` proves
+  the partition against the real list). The table only steers the balance; a
+  new suite is costed at the median until it is refreshed with
+  `node Tools/board-check/suite-durations.mjs <job logs>` (its header has the
+  `gh api` line). A suite must not depend on another suite having run first:
+  shards run on different machines, which `--changed` already assumed.
 - A known-red assertion goes in `suites.json`'s `expectedFailures` with its exact
   text and a reason — **never** by loosening the assertion. The runner prints
   every expected failure on every run, still goes red if the same suite fails a

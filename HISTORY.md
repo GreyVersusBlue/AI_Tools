@@ -9,6 +9,41 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## CI: the suites run as six parallel shard jobs (2026-10-26, AI-34, no `CACHE_VERSION`)
+
+**Why.** Devon approved splitting the CI suites across jobs on 2026-10-07 ("yes, to proceed"); the 2026-10-07 entry below
+raised the one job's timeout to 120 minutes and said that bought time and fixed nothing. It ran out on 2026-10-26: the wave
+PR AI_Tools#372 touched `_shared/`, selected all 330 suites, and was cancelled at 120 minutes in suite 307 (the a11y sweep).
+The last green full run on `main` (after #371) took 97 minutes for 301 suites.
+
+**Shipped.** `run-suites.mjs --shard i/n` keeps the i-th share of whatever was selected (full list, `--only`, `--changed`),
+printing the whole plan at the top. The split is `Tools/board-check/shard-suites.mjs`: longest-first greedy over
+`Tools/board-check/suite-durations.json` (seconds per suite, read off the GitHub timestamps of #371's full run and #372's
+cancelled one, #372 winning; 314 of 330 timed, 121.3 minutes summed), ties by path then lowest shard, each shard in
+`suites.json` order, an untimed suite costed at the table's median. `suite-durations.mjs` refreshes the table from job logs.
+`.github/workflows/ci.yml` is now three jobs: `guards` (the read-only checks once, no Chromium or poppler; none of their
+scripts mentions either), `suites` (a `fail-fast: false` matrix of six, `timeout-minutes: 60`, each with the old setup steps
+and `--shard <i>/${{ strategy.job-total }}`, artifacts as `suite-output-shard-<i>` since upload-artifact v4+ refuses one name
+from two jobs), and `test`, which needs both and is green only if both results are `success` (`!cancelled()`, so it goes red
+rather than skipped when a shard fails). **Branch protection:** `gh api .../branches/main/protection` answered "Branch not
+protected" and the repo has no rulesets, so no required check names the old job; the aggregate keeps the name `test` anyway,
+so anything that reads "the test check" (the landing routine waits on all checks) still means everything.
+
+**Proof.** `npm run test:shard-suites` (pure Node, 120 assertions): every n from 1 to 10 over the real list partitions it
+(no suite in two shards or none, each shard in order), the same plan twice and with the table's keys reversed, shards within
+one suite's time of each other, count-balanced with no table, the median rule, empty shards, and the CLI's `--list` for
+`--shard i/6` and `--only board-check --shard i/3`. Locally: each of `--only board-check --shard 1/3..3/3` and
+`--only name-picker --shard 1/2..2/2` ran green (the 1.9-minute estimate for `drive-weighting.mjs` matched its 1.9-minute run),
+an empty shard exits 0, and `--changed --base origin/main --shard i/6 --list` for i = 1..6 gave 52/56/56/56/55/56 suites,
+~20.6 minutes each, union equal to `suites.json`'s 331 with no repeat. The workflow parses with PyYAML and keeps all 15 guard
+steps byte-identical.
+
+**Not verified.** No GitHub Actions run has used the new workflow; `strategy.job-total` inside `run:` and the aggregate's
+behaviour are from the documentation, not a run. A suite that silently relied on an earlier suite's leftovers would now fail
+in a shard; `--changed` already ran arbitrary subsets, so none is expected, but the first full run on `main` is the real test.
+Each shard repeats the setup (npm ci, Chromium deps, poppler), a few minutes each. The table goes stale as suites are added; it
+only moves suites between jobs.
+
 ## Path 13 P2 increment 3: 022's and 027's role memory is `groupHistory` (2026-10-26, AI-21, `CACHE_VERSION` v342–v343)
 
 **Shipped.** The storage step for 022 (v342, c84bd6c) and 027 (v343, 6d630aa), one commit each, then the tests

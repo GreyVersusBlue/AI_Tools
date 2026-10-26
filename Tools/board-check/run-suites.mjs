@@ -5,6 +5,7 @@
 //   node Tools/board-check/run-suites.mjs --changed
 //   node Tools/board-check/run-suites.mjs --changed --base origin/main
 //   node Tools/board-check/run-suites.mjs --list
+//   node Tools/board-check/run-suites.mjs --changed --shard 2/6 [--list]
 //   node Tools/board-check/run-suites.mjs --repeat 5
 //   node Tools/board-check/run-suites.mjs --repeat 20 --only group-team-generator
 //
@@ -55,6 +56,13 @@
 // line" was all the summary said, and the `route.fetch: read ECONNRESET` that
 // explained it sat unread at position 57 of 121 for a full session.
 //
+// --shard i/n keeps the i-th of n shards of whatever was selected (the full
+// list, --only or --changed), balanced by recorded run time. It is how CI runs
+// the suites as a matrix of jobs; shard-suites.mjs's header has the method and
+// the reason, and every selected suite is in exactly one shard. The plan for
+// all n shards is printed at the top, so each job's log shows where every
+// other suite went.
+//
 // Suites are run one at a time, in the order suites.json lists them. Several
 // drive a real browser and bind a fixed localhost port (drive-seating.mjs takes
 // 8146), so running them concurrently would make them fight over ports; the
@@ -66,6 +74,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { suitesForChanges, toolOf, readFileOnDisk, listPagesOnDisk } from './select-suites.mjs';
+import { parseShard, planShards, readDurations } from './shard-suites.mjs';
 
 const SITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const CONFIG = path.join(SITE, 'Tools', 'board-check', 'suites.json');
@@ -192,6 +201,21 @@ if (flag('--only')) {
   for (const w of why) console.log(`  because  ${w}`);
   if (!selected.length) {
     console.log(`run-suites: ${selectionLabel} — no suite covers the touched files. Nothing to run.`);
+    process.exit(0);
+  }
+}
+
+if (flag('--shard')) {
+  const shard = parseShard(valueOf('--shard'));
+  if (typeof shard === 'string') { console.error(`run-suites: --shard ${shard}`); process.exit(1); }
+  const plan = planShards(selected, shard.count, readDurations());
+  const est = sec => `${(sec / 60).toFixed(1)} min`;
+  console.log(`run-suites: shard plan for ${selected.length} suite${selected.length === 1 ? '' : 's'} in ${shard.count} shards (estimated from suite-durations.json):`);
+  plan.forEach((p, k) => console.log(`  shard ${k + 1}/${shard.count}${k + 1 === shard.index ? ' (this one)' : ''}: ${p.suites.length} suite${p.suites.length === 1 ? '' : 's'}, ~${est(p.seconds)}`));
+  selected = plan[shard.index - 1].suites;
+  selectionLabel += `, shard ${shard.index}/${shard.count} (${selected.length} suite${selected.length === 1 ? '' : 's'})`;
+  if (!selected.length) {
+    console.log(`run-suites: ${selectionLabel} — this shard has no suite. Nothing to run.`);
     process.exit(0);
   }
 }

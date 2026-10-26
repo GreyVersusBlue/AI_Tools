@@ -267,6 +267,7 @@
     "test:check-entities": "node Tools/board-check/test/check-entities.test.mjs",
     "test:daily-editing-warmup": "node Tools/daily-editing-warmup-generator/test/smoke-entities.mjs",
     "test:select-suites": "node Tools/board-check/test/select-suites.test.mjs",
+    "test:shard-suites": "node Tools/board-check/test/shard-suites.test.mjs",
     "test:check-publisher": "node Tools/board-check/test/check-publisher.test.mjs",
     "test:blender-art": "node Tools/blender-art/test/validate-art.test.mjs",
     "lint": "eslint"

@@ -582,7 +582,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Tier 1 rows | **169**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
 | Art | **130** ledger entries: 046's relief (29,726 B), 030's board backdrop and tiles (5,348 B), 042's ten seals and ribbons (84,170 B), 071's twelve pictures (157,454 B), 080's piece atlas (43,318 B), 87 tool icons, the sprite (58,032 B), 4 shortcut PNGs, the 4 app-mark PNGs (14,457 B), the 4 hero WebPs (64,832 B), the test tile's light/dark pair |
 | Dark mode / fullscreen | 92 of 92 themed pages native dark (`path5:next`; 8 live pages load no `a11y.js`: 035 is the documented exception (`CLAUDE.md`), the rest are standalone on purpose); `stage.js` on 10 pages. Path 5 is finished |
-| CI | Pull requests run `--changed`; a push to `main` runs everything, ~32 min. A PR touching `_shared/`, `index.html`, `package.json` or `Tools/board-check/` is site-wide (#296's took 38 min) |
+| CI | Pull requests run `--changed`; a push to `main` runs everything. Since 2026-10-26 the suites run as six parallel shard jobs (`--shard i/6`, ~21 min each by `suite-durations.json`, not yet seen on a CI run), with a `guards` job and one `test` check that is green only if all are. A PR touching `_shared/`, `index.html`, `package.json` or `Tools/board-check/` is site-wide: all 331 suites, ~121 min summed |
 | Lint | clean |
 
 ### Standing decisions
@@ -653,8 +653,8 @@ session hitting one of these ships rather than stalls.
 - **One suite at a time.** Suites bind fixed ports; a background `npm test` plus a
   foreground suite produces failures that are not real. New suites take a port above
   **8405**.
-- **A full `npm test` is ~20 minutes**, and CI is ~20 minutes on top. Plan a session
-  around two CI rounds, not six.
+- **A full `npm test` is about two hours** on one machine (~121 min summed on CI's runner,
+  2026-10-26); CI splits it into six jobs. Run only the suites you touched locally.
 - `npm ci` first — `node_modules` is gitignored and a fresh container has none.
 - **The 002 pairing-history flake was arithmetic, and it is fixed.** On 2026-09-04 CI went
   red on a *documentation-only* branch at `smoke-pairing-history.mjs`'s "at least one pair

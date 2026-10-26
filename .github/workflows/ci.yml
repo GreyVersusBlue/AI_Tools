@@ -1,5 +1,5 @@
 # CI — the guards on every run; the suites a pull request touches on a pull
-# request, and every suite on a push to main.
+# request, and every suite on a push to main, split across parallel jobs.
 #
 # Until this file existed, 120 test suites and three read-only guards ran only
 # when a session remembered to run them. They are all designed to be
@@ -21,6 +21,25 @@
 # that runs on every PR that touches it, since Tools/board-check/ is site-wide.
 # The guards are not scoped: all eleven together take about twelve seconds.
 # See CLAUDE.md, "Test tooling".
+#
+# THREE JOBS (since 2026-10-26). One job ran the guards and then every selected
+# suite in a row, and the list outgrew it: the last green full run on main took
+# 97 minutes, and #372, a wave touching _shared/, selected all 330 suites and
+# was cancelled at the 120-minute timeout in suite 307. Now:
+#   guards  — the read-only checks, once, with no browser installed.
+#   suites  — a matrix of SHARDS jobs. Each runs the same selection (--changed
+#             on a PR, the full list on main) with `--shard i/SHARDS`, which
+#             keeps its share, balanced by Tools/board-check/suite-durations.json
+#             (Tools/board-check/shard-suites.mjs has the method). Every
+#             selected suite runs in exactly one shard; each job's log prints
+#             the whole plan at its top. A shard with nothing to run passes.
+#   test    — green only if `guards` and every shard were. It keeps the old
+#             job's name, so "the test check" still means everything; the
+#             repo had no branch protection or ruleset naming a check on
+#             2026-10-26, so nothing outside this file had to change.
+# To change the number of shards, edit the `shard` list; `--shard` reads the
+# total from the matrix. Refresh the durations table now and then from a full
+# run's job logs (Tools/board-check/suite-durations.mjs).
 #
 # A known-red assertion does NOT fail this workflow if it is recorded in
 # Tools/board-check/suites.json expectedFailures: run-suites.mjs prints it with
@@ -46,12 +65,9 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  guards:
     runs-on: ubuntu-24.04
-    # 120 since 2026-10-07: the full list (240 suites) took 54 minutes on the
-    # last wave and was cancelled at 60 on the next, in suite 209 with none
-    # failed. Splitting the suites across jobs is the real fix and is not done.
-    timeout-minutes: 120
+    timeout-minutes: 20
 
     steps:
       # Pinned to the current majors (checkout v7, setup-node v7, cache v6,
@@ -73,39 +89,8 @@ jobs:
       - name: Install dev dependencies
         run: npm ci
 
-      # Keyed on the resolved Playwright version, so a version bump misses the
-      # cache and downloads the matching browser instead of reusing the old one.
-      - name: Resolve Playwright version
-        id: pw
-        run: echo "version=$(node -p "require('./node_modules/playwright/package.json').version")" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright browsers
-        id: pw-cache
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
-
-      - name: Install Chromium
-        if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
-
-      # A cache hit restores the browser but not the system libraries it links
-      # against, which live outside ~/.cache and change with the runner image.
-      - name: Install Chromium system dependencies
-        if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
-
-      # Four suites read the PDFs Chromium writes with poppler's `pdftotext`
-      # and `pdfinfo` (075's wallet cards, 068's packet, 079's call-outs, 077's
-      # rooms), and the runner image does not ship them: all four crashed in
-      # AI_Tools#353's full run. Two more (export, image-to-pdf) use `pdftoppm`
-      # when it is there and skip that check when it is not, so this turns
-      # those checks on in CI too.
-      - name: Install poppler-utils (pdftotext, pdfinfo, pdftoppm)
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils
-
-      # The guards are read-only and fast, so they run first and independently:
+      # The guards are read-only and fast, so they get a job of their own, next
+      # to the suite shards, and run independently of each other:
       # `!cancelled()` means one failing guard still lets the others report,
       # rather than the first one hiding the rest — the same reasoning that
       # produced run-suites.mjs.
@@ -207,29 +192,115 @@ jobs:
         if: "!cancelled() && github.event_name == 'pull_request'"
         run: npm run check:precache -- --base "origin/${{ github.base_ref }}"
 
+  suites:
+    runs-on: ubuntu-24.04
+    # Six shards of the 330-suite list are about 21 minutes each by the
+    # durations table, plus a few minutes of setup. 60 leaves room for the list
+    # to grow by half again before anyone has to add a shard.
+    timeout-minutes: 60
+    strategy:
+      # One shard failing must not cancel the others: the point of the runner
+      # is that every failure is reported at once.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    name: suites (shard ${{ matrix.shard }})
+
+    steps:
+      # Pinned to the current majors (checkout v7, setup-node v7, cache v6,
+      # upload-artifact v7, all node24) — the v4 line was being forced onto
+      # Node 24 with a deprecation warning on every run.
+      - uses: actions/checkout@v7
+        with:
+          # run-suites.mjs --changed diffs against origin/main, the offline
+          # copy check reads git history, and the CACHE_VERSION guard below
+          # needs the merge-base with the PR's base branch. A shallow clone
+          # has none of them.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dev dependencies
+        run: npm ci
+
+      # Keyed on the resolved Playwright version, so a version bump misses the
+      # cache and downloads the matching browser instead of reusing the old one.
+      - name: Resolve Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('./node_modules/playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      # A cache hit restores the browser but not the system libraries it links
+      # against, which live outside ~/.cache and change with the runner image.
+      - name: Install Chromium system dependencies
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # Four suites read the PDFs Chromium writes with poppler's `pdftotext`
+      # and `pdfinfo` (075's wallet cards, 068's packet, 079's call-outs, 077's
+      # rooms), and the runner image does not ship them: all four crashed in
+      # AI_Tools#353's full run. Two more (export, image-to-pdf) use `pdftoppm`
+      # when it is there and skip that check when it is not, so this turns
+      # those checks on in CI too.
+      - name: Install poppler-utils (pdftotext, pdfinfo, pdftoppm)
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+
       # Pull request: only the suites covering the PR's diff against its base
-      # branch (see the header). The selection and the reason for every suite
-      # in it are printed at the top of the step, so "why did that not run" is
+      # branch (see the header), this job's share of them. The selection, the
+      # reason for every suite in it and the shard plan are printed at the top
+      # of the step, so "why did that not run" and "which job ran it" are both
       # answered from the log. A PR that touches nothing a suite covers (a
       # Markdown-only change) runs no suite here and passes on the guards.
       - name: Test suites (changed)
         if: "!cancelled() && github.event_name == 'pull_request'"
-        run: npm test -- --changed --base "origin/${{ github.base_ref }}"
+        run: npm test -- --changed --base "origin/${{ github.base_ref }}" --shard "${{ matrix.shard }}/${{ strategy.job-total }}"
 
       # Push to main: everything, as the safety net behind the selector.
       - name: Test suites (full)
         if: "!cancelled() && github.event_name != 'pull_request'"
-        run: npm test
+        run: npm test -- --shard "${{ matrix.shard }}/${{ strategy.job-total }}"
 
       # Screenshots and printed PDFs the browser suites write as they go. On a
       # failure these are usually the difference between "a click did nothing"
-      # and knowing which click.
+      # and knowing which click. One artifact per shard: two jobs uploading
+      # under one name is an error in upload-artifact v4 and later.
       - name: Upload suite artifacts
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: suite-output
+          name: suite-output-shard-${{ matrix.shard }}
           path: |
             Tools/*/shots/**
           if-no-files-found: ignore
           retention-days: 7
+
+  # The one check that means "all green". `!cancelled()` rather than the
+  # default, so it runs and goes red when a shard or the guards failed (the
+  # default would skip it, and a skipped check reads as neither); not
+  # `always()`, for the cancel-in-progress reason the guards' comment gives.
+  test:
+    needs: [guards, suites]
+    if: '!cancelled()'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Every shard and the guards passed
+        run: |
+          echo "guards: ${{ needs.guards.result }}"
+          echo "suites: ${{ needs.suites.result }}"
+          test "${{ needs.guards.result }}" = success
+          test "${{ needs.suites.result }}" = success
