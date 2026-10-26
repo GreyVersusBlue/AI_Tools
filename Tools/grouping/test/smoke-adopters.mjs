@@ -157,6 +157,75 @@ const ADOPTERS = [
         `groups ${J(got.groups)} vs ${J(groups)}; meetings ${J(got.meetings)} vs ${J(meetings)}`];
     },
     cases: [['count', 3], ['count', 5], ['size', 4], ['size', 3], ['count', 20]]
+  },
+  {
+    // three presses of Shuffle (groups and roles each time), and the memory;
+    // the last case adds keep-apart pairs, which stay for the rest of the page.
+    // No pair names the repeated student: with two of one name, the page's
+    // warning (findApartViolations, by name) and the engine (by position) can
+    // disagree about which of the two a pair means, as the old page's repair
+    // and warning already could.
+    tool: '022',
+    url: '/Tools/022-lab-group-role-randomizer.html',
+    names: CLASS.concat(['Ada Lovelace']),
+    async load() {},
+    async split(page, [mode, v, pairs], seed) {
+      return page.evaluate(([mode, v, pairs, seed, names]) => {
+        const cur = () => JSON.parse(localStorage.getItem('lgrr_rosters'))[localStorage.getItem('lgrr_current')];
+        const ta = document.getElementById('namesInput');
+        ta.value = names.join('\n');
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+        const radio = document.getElementById(mode === 'size' ? 'mode-size' : 'mode-count');
+        radio.checked = true;
+        radio.dispatchEvent(new Event('change', { bubbles: true }));
+        const sv = document.getElementById('splitValue');
+        sv.value = String(v);
+        sv.dispatchEvent(new Event('input', { bubbles: true }));
+        pairs.forEach(([a, b]) => {
+          document.getElementById('pairA').value = names[a];
+          document.getElementById('pairB').value = names[b];
+          document.getElementById('addPairBtn').click();
+        });
+        const before = cur().history || {};
+        const out = [];
+        window.Grouping.pin(seed);
+        for (let m = 0; m < 3; m++) {
+          document.getElementById('shuffleBtn').click();
+          out.push(cur().lastGroups.map(g => g.members));
+        }
+        window.Grouping.pin(null);
+        const st = cur();
+        return { before, roles: st.roles.map(r => (r.name || '').trim()).filter(Boolean), keepApart: st.keepApart,
+          presses: out, history: st.history, warn: document.getElementById('warnArea').textContent };
+      }, [mode, v, pairs, seed, this.names]);
+    },
+    compare(got, names, [mode, v, pairs], rng) {
+      const legacyState = { history: JSON.parse(JSON.stringify(got.before)) };
+      const presses = [];
+      let apartBroken = 0;
+      for (let m = 0; m < 3; m++) {
+        let groups;
+        if (!pairs.length) groups = L.lab022(names, { mode, splitValue: String(v), keepApart: [] }, rng).groups;
+        else { // the page's own construction of the engine call, run here on the same numbers
+          const apart = pairs.map(([a, b]) => [String(a), String(b)]);
+          const k = Math.max(1, Math.min(mode === 'size' ? Math.ceil(names.length / v) : v, names.length));
+          const res = G.formGroups(names.map((n, i) => ({ key: String(i), name: n })), { count: k, apart, rng });
+          apartBroken += res.violations.apart.length;
+          groups = res.groups.map(g => g.map(key => names[+key]));
+        }
+        const picker = L.rolePicker(legacyState, rng);
+        presses.push(groups.map(g => {
+          const asg = picker.assignRolesForGroup(g, got.roles);
+          g.forEach(nm => picker.recordHistory(nm, asg[nm]));
+          return g.map(nm => ({ name: nm, role: asg[nm] }));
+        }));
+      }
+      const pairsOk = !pairs.length || (got.keepApart.length === pairs.length && apartBroken === 0 && !/keep-apart/.test(got.warn));
+      return [pairsOk && Object.keys(got.history).length > 0 && J(got.presses) === J(presses) && J(got.history) === J(legacyState.history),
+        `pairs ok ${pairsOk} (${got.keepApart.length} stored, ${apartBroken} broken, warn ${J(got.warn)}); same presses ${J(got.presses) === J(presses)}; presses ${J(got.presses)} vs ${J(presses)}`];
+    },
+    cases: [['count', 3, []], ['count', 5, []], ['size', 4, []], ['size', 3, []], ['count', 20, []],
+      ['count', 4, [[1, 2], [3, 4], [5, 6], [1, 7]]]]
   }
 ];
 

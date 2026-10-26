@@ -28,6 +28,7 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/grouping.js"></script>
 <script src="../_shared/student-flags.js"></script>
 <!-- Path 6 P4's roster chain: share.js receives 002's groups (?labgroups=),
      and the registry and handoff table send this page's groups to 005 as a
@@ -954,15 +955,26 @@
   }
 
   // Assign groups of students by random split, then best-effort resolve any
-  // keep-apart pairs (same swap-based local search as 002-group-team-generator.html).
+  // keep-apart pairs. Both are _shared/grouping.js's since Path 13 P2 (v340):
+  // the split is the one this page had, draw for draw, and the repair is
+  // 002-group-team-generator.html's swap search, which fails no more often
+  // than this page's own did (Tools/grouping/test/parity.test.mjs measures it
+  // over 14,000 classes). Members are keyed by position, so two students of
+  // one name stay two; a pair names the first of them, as groupIndexOf() does.
   function makeGroups(names) {
-    var k = groupCountFor(names.length);
-    var groups = [];
-    for (var i = 0; i < k; i++) groups.push([]);
-    var shuffled = shuffle(names);
-    shuffled.forEach(function (name, idx) { groups[idx % k].push(name); });
-    resolveKeepApart(groups);
-    return groups;
+    var members = names.map(function (n, i) { return { key: String(i), name: n }; });
+    var first = {};
+    names.forEach(function (n, i) { if (!Object.prototype.hasOwnProperty.call(first, n)) first[n] = String(i); });
+    var apart = [];
+    (state.keepApart || []).forEach(function (pair) {
+      if (Array.isArray(pair) && Object.prototype.hasOwnProperty.call(first, pair[0]) &&
+          Object.prototype.hasOwnProperty.call(first, pair[1])) apart.push([first[pair[0]], first[pair[1]]]);
+    });
+    var opts = { count: groupCountFor(names.length) };
+    if (apart.length) opts.apart = apart;
+    return Grouping.formGroups(members, opts).groups.map(function (g) {
+      return g.map(function (key) { return names[+key]; });
+    });
   }
 
   function groupIndexOf(groups, name) {
@@ -980,74 +992,26 @@
     });
   }
 
-  // Randomized local search: repeatedly swap a member of a violating group
-  // with a member of another group, keeping the swap only if it doesn't make
-  // things worse. Best-effort — some constraint sets can't all be satisfied.
-  function resolveKeepApart(groups) {
-    var pairs = state.keepApart || [];
-    if (!pairs.length || groups.length < 2) return;
-    var attempts = 0, maxAttempts = 600;
-    var bestCount = findApartViolations(groups).length;
-    while (bestCount > 0 && attempts < maxAttempts) {
-      attempts++;
-      var violations = findApartViolations(groups);
-      if (!violations.length) break;
-      var offender = violations[Math.floor(Math.random() * violations.length)];
-      var groupIdx = groupIndexOf(groups, offender[0]);
-      var otherIdx = Math.floor(Math.random() * groups.length);
-      if (otherIdx === groupIdx || !groups[otherIdx].length) continue;
-      var fromArr = groups[groupIdx];
-      var swapOutIdx = fromArr.indexOf(offender[1]);
-      if (swapOutIdx === -1) continue;
-      var toArr = groups[otherIdx];
-      var swapInIdx = Math.floor(Math.random() * toArr.length);
-      var a = fromArr[swapOutIdx], b = toArr[swapInIdx];
-      fromArr[swapOutIdx] = b; toArr[swapInIdx] = a;
-      var newCount = findApartViolations(groups).length;
-      if (newCount > bestCount) { fromArr[swapOutIdx] = a; toArr[swapInIdx] = b; }
-      else { bestCount = newCount; }
-    }
-  }
-
   // Role-fairness memory: for each student, state.history[name] is an array
-  // of role names they've held in past shuffles, oldest first. We bias
-  // assignment within each group by weighting each candidate role's random
-  // "score" against how recently that student held it — a role never held
-  // (or held longest ago) sorts to the top of the preference order.
-  function roleRecencyScore(studentName, role) {
-    var hist = (state.history && state.history[studentName]) || [];
-    var idxFromEnd = -1;
-    for (var i = hist.length - 1; i >= 0; i--) {
-      if (hist[i] === role) { idxFromEnd = hist.length - 1 - i; break; }
-    }
-    // Never held this role -> best possible score (very low = most preferred).
-    if (idxFromEnd === -1) return -1;
-    // Held it before -> higher score the more recently it was held
-    // (idxFromEnd 0 = held it last time = worst score).
-    return idxFromEnd === 0 ? 1000 : (100 - Math.min(idxFromEnd, 99));
-  }
-
-  // Assign distinct roles within one group, preferring for each student the
-  // role they've had least recently. Greedy: try students in random order,
-  // each picks their most-preferred still-available role, with some
-  // randomness among near-equal preferences so it doesn't feel robotic.
+  // of role names they've held in past shuffles, oldest first. Within each
+  // group a student takes the open role they held longest ago (or never),
+  // with a random tie-break. The picker is Grouping.rotateRoles() since Path
+  // 13 P2 (v340), reading this same map, draw for draw the one this page had
+  // (parity.test.mjs); the memory is still this page's and recordHistory()
+  // below still writes it.
   function assignRolesForGroup(members, roles) {
-    var order = shuffle(members);
-    var available = roles.slice();
-    var assignment = {}; // name -> role or null (Team Member)
-
-    order.forEach(function (name) {
-      if (!available.length) { assignment[name] = null; return; }
-      // Rank available roles by recency score (lower = more preferred),
-      // then break ties randomly.
-      var ranked = available.map(function (role) {
-        return { role: role, score: roleRecencyScore(name, role) + Math.random() * 0.5 };
-      }).sort(function (a, b) { return a.score - b.score; });
-      var chosen = ranked[0].role;
-      assignment[name] = chosen;
-      available.splice(available.indexOf(chosen), 1);
+    // Keys are 'n:' + name, so no name ("keys", "constructor") can be read as
+    // anything but a student; a repeated name is one key, as it was one entry.
+    var held = {};
+    members.forEach(function (name) {
+      var h = state.history && Object.prototype.hasOwnProperty.call(state.history, name) ? state.history[name] : null;
+      if (Array.isArray(h)) held['n:' + name] = h;
     });
-
+    var assignment = {}; // name -> role or null (Team Member)
+    var keys = members.map(function (name) { return 'n:' + name; });
+    Grouping.rotateRoles([keys], roles, held).byGroup[0].forEach(function (x) {
+      assignment[x.key.slice(2)] = x.role;
+    });
     return assignment;
   }
 
@@ -1252,26 +1216,13 @@
   // group (cursor keeps advancing even when a slot is reused, so multiple
   // absences spread out rather than piling every vacancy on one student).
   function computeEffectiveMembers(group) {
+    // Grouping.coverRoles() since Path 13 P2 (v340), keyed by position.
     var members = group.members;
-    var presentIdx = [];
-    members.forEach(function (m, i) { if (!isAbsentNow(m.name)) presentIdx.push(i); });
-    var coverage = {};
-    if (presentIdx.length) {
-      var cursor = 0;
-      members.forEach(function (m, i) {
-        if (isAbsentNow(m.name) && m.role) {
-          var targetIdx = presentIdx[cursor % presentIdx.length];
-          cursor++;
-          (coverage[targetIdx] = coverage[targetIdx] || []).push(m.role);
-        }
-      });
-    }
+    var absentKeys = [];
+    members.forEach(function (m, i) { if (isAbsentNow(m.name)) absentKeys.push(String(i)); });
+    var covered = Grouping.coverRoles(members.map(function (m, i) { return { key: String(i), role: m.role }; }), absentKeys);
     return members.map(function (m, i) {
-      var isAbsent = isAbsentNow(m.name);
-      var extra = coverage[i] || [];
-      var effectiveRole = m.role || null;
-      if (extra.length) effectiveRole = (effectiveRole ? [effectiveRole] : []).concat(extra).join(' + ');
-      return { name: m.name, role: m.role, effectiveRole: isAbsent ? null : effectiveRole, absent: isAbsent, fromHub: !!hubAbsent[m.name] };
+      return { name: m.name, role: m.role, effectiveRole: covered[i].effectiveRole, absent: covered[i].absent, fromHub: !!hubAbsent[m.name] };
     });
   }
 
@@ -1467,7 +1418,7 @@
   // is deliberately comprehensive: every current roster name (even with no
   // history) x every currently-defined role (even with a zero count), plus
   // any legacy role names still sitting in old history so past data isn't
-  // dropped. Same recency-memory source (`state.history`) as roleRecencyScore
+  // dropped. Same recency-memory source (`state.history`) as the role picker
   // and recordHistory — this is a read-only view of that data, nothing new
   // is tracked.
   function fairnessGridHtml() {
