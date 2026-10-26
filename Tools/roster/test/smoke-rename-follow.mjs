@@ -194,6 +194,10 @@ async function loadRoster(page, sel, btn) {
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('lgrr_rosters'))['Block A']);
   eq(saved.history['Aiden Smith'], ['Recorder', 'Recorder'], '022: the role history followed the rename');
   ok(!saved.history['Smith, Aiden'], '022: ...and is not left under the old name');
+  // Since v342/v343 the map is written from groupHistory, the engine's memory,
+  // which a save from before it (as here) gets on load; the rename moves it there.
+  ok(saved.groupHistory && saved.groupHistory.names.indexOf('Aiden Smith') !== -1 && saved.groupHistory.names.indexOf('Smith, Aiden') === -1,
+    '022: the role memory (groupHistory) followed it too');
   eq(saved.absent, ['Aiden Smith'], '022: the absence mark followed it');
   eq(saved.keepApart[0], ['Aiden Smith', 'Grace Hopper'], '022: and so did the keep-apart pair');
   ok(errors.length === 0, `022: no page errors (${errors.slice(0, 2).join(' | ')})`);
@@ -225,6 +229,8 @@ async function loadRoster(page, sel, btn) {
   await loadRoster(page, '#rosterHubSelect', '#rosterHubLoadBtn');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('novel-study-circles'))['Holes']);
   eq(saved.history['Aiden Smith'], ['Discussion Director'], '027: the circle role history followed the rename');
+  ok(saved.groupHistory && saved.groupHistory.names.indexOf('Aiden Smith') !== -1 && saved.groupHistory.names.indexOf('Smith, Aiden') === -1,
+    '027: the role memory (groupHistory) followed it too');
   eq(saved.groups[0].members, ['Aiden Smith', 'Grace Hopper'], '027: the current circle followed it');
   eq(saved.meetings[0].groups[0].assignment[0].name, 'Aiden Smith', '027: and so did the recorded meeting');
   ok(errors.length === 0, `027: no page errors (${errors.slice(0, 2).join(' | ')})`);

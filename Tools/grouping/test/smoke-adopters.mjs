@@ -18,7 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
-import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
+import { serve, launch, prepPage, settle, downloadText } from '../../board-check/harness.mjs';
 import * as L from './_legacy.mjs';
 
 const PORT = 8555;
@@ -35,6 +35,10 @@ const ok = (cond, label) => {
   failed++; console.log('  FAIL ' + label); return false;
 };
 const J = x => JSON.stringify(x);
+// 022 and 027 since the storage step (v342, v343): the role memory is
+// groupHistory, and the saved `history` map is exactly the one written from it.
+const mirrored = got => !!got.groupHistory && Array.isArray(got.groupHistory.keys) &&
+  J(G.history.toLegacyRoles(got.groupHistory)) === J(got.history);
 
 const CLASS = ['Ada Lovelace', 'Marco Polo', 'Nellie Bly', 'Zheng He', 'Grace Hopper', 'Ida B Wells',
   'Mae Jemison', 'Alan Turing', 'Rosa Parks', 'Carl Sagan', 'Mary Seacole', 'Nikola Tesla', 'Katherine Johnson'];
@@ -137,7 +141,7 @@ const ADOPTERS = [
           before, roles: st.roles.map(r => r.name.trim()).filter(Boolean),
           groups: st.groups.map(g => g.members),
           meetings: st.meetings.slice(0, 3).reverse().map(mt => mt.groups.map(g => g.assignment)),
-          history: st.history
+          history: st.history, groupHistory: st.groupHistory
         };
       }, [mode, v, seed, this.names]);
     },
@@ -153,8 +157,9 @@ const ADOPTERS = [
           return g.map(nm => ({ name: nm, role: asg[nm] }));
         }));
       }
-      return [got.meetings.length === 3 && Object.keys(got.history).length > 0 && J(got.groups) === J(groups) && J(got.meetings) === J(meetings) && J(got.history) === J(legacyState.history),
-        `groups ${J(got.groups)} vs ${J(groups)}; meetings ${J(got.meetings)} vs ${J(meetings)}`];
+      const mirror = mirrored(got);
+      return [mirror && got.meetings.length === 3 && Object.keys(got.history).length > 0 && J(got.groups) === J(groups) && J(got.meetings) === J(meetings) && J(got.history) === J(legacyState.history),
+        `mirror ${mirror}; groups ${J(got.groups)} vs ${J(groups)}; meetings ${J(got.meetings)} vs ${J(meetings)}`];
     },
     cases: [['count', 3], ['count', 5], ['size', 4], ['size', 3], ['count', 20]]
   },
@@ -196,7 +201,7 @@ const ADOPTERS = [
         window.Grouping.pin(null);
         const st = cur();
         return { before, roles: st.roles.map(r => (r.name || '').trim()).filter(Boolean), keepApart: st.keepApart,
-          presses: out, history: st.history, warn: document.getElementById('warnArea').textContent };
+          presses: out, history: st.history, groupHistory: st.groupHistory, warn: document.getElementById('warnArea').textContent };
       }, [mode, v, pairs, seed, this.names]);
     },
     compare(got, names, [mode, v, pairs], rng) {
@@ -221,8 +226,9 @@ const ADOPTERS = [
         }));
       }
       const pairsOk = !pairs.length || (got.keepApart.length === pairs.length && apartBroken === 0 && !/keep-apart/.test(got.warn));
-      return [pairsOk && Object.keys(got.history).length > 0 && J(got.presses) === J(presses) && J(got.history) === J(legacyState.history),
-        `pairs ok ${pairsOk} (${got.keepApart.length} stored, ${apartBroken} broken, warn ${J(got.warn)}); same presses ${J(got.presses) === J(presses)}; presses ${J(got.presses)} vs ${J(presses)}`];
+      const mirror = mirrored(got);
+      return [mirror && pairsOk && Object.keys(got.history).length > 0 && J(got.presses) === J(presses) && J(got.history) === J(legacyState.history),
+        `mirror ${mirror}; pairs ok ${pairsOk} (${got.keepApart.length} stored, ${apartBroken} broken, warn ${J(got.warn)}); same presses ${J(got.presses) === J(presses)}; presses ${J(got.presses)} vs ${J(presses)}`];
     },
     cases: [['count', 3, []], ['count', 5, []], ['size', 4, []], ['size', 3, []], ['count', 20, []],
       ['count', 4, [[1, 2], [3, 4], [5, 6], [1, 7]]]]
@@ -330,6 +336,83 @@ try {
       }
     }
     ok(errors.length === 0, `${a.tool}: no page errors (${errors.join(' | ')})`);
+    await page.close();
+  }
+
+  /* ── The storage step (022 v342, 027 v343): saves and files of the old shape ──
+     Each record below is in a format the pages wrote before groupHistory: the
+     old map only (every save before v342/v343), and a groupHistory the map
+     disagrees with, as when an older cached page has shuffled, reset or
+     renamed since (it writes the map; a restore can put the two side by side).
+     The page must hand out roles exactly as the old picker would from
+     the old map, with the old map's contents, and save the map it writes from
+     the memory. `before` in each adopter's split() is the map as saved, which
+     is what the old picker is fed. */
+  const OLD = { 'Ada Lovelace': ['Recorder', 'Recorder'], 'Marco Polo': ['Materials Manager'],
+    'Zheng He': ['Safety Officer', 'Recorder'], 'Left In June': ['Recorder'] };
+  const STALE = { v: 1, gen: 4, keys: ['n:Ada Lovelace', 'n:Rosa Parks', 'n:Marco Polo'],
+    names: ['Ada Lovelace', 'Rosa Parks', 'Marco Polo'], seen: [4, 4, 3], pairs: {},
+    roles: { 0: ['Recorder'], 1: ['Recorder', 'Recorder'], 2: ['Materials Manager'] } };
+  const stores = {
+    '022': (rec) => ({ lgrr_rosters: { 'Period 2': Object.assign({ name: 'Period 2', students: '', mode: 'count', splitValue: 3 }, rec) }, lgrr_current: 'Period 2' }),
+    '027': (rec) => ({ 'novel-study-circles': { 'Hatchet': Object.assign({ name: 'Hatchet', students: '', groups: [], roles: [], meetings: [] }, rec) }, 'novel-study-circles-current': 'Hatchet' })
+  };
+  const fileOf = {
+    '022': { input: '#importRosterFile', rec: (h) => ({ name: 'Old file', students: '', mode: 'count', splitValue: 3, history: h }) },
+    '027': { input: '#importProjectFile', rec: (h) => ({ name: 'Old file', students: '', groups: [], roles: [], meetings: [], history: h }) }
+  };
+  const exportOf = { '022': '#exportRosterBtn', '027': '#exportProjectBtn' };
+  for (const a of ADOPTERS.filter(x => stores[x.tool])) {
+    console.log(`${a.tool} — an old save, a disagreeing older page and an old file hand out roles as before`);
+    const fixtures = [
+      ['a save from before groupHistory', { history: OLD }, OLD],
+      ['a groupHistory an older page has since overtaken', { history: OLD, groupHistory: STALE }, OLD],
+      ['a groupHistory whose map an older page reset', { history: {}, groupHistory: STALE }, {}]
+    ];
+    for (const [what, rec, want] of fixtures) {
+      const page = await prepPage(browser, BASE, { width: 1280, height: 950 });
+      const errors = [];
+      page.on('pageerror', e => errors.push(e.message));
+      await page.goto(BASE + a.url, { waitUntil: 'networkidle' });
+      await page.evaluate(st => { localStorage.clear(); Object.keys(st).forEach(k => localStorage.setItem(k, typeof st[k] === 'string' ? st[k] : JSON.stringify(st[k]))); }, stores[a.tool](rec));
+      await page.reload({ waitUntil: 'networkidle' });
+      await settle(page, 300);
+      const c = a.cases[0], seed = SEEDS[2];
+      const got = await a.split(page, c, seed);
+      ok(J(got.before) === J(want), `${a.tool}: ${what}: the page reads the old map as it was (${J(got.before)})`);
+      const [same, detail] = a.compare(got, a.names.slice(), c, G.rng(seed));
+      ok(same, `${a.tool}: ${what}: roles as the old picker hands them out from the old map (${detail})`);
+      ok(!Object.prototype.hasOwnProperty.call(got.history, 'Left In June') === !Object.prototype.hasOwnProperty.call(want, 'Left In June'),
+        `${a.tool}: ${what}: a student no longer on the list keeps the list the old map had for them`);
+      ok(errors.length === 0, `${a.tool}: ${what}: no page errors (${errors.join(' | ')})`);
+      await page.close();
+    }
+    // A file written before the field: imported, it is the old map; exported
+    // again, it carries groupHistory and the map written from it.
+    const page = await prepPage(browser, BASE, { width: 1280, height: 950 });
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto(BASE + a.url, { waitUntil: 'networkidle' });
+    await page.evaluate(() => localStorage.clear());
+    await page.reload({ waitUntil: 'networkidle' });
+    await settle(page, 300);
+    await page.setInputFiles(fileOf[a.tool].input, { name: 'old.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(fileOf[a.tool].rec(OLD))) });
+    await settle(page, 400);
+    const got = await a.split(page, a.cases[0], SEEDS[3]);
+    ok(J(got.before) === J(OLD), `${a.tool}: an old file's map arrives as it was (${J(got.before)})`);
+    const [same, detail] = a.compare(got, a.names.slice(), a.cases[0], G.rng(SEEDS[3]));
+    ok(same, `${a.tool}: an old file's roles are handed out as the old picker would (${detail})`);
+    const out = JSON.parse(await downloadText(page, exportOf[a.tool], { what: a.tool + ' export' }));
+    ok(mirrored(out) && J(out.history) === J(got.history), `${a.tool}: the exported file carries groupHistory and the map written from it`);
+    // ...and that file, read back, is the same memory.
+    await page.setInputFiles(fileOf[a.tool].input, { name: 'new.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(out)) });
+    await settle(page, 400);
+    const back = await page.evaluate(() => {
+      const k = document.getElementById('importRosterFile') ? ['lgrr_rosters', 'lgrr_current'] : ['novel-study-circles', 'novel-study-circles-current'];
+      return JSON.parse(localStorage.getItem(k[0]))[localStorage.getItem(k[1])];
+    });
+    ok(J(back.groupHistory) === J(out.groupHistory) && J(back.history) === J(out.history), `${a.tool}: a new file reads back as the same memory`);
+    ok(errors.length === 0, `${a.tool}: files: no page errors (${errors.join(' | ')})`);
     await page.close();
   }
 } finally {
