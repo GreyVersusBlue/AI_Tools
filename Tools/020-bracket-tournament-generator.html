@@ -25,6 +25,7 @@
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/bracket.js"></script>
+<script src="../_shared/stage.js"></script>
 <script src="bracket-tournament-generator/bt-store.js"></script>
 <script src="bracket-tournament-generator/bt-teams.js"></script>
 <script src="../_shared/question-bank.js"></script>
@@ -209,6 +210,16 @@
   #exitPresentBtn { position: fixed; top: 14px; right: 14px; z-index: 600; display: none; }
   body.presenting #exitPresentBtn { display: inline-block; }
   body.presenting .toolbar, body.presenting footer.note { display: none; }
+  /* Second display (?display=1): the teacher's bracket, read-only, for the room. */
+  #displayFsBtn, #displayWait { display: none; }
+  body.display-mode #displayFsBtn { display: inline-block; position: fixed; top: 14px; right: 14px; z-index: 600; }
+  body.display-mode #displayWait { display: block; font-size: 1.4rem; text-align: center; padding: 3rem 1rem; color: var(--muted); }
+  body.display-mode #displayWait[hidden] { display: none; }
+  body.display-mode .app-header, body.display-mode .toolbar, body.display-mode #setupCard, body.display-mode #academicCard,
+  body.display-mode #academicPanel, body.display-mode footer.note, body.display-mode .match-q-btn,
+  body.display-mode #exitPresentBtn { display: none !important; }
+  body.display-mode #bracketView { pointer-events: none; }
+  body.display-mode #displayFsBtn { pointer-events: auto; }
   #presentBar {
     display: none; align-items: baseline; gap: .6rem; flex-wrap: wrap;
     background: var(--info-bg); border: 1px solid var(--accent-2); border-radius: 8px;
@@ -296,7 +307,7 @@
        feature set exists to put on paper. Only #setupCard (the input form)
        should disappear here. */
     .toolbar, #setupCard, .back-link, footer.note, .app-header .back-link,
-    #presentBar, #exitPresentBtn { display: none !important; }
+    #presentBar, #exitPresentBtn, #displayFsBtn { display: none !important; }
     body { padding: 0; background: #fff; }
     body.presenting .bracket-title, body.presenting .bracket-subtitle,
     body.presenting .round-label, body.presenting .slot, body.presenting .match-score,
@@ -318,6 +329,8 @@
   </div>
 
   <button type="button" class="secondary" id="exitPresentBtn">Exit presentation</button>
+  <button type="button" class="secondary" id="displayFsBtn">Fullscreen</button>
+  <p id="displayWait" role="status" hidden>Waiting for the bracket from the teacher&rsquo;s window&hellip;</p>
 
   <div class="toolbar" id="toolbar" style="display:none;">
     <label for="bracketSwitch" style="margin:0;font-weight:600;font-size:.85rem;">Bracket:</label>
@@ -329,6 +342,7 @@
     <button type="button" class="secondary" id="shareBtn">&#128279; Share bracket&hellip;</button>
     <button type="button" class="secondary" id="scheduleBtn">Schedule</button>
     <button type="button" class="secondary" id="presentBtn">Present</button>
+    <button type="button" class="secondary" id="displayWindowBtn" title="Opens a read-only copy of this bracket in a new window on this browser, to drag onto the projector. Anything you change here shows there.">Open display window</button>
     <span class="spacer"></span>
     <label class="checkline" style="margin:0;" title="Prints the bracket with only the starting matchups filled in, no picks marked — a blank sheet for students to predict on.">
       <input type="checkbox" id="printBlank"> Print blank
@@ -537,8 +551,30 @@
     exitPresentBtn: document.getElementById('exitPresentBtn'),
     presentBar: document.getElementById('presentBar'),
     presentLabel: document.getElementById('presentLabel'),
-    presentText: document.getElementById('presentText')
+    presentText: document.getElementById('presentText'),
+    displayWindowBtn: document.getElementById('displayWindowBtn'),
+    displayFsBtn: document.getElementById('displayFsBtn'),
+    displayWait: document.getElementById('displayWait')
   };
+
+  /* ---------- second display (Path 13 P4) ----------
+     The same file opened with ?display=1 is a read-only copy of the teacher's
+     open bracket, for the projector. The teacher's page posts its saved object
+     on a BroadcastChannel after every render (and null on the setup screen);
+     the display runs this page's own render() on it, so each format draws as
+     it does for the teacher and a new format needs no second renderer. A
+     message carries state and no command, the display never saves or reads
+     storage, and the academic card (questions, answers) is not drawn there. */
+  var isDisplay = (function () {
+    try { return new URLSearchParams(window.location.search).get('display') === '1'; }
+    catch (e) { return false; }
+  })();
+  var displayBc = null;
+  try { if ('BroadcastChannel' in window) displayBc = new BroadcastChannel('bracket-tournament-display'); } catch (e) { displayBc = null; }
+  function postDisplay() {
+    if (isDisplay || !displayBc) return;
+    try { displayBc.postMessage({ type: 'bracket', state: state ? JSON.parse(JSON.stringify(state)) : null }); } catch (e) { /* the display is a bonus */ }
+  }
 
   var state = null; // { name, slots: [ [round0...], [round1...], ... ] }
 
@@ -959,7 +995,7 @@
   }
 
   function save() {
-    if (!state) return;
+    if (!state || isDisplay) return;
     BracketStore.saveBracket(state.name, state);
   }
 
@@ -983,7 +1019,7 @@
     else renderSingle();
     if (!state.consolation) setPlaces('');
     decorateTeams();
-    academic.sync();
+    if (!isDisplay) { academic.sync(); postDisplay(); }
   }
 
   function renderBlank() {
@@ -2889,6 +2925,7 @@
     populateRosterSelect();
     refreshSwitcher();
     academic.sync();
+    postDisplay();
   }
 
   function buildForType(type, name, names, seedMode) {
@@ -3173,7 +3210,7 @@
 
   // ── Presentation (projector) mode: enlarges the live view and calls out
   //    the current match, so the bracket can live on the board during play. ──
-  function exitPresentMode() { document.body.classList.remove('presenting'); }
+  function exitPresentMode() { if (!isDisplay) document.body.classList.remove('presenting'); }
   els.presentBtn.addEventListener('click', function () {
     if (!state) { alert('Generate a bracket first.'); return; }
     document.body.classList.add('presenting');
@@ -3184,8 +3221,51 @@
     if (e.key === 'Escape' && document.body.classList.contains('presenting')) exitPresentMode();
   });
 
+  els.displayWindowBtn.addEventListener('click', function () {
+    var w = window.open(window.location.pathname + '?display=1', 'bracket-display');
+    if (!w) alert('The browser blocked the new window. Allow pop-ups for this page and try again.');
+  });
+
+  function startDisplay() {
+    document.body.classList.add('display-mode', 'presenting');
+    els.displayWait.hidden = false;
+    // Nothing on the bracket can be pressed: the clicks, keys and edits that reach it are stopped before any handler.
+    ['click', 'dblclick', 'keydown', 'keyup', 'input', 'change', 'submit', 'contextmenu'].forEach(function (t) {
+      document.addEventListener(t, function (e) {
+        if (e.target && e.target.closest && e.target.closest('#displayFsBtn')) return;
+        if (t === 'keydown' && (e.key === 'Escape' || e.key === 'f' || e.key === 'F')) return; // Stage's own keys
+        e.stopPropagation(); e.preventDefault();
+      }, true);
+    });
+    if (window.Stage) Stage.mount(els.bracketCard, { button: els.displayFsBtn });
+    if (displayBc) {
+      displayBc.onmessage = function (e) {
+        var msg = e && e.data;
+        if (!msg || msg.type !== 'bracket') return;
+        var next = msg.state;
+        if (!next || typeof next !== 'object' || (!next.slots && !next.rounds && !next.pools && !next.matches)) {
+          state = null;
+          els.bracketCard.style.display = 'none';
+          els.championBanner.classList.remove('show');
+          els.displayWait.hidden = false;
+          return;
+        }
+        state = next;
+        els.displayWait.hidden = true;
+        els.bracketCard.style.display = '';
+        render();
+      };
+      displayBc.postMessage({ type: 'hello' });
+    }
+  }
+  if (displayBc && !isDisplay) {
+    displayBc.onmessage = function (e) { if (e && e.data && e.data.type === 'hello') postDisplay(); };
+  }
+
   /* ---------- boot ---------- */
-  if (!importSharedBracketFromUrl()) {
+  if (isDisplay) {
+    startDisplay();
+  } else if (!importSharedBracketFromUrl()) {
     var current = BracketStore.getCurrentName();
     if (current && BracketStore.loadBracket(current)) {
       loadBracketByName(current);

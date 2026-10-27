@@ -303,6 +303,7 @@
     "Tools/bracket-tournament-generator/test/bracket.test.mjs": 2,
     "Tools/bracket-tournament-generator/test/bracket-parity.test.mjs": 4,
     "Tools/bracket-tournament-generator/test/smoke-redecide.mjs": 40,
+    "Tools/bracket-tournament-generator/test/smoke-display.mjs": 60,
     "Tools/pe-tournament-stations/test/rotation.test.mjs": 2,
     "Tools/pe-tournament-stations/test/rotation-parity.test.mjs": 3,
     "Tools/gallery-walk-qr/test/rotation-parity.test.mjs": 3,
