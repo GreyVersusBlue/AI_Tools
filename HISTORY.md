@@ -116,8 +116,8 @@ exactly; the old path (a count, size with "extra") is still compared draw for dr
 by 3 and 4, so the old and new rules agreed and a deliberately removed fix passed them; they now use 13, 11 and 13 by 5.
 `smoke-year-memory.mjs`'s golden file (`golden-old-groupings.json`): exactly two of its twelve scenarios moved,
 `random-27-floaters` and `random-27-own-group` (the other ten, and the saved bytes less `groupHistory`, held), and only those two
-were re-recorded, from the page at this version, with an `amended` note in the file saying so. 27 by 4 gives six of 4 and 3 floaters
-either way, so the visible change in those two is the saved memory bytes and the group sizes in their own steps.
+were re-recorded, from the page at this version, with an `amended` note in the file saying so. Those two now show six groups of 4 and 3 floaters
+(or a seventh group of 3) where the old page showed seven groups of 3 and 6 floaters (or a group of 6).
 *Not verified:* nothing on a phone or paper; no teacher has seen the new wording. The page's explanation still reads as
 before ("N students left as floaters today").
 
