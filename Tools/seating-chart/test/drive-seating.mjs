@@ -815,6 +815,42 @@ async function buildChart(page) {
   await page.close();
 }
 
+/* ============================================ The four preferences (Path 14 P3 increment 2, step 3) === */
+{
+  const page = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  const students = ['Ada Lovelace', 'Marco Polo'].map((n, i) => ({ id: 's' + i, name: n, note: '', flag: false, photo: '' }));
+  const desks = ['a', 'b', 'c'].map((id, i) => ({ id, x: 40 + i * 130, y: 110, rot: 0, locked: false }));
+  const FIXTURE = {
+    __v: 1, active: 'p1', theme: 'light', zoom: 'fit', lastFirst: false, numbered: false, mirror: false,
+    printNames: true, printPhotos: true, printViolations: true, currentQuarter: 'Q1',
+    sections: [{ id: 'p1', name: 'Prefs Test', students, desks, assign: {}, apart: [], together: [], layouts: [], history: [] }],
+  };
+  await page.goto(URL_PAGE, { waitUntil: 'load' });
+  await settle(page, 300);
+  await page.evaluate(f => localStorage.setItem('seating-chart-v1', JSON.stringify(f)), FIXTURE);
+  await page.reload({ waitUntil: 'load' });
+  await settle(page, 400);
+  const val = id => page.$eval('#' + id, e => e.value);
+  eq(await val('pref_noRepeatSeat') + await val('pref_frontRowRotation') + await val('pref_newNeighbours') + await val('pref_spreadEmpty'), '2200', 'the four settings start at 2, 2, 0, 0 (today\'s behaviour)');
+  ok(!('prefs' in (await stored(page)).sections[0]), 'a chart that never touches them stores nothing');
+  ok(await page.isHidden('#pref_spreadEmpty'), 'the settings are tucked under a closed Preferences heading');
+  await page.click('#prefsBox summary');
+  await page.selectOption('#pref_spreadEmpty', '3');
+  await page.selectOption('#pref_noRepeatSeat', '0');
+  await settle(page, 1700);
+  let sv = (await stored(page)).sections[0];
+  ok(sv.prefs && sv.prefs.spreadEmpty === 3 && sv.prefs.noRepeatSeat === 0 && sv.prefs.frontRowRotation === 2, 'the choices are stored with the section: ' + JSON.stringify(sv.prefs));
+  await page.reload({ waitUntil: 'load' }); await settle(page, 400);
+  await page.click('#prefsBox summary');
+  eq(await val('pref_spreadEmpty'), '3', 'and shown again after a reload');
+  await page.click('button[onclick="autoAssign()"]'); await settle(page, 200);
+  await page.click('button[onclick="undo()"]'); await settle(page, 200);
+  eq(await val('pref_spreadEmpty'), '3', 'a setting is not undone by undoing a seating');
+  const errs = page.__errs.filter(e => !/favicon/.test(e));
+  eq(errs.length, 0, 'no console/page errors in the preferences flow' + (errs.length ? ':\n       ' + errs.join('\n       ') : ''));
+  await page.close();
+}
+
 await browser.close();
 server.close();
 
