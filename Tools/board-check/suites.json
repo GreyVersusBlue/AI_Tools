@@ -331,6 +331,7 @@
     "Tools/seating-read/test/seating-read.test.mjs",
     "Tools/seating-chart/test/solver.test.mjs",
     "Tools/seating-chart/test/migration.test.mjs",
+    "Tools/seating-chart/test/explain.test.mjs",
     "Tools/a11y-sweep/test/smoke-a11y-sweep.mjs",
     "Tools/board-check/test/select-suites.test.mjs",
     "Tools/board-check/test/shard-suites.test.mjs",

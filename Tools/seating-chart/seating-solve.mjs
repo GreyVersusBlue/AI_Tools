@@ -113,7 +113,7 @@ export function normalizeRules(section) {
   for (const r of out) {
     if (r.kind === 'together' && r.hard && !r.anyOf.length) {
       const clash = hardApart.find(a => r.students.filter(s => a.students.includes(s)).length >= 2);
-      if (clash) { dropped.push({ id: r.id, code: 'contradiction', by: [clash.id] }); continue; }
+      if (clash) { dropped.push({ id: r.id, code: 'contradiction', kind: r.kind, students: r.students.slice(), by: [clash.id], byWhat: { kind: clash.kind, students: clash.students.slice() } }); continue; }
     }
     keep.push(r);
   }
@@ -291,20 +291,24 @@ function ruleBreaks(ctx, r, deskOf, occ, partial, who) {
   }
 }
 
-/** The soft cost of one student's seat under the four preferences. */
-function prefCost(ctx, sid, deskOf, occ) {
+/** The soft cost of one student's seat under the preferences, by part. */
+function prefParts(ctx, sid, deskOf, occ) {
   const d = deskOf[sid];
   const p = ctx.prefs;
-  let c = 0;
+  let repeat = 0, front = 0, nbr = 0;
   if (p.noRepeatSeat && d) {
     const had = ctx.repeatMap[sid];
-    if (had && had.has(seatKey(ctx.deskById[d]))) c += p.noRepeatSeat;
+    if (had && had.has(seatKey(ctx.deskById[d]))) repeat = p.noRepeatSeat;
   }
-  if (p.frontRowRotation && ctx.dueSet.has(sid) && !(d && ctx.frontSet.has(d))) c += p.frontRowRotation;
+  if (p.frontRowRotation && ctx.dueSet.has(sid) && !(d && ctx.frontSet.has(d))) front = p.frontRowRotation;
   if (p.newNeighbours && d && ctx.nbrHist.size) {
-    for (const nb of ctx.nbrs[d] || []) { const o = occ[nb]; if (o && ctx.nbrHist.has(pairKey(sid, o))) c += p.newNeighbours / 2; }
+    for (const nb of ctx.nbrs[d] || []) { const o = occ[nb]; if (o && ctx.nbrHist.has(pairKey(sid, o))) nbr += p.newNeighbours / 2; }
   }
-  return c;
+  return { repeat, front, nbr };
+}
+function prefCost(ctx, sid, deskOf, occ) {
+  const q = prefParts(ctx, sid, deskOf, occ);
+  return q.repeat + q.front + q.nbr;
 }
 
 function spreadCost(ctx, occ) {
@@ -335,10 +339,16 @@ function scoreMaps(ctx, deskOf, occ, detail) {
     if (detail) broken.push({ ruleId: r.id, kind: r.kind, hard: r.hard, students: [...new Set(who)], desks: r.desks.length ? r.desks.slice() : [...new Set(who)].map(s => deskOf[s]).filter(Boolean), weight: r.weight, cost: n });
   }
   for (const sid of ctx.present) {
-    const c = prefCost(ctx, sid, deskOf, occ);
+    const q = prefParts(ctx, sid, deskOf, occ);
+    const c = q.repeat + q.front + q.nbr;
     if (!c) continue;
     soft += c;
-    if (detail) broken.push({ ruleId: 'pref', kind: 'pref', hard: false, students: [sid], desks: deskOf[sid] ? [deskOf[sid]] : [], weight: c, cost: 1 });
+    if (detail) {
+      const at = deskOf[sid] ? [deskOf[sid]] : [];
+      if (q.repeat) broken.push({ ruleId: 'pref:noRepeatSeat', kind: 'pref', hard: false, students: [sid], desks: at, weight: q.repeat, cost: 1 });
+      if (q.front) broken.push({ ruleId: 'pref:frontRowRotation', kind: 'pref', hard: false, students: [sid], desks: at, weight: q.front, cost: 1 });
+      if (q.nbr) broken.push({ ruleId: 'pref:newNeighbours', kind: 'pref', hard: false, students: [sid], desks: at, weight: q.nbr, cost: 1 });
+    }
   }
   const sp = spreadCost(ctx, occ);
   if (sp) {
@@ -548,10 +558,11 @@ function improve(ctx, st, pinned, rand, budget, stats, expired) {
   while (stats.moves < budget.moves) {
     if (expired()) { stats.timedOut = true; break; }
     const sc = scoreMaps(ctx, st.deskOf, st.occ, true);
-    const todo = sc.broken.filter(b => b.ruleId !== 'pref' && b.ruleId !== 'pref:spreadEmpty' && !tabu.has(b.ruleId));
+    const todo = sc.broken.filter(b => b.kind !== 'pref' && !tabu.has(b.ruleId));
     const prefs = sc.broken.filter(b => b.kind === 'pref');
-    const pool = todo.length ? todo : (sc.hard === 0 ? prefs : []);
+    const pool = todo.length ? todo : (sc.hard === 0 ? prefs.filter(b => !tabu.has(b.ruleId + ':' + b.students.join(','))) : []);
     if (!pool.length) break;
+    // preferences are tried by their own id once; tabu keeps a stuck one from looping
     pool.sort((x, y) => (Number(y.hard) - Number(x.hard)) || (y.weight * y.cost - x.weight * x.cost));
     const top = pool.filter(b => b.hard === pool[0].hard && b.weight * b.cost === pool[0].weight * pool[0].cost);
     const target = top[Math.floor(rand() * top.length)];
@@ -582,7 +593,7 @@ function improve(ctx, st, pinned, rand, budget, stats, expired) {
     };
     if (best && bestKey < cur) { apply(); cur = bestKey; sideways = 0; stats.improved++; }
     else if (best && bestKey === cur && sideways < 2) { apply(); sideways++; }
-    else { tabu.add(target.ruleId); sideways = 0; }
+    else { tabu.add(target.ruleId + (target.kind === 'pref' ? ':' + target.students.join(',') : '')); sideways = 0; }
   }
 }
 

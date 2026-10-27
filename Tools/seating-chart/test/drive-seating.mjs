@@ -608,6 +608,56 @@ async function buildChart(page) {
   await page.close();
 }
 
+/* ============================================ "Why?" after auto-assign === */
+{
+  // Path 14 P3 step 3. A pair kept apart whose two seats are both pinned side by side is a
+  // conflict no shuffle can mend: the page must say so in a sentence with the names, and the
+  // sentence must go as soon as anything else changes the chart.
+  const page = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  const students = ['Ada Lovelace', 'Marco Polo', 'Mansa Musa', 'Ida B Wells']
+    .map((n, i) => ({ id: 's' + i, name: n, note: '', flag: false, photo: '' }));
+  students[2].name = '<i>Mansa</i> Musa';                       // names are text, never markup
+  const desks = [{ id: 'a', x: 40, y: 110, locked: true }, { id: 'b', x: 170, y: 110, locked: true },
+    { id: 'c', x: 300, y: 110, locked: false }, { id: 'd', x: 430, y: 110, locked: false }].map(d => ({ ...d, rot: 0 }));
+  const FIXTURE = {
+    __v: 1, active: 'p1', theme: 'light', zoom: 'fit', lastFirst: false, numbered: false, mirror: false,
+    printNames: true, printPhotos: true, printViolations: true, currentQuarter: 'Q1',
+    sections: [{ id: 'p1', name: 'Why Test', students, desks, assign: { a: 's0', b: 's1' }, apart: [['s0', 's1']], together: [], layouts: [], history: [] }],
+  };
+  await page.goto(URL_PAGE, { waitUntil: 'load' });
+  await settle(page, 300);
+  await page.evaluate(f => localStorage.setItem('seating-chart-v1', JSON.stringify(f)), FIXTURE);
+  await page.reload({ waitUntil: 'load' });
+  await settle(page, 400);
+  ok(await page.isHidden('#whyBtn'), 'Why? is not offered before an auto-assign');
+  await page.click('button[onclick="autoAssign()"]');
+  await settle(page, 300);
+  ok(await page.isVisible('#whyBtn'), 'Why? appears when auto-assign could not keep a rule');
+  ok(await page.isHidden('#whyPanel'), 'and the panel stays shut until asked');
+  await page.click('#whyBtn');
+  ok(await page.isVisible('#whyPanel'), 'Why? opens the panel');
+  eq(await page.getAttribute('#whyBtn', 'aria-expanded'), 'true', 'and says it is open');
+  const lines = await page.$$eval('#whyList li', els => els.map(e => e.textContent));
+  ok(lines.length === 1 && /^Ada Lovelace and Marco Polo are side by side: every seat that would mend it is held by .*pinned seat/.test(lines[0]), 'the sentence names both students and what holds them: ' + JSON.stringify(lines));
+  eq(await page.$$eval('#whyList i', els => els.length), 0, 'a name is shown as text, not parsed as markup');
+  const st = await page.textContent('#status');
+  ok(/keep-apart pair\(s\) could not be separated/.test(st), 'the status line keeps its count');
+  // Shuffle (a new seed) keeps the explanation, a change to the chart removes it
+  await page.click('button[onclick="clearSeats()"]');
+  await settle(page, 200);
+  ok(await page.isHidden('#whyBtn'), 'Why? goes once the chart is changed by hand');
+  // undo after a solve restores the chart
+  await page.click('button[onclick="autoAssign()"]');
+  await settle(page, 200);
+  await page.click('button[onclick="undo()"]');
+  await settle(page, 200);
+  const after = await stored(page);
+  ok(after && after.sections[0].assign.a === 's0', 'Undo after an auto-assign brings the earlier chart back');
+  const errs = page.__errs.filter(e => !/favicon/.test(e));
+  eq(errs.length, 0, 'no console/page errors in the Why? flow' + (errs.length ? ':\n       ' + errs.join('\n       ') : ''));
+  await page.close();
+}
+
 await browser.close();
 server.close();
 

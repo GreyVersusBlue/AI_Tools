@@ -221,6 +221,11 @@
   .status b{color:var(--blue);}
   .status .bad{color:var(--warn); font-weight:600;}
   .status .good{color:var(--teal-deep); font-weight:600;}
+  [hidden]{display:none !important;}
+  .why-panel{flex:0 0 100%; font-size:13px; border:1px solid var(--line, #cdd6d2); border-radius:8px; padding:6px 12px; background:var(--card, #fff);}
+  .why-panel ul{margin:0; padding-left:18px;}
+  .why-panel li{margin:3px 0;}
+  .why-panel li.bad{color:var(--warn);}
 
   /* the shared save bar, dressed as a row of ghost buttons */
   #saveBar{
@@ -648,7 +653,7 @@
       <div class="tb-primary">
       <div class="grp">
         <button class="btn sm teal" onclick="autoAssign()">Auto-assign</button>
-        <button class="btn sm ghost" onclick="autoAssign()">Shuffle</button>
+        <button class="btn sm ghost" onclick="autoAssign()" title="Try another arrangement">Shuffle</button>
         <button class="btn sm ghost" onclick="clearSeats()">Clear seats</button>
         <button class="btn sm danger" onclick="clearDesks()">Remove desks</button>
       </div>
@@ -697,6 +702,8 @@
       </div>
       <span class="spacer"></span>
       <div class="status" id="status" role="status" aria-live="polite"></div>
+      <button class="btn sm ghost" type="button" id="whyBtn" hidden aria-expanded="false" aria-controls="whyPanel">Why?</button>
+      <div class="why-panel" id="whyPanel" hidden role="region" aria-label="What the last auto-assign could not do"><ul id="whyList"></ul></div>
     </div>
 
     <div class="stage" id="stage">
@@ -756,13 +763,15 @@
 <script type="module">
 import {
   ROOM, ZOOM_MIN, ZOOM_MAX, snap, freshState, newSection, newLayout, createSeatingSlot, repairState,
-  assignSeats, checkConstraints, pickNext, parseRoster,
+  checkConstraints, pickNext, parseRoster,
   gridDesks, rowDesks, nextSpot, contentBox,
   storageReport, matchPhotoFilenames,
   photoRefsIn, mapSectionPhotos, mapStatePhotos,
   todayISO, suggestQuarter, newHistoryEntry, checkHistoryConstraints,
   studentHistoryRows, classHistorySummary,
 } from './seating-chart/seating.mjs';
+import { solve } from './seating-chart/seating-solve.mjs';
+import { explain } from './seating-chart/seating-explain.mjs';
 import { mountSaveBar, defaultStorage } from '../_shared/gvb-save.js';
 const { getParam, decodeState, clearParam } = window.StateLink;
 
@@ -1482,12 +1491,35 @@ function autoAssign(){
   if (!s.students.length){ say('Add some students first.', 'bad'); return; }
   if (!s.desks.length){ say('Add some desks first. Try "Make grid".', 'bad'); return; }
   pushUndo();
-  const r = assignSeats(s, { quarter: state.currentQuarter });
+  const r = solve(s, { quarter: state.currentQuarter });
   s.assign = r.assign;
   selectedStudent = null;
   renderAll();
   reportConstraints(r);
+  showWhy(explain(s, r));
 }
+/* "Why?": one sentence per rule the last auto-assign could not keep. In memory only, and
+   hidden again as soon as anything else changes the chart (refreshStatus). Every line goes in
+   with textContent: names are the teacher's text, not markup. */
+function showWhy(lines){
+  const btn = el('whyBtn'), panel = el('whyPanel'), list = el('whyList');
+  list.textContent = '';
+  for (const l of lines){
+    const li = document.createElement('li');
+    li.className = l.level === 'bad' ? 'bad' : '';
+    li.textContent = l.text;
+    list.appendChild(li);
+  }
+  btn.hidden = !lines.length;
+  panel.hidden = true;
+  btn.setAttribute('aria-expanded', 'false');
+}
+function toggleWhy(){
+  const btn = el('whyBtn'), panel = el('whyPanel');
+  panel.hidden = !panel.hidden;
+  btn.setAttribute('aria-expanded', panel.hidden ? 'false' : 'true');
+}
+el('whyBtn').addEventListener('click', toggleWhy);
 function reportConstraints(r){
   const s = sec();
   const report = r || checkConstraints(s);
@@ -1742,7 +1774,7 @@ function baseStatus(){
   const seated = Object.keys(s.assign).length;
   return `<b>${esc(s.name)}</b> &middot; ${s.students.length} students &middot; ${s.desks.length} desks &middot; ${seated} seated`;
 }
-function refreshStatus(){ el('status').innerHTML = baseStatus(); }
+function refreshStatus(){ el('status').innerHTML = baseStatus(); showWhy([]); }
 function say(text, kind){
   el('status').innerHTML = baseStatus() + (text ? ` &middot; <span class="${kind === 'bad' ? 'bad' : 'good'}">${esc(text)}</span>` : '');
 }
