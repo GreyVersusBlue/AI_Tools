@@ -177,6 +177,9 @@
   .desk.leave-empty{border-style:dashed; opacity:.75;}
   .room-mark{position:absolute; box-sizing:border-box; pointer-events:none; border:1.5px dashed var(--muted,#667); background:rgba(120,140,160,.14); color:var(--muted,#445);
     font-size:11px; font-weight:700; letter-spacing:.5px; display:flex; align-items:center; justify-content:center; text-align:center; overflow:hidden;}
+  .room-mark.movable{pointer-events:auto; cursor:grab; touch-action:none;}
+  .room-mark.movable:focus-visible{outline:3px solid var(--teal-deep); outline-offset:2px;}
+  .desk-layer.mirrored .room-mark > span{display:inline-block; transform:scaleX(-1);}
   .room-mark.door{border-style:solid; background:rgba(160,110,60,.18);} .room-mark.window{background:rgba(90,150,200,.2);}
   .room-mark.projector{background:rgba(60,60,60,.18);} .room-mark.obstacle{background:repeating-linear-gradient(45deg,rgba(0,0,0,.1) 0 6px,transparent 6px 12px);}
   .desk.zone-pick{outline:3px dashed var(--teal-deep); outline-offset:2px;}
@@ -1009,7 +1012,7 @@ el('stage').addEventListener('wheel', ev => {
 (function wirePan(){
   const stage = el('stage');
   let panning = null;
-  const INTERACTIVE = '.desk, .chip, button, input, select, textarea, a, label';
+  const INTERACTIVE = '.desk, .room-mark.movable, .chip, button, input, select, textarea, a, label';
   stage.addEventListener('pointerdown', ev => {
     if (ev.pointerType !== 'mouse' || ev.button !== 0) return;
     if (ev.target.closest(INTERACTIVE)) return;
@@ -1128,7 +1131,53 @@ function deleteSection(){
 /* ---- the room layer (Path 14 P4) -------------------------------------
    A room lives beside the sections; a section in one keeps `desks` as its mirror
    (seating-room.mjs), so everything that reads s.desks is unchanged. */
-function roomOfActive(){ return (state.rooms || []).find(r => r.id === sec().room) || null; }
+function roomOf(s){ return (state.rooms || []).find(r => r.id === s.room) || null; }
+function roomOfActive(){ return roomOf(sec()); }
+/** A mark as drawn: the floor's (movable) and the printed page's (not) are the same node. */
+function markNode(m, movable){
+  const n = document.createElement('div');
+  n.className = 'room-mark ' + m.kind + (movable ? ' movable' : '');
+  n.style.cssText = `left:${m.x}px;top:${m.y}px;width:${m.w}px;height:${m.h}px;` + (m.rot ? `transform:rotate(${m.rot}deg);` : '');
+  const t = document.createElement('span'); t.textContent = m.label || m.kind; n.appendChild(t);
+  const name = m.kind + (m.label ? ', ' + m.label : '');
+  if (movable){
+    n.dataset.markId = m.id; n.tabIndex = 0; n.setAttribute('role', 'group');
+    n.setAttribute('aria-label', name + '. Arrow keys move it.');
+    n.addEventListener('pointerdown', ev => markPointerDown(ev, m.id, n));
+    n.addEventListener('keydown', ev => {
+      const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[ev.key];
+      if (!d) return;
+      ev.preventDefault(); nudgeMark(m.id, d[0], d[1]); focusMark(m.id);
+    });
+  } else { n.setAttribute('role', 'img'); n.setAttribute('aria-label', name); }
+  return n;
+}
+function focusMark(id){ const n = document.querySelector(`.room-mark[data-mark-id="${id}"]`); if (n) n.focus(); }
+let movingMark = null;
+function markPointerDown(ev, id, node){
+  if (ev.button !== 0 || state.mirror) return;   // mirrored: the same screen-to-room guard the desks have
+  const r = roomOfActive(), m = r && r.marks.find(x => x.id === id); if (!m) return;
+  const floorRect = el('floor').getBoundingClientRect();
+  movingMark = { id, el: node, m, dx: ev.clientX - (floorRect.left + m.x * scale), dy: ev.clientY - (floorRect.top + m.y * scale), floorRect, moved: false };
+  node.setPointerCapture(ev.pointerId); node.style.cursor = 'grabbing';
+}
+document.addEventListener('pointermove', ev => {
+  if (!movingMark) return;
+  const g = movingMark;
+  g.moved = true;
+  g.el.style.left = Math.max(0, Math.min(ROOM.width - g.m.w, (ev.clientX - g.floorRect.left - g.dx) / scale)) + 'px';
+  g.el.style.top = Math.max(0, Math.min(ROOM.height - g.m.h, (ev.clientY - g.floorRect.top - g.dy) / scale)) + 'px';
+});
+document.addEventListener('pointerup', () => {
+  if (!movingMark) return;
+  const g = movingMark; movingMark = null;
+  const r = roomOfActive();
+  if (g.moved && r){
+    pushUndo();
+    state = setMark(state, r.id, { ...g.m, x: snap(parseFloat(g.el.style.left)), y: snap(parseFloat(g.el.style.top)) }).state;
+  }
+  renderAll();
+});
 /** Whatever was done to this period's desks, the room takes and the other periods follow. */
 function followRoom(){
   const r = roomOfActive();
@@ -1776,14 +1825,7 @@ function renderFloor(){
   const s = sec();
   const total = s.desks.length;
   const rm = roomOfActive();
-  if (rm) rm.marks.forEach(m => {
-    const n = document.createElement('div');
-    n.className = 'room-mark ' + m.kind;
-    n.style.cssText = `left:${m.x}px;top:${m.y}px;width:${m.w}px;height:${m.h}px;` + (m.rot ? `transform:rotate(${m.rot}deg);` : '');
-    n.textContent = m.label || m.kind;
-    n.setAttribute('role', 'img'); n.setAttribute('aria-label', m.kind + (m.label ? ', ' + m.label : ''));
-    layer.appendChild(n);
-  });
+  if (rm) rm.marks.forEach(m => layer.appendChild(markNode(m, !state.mirror)));
   s.desks.forEach((d, i) => {
     const sid = s.assign[d.id];
     const st = sid ? studentById(sid) : null;
@@ -2041,8 +2083,12 @@ let printMode = 'single';           // 'single' (Print / Ctrl+P) or 'all' (Print
 /** The trim-and-scale math, pulled out so preparePrint() (the live floor) and
     preparePrintAll() (one static snapshot per section) compute it the same way
     instead of one of them drifting out of sync with the other. */
-function printLayoutFor(desks){
+function printLayoutFor(desks, marks = []){
   const box = contentBox(desks);
+  if (desks.length) marks.forEach(m => {   // a door or a board that sits outside the desks still prints
+    const x1 = Math.max(box.x + box.w, m.x + m.w), y1 = Math.max(box.y + box.h, m.y + m.h);
+    box.x = Math.min(box.x, m.x); box.y = Math.min(box.y, m.y); box.w = x1 - box.x; box.h = y1 - box.y;
+  });
   const pad = 30;
   const topRoom = 58;               // leave the FRONT OF ROOM bar room to breathe
   const w = box.w + pad * 2;
@@ -2097,7 +2143,7 @@ function notesHTML(section){
 
 function preparePrint(){
   const s = sec();
-  const { box, pad, topRoom, w, h, fit } = printLayoutFor(s.desks);
+  const { box, pad, topRoom, w, h, fit } = printLayoutFor(s.desks, (roomOf(s) || {}).marks);
 
   const floor = el('floor'), wrap = el('floorWrap'), layer = el('deskLayer');
   // Chrome can fire beforeprint more than once for one trip through the dialog,
@@ -2173,7 +2219,7 @@ function deskNodeForPrint(d, i, total, s, opts){
     showViolations — all default true except mirror, so a plain call prints
     exactly what "Print all sections" always has. */
 function buildPrintPage(s, opts = {}){
-  const { box, pad, topRoom, w, h, fit } = printLayoutFor(s.desks);
+  const { box, pad, topRoom, w, h, fit } = printLayoutFor(s.desks, (roomOf(s) || {}).marks);
 
   const page = document.createElement('div');
   page.className = 'print-page';
@@ -2205,6 +2251,8 @@ function buildPrintPage(s, opts = {}){
   layer.className = 'desk-layer' + (mirror ? ' mirrored' : '');
   layer.style.transform = layerTransform(-box.x + pad, -box.y + topRoom, mirror);
   const total = s.desks.length;
+  const rm = roomOf(s);
+  if (rm) rm.marks.forEach(m => layer.appendChild(markNode(m, false)));
   s.desks.forEach((d, i) => layer.appendChild(deskNodeForPrint(d, i, total, s, opts)));
   floor.appendChild(layer);
 
