@@ -319,6 +319,19 @@ const CHECKS = {
     }
     return true;
   },
+  'rotateRoles: best with many roles stays quick and still never repeats when it need not'(G) {
+    const keys = n => Array.from({ length: n }, (_, i) => 'k' + i);
+    for (const [m, r] of [[8, 10], [8, 12], [6, 15], [12, 12]]) {
+      const roles = Array.from({ length: r }, (_, i) => 'R' + i), hist = {};
+      keys(m).forEach((x, i) => { hist[x] = [roles[i % r]]; });
+      const t = Date.now();
+      const out = G.rotateRoles([keys(m)], roles, hist, { method: 'best', seed: 1 });
+      if (Date.now() - t > 400) return `${m} members, ${r} roles took ${Date.now() - t} ms`;
+      if (out.repeats.length) return `${m} members, ${r} roles: ${out.repeats.length} repeats`;
+      if (new Set(out.byGroup[0].map(x => x.role)).size !== m) return `${m} members, ${r} roles: a role handed out twice`;
+    }
+    return true;
+  },
   'rotateRoles: greedy repeats inside a band round the measured 1.1%'(G) {
     let repeats = 0, total = 0;
     for (let c = 0; c < 2000; c++) {
@@ -552,6 +565,7 @@ const MUTANTS = [
   ['formGroups: spread deals a category evenly', "var x = cat(a), y = cat(b); return x < y ? -1 : (x > y ? 1 : 0);", "return 0;"],
   ['formGroups: the memory steers away from last time and is never written', "return penalties[Math.max(nowGen - lg, 1) - 1] || 0;", "return 0;"],
   ['rotateRoles: best never repeats when an assignment without a repeat exists', "if (c < bestCost) { bestCost = c; pickBest = pk.slice(); }", "if (!pickBest) { bestCost = c; pickBest = pk.slice(); }"],
+  ['rotateRoles: best with many roles stays quick and still never repeats when it need not', "if (ms.length <= 8 && orderings <= 400000) {", "if (ms.length <= 8) {"],
   ['rotateRoles: greedy repeats inside a band round the measured 1.1%', "score: recencyScore(held(k), role) + next() * 0.5", "score: recencyScore(held(k), role) + next() * 2000"],
   ['rotateRoles: a member past the last role gets null, and a map history is read', "var v = history && own(history, k) ? history[k] : null;", "var v = null;"],
   ['coverRoles: an absent member’s role goes round the present ones', "var ti = presentIdx[cursor % presentIdx.length];\n          cursor++;", "var ti = presentIdx[0];"],

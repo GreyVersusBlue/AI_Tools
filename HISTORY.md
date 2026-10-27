@@ -85,7 +85,7 @@ repo. The published browser, `sv-browser.js`, the Northwind baseline and the 034
 scans 034, which has the same `br-rise` fade, with plain `a11yScan`; it is green on CI and was not changed here. It
 may share the blind spot, if its clock leaves the fade at 0.
 
-## Path 13 P2 increment 5: the improvements, each its own commit (2026-10-27, AI-21, `CACHE_VERSION` v347–v350)
+## Path 13 P2 increment 5: the improvements, each its own commit (2026-10-27, AI-21, `CACHE_VERSION` v347–v351)
 
 These change results on purpose. For each: what a teacher now sees differently, what proves it, and what still proves the
 old path. Devon's ten P1 answers (2026-10-21, all "keep the default") bind every call.
@@ -179,6 +179,29 @@ turned off (002 left a pair together 8 times in 30, 022 10 times in 30), and the
 saved bytes held, and the parity suite is unchanged (its 022 keep-apart claim is by failure rate, which restarts only lower).
 *A mistake found on the way:* the first 022 check read `members` as names, but they are `{ name, role }`, so it counted
 no pair together and passed with the fix switched off; it was found because the break-on-purpose run did not fail.
+
+**5. 022 and 027 hand roles out by the cheapest whole assignment (v351).** *Before:* each member in shuffled order took the open
+role they held longest ago (the page's own picker, ported as `method: 'greedy'`), so a student could be handed the role
+they held last time while another assignment had given everyone a different one: 1.0% of hand-outs for 4 students and 4 roles, 4.0%
+for 4 students and 3 roles, 2.7% for 5 and 4 (measured on the engine, 300 classes, 12 meetings each). *Now:* both pages call
+`rotateRoles(..., { method: 'best' })`: every ordering of the roles is tried for a group of up to 8 and the cheapest is kept,
+ties broken by the random draw, so nobody is handed last meeting's role when a way round it exists. A team with more roles than students
+(022's five default roles, 027's six) hardly ever repeated before either, and sees no difference there; the change shows in a group
+that has fewer roles than students or about as many. Nothing else moves: the same memory, the same `history` map written
+from it, the same roles list, "Team Member" / "Group Member" for the ones left over; the split into groups is untouched.
+*What the build found:* `method: 'best'` had never been run on a page, and it took **1.5 seconds** for a group of 8 with 12 roles
+(it tried every ordering of 12 role slots, 12!/4! of them), which would freeze the page. The exhaustive search now runs only up to
+400,000 orderings (8 students and 8 or 9 roles: 12 and 31 ms) and above that the greedy pick is improved by swaps, including
+a swap for a role nobody has yet, which takes a group of 8 with 12 roles, 6 with 15 or 12 with 12 to 1 ms with no repeat.
+*Proof:* `test:grouping` (93, 31 broken on purpose): a new check that those four shapes finish within 400 ms, repeat nothing
+and give no role twice (fails with the cap taken out). `test:grouping-adopters` (256): on each page, 500 meetings of a group of 4
+with 3 roles (roles removed through the page's own buttons) never hand a student the role they held last time; with the page set
+back to greedy it did 90 times on 022 and 76 on 027. The earlier hand-out checks, which compared roles with the old picker draw for
+draw, are now held to what a hand-out must be (roles from the list, none twice in a group, the memory exactly the old map plus what was
+handed out, the first press's split the old page's) because the old picker's draws are no longer the page's;
+the picker itself is still proved by `test:grouping-parity`. A first draft of the 500-meeting check used the default roles and
+passed with the page set back to greedy, because a team with spare roles hardly ever repeats: the roles were cut to three so the
+check can fail. Seen only as a risk, not run: no teacher has watched a role hand-out on a phone.
 
 ## Path 13 P2 increment 4: 002, 022 and 027 keyed by roster id (2026-10-26, AI-21, `CACHE_VERSION` v344–v346)
 

@@ -1199,7 +1199,7 @@
      022's and 027's picker draw for draw: members in shuffled order, each
      takes the open role it held longest ago, a random 0 to 0.5 added to each
      score. 'best' is the cheapest whole assignment over the same scores,
-     every ordering tried up to 8 members and greedy then pair swaps above,
+     every ordering tried up to 8 members and 400,000 orderings, greedy then swaps above,
      ties broken by rng. `history` is the memory, or { key: [role] }. */
   function rotateRoles(groups, roles, history, opts) {
     opts = isObj(opts) ? opts : {};
@@ -1234,7 +1234,11 @@
           return slots.map(function (r) { return (r === null ? 0 : recencyScore(held(k), r)) + next() * 1e-3; });
         });
         var pickBest = null, bestCost = Infinity;
-        if (ms.length <= 8) {
+        /* Every ordering for a small group, unless there are so many roles that the orderings run past 400,000
+           (8 members and 10 roles is 1.8 million, a second and a half on a phone): then the greedy pick and swaps below. */
+        var orderings = 1;
+        for (var oi = 0; oi < ms.length && orderings <= 400000; oi++) orderings *= (slots.length - oi);
+        if (ms.length <= 8 && orderings <= 400000) {
           permutations(ms.length, slots.length, function (pk) {
             var c = 0;
             for (var i = 0; i < pk.length; i++) c += cost[i][pk[i]];
@@ -1255,6 +1259,10 @@
                 var now = cost[a][pickBest[a]] + cost[b][pickBest[b]];
                 var sw = cost[a][pickBest[b]] + cost[b][pickBest[a]];
                 if (sw < now - 1e-9) { var tmp = pickBest[a]; pickBest[a] = pickBest[b]; pickBest[b] = tmp; improved = true; }
+              }
+              // ...and a role nobody has yet, when it costs this member less.
+              for (var u = 0; u < slots.length; u++) {
+                if (pickBest.indexOf(u) === -1 && cost[a][u] < cost[a][pickBest[a]] - 1e-9) { pickBest[a] = u; improved = true; }
               }
             }
           }

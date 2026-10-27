@@ -1052,7 +1052,7 @@
     ided.members.forEach(function (m) { keyOf['#' + m.name] = m.key; });
     var keys = members.map(function (name) { return keyOf['#' + name]; });
     var assignment = {};
-    Grouping.rotateRoles([keys], roles, ided.history).byGroup[0].forEach(function (x, i) {
+    Grouping.rotateRoles([keys], roles, ided.history, { method: 'best' }).byGroup[0].forEach(function (x, i) {
       assignment[members[i]] = x.role;
     });
     // One entry per member in group order, so a name that is in the group
