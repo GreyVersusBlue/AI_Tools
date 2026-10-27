@@ -25,7 +25,11 @@
 --------------------------------------------------------------------------- */
 import {
   ROOM, neighborMap, frontRowDeskIds, seatKey, seatHistoryMap, frontRowStatus, checkConstraints,
+  DEFAULT_PREFS, cleanPrefs, repairRule, pairKey, rulesToLegacy, absorbLegacy, syncLegacy,
 } from './seating.mjs';
+
+export { DEFAULT_PREFS, cleanPrefs, rulesToLegacy, absorbLegacy, syncLegacy };
+const str = v => (typeof v === 'string' ? v : '');
 
 /* ---------------------------------------------------------------------------
    Seeded randomness (mulberry32 from a number or an FNV-1a hashed string).
@@ -50,33 +54,7 @@ export function rng(seed) {
 }
 export function newSeed(rand = Math.random) { return Math.floor(rand() * 4294967296) >>> 0; }
 
-const KINDS = ['apart', 'together', 'zone', 'seat', 'empty', 'space'];
-const ZONE_NAMES = ['front', 'back', 'edge', 'notEdge'];
-export const DEFAULT_PREFS = { noRepeatSeat: 2, frontRowRotation: 2, newNeighbours: 0, spreadEmpty: 0 };
 export const DEFAULT_BUDGET = { passes: 40, moves: 4000 };
-
-const str = v => (typeof v === 'string' ? v : '');
-const ids = (v, ok) => {
-  const out = [], seen = new Set();
-  for (const x of Array.isArray(v) ? v : []) {
-    if (typeof x !== 'string' || !x || seen.has(x) || (ok && !ok.has(x))) continue;
-    seen.add(x); out.push(x);
-  }
-  return out;
-};
-const pairKey = (a, b) => (a < b ? a + '|' + b : b + '|' + a);
-
-export function cleanPrefs(p) {
-  const out = { ...DEFAULT_PREFS };
-  if (p && typeof p === 'object') {
-    for (const k of Object.keys(DEFAULT_PREFS)) {
-      if (p[k] === undefined) continue;
-      const n = Math.round(Number(p[k]));
-      if (Number.isFinite(n)) out[k] = Math.max(0, Math.min(3, n));
-    }
-  }
-  return out;
-}
 
 /* ---------------------------------------------------------------------------
    Rules
@@ -84,37 +62,6 @@ export function cleanPrefs(p) {
 function ruleKey(r) {
   return [r.kind, r.students.slice().sort().join(','), r.zone, r.desks.slice().sort().join(','),
     r.anyOf.slice().sort().join(',')].join('|');
-}
-
-function cleanRule(raw, index, studentSet, deskSet, dropped) {
-  const id = raw && typeof raw === 'object' && str(raw.id) ? raw.id : `rule:${index}`;
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) { dropped.push({ id, code: 'malformed' }); return null; }
-  if (!KINDS.includes(raw.kind)) { dropped.push({ id, code: 'unknown-kind' }); return null; }
-  const kind = raw.kind;
-  const students = ids(raw.students, studentSet);
-  const desks = ids(raw.desks, deskSet);
-  const anyOf = ids(raw.anyOf, studentSet).filter(x => !students.includes(x));
-  const zone = ZONE_NAMES.includes(raw.zone) ? raw.zone : '';
-  const hadAnyOf = Array.isArray(raw.anyOf) && raw.anyOf.length > 0;
-  let ok;
-  if (kind === 'apart') ok = students.length >= 2;
-  else if (kind === 'together') ok = hadAnyOf ? (students.length >= 1 && anyOf.length >= 1) : students.length >= 2;
-  else if (kind === 'zone') ok = students.length >= 1 && (zone || desks.length >= 1);
-  else if (kind === 'space') ok = students.length >= 1;
-  else if (kind === 'seat') ok = students.length === 1 && desks.length === 1;
-  else ok = desks.length >= 1;                                   // empty
-  if (!ok) { dropped.push({ id, code: 'too-few' }); return null; }
-  const w = Math.round(Number(raw.weight));
-  return {
-    id, kind,
-    hard: raw.hard === true,
-    weight: Number.isFinite(w) ? Math.max(1, Math.min(3, w)) : 2,
-    students: kind === 'empty' ? [] : (kind === 'seat' ? students.slice(0, 1) : students),
-    desks: kind === 'zone' && zone && !desks.length ? [] : desks,
-    zone: kind === 'zone' && !desks.length ? zone : '',
-    anyOf: kind === 'together' ? anyOf : [],
-    why: str(raw.why).trim().slice(0, 200),
-  };
 }
 
 /** The section's rules, one list: today's `apart`/`together` pairs as 2-member
@@ -141,7 +88,7 @@ export function normalizeRules(section) {
   };
 
   (Array.isArray(section.rules) ? section.rules : []).forEach((raw, i) => {
-    const r = cleanRule(raw, i, students, deskSet, dropped);
+    const r = repairRule(raw, i, students, deskSet, dropped);
     if (r) push(r);
   });
   const legacy = (kind, list) => {
@@ -171,49 +118,6 @@ export function normalizeRules(section) {
     keep.push(r);
   }
   return { rules: keep, dropped };
-}
-
-/** The 2-member apart and together rules, as the pair lists older pages read. */
-export function rulesToLegacy(rules) {
-  const apart = [], together = [];
-  for (const r of rules || []) {
-    if (!r || r.anyOf && r.anyOf.length) continue;
-    if (!r.students || r.students.length !== 2) continue;
-    if (r.kind === 'apart') apart.push([r.students[0], r.students[1]]);
-    else if (r.kind === 'together') together.push([r.students[0], r.students[1]]);
-  }
-  return { apart, together };
-}
-
-/** On load: a 2-member rule is represented by the pair lists, so the lists win
-    (an older cached page that added or removed a pair is honoured, and a rule's
-    hard, weight and why are kept where the pair still matches). Rules of any
-    other kind or size live only in `rules`. */
-export function absorbLegacy(section) {
-  const students = new Set((section.students || []).map(s => s.id));
-  const stored = Array.isArray(section.rules) ? section.rules : [];
-  const isPair = r => r && (r.kind === 'apart' || r.kind === 'together') && Array.isArray(r.students)
-    && r.students.length === 2 && !(Array.isArray(r.anyOf) && r.anyOf.length);
-  const inLists = new Map();
-  const note = (kind, list) => {
-    for (const p of Array.isArray(list) ? list : []) {
-      if (!Array.isArray(p) || p.length < 2) continue;
-      const a = str(p[0]), b = str(p[1]);
-      if (!a || !b || a === b || !students.has(a) || !students.has(b)) continue;
-      inLists.set(kind + ':' + pairKey(a, b), [a, b]);
-    }
-  };
-  note('apart', section.apart); note('together', section.together);
-  const kept = [], matched = new Set();
-  for (const r of stored) {
-    if (!isPair(r)) { kept.push(r); continue; }
-    const k = r.kind + ':' + pairKey(r.students[0], r.students[1]);
-    if (!inLists.has(k)) continue;                                // an older page removed it
-    matched.add(k); kept.push(r);
-  }
-  // pairs in the lists with no rule: a plain Must (normalizeRules derives it), nothing stored
-  const rules = kept;
-  return { ...section, rules };
 }
 
 /* ---------------------------------------------------------------------------

@@ -182,6 +182,131 @@ function repairZoom(z) {
   return 'fit';
 }
 
+
+/* ---------------------------------------------------------------------------
+   Rules, as they are stored (Path 14 P3). The solver's reading of them is in
+   seating-solve.mjs; this is the shape-check every load runs, and the mirror
+   into the old `apart`/`together` lists that keeps an older cached page honest.
+--------------------------------------------------------------------------- */
+export const RULE_KINDS = ['apart', 'together', 'zone', 'seat', 'empty', 'space'];
+export const ZONE_NAMES = ['front', 'back', 'edge', 'notEdge'];
+export const DEFAULT_PREFS = { noRepeatSeat: 2, frontRowRotation: 2, newNeighbours: 0, spreadEmpty: 0 };
+
+const ids = (v, ok) => {
+  const out = [], seen = new Set();
+  for (const x of Array.isArray(v) ? v : []) {
+    if (typeof x !== 'string' || !x || seen.has(x) || (ok && !ok.has(x))) continue;
+    seen.add(x); out.push(x);
+  }
+  return out;
+};
+export const pairKey = (a, b) => (a < b ? a + '|' + b : b + '|' + a);
+
+export function cleanPrefs(p) {
+  const out = { ...DEFAULT_PREFS };
+  if (p && typeof p === 'object') {
+    for (const k of Object.keys(DEFAULT_PREFS)) {
+      if (p[k] === undefined) continue;
+      const n = Math.round(Number(p[k]));
+      if (Number.isFinite(n)) out[k] = Math.max(0, Math.min(3, n));
+    }
+  }
+  return out;
+}
+
+export function repairRule(raw, index, studentSet, deskSet, dropped) {
+  const id = raw && typeof raw === 'object' && str(raw.id) ? raw.id : `rule:${index}`;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) { dropped.push({ id, code: 'malformed' }); return null; }
+  if (!RULE_KINDS.includes(raw.kind)) { dropped.push({ id, code: 'unknown-kind' }); return null; }
+  const kind = raw.kind;
+  const students = ids(raw.students, studentSet);
+  const desks = ids(raw.desks, deskSet);
+  const anyOf = ids(raw.anyOf, studentSet).filter(x => !students.includes(x));
+  const zone = ZONE_NAMES.includes(raw.zone) ? raw.zone : '';
+  const hadAnyOf = Array.isArray(raw.anyOf) && raw.anyOf.length > 0;
+  let ok;
+  if (kind === 'apart') ok = students.length >= 2;
+  else if (kind === 'together') ok = hadAnyOf ? (students.length >= 1 && anyOf.length >= 1) : students.length >= 2;
+  else if (kind === 'zone') ok = students.length >= 1 && (zone || desks.length >= 1);
+  else if (kind === 'space') ok = students.length >= 1;
+  else if (kind === 'seat') ok = students.length === 1 && desks.length === 1;
+  else ok = desks.length >= 1;                                   // empty
+  if (!ok) { dropped.push({ id, code: 'too-few' }); return null; }
+  const w = Math.round(Number(raw.weight));
+  return {
+    id, kind,
+    hard: raw.hard === true,
+    weight: Number.isFinite(w) ? Math.max(1, Math.min(3, w)) : 2,
+    students: kind === 'empty' ? [] : (kind === 'seat' ? students.slice(0, 1) : students),
+    desks: kind === 'zone' && zone && !desks.length ? [] : desks,
+    zone: kind === 'zone' && !desks.length ? zone : '',
+    anyOf: kind === 'together' ? anyOf : [],
+    why: str(raw.why).trim().slice(0, 200),
+  };
+}
+
+/** The 2-member apart and together rules, as the pair lists older pages read. */
+export function rulesToLegacy(rules) {
+  const apart = [], together = [];
+  for (const r of rules || []) {
+    if (!r || r.anyOf && r.anyOf.length) continue;
+    if (!r.students || r.students.length !== 2) continue;
+    if (r.kind === 'apart') apart.push([r.students[0], r.students[1]]);
+    else if (r.kind === 'together') together.push([r.students[0], r.students[1]]);
+  }
+  return { apart, together };
+}
+
+/** On load: a 2-member rule is represented by the pair lists, so the lists win
+    (an older cached page that added or removed a pair is honoured, and a rule's
+    hard, weight and why are kept where the pair still matches). Rules of any
+    other kind or size live only in `rules`. */
+export function absorbLegacy(section) {
+  const students = new Set((section.students || []).map(s => s.id));
+  const stored = Array.isArray(section.rules) ? section.rules : [];
+  const isPair = r => r && (r.kind === 'apart' || r.kind === 'together') && Array.isArray(r.students)
+    && r.students.length === 2 && !(Array.isArray(r.anyOf) && r.anyOf.length);
+  const inLists = new Map();
+  const note = (kind, list) => {
+    for (const p of Array.isArray(list) ? list : []) {
+      if (!Array.isArray(p) || p.length < 2) continue;
+      const a = str(p[0]), b = str(p[1]);
+      if (!a || !b || a === b || !students.has(a) || !students.has(b)) continue;
+      inLists.set(kind + ':' + pairKey(a, b), [a, b]);
+    }
+  };
+  note('apart', section.apart); note('together', section.together);
+  const kept = [], matched = new Set();
+  for (const r of stored) {
+    if (!isPair(r)) { kept.push(r); continue; }
+    const k = r.kind + ':' + pairKey(r.students[0], r.students[1]);
+    if (!inLists.has(k)) continue;                                // an older page removed it
+    matched.add(k); kept.push(r);
+  }
+  // a pair in the lists with no rule (an older page added it): a plain Must. Only
+  // once `rules` is in use; a section without it is left exactly as it was.
+  const rules = kept;
+  if (stored.length) {
+    for (const [k, p] of inLists) {
+      if (matched.has(k)) continue;
+      const kind = k.slice(0, k.indexOf(':'));
+      rules.push({ id: `legacy:${kind}:${pairKey(p[0], p[1])}`, kind, hard: true, weight: 2, students: [p[0], p[1]], desks: [], zone: '', anyOf: [], why: '' });
+    }
+  }
+  return { ...section, rules };
+}
+
+/** Before a save: the 2-member apart and together rules are written out as the
+    old lists, so a page from before rules existed still reads them. (absorbLegacy
+    has already turned every list pair into a rule, so the lists lose nothing.)
+    A section with no `rules` is returned untouched. */
+export function syncLegacy(section) {
+  if (!section || !Array.isArray(section.rules) || !section.rules.length) return section;
+  const { apart, together } = rulesToLegacy(section.rules);
+  return { ...section, apart, together };
+}
+
+
 /** Shared by a section's live desks and every saved layout's desks. */
 function repairDesks(list, rng) {
   return (Array.isArray(list) ? list : [])
@@ -192,6 +317,7 @@ function repairDesks(list, rng) {
       y: clamp(num(d.y, 110), 0, ROOM.height - ROOM.deskH),
       rot: [0, 90, 180, 270].includes(num(d.rot, 0)) ? num(d.rot, 0) : 0,
       locked: bool(d.locked),
+      ...(d.empty === true ? { empty: true } : {}),
     }));
 }
 
@@ -300,7 +426,24 @@ function repairSection(s, index, rng) {
     .map(h => repairHistoryEntry(h, rng))
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
-  return { id, name, students, apart, together, desks, assign, layouts, history };
+  const out = { id, name, students, apart, together, desks, assign, layouts, history };
+
+  // Path 14 P3: rules and prefs are written only once used, so a chart saved
+  // before they existed loads exactly as it did. The pair lists win for the
+  // 2-member rules (an older cached page may have changed them), then the
+  // lists are rewritten from the rules.
+  if (Array.isArray(s.rules) && s.rules.length) {
+    const dropped = [];
+    const deskSet = new Set(desks.map(d => d.id));
+    const rules = [];
+    s.rules.forEach((raw, i) => { const r = repairRule(raw, i, studentIds, deskSet, dropped); if (r) rules.push(r); });
+    if (rules.length) out.rules = absorbLegacy({ ...out, rules }).rules;
+  }
+  if (s.prefs && typeof s.prefs === 'object') {
+    const p = cleanPrefs(s.prefs);
+    if (JSON.stringify(p) !== JSON.stringify(DEFAULT_PREFS)) out.prefs = p;
+  }
+  return out;
 }
 
 /* ---------------------------------------------------------------------------

@@ -551,6 +551,9 @@
         arr(s.students).forEach(function (st) { names++; sample.push(nameOf(st)); });
         hist += size(s.history); desks += size(s.desks); layouts += size(s.layouts);
         q.students = []; q.apart = []; q.together = []; q.assign = {}; q.history = [];
+        // Path 14 P3: the rules name students and carry the teacher's reasons, so they go; the preferences
+        // (`prefs`) and a desk left empty (`desk.empty`) are setup and stay.
+        if ('rules' in s) q.rules = [];
         q.layouts = arr(s.layouts).map(function (l) { if (!isObj(l)) return l; var m = shallow(l); m.assign = {}; return m; });
         return q;
       });
