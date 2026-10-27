@@ -173,6 +173,9 @@
   .pair .pp{flex:1;}
   .pair.apart{border-left:3px solid var(--warn);}
   .pair.together{border-left:3px solid var(--teal);}
+  .pair.other{border-left:3px solid var(--gold);}
+  .desk.zone-pick{outline:3px dashed var(--teal-deep); outline-offset:2px;}
+  #ruleStudents,#ruleAnyOf{width:100%;}
 
   .hint{font-size:11.5px; opacity:0.65; margin-top:6px; line-height:1.4;}
   .privacy{
@@ -528,7 +531,7 @@
           &ldquo;Testing rows&rdquo;, &ldquo;Group pods&rdquo;, &ldquo;Discussion circle&rdquo;
           &mdash; then switch between them any time. <b>Switching replaces the floor</b> with the
           saved layout, so save first if you want to keep what's there. The roster and Keep
-          Apart / Put Together rules are shared by every layout in this section.</p>
+          Rules are shared by every layout in this section.</p>
       </div>
 
       <div class="block">
@@ -566,26 +569,52 @@
         <div class="storage" id="storageBox"></div>
       </div>
 
-      <div class="block">
-        <h2>Keep Apart</h2>
-        <div class="row tight">
-          <select id="apartA" aria-label="Keep apart, first student"></select>
-          <select id="apartB" aria-label="Keep apart, second student"></select>
-          <button class="btn sm ghost" onclick="addPair('apart')">Add</button>
+      <div class="block" id="rulesBlock">
+        <h2>Rules <span class="count" id="rulesCount">0</span></h2>
+        <label class="field" for="ruleKind">Kind of rule</label>
+        <select id="ruleKind" onchange="syncRuleForm()">
+          <option value="apart">Keep apart</option>
+          <option value="together">Put together</option>
+          <option value="partner">Needs a partner from&hellip;</option>
+          <option value="zone">Seat in a zone</option>
+          <option value="space">Needs room (no neighbour)</option>
+        </select>
+        <label class="field" for="ruleStudents" id="ruleStudentsLbl">Students (Ctrl or Shift to pick several)</label>
+        <select id="ruleStudents" multiple size="5"></select>
+        <div id="ruleAnyWrap" hidden>
+          <label class="field" for="ruleAnyOf">Could be the partner (Ctrl or Shift to pick several)</label>
+          <select id="ruleAnyOf" multiple size="4"></select>
         </div>
-        <div id="apartList" style="margin-top:9px;"></div>
-        <p class="hint">These two will never land in neighboring desks when you auto-assign.</p>
-      </div>
-
-      <div class="block">
-        <h2>Put Together</h2>
-        <div class="row tight">
-          <select id="togA" aria-label="Put together, first student"></select>
-          <select id="togB" aria-label="Put together, second student"></select>
-          <button class="btn sm ghost" onclick="addPair('together')">Add</button>
+        <div id="ruleZoneWrap" hidden>
+          <label class="field" for="ruleZone">Zone</label>
+          <select id="ruleZone" onchange="syncRuleForm()">
+            <option value="front">The front row</option>
+            <option value="back">The back row</option>
+            <option value="edge">An end-of-row desk</option>
+            <option value="notEdge">A desk that is not at an end</option>
+            <option value="desks">Desks I choose on the floor</option>
+          </select>
+          <div id="ruleDesksWrap" hidden class="row tight" style="margin-top:6px;">
+            <button class="btn sm ghost" type="button" id="ruleTapBtn" aria-pressed="false" onclick="toggleTapDesks()">Choose desks on the floor</button>
+            <span class="status" id="ruleTapInfo" role="status" aria-live="polite"></span>
+          </div>
         </div>
-        <div id="togList" style="margin-top:9px;"></div>
-        <p class="hint">These two will sit next to each other. Chain several pairs to build a pod (A with B, B with C).</p>
+        <label class="field" for="ruleStrength">How strict</label>
+        <select id="ruleStrength">
+          <option value="must">Must</option>
+          <option value="1">Want: a little</option>
+          <option value="2">Want: important</option>
+          <option value="3">Want: really want</option>
+        </select>
+        <label class="field" for="ruleWhy">Reason (optional)</label>
+        <input type="text" id="ruleWhy" maxlength="200" placeholder="front row, vision">
+        <div class="row tight" style="margin-top:8px;">
+          <button class="btn sm teal" type="button" onclick="addRuleFromForm()">Add rule</button>
+        </div>
+        <div id="rulesList" style="margin-top:9px;"></div>
+        <p class="hint"><b>Must</b> rules are kept before anything else; <b>Want</b> rules are traded off, and the Why? link says which one gave way.
+          The reason stays in this browser and never travels in a link or prints &mdash; keep it short and practical, nothing from a medical or IEP document.
+          A pod is Put together with three or more students.</p>
       </div>
 
       <div class="block">
@@ -610,8 +639,8 @@
           labeled (&ldquo;Unit 3&rdquo;), tagged with the quarter above. Once something is recorded,
           <b>Auto-assign tries to avoid</b> reseating a student in a spot they've already had, and
           gives a front-row seat first to whoever hasn't had one yet this quarter &mdash; both are
-          best-effort nudges the solver applies when the room allows it, same as Keep Apart / Put
-          Together, not a rule it will break the room to satisfy. The two print buttons turn the
+          best-effort nudges the solver applies when the room allows it, same as a Want rule, not a
+          rule it will break the room to satisfy. The two print buttons turn the
           record into evidence for a parent or admin conversation about seating fairness.</p>
       </div>
 
@@ -770,8 +799,9 @@ import {
   todayISO, suggestQuarter, newHistoryEntry, checkHistoryConstraints,
   studentHistoryRows, classHistorySummary,
 } from './seating-chart/seating.mjs';
-import { solve } from './seating-chart/seating-solve.mjs';
+import { solve, normalizeRules } from './seating-chart/seating-solve.mjs';
 import { explain } from './seating-chart/seating-explain.mjs';
+import { buildRule, addRule, removeRule, pruneRules, describeRule } from './seating-chart/seating-rules.mjs';
 import { mountSaveBar, defaultStorage } from '../_shared/gvb-save.js';
 const { getParam, decodeState, clearParam } = window.StateLink;
 
@@ -1176,6 +1206,7 @@ function removeStudent(id){
   s.students = s.students.filter(x => x.id !== id);
   s.apart = s.apart.filter(p => !p.includes(id));
   s.together = s.together.filter(p => !p.includes(id));
+  pruneRules(s);
   for (const d in s.assign){ if (s.assign[d] === id) delete s.assign[d]; }  // free the seat, keep the desk
   if (selectedStudent === id) selectedStudent = null;
   renderAll();
@@ -1297,52 +1328,77 @@ function renderStorage(){
 }
 
 /* ============================================================
-   Constraint pairs
+   Rules (seating-chart/seating-rules.mjs builds, adds, prunes and words them;
+   the solver reads them). Everything the teacher typed goes in with textContent.
 ============================================================ */
-function fillSelect(id){
+let tapDesks = null;            // Set of desk ids while "Choose desks on the floor" is on, else null
+let tapPicked = new Set();      // the desks chosen so far (kept while the mode is off, until Add)
+function fillMulti(id){
   const box = el(id);
-  const cur = box.value;
-  box.innerHTML = '';
+  const cur = new Set([...box.selectedOptions].map(o => o.value));
+  box.textContent = '';
   sec().students.forEach(st => {
-    const o = document.createElement('option'); o.value = st.id; o.textContent = st.name; box.appendChild(o);
+    const o = document.createElement('option'); o.value = st.id; o.textContent = st.name; o.selected = cur.has(st.id);
+    box.appendChild(o);
   });
-  if ([...box.options].some(o => o.value === cur)) box.value = cur;
 }
-function addPair(kind){
-  const a = el(kind === 'apart' ? 'apartA' : 'togA').value;
-  const b = el(kind === 'apart' ? 'apartB' : 'togB').value;
-  if (!a || !b || a === b){ say('Pick two different students.', 'bad'); return; }
-  const list = kind === 'apart' ? sec().apart : sec().together;
-  if (list.some(p => (p[0] === a && p[1] === b) || (p[0] === b && p[1] === a))) return;
+function syncRuleForm(){
+  const kind = el('ruleKind').value;
+  el('ruleAnyWrap').hidden = kind !== 'partner';
+  el('ruleZoneWrap').hidden = kind !== 'zone';
+  el('ruleDesksWrap').hidden = !(kind === 'zone' && el('ruleZone').value === 'desks');
+  el('ruleStudentsLbl').textContent = kind === 'partner' ? 'The student who needs a partner' : 'Students (Ctrl or Shift to pick several)';
+  if (el('ruleDesksWrap').hidden) setTapMode(false);
+}
+function setTapMode(on){
+  tapDesks = on ? tapPicked : null;
+  if (on) selectedStudent = null;
+  const b = el('ruleTapBtn');
+  b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  b.textContent = on ? 'Done choosing desks' : 'Choose desks on the floor';
+  el('ruleTapInfo').textContent = tapPicked.size ? `${tapPicked.size} desk${tapPicked.size === 1 ? '' : 's'} chosen` : (on ? 'Tap or press Enter on a desk' : '');
+  renderFloor();
+}
+function toggleTapDesks(){ setTapMode(!tapDesks); }
+function addRuleFromForm(){
+  const s = sec();
+  const picked = id => [...el(id).selectedOptions].map(o => o.value);
+  const st = el('ruleStrength').value;
+  const r = buildRule({
+    kind: el('ruleKind').value, students: picked('ruleStudents'), anyOf: picked('ruleAnyOf'),
+    zone: el('ruleZone').value, desks: [...tapPicked], hard: st === 'must', weight: st === 'must' ? 3 : Number(st),
+    why: el('ruleWhy').value,
+  }, s, uid);
+  if (r.error){ say(r.error, 'bad'); return; }
   pushUndo();
-  list.push([a, b]);
-  // a pair cannot be both apart and together
-  const same = p => (p[0] === a && p[1] === b) || (p[0] === b && p[1] === a);
-  if (kind === 'apart') sec().together = sec().together.filter(p => !same(p));
-  else sec().apart = sec().apart.filter(p => !same(p));
+  addRule(s, r.rule);
+  tapPicked = new Set(); tapDesks = null; el('ruleWhy').value = '';
+  setTapMode(false);
   renderAll();
+  say('Rule added.', 'good');
 }
-function removePair(kind, i){
-  pushUndo();
-  if (kind === 'apart') sec().apart.splice(i, 1); else sec().together.splice(i, 1);
-  renderAll();
-}
-function renderPairs(){
-  const ap = el('apartList'); ap.innerHTML = '';
-  sec().apart.forEach((p, i) => {
-    const d = document.createElement('div'); d.className = 'pair apart';
-    d.innerHTML = `<span class="pp">${esc(nameOf(p[0]))} &nbsp;&#8212;&nbsp; ${esc(nameOf(p[1]))}</span>
-      <button class="icon-btn" aria-label="Remove the keep-apart rule for ${esc(nameOf(p[0]))} and ${esc(nameOf(p[1]))}"
-              onclick="removePair('apart',${i})">&times;</button>`;
-    ap.appendChild(d);
-  });
-  const tg = el('togList'); tg.innerHTML = '';
-  sec().together.forEach((p, i) => {
-    const d = document.createElement('div'); d.className = 'pair together';
-    d.innerHTML = `<span class="pp">${esc(nameOf(p[0]))} &nbsp;+&nbsp; ${esc(nameOf(p[1]))}</span>
-      <button class="icon-btn" aria-label="Remove the put-together rule for ${esc(nameOf(p[0]))} and ${esc(nameOf(p[1]))}"
-              onclick="removePair('together',${i})">&times;</button>`;
-    tg.appendChild(d);
+function removeRuleById(id){ pushUndo(); removeRule(sec(), id); renderAll(); }
+function renderRules(){
+  const s = sec();
+  fillMulti('ruleStudents'); fillMulti('ruleAnyOf');
+  pruneRules(s);
+  const box = el('rulesList'); box.textContent = '';
+  const deskNo = id => s.desks.findIndex(d => d.id === id) + 1;
+  // the old pair lists with no rules yet (a chart that never used the block) are listed as Must rules too
+  const list = Array.isArray(s.rules) && s.rules.length ? s.rules : normalizeRules({ ...s, rules: [], desks: [], assign: {} }).rules;
+  const shown = list.filter(r => r.kind !== 'seat' && r.kind !== 'empty');
+  el('rulesCount').textContent = shown.length;
+  shown.forEach(r => {
+    const d = describeRule(r, nameOf, deskNo);
+    const row = document.createElement('div'); row.className = 'pair ' + (r.kind === 'apart' || r.kind === 'together' ? r.kind : 'other');
+    const pp = document.createElement('span'); pp.className = 'pp';
+    pp.textContent = `${d.text} \u00B7 ${d.strength}${d.why ? ' \u00B7 ' + d.why : ''}`;
+    const b = document.createElement('button'); b.className = 'icon-btn'; b.type = 'button';
+    b.setAttribute('aria-label', `Remove the rule: ${d.text}`);
+    b.textContent = '\u00D7';
+    b.addEventListener('click', () => removeRuleById(r.id));
+    row.append(pp, b);
+    box.appendChild(row);
   });
 }
 
@@ -1552,7 +1608,7 @@ function renderFloor(){
     const st = sid ? studentById(sid) : null;
     const node = document.createElement('div');
     node.className = 'desk ' + (st ? 'assigned' : 'empty') + (st && st.flag ? ' flagged' : '')
-      + (d.locked ? ' locked' : '') + (selectedStudent && !st ? ' sel-target' : '');
+      + (d.locked ? ' locked' : '') + (selectedStudent && !st ? ' sel-target' : '') + (tapPicked.has(d.id) ? ' zone-pick' : '');
     node.style.left = d.x + 'px'; node.style.top = d.y + 'px';
     node.style.transform = (d.rot ? 'rotate(' + d.rot + 'deg)' : '');
     node.dataset.id = d.id;
@@ -1560,8 +1616,9 @@ function renderFloor(){
     const label = st
       ? `Seat ${i + 1} of ${total}, ${st.name}${st.flag ? ', flagged' : ''}${d.locked ? ', pinned' : ''}`
       : `Seat ${i + 1} of ${total}, empty`;
+    const label2 = label + (tapPicked.has(d.id) ? ', chosen for the rule' : '');
     node.innerHTML =
-        `<button class="seat" data-id="${d.id}" aria-label="${esc(label)}"${st ? ' draggable="true"' : ''}>`
+        `<button class="seat" data-id="${d.id}" aria-label="${esc(label2)}"${st ? ' draggable="true"' : ''}>`
       +   (st && photoSrc(st.photo) ? `<img class="photo" src="${esc(photoSrc(st.photo))}" alt="">` : '')
       +   `<span>${st ? esc(st.name) : 'empty'}</span>`
       + `</button>`
@@ -1686,6 +1743,11 @@ document.addEventListener('pointerup', () => {
 /* ----- tap-to-place ----- */
 function deskClick(ev, deskId){
   if (moving && moving.moved) return; // was a drag
+  if (tapDesks){            // choosing desks for a zone rule: a tap picks or drops the desk, nothing else
+    if (tapPicked.has(deskId)) tapPicked.delete(deskId); else tapPicked.add(deskId);
+    setTapMode(true); focusDesk(deskId);
+    return;
+  }
   const s = sec();
   const here = s.assign[deskId];
   if (selectedStudent){
@@ -2150,8 +2212,7 @@ function renderAll(){
   renderSections();
   renderRoster();
   renderLayouts();
-  fillSelect('apartA'); fillSelect('apartB'); fillSelect('togA'); fillSelect('togB');
-  renderPairs();
+  renderRules();
   renderHistory();
   renderFloor();
   renderPool();
@@ -2339,10 +2400,10 @@ Object.assign(window, {
   addNames, sortRoster, setLastFirst, toggleFlag, editNote, removeStudent,
   choosePhoto, removePhoto, chooseBulkPhotos,
   loadRosterHub,
-  addPair, removePair,
+  removeRuleById,
   setQuarter, recordHistory, deleteHistoryEntry, printStudentHistory, printClassHistory,
   addDesk, addRow, addPod, makeGrid, clearDesks, clearSeats,
-  autoAssign, undo, pickStudent, toggleZoom, toggleMirror, toggleNumbered, toggleToolbarMore,
+  autoAssign, syncRuleForm, toggleTapDesks, addRuleFromForm, undo, pickStudent, toggleZoom, toggleMirror, toggleNumbered, toggleToolbarMore,
   printChart, printAllSections, printBlankChart, printSubExport, printSubExportAll, setPrintOpt,
   poolDragOver, poolDragLeave, poolDrop, poolClick,
 });

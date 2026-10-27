@@ -658,6 +658,113 @@ async function buildChart(page) {
   await page.close();
 }
 
+/* ============================================ Rules block (Path 14 P3 increment 2, step 1) === */
+{
+  // The Rules block: a keep-apart pair on a chart saved before rules existed shows as a Must rule;
+  // a zone rule by tapping desks (with the keyboard), a soft rule with a reason, an error with
+  // nothing picked, a clash refused, removal, and a removed student taking their rules with them.
+  const page = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  const students = ['Ada Lovelace', 'Marco Polo', 'Mansa Musa', 'Ida B Wells', 'Hypatia Alexandria', 'Zheng He']
+    .map((n, i) => ({ id: 's' + i, name: n, note: '', flag: false, photo: '' }));
+  const desks = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((id, i) => ({ id, x: 40 + (i % 4) * 130, y: 110 + Math.floor(i / 4) * 130, rot: 0, locked: false }));
+  const FIXTURE = {
+    __v: 1, active: 'p1', theme: 'light', zoom: 'fit', lastFirst: false, numbered: false, mirror: false,
+    printNames: true, printPhotos: true, printViolations: true, currentQuarter: 'Q1',
+    sections: [{ id: 'p1', name: 'Rules Test', students, desks, assign: {}, apart: [['s0', 's1']], together: [], layouts: [], history: [] }],
+  };
+  await page.goto(URL_PAGE, { waitUntil: 'load' });
+  await settle(page, 300);
+  await page.evaluate(f => localStorage.setItem('seating-chart-v1', JSON.stringify(f)), FIXTURE);
+  await page.reload({ waitUntil: 'load' });
+  await settle(page, 400);
+  const rows = () => page.$$eval('#rulesList .pair', els => els.map(e => e.querySelector('.pp').textContent));
+  let list = await rows();
+  ok(list.length === 1 && /^Keep apart: Ada Lovelace, Marco Polo \u00B7 Must$/.test(list[0]), 'a pair saved before rules existed is listed as a Must rule: ' + JSON.stringify(list));
+  eq(await page.textContent('#rulesCount'), '1', 'the count says one rule');
+  const had = await stored(page);
+  ok(!('rules' in had.sections[0]), 'merely loading the chart writes no rules field');
+
+  // nothing picked: an error, nothing stored
+  await page.selectOption('#ruleKind', 'apart');
+  await page.click('button[onclick="addRuleFromForm()"]');
+  ok(/at least two students/.test(await page.textContent('#status')), 'adding with nothing picked says so');
+  eq((await rows()).length, 1, 'and adds nothing');
+
+  // a Must put-together over the same pair as the Must keep-apart is refused
+  await page.selectOption('#ruleKind', 'together');
+  await page.selectOption('#ruleStudents', ['s0', 's1']);
+  await page.click('button[onclick="addRuleFromForm()"]');
+  ok(/clashes with a keep-apart rule/.test(await page.textContent('#status')), 'a hard together on a hard apart pair is refused');
+  eq((await rows()).length, 1, 'and adds nothing again');
+
+  // a zone rule by tapping desks, from the keyboard
+  await page.selectOption('#ruleKind', 'zone');
+  ok(await page.isVisible('#ruleZoneWrap'), 'the zone choices appear for a zone rule');
+  ok(await page.isHidden('#ruleAnyWrap'), 'and the partner list stays away');
+  await page.selectOption('#ruleStudents', ['s2']);
+  await page.selectOption('#ruleZone', 'desks');
+  ok(await page.isVisible('#ruleTapBtn'), 'Choose desks on the floor is offered for "desks I choose"');
+  await page.focus('#ruleTapBtn');
+  await page.keyboard.press('Enter');
+  eq(await page.getAttribute('#ruleTapBtn', 'aria-pressed'), 'true', 'the choose-desks mode says it is on');
+  await page.focus('.desk[data-id="a"] .seat'); await page.keyboard.press('Enter');
+  await page.focus('.desk[data-id="b"] .seat'); await page.keyboard.press('Enter');
+  eq(await page.textContent('#ruleTapInfo'), '2 desks chosen', 'two desks chosen with the keyboard');
+  ok(/chosen for the rule/.test(await page.getAttribute('.desk[data-id="a"] .seat', 'aria-label')), 'a chosen desk says so to a screen reader');
+  await page.focus('.desk[data-id="b"] .seat'); await page.keyboard.press('Enter');
+  eq(await page.textContent('#ruleTapInfo'), '1 desk chosen', 'a second press drops the desk');
+  await page.focus('.desk[data-id="b"] .seat'); await page.keyboard.press('Enter');
+  await page.click('#ruleWhy'); await page.fill('#ruleWhy', 'front row, vision');
+  await page.click('button[onclick="addRuleFromForm()"]');
+  list = await rows();
+  ok(list.length === 2 && /^Mansa Musa in desk 1, 2 \u00B7 Must \u00B7 front row, vision$/.test(list[1]), 'the zone rule is listed with its desks, strength and reason: ' + JSON.stringify(list));
+  eq(await page.getAttribute('#ruleTapBtn', 'aria-pressed'), 'false', 'choosing desks ends when the rule is added');
+
+  // a soft keep-apart with a reason mirrors into the old pair list
+  await page.selectOption('#ruleKind', 'apart');
+  await page.selectOption('#ruleStudents', ['s3', 's4']);
+  await page.selectOption('#ruleStrength', '2');
+  await page.fill('#ruleWhy', '');
+  await page.click('button[onclick="addRuleFromForm()"]');
+  await settle(page, 1600);
+  let st1 = await stored(page);
+  const sec1 = st1.sections[0];
+  eq(sec1.rules.length, 3, 'three rules stored');
+  const zr = sec1.rules.find(r => r.kind === 'zone');
+  ok(zr && zr.hard === true && zr.zone === '' && zr.desks.join() === 'a,b' && zr.why === 'front row, vision', 'the zone rule is stored with its desks, Must and reason');
+  const soft = sec1.rules.find(r => r.kind === 'apart' && !r.hard);
+  ok(soft && soft.weight === 2 && soft.students.join() === 's3,s4', 'the Want rule is stored soft, weight 2');
+  ok(sec1.apart.some(p => p.join() === 's3,s4') && sec1.apart.some(p => p.join() === 's0,s1'), 'both pairs are in the old apart list for an older page');
+
+  // Auto-assign keeps the zone rule
+  await page.click('button[onclick="autoAssign()"]');
+  await settle(page, 300);
+  await settle(page, 1600);
+  st1 = await stored(page);
+  const seat2 = Object.entries(st1.sections[0].assign).find(([, sid]) => sid === 's2');
+  ok(seat2 && ['a', 'b'].includes(seat2[0]), 'Auto-assign seats the student in one of the chosen desks');
+
+  // tab order: from the reason field the next stop is the Add button
+  await page.focus('#ruleWhy'); await page.keyboard.press('Tab');
+  eq(await page.evaluate(() => document.activeElement && document.activeElement.getAttribute('onclick')), 'addRuleFromForm()', 'Tab goes from the reason to Add rule');
+
+  // remove one by its button
+  await page.click('#rulesList .pair:nth-child(3) .icon-btn');
+  eq((await rows()).length, 2, 'removing a rule takes it off the list');
+  await settle(page, 1600);
+  st1 = await stored(page);
+  ok(!st1.sections[0].apart.some(p => p.join() === 's3,s4'), 'and out of the old pair list');
+
+  // removing a student takes their rules with them
+  await page.click('button[onclick="removeStudent(\'s2\')"]');
+  await settle(page, 1600);
+  st1 = await stored(page);
+  ok(!st1.sections[0].rules.some(r => r.kind === 'zone'), 'a removed student takes their zone rule with them');
+  const errs = page.__errs.filter(e => !/favicon/.test(e));
+  eq(errs.length, 0, 'no console/page errors in the Rules flow' + (errs.length ? ':\n       ' + errs.join('\n       ') : ''));
+  await page.close();
+}
+
 await browser.close();
 server.close();
 
