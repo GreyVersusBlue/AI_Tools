@@ -6502,6 +6502,23 @@ un-extracted.
   so one physical room is drawn once. Reuse 035's tile editor where sensible;
   decide whether the room model lives here or in a shared "my classroom" store 035
   also writes.
+  **Designed (AI-22, 2026-10-27; built in steps, see Status).** *Storage.* `rooms: [{ id, name, desks: [{id,x,y,rot}],
+  marks: [{ id, kind, x, y, w, h, rot, label }] }]` beside `sections` in `seating-chart-v1`, and `section.room` (a room id).
+  Both exist only once used, so a chart saved before them loads byte-identical (`fixtures/saved-v357.json` is the proof).
+  `kind` is door, window, teacher, bench, projector or obstacle. **A section in a room keeps its own `desks` field as a
+  mirror of the room's desks** (geometry from the room; `locked` and `empty` stay the section's own, since they are about
+  that period's seating), the way the pair lists mirror `rules`: `_shared/seating-read.js` and its readers (010, 008, 045,
+  007, 002) read `section.desks` and never learn a room exists, so they work unchanged and a cached older page still
+  draws every period. A load with a missing room drops `section.room` and keeps the desks. Editing the room (one place)
+  rewrites the mirror in every attached section and drops a seat on a desk that is gone. Attaching a section to a room
+  keeps the seats on desks the room has and unseats the rest (counted, never silent). *How P3 reads it.* Zones, Leave empty,
+  "front row" and the solver read `section.desks` as now (the mirror); the room adds `desksNear(room, markId, radius)`,
+  which gives a door or window mark's nearby desks as a desk list for a tapped zone (P14-8) so "near the door" is a zone
+  rule over desks, not a new rule kind. A mark never changes adjacency (`ROOM.neighbor` is unchanged). *035's tile editor:*
+  not imported (no cross-tool coupling); the mark kinds and the snap grid are the vocabulary to line up with if 035 ever
+  shares a classroom. **Open questions for Devon, defaults built:** (a) does the room live in 005's own storage or in a
+  shared "my classroom" store 035 also writes (default: 005's, no new shared store); (b) are a period's saved layouts kept
+  per room or per section (default: per section, unchanged). Nothing here decides either beyond the default.
 - **P5 — Live mode + undo extraction.** Project the chart; tap a seat to mark
   absent, award a point (008), or start a pass (001). Extract the undo stack into
   `_shared/undo.js` and adopt it in the tools whose undo is a single in-memory
