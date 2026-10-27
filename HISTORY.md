@@ -85,7 +85,7 @@ repo. The published browser, `sv-browser.js`, the Northwind baseline and the 034
 scans 034, which has the same `br-rise` fade, with plain `a11yScan`; it is green on CI and was not changed here. It
 may share the blind spot, if its clock leaves the fade at 0.
 
-## Path 13 P2 increment 5: the improvements, each its own commit (2026-10-27, AI-21, `CACHE_VERSION` v347–v348)
+## Path 13 P2 increment 5: the improvements, each its own commit (2026-10-27, AI-21, `CACHE_VERSION` v347–v349)
 
 These change results on purpose. For each: what a teacher now sees differently, what proves it, and what still proves the
 old path. Devon's ten P1 answers (2026-10-21, all "keep the default") bind every call.
@@ -143,6 +143,23 @@ section 1b holds the gap under 0.5 and the range at 1 in all five rounds (it fai
 draw and the later presses by shape (group count, nobody lost or twice, keep-apart held); random and coverage cases are
 compared in full as before. The engine's own check (`keepStrategy` holds the balanced gap after four generations) was
 already in `test:grouping` from P1.
+
+**3. 002's keep-together pairs are blocks (v349).** *Before:* a keep-together pair was one more broken pair for the repair
+to try to fix, with the same weight as a keep-apart; two chains of three (A with B and B with C; D with E and E with F) in 28
+students by 7 groups were left parted in 4.5% of shuffles (measured in P1, item 4). *Now:* when the class has any keep-together
+pair the page passes `search.together: 'units'`: the pairs are joined into sets (a chain is one set), each set is dealt as one block
+into the smallest group, blocks first and largest first, then the strategy orders everyone else and each goes to the smallest
+group. Devon's P13-8 ("a block once switched on"). With no keep-together pair the page keeps the old deal, because `units` with
+no set still takes a different path and would have moved every golden class. A set bigger than a group, which no deal can keep,
+is now said in the "Why this grouping" list ("...are more than a group holds, so they cannot all be kept together") instead
+of only showing up as a broken pair; a keep-apart pair inside a chain is still the one case where the two rules cannot both
+hold, and the apart repair is what breaks it.
+*Proof:* `smoke-year-memory.mjs` section 1c: two chains of three in 28 by 7, 100 unseeded presses on the page, none parted and
+nobody missing (with `units` taken out it fails at press 25 and the golden fails; the old rule passed all 100 about 1% of the time).
+Exactly one of the twelve golden scenarios moved (`apart-together-24`, the only one with keep-together pairs), none of the
+other eleven; it was re-recorded alone with an `amended` note. `test:grouping`'s engine checks for `units` were
+already in from P1, and `test:grouping-adopters` is unchanged at 246 (its keep-together case is a skill strategy, held by
+shape since v348).
 
 ## Path 13 P2 increment 4: 002, 022 and 027 keyed by roster id (2026-10-26, AI-21, `CACHE_VERSION` v344–v346)
 

@@ -1152,7 +1152,9 @@
       history: history, rng: Math.random,
       /* The strategy the teacher picked wins over "not last time's partner": the repair no longer
          undoes a balanced, mixed or readiness grouping to avoid a repeat (Path 13 P2, v348). */
-      search: { keepStrategy: KEEP_STRATEGIES.indexOf(els.strategySelect.value) !== -1 }
+      /* A keep-together set (a chain of pairs too) is dealt as one block, so the repair is not what holds it
+         together (v349, Devon's P13-8: a block once switched on). With no pair set the old deal is kept. */
+      search: { keepStrategy: KEEP_STRATEGIES.indexOf(els.strategySelect.value) !== -1, together: keepTogether.length ? 'units' : 'pairs' }
     });
     var lockedCount = res.stats.lockedCount, usedLocks = lockedCount > 0, lockedIdxSet = {};
     var keyOfObj = new Map();
@@ -1205,7 +1207,7 @@
         longMemory: longMemory, busiestPairing: busiest,
         rolesFresh: roleResult ? roleResult.fresh : 0, rolesTotal: roleResult ? roleResult.total : 0,
         strategy: res.stats.strategy, keptStrategy: KEEP_STRATEGIES.indexOf(res.stats.strategy) !== -1, oddMode: oddMode, lockedCount: lockedCount, reshuffledCount: reshuffledCount,
-        usedLocks: usedLocks, totalActive: activeStudents.length, groupCountTarget: res.stats.count - lockedCount,
+        togetherTooBig: res.impossible.filter(function (x) { return x.code === 'together-too-big'; }).length, usedLocks: usedLocks, totalActive: activeStudents.length, groupCountTarget: res.stats.count - lockedCount,
         fallbackNote: res.stats.note === 'one-left' ? 'Only one student was left over, so they were kept as a floater — a pair needs at least two.' : null,
         bonusGroupSize: res.stats.ownGroup,
         newPairsThisGen: pairStats.brandNew, totalPairsThisGen: pairStats.total
@@ -1430,6 +1432,10 @@
       lines.push(result.togetherViolations.length
         ? 'Could not keep ' + result.togetherViolations.length + ' pair' + (result.togetherViolations.length === 1 ? '' : 's') + ' together: ' + pairsText(result.togetherViolations) + '.'
         : 'All ' + keepTogether.length + ' keep-together constraint' + (keepTogether.length === 1 ? '' : 's') + ' honored.');
+    }
+    if (result.meta.togetherTooBig) {
+      lines.push(result.meta.togetherTooBig === 1 ? 'The students you linked with keep-together pairs are more than a group holds, so they cannot all be kept together.'
+        : result.meta.togetherTooBig + ' sets of students linked by keep-together pairs are each more than a group holds, so they cannot all be kept together.');
     }
     var hasPairHistory = !!(state && state.pairHistory && Object.keys(state.pairHistory).length);
     if (hasPairHistory) {

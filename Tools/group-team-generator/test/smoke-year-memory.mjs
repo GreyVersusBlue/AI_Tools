@@ -166,6 +166,32 @@ if (want('1b')) {
   }
 }
 
+/* ── 1c. a keep-together pair or chain is a block (v349) ───────────────────────
+   Measured before on the engine (P1, item 4): two chains of three (A with B, B with C; D with E, E with F) in 28 students
+   by 7 were left broken in 4.5% of shuffles. Over 100 presses on the page, unseeded, none may be: a block does not depend
+   on the repair, so the property is exact, and the old rule would pass all 100 only about 1% of the time. */
+if (want('1c')) {
+  const names = nameList(28);
+  const page = await open();
+  await roster(page, names, { mode: 'count', value: 7 });
+  for (const [a, b] of [[0, 1], [1, 2], [3, 4], [4, 5]]) {
+    await page.selectOption('#together-a', names[a]); await page.selectOption('#together-b', names[b]); await page.click('#add-together-btn');
+  }
+  let broken = 0, bad = '';
+  for (let i = 0; i < 100; i++) {
+    await page.click(i ? '#regenerate-btn' : '#generate-btn');
+    const groups = await page.evaluate(() => [...document.querySelectorAll('#results .group-card')].map(c => [...c.querySelectorAll('li > span:first-child')].map(x => x.textContent)));
+    const where = n => groups.findIndex(g => g.includes(n));
+    for (const chain of [[0, 1, 2], [3, 4, 5]]) {
+      if (new Set(chain.map(c => where(names[c]))).size !== 1) { broken++; bad = bad || `press ${i}: ${chain.map(c => names[c] + ' in ' + where(names[c])).join(', ')}`; }
+    }
+    if (groups.reduce((a, g) => a + g.length, 0) !== 28) { broken++; bad = bad || `press ${i}: a student is missing`; }
+  }
+  eq(broken, 0, `two keep-together chains of three stayed whole in 100 presses of 28 by 7 ${bad}`);
+  ok(page.__errs.length === 0, `no page errors (${page.__errs.slice(0, 2).join(' | ')})`);
+  await page.context().close();
+}
+
 /* ── 2. long memory ───────────────────────────────────────────────────────── */
 if (want('2')) {
   const names = nameList(12);
