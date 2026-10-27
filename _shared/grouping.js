@@ -24,7 +24,7 @@
    NOT HERE. 002's long-memory refine and its Hungarian role rotation
    (Tools/group-team-generator/gtg-memory.js, v277) came after the design; they
    stay 002's and run after formGroups() exactly where they run today. Stations
-   and timers are rotation (P3). Brackets, pools and Swiss are P3 and P4.
+   and timers are rotation (P3). Brackets, pools and Swiss are bracket.js (P3).
 
    A MEMBER is { key, name, attrs }: `key` any string unique in the call (a
    bare string is a member whose key and name are that string), `attrs` an
