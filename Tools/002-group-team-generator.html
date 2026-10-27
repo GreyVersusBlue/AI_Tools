@@ -1141,6 +1141,9 @@
 
     var res = Grouping.formGroups(members, {
       count: isSize ? undefined : v, size: isSize ? v : undefined,
+      /* "Students per group" with floaters or an own group means groups of that size and
+         the rest left over, not the group count rounded up with every group popped down. */
+      sizeRule: isSize && oddMode !== 'extra' ? 'floor' : undefined,
       remainder: oddMode === 'extra' || oddMode === 'pair' ? oddMode : 'floaters',
       strategy: els.strategySelect.value,
       absent: absent, apart: keyPairs(keepApart), together: keyPairs(keepTogether),

@@ -484,205 +484,210 @@
      "groups": [
       [
        "Quin TestQ",
-       "Fay TestF",
-       "Eli TestE"
-      ],
-      [
-       "Rae TestR",
-       "Uri TestU",
-       "Mo TestM"
-      ],
-      [
-       "Nia TestN",
-       "Sol TestS",
-       "Lena TestL"
-      ],
-      [
-       "Val TestV",
-       "Gus TestG",
-       "Abe TestA"
-      ],
-      [
-       "Ira TestI",
-       "Oz TestO",
+       "Di TestD",
+       "Tess TestT",
        "Kai TestK"
       ],
       [
-       "Zed TestZ",
-       "Tess TestT",
-       "Hana TestH"
-      ],
-      [
-       "Di TestD",
+       "Rae TestR",
+       "Fay TestF",
        "Cy TestC",
-       "Xan TestX"
-      ]
-     ],
-     "floaters": "Floaters (not assigned to a group): Wen TestW, Ada TestA, Yul TestY, Bo TestB, Jo TestJ, Pia TestP"
-    },
-    {
-     "groups": [
-      [
-       "Zed TestZ",
-       "Eli TestE",
-       "Ada TestA"
+       "Hana TestH"
       ],
       [
        "Nia TestN",
-       "Jo TestJ",
-       "Hana TestH"
+       "Uri TestU",
+       "Eli TestE",
+       "Xan TestX"
       ],
       [
-       "Kai TestK",
-       "Mo TestM",
-       "Fay TestF"
-      ],
-      [
-       "Di TestD",
+       "Val TestV",
        "Sol TestS",
+       "Mo TestM",
        "Wen TestW"
       ],
       [
-       "Quin TestQ",
-       "Abe TestA",
-       "Pia TestP"
-      ],
-      [
-       "Tess TestT",
-       "Xan TestX",
-       "Oz TestO"
-      ],
-      [
-       "Rae TestR",
-       "Val TestV",
-       "Lena TestL"
-      ]
-     ],
-     "floaters": "Floaters (not assigned to a group): Uri TestU, Gus TestG, Yul TestY, Bo TestB, Ira TestI, Cy TestC"
-    },
-    {
-     "groups": [
-      [
-       "Cy TestC",
+       "Ira TestI",
        "Gus TestG",
-       "Eli TestE"
-      ],
-      [
-       "Ada TestA",
-       "Jo TestJ",
-       "Oz TestO"
-      ],
-      [
-       "Kai TestK",
-       "Zed TestZ",
-       "Lena TestL"
-      ],
-      [
-       "Ira TestI",
-       "Xan TestX",
-       "Sol TestS"
-      ],
-      [
-       "Mo TestM",
-       "Quin TestQ",
-       "Hana TestH"
-      ],
-      [
-       "Wen TestW",
-       "Nia TestN",
-       "Val TestV"
-      ],
-      [
-       "Abe TestA",
-       "Tess TestT",
-       "Rae TestR"
-      ]
-     ],
-     "floaters": "Floaters (not assigned to a group): Pia TestP, Yul TestY, Fay TestF, Di TestD, Uri TestU, Bo TestB"
-    },
-    {
-     "groups": [
-      [
-       "Zed TestZ",
-       "Bo TestB",
-       "Oz TestO"
-      ],
-      [
-       "Sol TestS",
-       "Eli TestE",
-       "Mo TestM"
-      ],
-      [
-       "Val TestV",
-       "Quin TestQ",
-       "Uri TestU"
-      ],
-      [
-       "Nia TestN",
-       "Ada TestA",
-       "Kai TestK"
-      ],
-      [
-       "Ira TestI",
-       "Tess TestT",
-       "Yul TestY"
-      ],
-      [
-       "Rae TestR",
-       "Pia TestP",
-       "Gus TestG"
-      ],
-      [
-       "Fay TestF",
        "Lena TestL",
-       "Abe TestA"
-      ]
-     ],
-     "floaters": "Floaters (not assigned to a group): Cy TestC, Hana TestH, Di TestD, Wen TestW, Xan TestX, Jo TestJ"
-    },
-    {
-     "groups": [
-      [
-       "Quin TestQ",
-       "Oz TestO",
-       "Lena TestL"
-      ],
-      [
-       "Zed TestZ",
-       "Gus TestG",
-       "Tess TestT"
-      ],
-      [
-       "Abe TestA",
-       "Nia TestN",
-       "Di TestD"
-      ],
-      [
-       "Rae TestR",
-       "Ira TestI",
        "Ada TestA"
       ],
       [
-       "Sol TestS",
-       "Hana TestH",
+       "Zed TestZ",
+       "Oz TestO",
+       "Abe TestA",
+       "Yul TestY"
+      ]
+     ],
+     "floaters": "Floaters (not assigned to a group): Bo TestB, Jo TestJ, Pia TestP"
+    },
+    {
+     "groups": [
+      [
+       "Zed TestZ",
+       "Rae TestR",
+       "Xan TestX",
        "Pia TestP"
       ],
       [
-       "Fay TestF",
-       "Uri TestU",
-       "Xan TestX"
+       "Nia TestN",
+       "Yul TestY",
+       "Val TestV",
+       "Quin TestQ"
       ],
       [
-       "Yul TestY",
-       "Bo TestB",
-       "Kai TestK"
+       "Kai TestK",
+       "Jo TestJ",
+       "Ada TestA",
+       "Hana TestH"
+      ],
+      [
+       "Di TestD",
+       "Mo TestM",
+       "Lena TestL",
+       "Uri TestU"
+      ],
+      [
+       "Oz TestO",
+       "Sol TestS",
+       "Fay TestF",
+       "Gus TestG"
+      ],
+      [
+       "Tess TestT",
+       "Abe TestA",
+       "Wen TestW",
+       "Eli TestE"
       ]
      ],
-     "floaters": "Floaters (not assigned to a group): Val TestV, Wen TestW, Mo TestM, Cy TestC, Jo TestJ, Eli TestE"
+     "floaters": "Floaters (not assigned to a group): Bo TestB, Ira TestI, Cy TestC"
+    },
+    {
+     "groups": [
+      [
+       "Xan TestX",
+       "Mo TestM",
+       "Kai TestK",
+       "Yul TestY"
+      ],
+      [
+       "Ira TestI",
+       "Abe TestA",
+       "Hana TestH",
+       "Nia TestN"
+      ],
+      [
+       "Uri TestU",
+       "Fay TestF",
+       "Tess TestT",
+       "Val TestV"
+      ],
+      [
+       "Ada TestA",
+       "Cy TestC",
+       "Quin TestQ",
+       "Oz TestO"
+      ],
+      [
+       "Pia TestP",
+       "Jo TestJ",
+       "Sol TestS",
+       "Eli TestE"
+      ],
+      [
+       "Zed TestZ",
+       "Bo TestB",
+       "Lena TestL",
+       "Wen TestW"
+      ]
+     ],
+     "floaters": "Floaters (not assigned to a group): Rae TestR, Di TestD, Gus TestG"
+    },
+    {
+     "groups": [
+      [
+       "Hana TestH",
+       "Gus TestG",
+       "Mo TestM",
+       "Rae TestR"
+      ],
+      [
+       "Cy TestC",
+       "Xan TestX",
+       "Uri TestU",
+       "Ira TestI"
+      ],
+      [
+       "Pia TestP",
+       "Tess TestT",
+       "Bo TestB",
+       "Di TestD"
+      ],
+      [
+       "Kai TestK",
+       "Lena TestL",
+       "Eli TestE",
+       "Quin TestQ"
+      ],
+      [
+       "Ada TestA",
+       "Sol TestS",
+       "Wen TestW",
+       "Yul TestY"
+      ],
+      [
+       "Zed TestZ",
+       "Oz TestO",
+       "Jo TestJ",
+       "Abe TestA"
+      ]
+     ],
+     "floaters": "Floaters (not assigned to a group): Val TestV, Fay TestF, Nia TestN"
+    },
+    {
+     "groups": [
+      [
+       "Sol TestS",
+       "Cy TestC",
+       "Di TestD",
+       "Abe TestA"
+      ],
+      [
+       "Tess TestT",
+       "Gus TestG",
+       "Kai TestK",
+       "Ada TestA"
+      ],
+      [
+       "Jo TestJ",
+       "Uri TestU",
+       "Bo TestB",
+       "Mo TestM"
+      ],
+      [
+       "Zed TestZ",
+       "Quin TestQ",
+       "Xan TestX",
+       "Val TestV"
+      ],
+      [
+       "Lena TestL",
+       "Rae TestR",
+       "Yul TestY",
+       "Nia TestN"
+      ],
+      [
+       "Hana TestH",
+       "Wen TestW",
+       "Eli TestE",
+       "Oz TestO"
+      ]
+     ],
+     "floaters": "Floaters (not assigned to a group): Ira TestI, Pia TestP, Fay TestF"
     }
    ],
-   "savedSha256": "6007cee88410994c41cca083c05a948804f272b98dc6640b0a6c363e0464ce82",
-   "savedLength": 4925
+   "savedSha256": "d237eaf49fe2a5985902a1a6c36fdb92a324ddabeeef79e2e1270173017d0115",
+   "savedLength": 7428
   },
   "random-27-own-group": {
    "steps": [
@@ -690,93 +695,89 @@
      "groups": [
       [
        "Xan TestX",
+       "Sol TestS",
+       "Cy TestC",
+       "Rae TestR"
+      ],
+      [
+       "Yul TestY",
        "Fay TestF",
+       "Tess TestT",
+       "Ada TestA"
+      ],
+      [
+       "Hana TestH",
+       "Nia TestN",
+       "Zed TestZ",
+       "Oz TestO"
+      ],
+      [
+       "Di TestD",
+       "Val TestV",
+       "Bo TestB",
+       "Jo TestJ"
+      ],
+      [
+       "Quin TestQ",
+       "Uri TestU",
+       "Gus TestG",
+       "Eli TestE"
+      ],
+      [
+       "Kai TestK",
+       "Wen TestW",
+       "Pia TestP",
+       "Ira TestI"
+      ],
+      [
+       "Abe TestA",
+       "Lena TestL",
+       "Mo TestM"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Eli TestE",
+       "Abe TestA",
+       "Val TestV",
+       "Ada TestA"
+      ],
+      [
+       "Ira TestI",
+       "Oz TestO",
+       "Quin TestQ",
+       "Sol TestS"
+      ],
+      [
+       "Kai TestK",
+       "Xan TestX",
+       "Lena TestL",
+       "Nia TestN"
+      ],
+      [
+       "Mo TestM",
+       "Wen TestW",
+       "Fay TestF",
+       "Di TestD"
+      ],
+      [
+       "Cy TestC",
+       "Gus TestG",
+       "Jo TestJ",
        "Zed TestZ"
       ],
       [
        "Yul TestY",
-       "Nia TestN",
-       "Bo TestB"
-      ],
-      [
-       "Hana TestH",
-       "Val TestV",
-       "Gus TestG"
-      ],
-      [
-       "Di TestD",
        "Uri TestU",
+       "Rae TestR",
        "Pia TestP"
       ],
       [
-       "Quin TestQ",
-       "Wen TestW",
-       "Rae TestR"
-      ],
-      [
-       "Kai TestK",
-       "Cy TestC",
-       "Ada TestA"
-      ],
-      [
-       "Sol TestS",
-       "Tess TestT",
-       "Oz TestO"
-      ],
-      [
-       "Jo TestJ",
-       "Eli TestE",
-       "Ira TestI",
-       "Abe TestA",
-       "Lena TestL",
-       "Mo TestM"
-      ]
-     ],
-     "floaters": ""
-    },
-    {
-     "groups": [
-      [
-       "Lena TestL",
-       "Oz TestO",
-       "Gus TestG"
-      ],
-      [
-       "Ira TestI",
-       "Xan TestX",
-       "Uri TestU"
-      ],
-      [
-       "Kai TestK",
-       "Sol TestS",
-       "Jo TestJ"
-      ],
-      [
-       "Ada TestA",
-       "Mo TestM",
-       "Rae TestR"
-      ],
-      [
-       "Cy TestC",
-       "Pia TestP",
-       "Eli TestE"
-      ],
-      [
-       "Yul TestY",
-       "Val TestV",
-       "Wen TestW"
-      ],
-      [
-       "Abe TestA",
-       "Fay TestF",
-       "Nia TestN"
-      ],
-      [
-       "Di TestD",
-       "Zed TestZ",
-       "Tess TestT",
        "Bo TestB",
-       "Quin TestQ",
+       "Tess TestT",
        "Hana TestH"
       ]
      ],
@@ -785,95 +786,45 @@
     {
      "groups": [
       [
-       "Uri TestU",
-       "Zed TestZ",
-       "Eli TestE"
-      ],
-      [
-       "Quin TestQ",
-       "Abe TestA",
-       "Cy TestC"
-      ],
-      [
        "Yul TestY",
-       "Fay TestF",
+       "Di TestD",
+       "Zed TestZ",
        "Kai TestK"
       ],
       [
-       "Tess TestT",
-       "Jo TestJ",
-       "Pia TestP"
-      ],
-      [
-       "Oz TestO",
-       "Nia TestN",
-       "Rae TestR"
-      ],
-      [
-       "Ira TestI",
-       "Wen TestW",
-       "Hana TestH"
-      ],
-      [
-       "Mo TestM",
-       "Bo TestB",
-       "Gus TestG"
-      ],
-      [
-       "Val TestV",
-       "Lena TestL",
+       "Pia TestP",
        "Sol TestS",
-       "Xan TestX",
-       "Ada TestA",
-       "Di TestD"
-      ]
-     ],
-     "floaters": ""
-    },
-    {
-     "groups": [
-      [
-       "Oz TestO",
-       "Xan TestX",
-       "Mo TestM"
-      ],
-      [
-       "Zed TestZ",
-       "Ada TestA",
-       "Nia TestN"
-      ],
-      [
-       "Tess TestT",
-       "Val TestV",
-       "Cy TestC"
-      ],
-      [
-       "Uri TestU",
-       "Di TestD",
-       "Pia TestP"
-      ],
-      [
-       "Jo TestJ",
-       "Fay TestF",
+       "Gus TestG",
        "Bo TestB"
       ],
       [
-       "Hana TestH",
-       "Yul TestY",
-       "Gus TestG"
-      ],
-      [
-       "Ira TestI",
-       "Quin TestQ",
-       "Sol TestS"
-      ],
-      [
-       "Wen TestW",
-       "Abe TestA",
        "Eli TestE",
-       "Lena TestL",
-       "Kai TestK",
+       "Cy TestC",
+       "Ira TestI",
+       "Lena TestL"
+      ],
+      [
+       "Nia TestN",
+       "Abe TestA",
+       "Wen TestW",
+       "Tess TestT"
+      ],
+      [
+       "Hana TestH",
+       "Fay TestF",
+       "Val TestV",
        "Rae TestR"
+      ],
+      [
+       "Quin TestQ",
+       "Xan TestX",
+       "Jo TestJ",
+       "Mo TestM"
+      ],
+      [
+       "Oz TestO",
+       "Uri TestU",
+       "Ada TestA"
       ]
      ],
      "floaters": ""
@@ -881,54 +832,98 @@
     {
      "groups": [
       [
-       "Zed TestZ",
-       "Ira TestI",
-       "Fay TestF"
-      ],
-      [
        "Cy TestC",
-       "Di TestD",
-       "Wen TestW"
-      ],
-      [
-       "Ada TestA",
-       "Abe TestA",
-       "Yul TestY"
-      ],
-      [
-       "Bo TestB",
        "Val TestV",
-       "Rae TestR"
-      ],
-      [
-       "Lena TestL",
-       "Oz TestO",
-       "Tess TestT"
+       "Mo TestM",
+       "Bo TestB"
       ],
       [
        "Gus TestG",
+       "Ada TestA",
+       "Hana TestH",
+       "Ira TestI"
+      ],
+      [
+       "Di TestD",
+       "Sol TestS",
+       "Xan TestX",
+       "Abe TestA"
+      ],
+      [
        "Uri TestU",
+       "Kai TestK",
+       "Fay TestF",
+       "Tess TestT"
+      ],
+      [
+       "Lena TestL",
+       "Rae TestR",
+       "Zed TestZ",
+       "Quin TestQ"
+      ],
+      [
+       "Jo TestJ",
+       "Wen TestW",
+       "Pia TestP",
+       "Oz TestO"
+      ],
+      [
+       "Nia TestN",
+       "Eli TestE",
+       "Yul TestY"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Val TestV",
+       "Zed TestZ",
+       "Oz TestO",
+       "Gus TestG"
+      ],
+      [
+       "Ira TestI",
+       "Fay TestF",
+       "Nia TestN",
        "Sol TestS"
       ],
       [
-       "Mo TestM",
-       "Kai TestK",
-       "Jo TestJ"
+       "Abe TestA",
+       "Pia TestP",
+       "Uri TestU",
+       "Hana TestH"
       ],
       [
-       "Xan TestX",
+       "Lena TestL",
+       "Jo TestJ",
+       "Bo TestB",
+       "Di TestD"
+      ],
+      [
+       "Quin TestQ",
        "Eli TestE",
-       "Nia TestN",
-       "Hana TestH",
-       "Pia TestP",
-       "Quin TestQ"
+       "Tess TestT",
+       "Ada TestA"
+      ],
+      [
+       "Cy TestC",
+       "Rae TestR",
+       "Yul TestY",
+       "Xan TestX"
+      ],
+      [
+       "Wen TestW",
+       "Mo TestM",
+       "Kai TestK"
       ]
      ],
      "floaters": ""
     }
    ],
-   "savedSha256": "927af37b686f04b3f05644275e0070f8d571eb2e88df34b614e62e5359b4a0e1",
-   "savedLength": 7472
+   "savedSha256": "df79a3ad715cf552aea5273cc85fd9b79a96cc299e6176c9ba68d3fd1dc3130d",
+   "savedLength": 7882
   },
   "apart-together-24": {
    "steps": [
@@ -2513,5 +2508,9 @@
    "savedSha256": "ee6541bc00ef4e4c61c5ca142bc17fb2bdd7339388d894defef05c4f0e58fe01",
    "savedLength": 1092
   }
+ },
+ "amended": {
+  "random-27-floaters": "v347: \"students per group\" with floaters or an own group is groups of that size (sizeRule floor); recorded from the page at that version, every other scenario untouched",
+  "random-27-own-group": "v347: \"students per group\" with floaters or an own group is groups of that size (sizeRule floor); recorded from the page at that version, every other scenario untouched"
  }
 }

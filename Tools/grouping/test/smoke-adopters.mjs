@@ -293,9 +293,35 @@ const ADOPTERS = [
         want.push({ groups: r.groups.map(g => g.map(st => st.name)), floaters: r.floaters.map(st => st.name) });
       }
       const gotShape = got.presses.map(x => ({ groups: x.groups, floaters: x.floaters }));
+      const sorted = o => J(Object.keys(o).sort().map(k => [k, o[k]]));
+      /* Since v347 "students per group" with floaters or an own group means groups of that size and the rest left
+         over, so it is no longer the old page's deal (the old page rounded the group count up and popped every group
+         down). That is the one intended change: those cases are held to the new rule by shape, the memory and the keys
+         are held exactly as before, and the old path (a group count, or size with "extra") is still compared
+         draw for draw below. */
+      if (mode === 'size' && odd !== 'extra') {
+        const present = CLASS.filter((_, i) => !absent.includes(i));
+        const full = Math.floor(present.length / v), rem = present.length % v;
+        const shapeOk = got.presses.every((x, i) => {
+          const left = present.filter(n => x.floaters.includes(n)).length;
+          const inGroups = x.groups.reduce((a, g) => a + g.length, 0);
+          const everyone = inGroups + left === present.length && new Set(x.groups.flat()).size === inGroups;
+          if (i === 2) return everyone;    // group 1 locked: the rest are dealt round it, so only "everyone once" is held
+          const sizes = x.groups.map(g => g.length);
+          const want = odd === 'floater' ? Array(full).fill(v).concat([])
+            : Array(full).fill(v).concat(rem >= 2 ? [rem] : []);
+          const wantLeft = odd === 'floater' ? rem : (rem === 1 ? 1 : 0);
+          return everyone && J(sizes) === J(want) && left === wantLeft;
+        });
+        const sameMemory = got.saved.pairGen === 3 && J(got.mirror) === J({ pairHistory: got.saved.pairHistory, pairGen: got.saved.pairGen });
+        const keys = got.saved.groupHistory ? got.saved.groupHistory.keys : [];
+        const keyed = keys.length === CLASS.length && keys.every(k => k.indexOf(ids ? 'i:' : 'n:') === 0);
+        const apartBroken = apart.some(([a, b]) => got.presses.some(x => x.groups.some(g => g.includes(CLASS[a]) && g.includes(CLASS[b]))));
+        return [shapeOk && sameMemory && keyed && !apartBroken,
+          `new size rule: shape ${shapeOk}, memory ${sameMemory}, keys ${keyed}, apart broken ${apartBroken}; ${J(gotShape)}`];
+      }
       const sameGroups = got.presses.every((x, i) => J(x.groups) === J(want[i].groups) &&
         want[i].floaters.every(n => x.floaters.includes(n)) && (want[i].floaters.length > 0) === (x.floaters !== ''));
-      const sorted = o => J(Object.keys(o).sort().map(k => [k, o[k]]));
       const sameMemory = got.saved.pairGen === 3 && sorted(got.saved.pairHistory) === sorted(state.pairHistory) &&
         J(got.mirror) === J({ pairHistory: got.saved.pairHistory, pairGen: got.saved.pairGen });
       const keys = got.saved.groupHistory ? got.saved.groupHistory.keys : [];
@@ -304,12 +330,15 @@ const ADOPTERS = [
     },
     cases: [
       ['random', 'extra', 'count', 3, [], [], []],
-      ['balanced', 'floater', 'size', 4, [], [], [2]],
+      ['balanced', 'floater', 'size', 4, [], [], []],
+      ['balanced', 'floater', 'size', 4, [], [], [2, 9]],
+      ['random', 'pair', 'size', 5, [], [], []],
       ['heterogeneous', 'extra', 'count', 4, [[0, 1], [2, 3]], [[4, 5]], []],
       ['homogeneous', 'floater', 'count', 5, [], [], []],
-      ['coverage', 'pair', 'size', 3, [[6, 7]], [], [9]],
+      ['coverage', 'pair', 'size', 3, [[6, 7]], [], []],
+      ['random', 'extra', 'size', 4, [], [], []],
       ['heterogeneous', 'extra', 'count', 4, [[0, 1], [2, 3]], [[4, 5]], [], true],
-      ['coverage', 'pair', 'size', 3, [[6, 7]], [], [9], true]
+      ['coverage', 'pair', 'size', 3, [[6, 7]], [], [], true]
     ]
   }
 ];

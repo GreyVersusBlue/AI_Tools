@@ -138,7 +138,8 @@
      → { count, sizes, floaters, ownGroup, note }. Draws nothing.
      sizeRule, for `size`: 'ceil' (002, 022, 027: never over the size),
      'near' (087: floor, plus one when the remainder is at least half a
-     group) or 'floor' (never under, once n >= size). remainder: 'spread'
+     group) or 'floor' (never under, once n >= size; with floaters or an
+     own group every group is exactly `size` and the rest are left over). remainder: 'spread'
      (some groups get one more; 002's stored word 'extra' too), 'floaters'
      or 'own-group' (two or more left over make a group of their own, one
      stays a floater with a note; 002's 'pair'). The count is clamped to
@@ -168,6 +169,10 @@
       if (!opts.allowEmpty) count = Math.max(1, Math.min(count, n));
     }
     var base = count ? Math.floor(n / count) : 0;
+    /* 'floor' with the rest left over: every group is `size` (never over it), the rest
+       are floaters or a group of their own. Spread keeps floor's "never under". */
+    if (rule === 'floor' && remainder !== 'spread' && size !== null && (opts.count === undefined || opts.count === null) &&
+        count && count * size <= n) base = size;
     var extra = count ? n - base * count : 0;
     var sizes = [], floaters = 0, ownGroup = 0, note = null;
     for (var i = 0; i < count; i++) sizes.push(base + (remainder === 'spread' && i < extra ? 1 : 0));
@@ -921,6 +926,8 @@
     var impossible = findImpossible(apart, together, present, target.length + (p.ownGroup ? 1 : 0), largest);
 
     var remainder = REMAINDERS[opts.remainder] || 'spread';
+    var floorExact = opts.sizeRule === 'floor' && remainder !== 'spread' && !useLocks &&
+      (opts.count === undefined || opts.count === null) && p.sizes.length > 0;
 
     function deal() {
       var groups = base.map(function (g) { return g.slice(); });
@@ -935,8 +942,14 @@
         // Under 'units' a block is dealt before any single, so the end of a
         // group is a single and popping never splits a block.
         var minSize = Math.min.apply(null, target.map(function (i) { return groups[i].length; }));
+        /* sizeRule 'floor': the size plan() gave is the size asked for (never over it), not the smallest group dealt. */
+        if (floorExact) minSize = p.sizes[0];
         target.forEach(function (i) {
           while (groups[i].length > minSize) floaters.push(groups[i].pop());
+        });
+        // A deal that was uneven (heterogeneous tiers) leaves a group short: fill it from the leftovers.
+        if (floorExact) target.forEach(function (i) {
+          while (groups[i].length < minSize && floaters.length) groups[i].push(floaters.pop());
         });
         if (remainder === 'own-group' && floaters.length >= 2) { groups.push(floaters); floaters = []; }
       }

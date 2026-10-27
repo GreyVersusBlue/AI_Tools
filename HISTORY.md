@@ -85,6 +85,42 @@ repo. The published browser, `sv-browser.js`, the Northwind baseline and the 034
 scans 034, which has the same `br-rise` fade, with plain `a11yScan`; it is green on CI and was not changed here. It
 may share the blind spot, if its clock leaves the fade at 0.
 
+## Path 13 P2 increment 5: the improvements, each its own commit (2026-10-27, AI-21, `CACHE_VERSION` v347–)
+
+These change results on purpose. For each: what a teacher now sees differently, what proves it, and what still proves the
+old path. Devon's ten P1 answers (2026-10-21, all "keep the default") bind every call.
+
+**1. 002's "Students per group" with floaters or an own group means groups of that size (v347).** *Before:* the group count
+was `ceil(n / size)` and every group was then popped down to the smallest one dealt, so 30 students at "4 per group,
+leave the leftovers as floaters" made eight groups of 3 and **6 floaters**, and "put the leftovers in their own group" made
+eight groups of 3 and a ninth of 6. *Now:* seven groups of 4 and **2 floaters**, or seven of 4 and a group of 2; 27 at 4 is six
+of 4 and 3 floaters (or a group of 3); 5 at 4 is one group of 4 and 1 floater; fewer students than the size is one group of
+everyone. A group count ("Number of groups") and "Let one or more groups take an extra student" are untouched, so
+is the 002 saved bytes for them. Devon's P13-5 ("never over the size, and the fix").
+*What the build found:* the engine's `floor` rule had never been used and was wrong in two places, which no check had
+seen because 30 by 4 hides both. (a) `plan()` took the group size from `n / count`, so 11 at 4 was two groups of **5**
+and a floater, over the size P13-5 says never to exceed; with floaters or an own group `floor` now means every group is
+exactly `size` and the rest are left over (`spread` keeps "never under", sizes 6 and 5). (b) `formGroups()` popped every group
+down to the smallest *dealt* group, not to the size `plan()` gave, so the page would still have shown groups of 5 and 6; it
+now pops to `plan()`'s size, and a group a deal left short (heterogeneous deals tiers unevenly) is filled from the leftovers,
+so nobody is lost. Other rules are unchanged (the parity suite's 122,352 checks pass as they were).
+*Proof:* `test:grouping` has two new named checks (`plan`: every n 0..60 by size 1..7 is exact, never over, the rest is
+`n mod size`, 11 by 4 is `[4,4]` + 3, 5 by 4 is `[4]` + 1, `spread` unchanged; `formGroups`: every strategy places everyone once
+in groups of exactly size), each seen failing with its rule broken on purpose (90 passed, 30 checks, 30 broken). The
+`together: 'units'` check was equal to its own mutant once short groups are topped up, so it now also asserts that the
+deal needs no repair and that a block is never parted into the floaters, and its mutant is the blocks dealt all into
+the first group. `test:grouping-adopters` (246): 002's size-with-floaters cases are held to the new rule by shape (every
+student once, groups of the size, the rest left over, a group locked) and still to the old page's memory and keys
+exactly; the old path (a count, size with "extra") is still compared draw for draw, with a new size-with-extra case.
+**The cases had to be changed to mean anything:** the old ones used 13 names with one absent, 12 students, which divide
+by 3 and 4, so the old and new rules agreed and a deliberately removed fix passed them; they now use 13, 11 and 13 by 5.
+`smoke-year-memory.mjs`'s golden file (`golden-old-groupings.json`): exactly two of its twelve scenarios moved,
+`random-27-floaters` and `random-27-own-group` (the other ten, and the saved bytes less `groupHistory`, held), and only those two
+were re-recorded, from the page at this version, with an `amended` note in the file saying so. 27 by 4 gives six of 4 and 3 floaters
+either way, so the visible change in those two is the saved memory bytes and the group sizes in their own steps.
+*Not verified:* nothing on a phone or paper; no teacher has seen the new wording. The page's explanation still reads as
+before ("N students left as floaters today").
+
 ## Path 13 P2 increment 4: 002, 022 and 027 keyed by roster id (2026-10-26, AI-21, `CACHE_VERSION` v344–v346)
 
 **Shipped.** 002 (v344, 02473b2, with the engine change), 022 (v345, c73c9b8) and 027 (v346, 1b35bcc), one commit
