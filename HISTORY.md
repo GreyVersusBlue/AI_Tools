@@ -9,6 +9,27 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-22: Path 14 P4 increment 2, marks dragged, printed and read (2026-10-27, v367-v368)
+
+Audit entry AI-22, rank 36 (2+, Partial). Two steps, each its own commit and `CACHE_VERSION`.
+
+- **Step 3 (v367), 005.** A mark on the floor is picked up with the pointer (snapped to the grid, undoable) and moved with the arrow keys with
+  focus kept (`markNode()` is the one node for floor and paper). Marks stay out of the drag when the floor is mirrored (the desks' own guard;
+  the node is not `movable` then). The room's marks print on the live page, every page of Print all and the whole-day sub packet; the printed
+  box (`printLayoutFor(desks, marks)`) widens to hold a mark outside the desks. A period outside the room, and a chart with no room, print as
+  before. `test:seating-room-marks` (19, port 8560); removing the print-all mark line was seen failing it (3 FAILs). The mirror guard inside
+  `markPointerDown` is belt and braces: the test cannot reach it, because the node is not draggable when mirrored.
+- **Step 4 (v368), the readers.** `SeatingRead.marksOf(state, section, { mirror })` and `bounds(placed, { marks })`: a reader that does not pass
+  marks gets exactly what it got (held in `test:seating-read`: `placeDesks` and `bounds` equal with and without a room). 010's SVG draws the marks
+  behind the desks (`test:command-center` seating panel, 38; removing the draw was seen failing it). 008 keeps its own module: `layoutSeats(...,
+  { marks })` adds `marks` (percent boxes) and widens the box only when asked, `roomMarks(parsed, section)` reads them; 008's tap board draws
+  them aria-hidden and not tappable (`smoke-seating-layout` 53, `smoke-seating-board` 30; dropping the argument was seen failing it). 045, 007
+  and 002 do not ask and were not touched; `smoke-seat-near` (002) and the 045 suites pass.
+- **Not done / not verified.** A mark cannot be resized, turned or relabelled after it is added (remove and add again); a zone rule still holds a
+  desk list, not the mark it came from; 007's and 045's pictures draw no marks. `class-screen/test/smoke-widgets.mjs` fails here at "Add picture"
+  (the a11y widget intercepts the click); it does not load anything this change touched, but I did not run it against `origin/main`.
+  `smoke-seat-near` failed once (25/1) and passed on three re-runs; not diagnosed. No real classroom, no paper.
+
 ## AI-22: Path 14 P4 increment 1, the room layer (2026-10-27, v365-v366)
 
 Audit entry AI-22, rank 36 (2+, Partial). P4 had no written design, so the first commit is one, in the P4 bullet of `BACKLOG.md`.
