@@ -9,6 +9,27 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-22: Path 14 P4 increment 1, the room layer (2026-10-27, v365-v366)
+
+Audit entry AI-22, rank 36 (2+, Partial). P4 had no written design, so the first commit is one, in the P4 bullet of `BACKLOG.md`.
+
+- **The design.** `rooms: [{ id, name, desks: [{id,x,y,rot}], marks: [{id,kind,x,y,w,h,rot,label}] }]` beside `sections`, and `section.room`.
+  Both exist only once used, so a chart saved before them loads byte-identical. **A section in a room keeps `desks` as a mirror of the room's**
+  (geometry from the room; `locked` and `empty` stay the period's own), the way the pair lists mirror `rules`: `_shared/seating-read.js` and
+  010, 008, 045, 007 and 002 read `section.desks` and were not touched. A room that is missing on load is forgotten and the desks stay. A mark never
+  changes adjacency; P3's zones, Leave empty and "front row" read the mirror as before. 035's tile editor was not imported (no coupling).
+- **Step 1 (v365).** `seating-room.mjs` (pure; imports nothing so `seating.mjs` can import it) and the repair wiring; `test:seating-room` (33):
+  the pre-change fixture round-trips byte-identical, a drifted mirror is put back on load, locked stays per period, a removed desk drops its seat
+  and is counted. Each of three breaks (always write `rooms`; no mirror on load; locked not kept) was seen failing once.
+- **Step 2 (v366).** A Room card on 005: make a room of this floor, put a period in a room, marks (door, window, teacher, bench, projector,
+  obstacle) drawn on the floor and nudged by arrows, "Desks near" chooses the desks near a mark for a tapped-zone rule, delete the room. Desk edits
+  reach the room in `touch()`, so every period follows; duplicating a period in a room keeps the copy in it; in a room a saved layout brings its
+  seats only; the share link drops the room id. `test:seating-room-page` (21, port 8559); removing the `touch()` call was seen failing it.
+- **Devon's open questions, defaults built, nothing decided past them.** (a) Room in 005's own storage or a shared "my classroom" store 035 also
+  writes: 005's own. (b) Saved layouts per room or per section: per section.
+- **Not done / not verified.** Marks cannot be dragged (arrows only); only the shown period's marks print, and "print all" and the sub export do not
+  draw marks; a file or backup carries `rooms` only because it is the whole key (009's restore not exercised for it); no real classroom use.
+
 ## AI-22: Path 14 P3 increment 2, the page half of the seating solver (2026-10-27, v361-v364)
 
 **Why.** Rank 35's leftovers after increment 1, built in the prompt's order, each its own commit and `CACHE_VERSION`. Devon's eleven
