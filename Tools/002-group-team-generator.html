@@ -1095,6 +1095,9 @@
   // true keeps that group exactly as-is and only reshuffles the rest.
   // Returns { groups, violations, togetherViolations, repeatViolations, floaters, meta }
   var KEEP_STRATEGIES = ['balanced', 'heterogeneous', 'homogeneous'];
+  /* A shuffle that ends with a keep-apart or keep-together pair broken deals again, up to this many times, and keeps the best
+     (v350). It costs nothing when the first deal is clean. */
+  var RESTARTS = 10;
   function makeGroups(opts) {
     opts = opts || {};
     var keyed = keyStudents(students), members = keyed.members;
@@ -1154,7 +1157,7 @@
          undoes a balanced, mixed or readiness grouping to avoid a repeat (Path 13 P2, v348). */
       /* A keep-together set (a chain of pairs too) is dealt as one block, so the repair is not what holds it
          together (v349, Devon's P13-8: a block once switched on). With no pair set the old deal is kept. */
-      search: { keepStrategy: KEEP_STRATEGIES.indexOf(els.strategySelect.value) !== -1, together: keepTogether.length ? 'units' : 'pairs' }
+      search: { restarts: RESTARTS, keepStrategy: KEEP_STRATEGIES.indexOf(els.strategySelect.value) !== -1, together: keepTogether.length ? 'units' : 'pairs' }
     });
     var lockedCount = res.stats.lockedCount, usedLocks = lockedCount > 0, lockedIdxSet = {};
     var keyOfObj = new Map();

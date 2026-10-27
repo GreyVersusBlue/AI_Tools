@@ -214,7 +214,7 @@ const ADOPTERS = [
         else { // the page's own construction of the engine call, run here on the same numbers
           const apart = pairs.map(([a, b]) => [String(a), String(b)]);
           const k = Math.max(1, Math.min(mode === 'size' ? Math.ceil(names.length / v) : v, names.length));
-          const res = G.formGroups(names.map((n, i) => ({ key: String(i), name: n })), { count: k, apart, rng });
+          const res = G.formGroups(names.map((n, i) => ({ key: String(i), name: n })), { count: k, apart, rng, search: { restarts: 10 } });
           apartBroken += res.violations.apart.length;
           groups = res.groups.map(g => g.map(key => names[+key]));
         }
@@ -459,6 +459,85 @@ try {
     });
     ok(J(back.groupHistory) === J(out.groupHistory) && J(back.history) === J(out.history), `${a.tool}: a new file reads back as the same memory`);
     ok(errors.length === 0, `${a.tool}: files: no page errors (${errors.join(' | ')})`);
+    await page.close();
+  }
+
+  /* ── restarts (v350): a shuffle that ends with a keep-apart pair together deals again ──
+     A fixed class found by search on the engine (Path 13 P2 increment 5): 30 students in 3 groups with these 22 keep-apart pairs
+     are satisfiable, and one deal and its repair leave a pair together in 31% of shuffles (1,852 of 6,000 seeds); with ten
+     restarts none of 6,000 did. 30 unseeded presses on each page: the chance the old rule passes all of them is under
+     one in a million, and the new one's chance of failing is under 2%. */
+  const RS_PAIRS = [['S22', 'S30'], ['S13', 'S08'], ['S30', 'S13'], ['S06', 'S28'], ['S02', 'S20'], ['S23', 'S26'], ['S25', 'S20'], ['S27', 'S05'],
+    ['S20', 'S14'], ['S19', 'S06'], ['S20', 'S29'], ['S01', 'S22'], ['S20', 'S10'], ['S13', 'S20'], ['S26', 'S12'], ['S05', 'S30'], ['S22', 'S20'],
+    ['S07', 'S15'], ['S13', 'S14'], ['S25', 'S07'], ['S04', 'S14'], ['S30', 'S26']];
+  /* 002 keeps a pairing memory, which gives its repair more to do and fails less often, so it has a class of its own: 28
+     pairs, found the same way on the engine with ten presses of memory a class: one deal and its repair leave a pair together
+     in 35% of presses (71 of 200), with ten restarts none of 200 did. */
+  const RS_PAIRS_002 = [['S27', 'S14'], ['S16', 'S14'], ['S11', 'S29'], ['S06', 'S15'], ['S16', 'S19'], ['S11', 'S03'], ['S29', 'S03'], ['S29', 'S14'],
+    ['S16', 'S08'], ['S24', 'S01'], ['S04', 'S13'], ['S10', 'S15'], ['S27', 'S28'], ['S30', 'S28'], ['S19', 'S17'], ['S28', 'S17'], ['S16', 'S03'],
+    ['S25', 'S11'], ['S14', 'S03'], ['S14', 'S24'], ['S13', 'S06'], ['S29', 'S17'], ['S23', 'S12'], ['S30', 'S21'], ['S18', 'S24'], ['S21', 'S24'],
+    ['S10', 'S07'], ['S11', 'S10']];
+  const RS_NAMES = Array.from({ length: 30 }, (_, i) => 'S' + String(i + 1).padStart(2, '0'));
+  const apartBrokenIn = (groups, pairs) => pairs.filter(([a, b]) => groups.some(g => g.includes(a) && g.includes(b))).length;
+  {
+    console.log('002 — restarts keep a keep-apart class clean');
+    const page = await prepPage(browser, BASE, { width: 1280, height: 950 });
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto(BASE + '/Tools/002-group-team-generator.html', { waitUntil: 'networkidle' });
+    await page.evaluate(() => localStorage.clear());
+    await page.reload({ waitUntil: 'networkidle' });
+    await settle(page, 200);
+    await page.fill('#names-input', RS_NAMES.join('\n'));
+    await page.dispatchEvent('#names-input', 'input');
+    await page.click('label[for="mode-count"]');
+    await page.fill('#split-value', '3');
+    for (const [a, b] of RS_PAIRS_002) { await page.selectOption('#pair-a', a); await page.selectOption('#pair-b', b); await page.click('#add-pair-btn'); }
+    let broken = 0;
+    for (let i = 0; i < 30; i++) {
+      await page.click(i ? '#regenerate-btn' : '#generate-btn');
+      const groups = await page.evaluate(() => [...document.querySelectorAll('#results .group-card')].map(c => [...c.querySelectorAll('li > span:first-child')].map(x => x.textContent)));
+      if (groups.length !== 3 || groups.flat().length !== 30 || apartBrokenIn(groups, RS_PAIRS_002)) broken++;
+    }
+    ok(broken === 0, `002: 30 presses of a 30-student, 28-pair class left a pair together ${broken} time(s)`);
+    ok(errors.length === 0, `002: restarts: no page errors (${errors.join(' | ')})`);
+    await page.close();
+  }
+  {
+    console.log('022 — restarts keep a keep-apart class clean');
+    const page = await prepPage(browser, BASE, { width: 1280, height: 950 });
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto(BASE + '/Tools/022-lab-group-role-randomizer.html', { waitUntil: 'networkidle' });
+    await page.evaluate(() => localStorage.clear());
+    await page.reload({ waitUntil: 'networkidle' });
+    await settle(page, 200);
+    const broken = await page.evaluate(([names, pairs]) => {
+      const cur = () => JSON.parse(localStorage.getItem('lgrr_rosters'))[localStorage.getItem('lgrr_current')];
+      const ta = document.getElementById('namesInput');
+      ta.value = names.join('\n');
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      const radio = document.getElementById('mode-count');
+      radio.checked = true;
+      radio.dispatchEvent(new Event('change', { bubbles: true }));
+      const sv = document.getElementById('splitValue');
+      sv.value = '3';
+      sv.dispatchEvent(new Event('input', { bubbles: true }));
+      pairs.forEach(([a, b]) => {
+        document.getElementById('pairA').value = a;
+        document.getElementById('pairB').value = b;
+        document.getElementById('addPairBtn').click();
+      });
+      let bad = 0;
+      for (let i = 0; i < 30; i++) {
+        document.getElementById('shuffleBtn').click();
+        const groups = cur().lastGroups.map(g => g.members.map(m => m.name));
+        if (groups.length !== 3 || groups.flat().length !== 30 || pairs.some(([a, b]) => groups.some(g => g.includes(a) && g.includes(b)))) bad++;
+      }
+      return bad;
+    }, [RS_NAMES, RS_PAIRS]);
+    ok(broken === 0, `022: 30 presses of a 30-student, 22-pair class left a pair together ${broken} time(s)`);
+    ok(errors.length === 0, `022: restarts: no page errors (${errors.join(' | ')})`);
     await page.close();
   }
 } finally {

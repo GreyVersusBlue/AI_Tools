@@ -85,7 +85,7 @@ repo. The published browser, `sv-browser.js`, the Northwind baseline and the 034
 scans 034, which has the same `br-rise` fade, with plain `a11yScan`; it is green on CI and was not changed here. It
 may share the blind spot, if its clock leaves the fade at 0.
 
-## Path 13 P2 increment 5: the improvements, each its own commit (2026-10-27, AI-21, `CACHE_VERSION` v347–v349)
+## Path 13 P2 increment 5: the improvements, each its own commit (2026-10-27, AI-21, `CACHE_VERSION` v347–v350)
 
 These change results on purpose. For each: what a teacher now sees differently, what proves it, and what still proves the
 old path. Devon's ten P1 answers (2026-10-21, all "keep the default") bind every call.
@@ -160,6 +160,25 @@ Exactly one of the twelve golden scenarios moved (`apart-together-24`, the only 
 other eleven; it was re-recorded alone with an `amended` note. `test:grouping`'s engine checks for `units` were
 already in from P1, and `test:grouping-adopters` is unchanged at 246 (its keep-together case is a skill strategy, held by
 shape since v348).
+
+**4. 002 and 022 deal again when a keep-apart or keep-together pair ends up broken (v350).** *Before:* one deal and one repair
+of 800 swaps, and whatever was left was shown as a broken pair. *Now:* both pages pass `search.restarts`: a try that ends with
+a pair broken is dealt again, up to ten times, and the best try is kept; a clean first deal never deals again, so no golden
+class moved and the cost is nothing when it was not needed. 002 passes it always (`RESTARTS = 10`, with keep-together it
+covers a set that cannot fit too: the best try is kept); 022 when there is a keep-apart pair. There is no setting a teacher
+sees, and none of Devon's ten answers touches it (it was an opt-in of P1's design).
+*Measured, so the number is not a guess* (engine, 6,000 seeds of one class: 30 students in 3 groups with 22 keep-apart pairs):
+no restarts leaves a pair together in 1,852 (31%), 5 restarts in 3, 8 and 12 in none; ten was chosen, at about 0.7 ms a shuffle more
+only in the shuffles that failed. Over random classes of the shapes P1 measured, 30 in 3 with 20 pairs went from 1.0% to 0.0%
+at five restarts (300 classes), and 28 in 7, 24 in 4 and 30 in 5 never failed either way.
+*Proof:* `test:grouping-adopters` (250): 30 unseeded presses of that class on each page. 022 passes only if no press leaves a pair
+together; 002 has a class of its own (28 pairs: its pairing memory gives its repair more to do and it fails less often, 35%
+a press on the engine with ten presses of memory, 71 of 200; with ten restarts 0 of 200). Each is seen failing with the restarts
+turned off (002 left a pair together 8 times in 30, 022 10 times in 30), and the old pass-all chance is under one in a million.
+`test:grouping`'s `restarts never return a worse score than no restarts` is from P1. All twelve golden classes and the
+saved bytes held, and the parity suite is unchanged (its 022 keep-apart claim is by failure rate, which restarts only lower).
+*A mistake found on the way:* the first 022 check read `members` as names, but they are `{ name, role }`, so it counted
+no pair together and passed with the fix switched off; it was found because the break-on-purpose run did not fail.
 
 ## Path 13 P2 increment 4: 002, 022 and 027 keyed by roster id (2026-10-26, AI-21, `CACHE_VERSION` v344–v346)
 

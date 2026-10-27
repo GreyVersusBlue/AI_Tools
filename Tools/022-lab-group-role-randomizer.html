@@ -968,7 +968,8 @@
           Object.prototype.hasOwnProperty.call(first, pair[1])) apart.push([first[pair[0]], first[pair[1]]]);
     });
     var opts = { count: groupCountFor(names.length) };
-    if (apart.length) opts.apart = apart;
+    // A shuffle that ends with a keep-apart pair together deals again, up to ten times, and keeps the best (v350).
+    if (apart.length) { opts.apart = apart; opts.search = { restarts: 10 }; }
     return Grouping.formGroups(members, opts).groups.map(function (g) {
       return g.map(function (key) { return names[+key]; });
     });
