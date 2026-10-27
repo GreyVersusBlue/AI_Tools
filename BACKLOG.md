@@ -6052,10 +6052,45 @@ match; (021's silent overwrite of a saved unit on a name collision was fixed in 
   stations from 1 and has a "repeat when finished" loop, on a `phase` object that is not a `Rotation` clock. Moving either
   would change what a class sees, so neither moved; the difference is recorded, not decided. **P3 is whole.** **Not verified:** nothing
   ran on a projector or a phone; the full `npm test` was not run.
-- **P4 — Bracket completeness.** Double elimination, pools, Swiss (a scheduler
-  that copes with match counts unknown up front), ties/draws, re-deciding a decided
-  match, consolation bracket, team rosters, and a real second-display mode via
-  Path 8.
+- **P4 — Bracket completeness.** *Design (AI-21, 2026-10-27; read from the tree at v355.)* **What exists already (the old
+  text of this bullet was stale):** double elimination, pools, Swiss (`smoke-pools-swiss.mjs`), team rosters
+  (`bt-teams.js`, `smoke-teams*.mjs`) and a **first-round consolation bracket with a third-place game** for single
+  elimination, opt-in (v284, `state.consolation`). Not built: **re-deciding a decided match**, **ties/draws**, and a real
+  **second-display mode** (Path 8). Increment 1 below builds the first two; the consolation item is closed, not built.
+  *Re-deciding.* Today a decided slot has no handler: a wrong tap can only be undone by the single-level Undo, and not
+  at all once a later pick is made. Offered by clicking the **losing** slot of a decided match ("Change result"); a title
+  says so. Per format: **single elimination**: the other side becomes the winner; the match's own score is cleared
+  (a 21-18 for the old winner would contradict the new one), and every **later match that had already been decided
+  is cleared too** (its result, side and score), because one of its two players is now someone who never played it;
+  an undecided later match just gets the new name. A first-round flip with a consolation bracket takes that one loser
+  out of the consolation (slot and the chain it had decided) and puts the new loser in; a semifinal flip clears the
+  third-place pick. A bye match cannot be changed. **Round robin**: the winner (or draw) flips; nothing depends on it.
+  **Pools**: a pool game flips freely until the bracket is drawn from the pools; after that the page asks first and
+  **discards the drawn bracket and its scores** (`br_` keys), since seeding came from the standings. **Swiss**: flips
+  freely in the **latest** round; in an earlier round the page asks first and **discards the rounds after it** (they were
+  paired from the old record) and their scores. **Double elimination is not offered** (a flip moves a loser between two
+  brackets and the grand final; the default is Undo or remake; left out, not designed). Whenever results would be
+  cleared the page says how many (a `confirm()` naming the count); the flip itself is one Undo step.
+  Storage: nothing new. Every state is the plain object it was. The helpers are pure and live in `_shared/bracket.js`
+  (`Bracket.redecideElimination(state, r, m)`, `Bracket.dependentsOf(...)`, `Bracket.swissReopen`, `Bracket.poolsReopen`).
+  *Ties.* Opt-in per bracket, **round robin, pools and Swiss only**, a checkbox "Allow drawn games" above the rounds
+  (`state.draws = true`; absent = off, and an absent field is every saved bracket, unchanged). A drawn match stores
+  `winner: 'draw'`; every existing test of `winner !== null` reads it as decided, and no slot is highlighted.
+  A **tied score** (21-21) records a draw when draws are on; with them off it does what it did (sits there, now with a
+  visible "Tied: pick the winner" note on every format). A "Draw" button sits under an undecided match when draws are on.
+  Standings: a draw gives each side one **played** and half a win's worth of rank (`w + d/2` sorts, then point
+  difference, then fewer losses, then name, exactly the old order when nobody drew); a `d` column appears only once
+  a draw exists (so a no-draw state yields byte-identical standings, which `test:bracket-parity` holds). The champion
+  banner and `seedOrderFromPools` use that order, so a Swiss or pool field with draws pairs and seeds from it. **Elimination
+  refuses** a tied score (no winner can advance) and says so; resolving it is a pick by click (the teacher's tiebreak),
+  no overtime field. Old pages given a state with `'draw'` read it as a win for the second side: draws are not
+  backward-compatible, and an older page is no concern after a deploy.
+  *Left out on purpose:* double-elimination re-decide, a draw in an elimination bracket, a tiebreak rule engine, a 3/1/0
+  points table, the second-display mode. **Devon's questions, each built on its default:** (1) re-deciding clears later
+  results, with a count and Undo (the alternative: keep them and flag them); (2) a draw is worth half a win (alternatives:
+  a 3-1-0 table, or a draw that is neither); (3) elimination refuses a tie and the teacher breaks it by hand (alternative:
+  a sudden-death field); (4) draws are a per-bracket opt-in rather than always on; (5) double-elimination results can't be
+  changed, only undone. **Second-display mode** stays for a later session.
 
 **Model.** Fable for P1; Opus for the rest.
 
