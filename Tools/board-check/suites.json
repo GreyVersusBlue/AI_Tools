@@ -334,6 +334,7 @@
     "Tools/seating-chart/test/explain.test.mjs",
     "Tools/seating-chart/test/rules.test.mjs",
     "Tools/seating-chart/test/room.test.mjs",
+    "Tools/seating-chart/test/smoke-room.mjs",
     "Tools/a11y-sweep/test/smoke-a11y-sweep.mjs",
     "Tools/board-check/test/select-suites.test.mjs",
     "Tools/board-check/test/shard-suites.test.mjs",

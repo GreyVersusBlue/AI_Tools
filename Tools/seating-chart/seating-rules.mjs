@@ -131,8 +131,11 @@ export function describeRule(r, nameOf, deskNo) {
 /** The section as it leaves the device in a link or a file: its rules without `why`, the reason the
     teacher wrote (the one field of a rule that can describe a child). A section with no rules is returned as is. */
 export function forShare(section) {
-  if (!section || !Array.isArray(section.rules)) return section;
-  return { ...section, rules: section.rules.map(r => ({ ...r, why: '' })) };
+  if (!section) return section;
+  // A room belongs to this browser's chart (Path 14 P4): the link carries the desks, not the room id.
+  const { room, ...rest } = section;
+  if (!Array.isArray(rest.rules)) return room === undefined ? section : rest;
+  return { ...rest, rules: rest.rules.map(r => ({ ...r, why: '' })) };
 }
 
 /** What the substitute's page says about the rules that are not plain pairs (the pairs keep their

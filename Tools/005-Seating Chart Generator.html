@@ -175,6 +175,10 @@
   .pair.together{border-left:3px solid var(--teal);}
   .pair.other{border-left:3px solid var(--gold);}
   .desk.leave-empty{border-style:dashed; opacity:.75;}
+  .room-mark{position:absolute; box-sizing:border-box; pointer-events:none; border:1.5px dashed var(--muted,#667); background:rgba(120,140,160,.14); color:var(--muted,#445);
+    font-size:11px; font-weight:700; letter-spacing:.5px; display:flex; align-items:center; justify-content:center; text-align:center; overflow:hidden;}
+  .room-mark.door{border-style:solid; background:rgba(160,110,60,.18);} .room-mark.window{background:rgba(90,150,200,.2);}
+  .room-mark.projector{background:rgba(60,60,60,.18);} .room-mark.obstacle{background:repeating-linear-gradient(45deg,rgba(0,0,0,.1) 0 6px,transparent 6px 12px);}
   .desk.zone-pick{outline:3px dashed var(--teal-deep); outline-offset:2px;}
   #ruleStudents,#ruleAnyOf{width:100%;}
   .prefs{margin-top:10px; font-size:13px;}
@@ -422,6 +426,7 @@
     .desk.flagged{border-color:var(--blue-soft); box-shadow:none;}
     .desk.locked{border-color:var(--blue-soft); border-width:1.5px;}
     .desk-ctrls,.selnote,.lockbadge{display:none !important;}
+    .room-mark{background:none !important; border-color:#666; color:#444;}
     .print-head{display:block !important;}
     body,.desk,.desk .seat,.print-head p{background:#fff; color:#000 !important;}
     .seatnum{background:#fff !important; color:#000 !important; border:1px solid #000;}
@@ -521,6 +526,29 @@
           <button class="btn sm danger" onclick="renameSection()">Rename</button>
           <button class="btn sm danger" onclick="deleteSection()">Delete</button>
         </div>
+      </div>
+
+      <div class="block" id="roomBlock">
+        <h2>Room <span class="count" id="roomCount">0</span></h2>
+        <label class="field" for="roomSelect">This period sits in</label>
+        <select id="roomSelect" onchange="chooseRoom(this.value)"></select>
+        <div class="row tight" id="roomMake" style="margin-top:6px;">
+          <input type="text" id="newRoomName" placeholder="Name this room (e.g. Room 12)" aria-label="New room name">
+          <button class="btn sm teal" onclick="makeRoom()">Make a room of this floor</button>
+        </div>
+        <div id="roomIn" hidden>
+          <p class="hint" id="roomPeriods"></p>
+          <div class="row tight">
+            <select id="markKind" aria-label="Kind of mark"></select>
+            <input type="text" id="markLabel" placeholder="Label (optional)" aria-label="Mark label">
+            <button class="btn sm teal" onclick="addMark()">Add to room</button>
+          </div>
+          <div id="markList" style="margin-top:6px;"></div>
+          <button class="btn sm" onclick="deleteThisRoom()">Delete this room</button>
+        </div>
+        <p class="hint">A room is the desks and the doors, windows and board you draw once, shared by every period that sits in it.
+          Moving or adding a desk here moves it in all of them; each period keeps its own seats and pins.
+          Deleting the room leaves every period its desks.</p>
       </div>
 
       <div class="block">
@@ -818,6 +846,7 @@ import {
 } from './seating-chart/seating.mjs';
 import { solve, normalizeRules } from './seating-chart/seating-solve.mjs';
 import { explain } from './seating-chart/seating-explain.mjs';
+import { MARK_KINDS, createRoom, attachSection, detachSection, setRoomDesks, setMark, removeMark, deleteRoom, desksNear, sectionsIn } from './seating-chart/seating-room.mjs';
 import { forShare, subRules, buildRule, addRule, removeRule, pruneRules, describeRule } from './seating-chart/seating-rules.mjs';
 import { mountSaveBar, defaultStorage } from '../_shared/gvb-save.js';
 const { getParam, decodeState, clearParam } = window.StateLink;
@@ -863,7 +892,7 @@ function nameIn(section, id){ const s = section.students.find(x => x.id === id);
 
 /** Every change funnels through here, so nothing can be changed without being saved. */
 let erasing = false;
-function touch(){ if (autosaver && !erasing) autosaver.mark(); }
+function touch(){ if (typeof followRoom === 'function') followRoom(); if (autosaver && !erasing) autosaver.mark(); }
 
 /* ---- undo, cold-call picker ---- */
 let undoStack = [];
@@ -1096,6 +1125,90 @@ function deleteSection(){
   state.sections = state.sections.filter(s => s.id !== state.active);
   state.active = state.sections[0].id; renderAll();
 }
+/* ---- the room layer (Path 14 P4) -------------------------------------
+   A room lives beside the sections; a section in one keeps `desks` as its mirror
+   (seating-room.mjs), so everything that reads s.desks is unchanged. */
+function roomOfActive(){ return (state.rooms || []).find(r => r.id === sec().room) || null; }
+/** Whatever was done to this period's desks, the room takes and the other periods follow. */
+function followRoom(){
+  const r = roomOfActive();
+  if (!r) return;
+  const geo = sec().desks.map(d => ({ id: d.id, x: d.x, y: d.y, rot: d.rot }));
+  if (JSON.stringify(geo) === JSON.stringify(r.desks)) return;
+  const out = setRoomDesks(state, r.id, geo);
+  state = out.state;
+  if (out.unseated) say(`${out.unseated} seat${out.unseated === 1 ? '' : 's'} in the periods sharing this room went with a removed desk.`, 'warn');
+}
+function makeRoom(){
+  const nm = (el('newRoomName').value || '').trim();
+  pushUndo();
+  const out = createRoom(state, state.active, nm || ('Room ' + ((state.rooms || []).length + 1)));
+  state = out.state; el('newRoomName').value = '';
+  renderAll();
+  say(`Made "${out.room.name}". Put other periods in it from "This period sits in".`, 'good');
+}
+function chooseRoom(id){
+  pushUndo();
+  if (!id){ state = detachSection(state, state.active); renderAll(); say('This period keeps its desks and no longer follows a room.', 'good'); return; }
+  const out = attachSection(state, state.active, id);
+  state = out.state; renderAll();
+  say(out.unseated ? `This period now sits in the room; ${out.unseated} seat${out.unseated === 1 ? '' : 's'} on desks the room does not have were cleared.` : 'This period now sits in the room.', out.unseated ? 'warn' : 'good');
+}
+function deleteThisRoom(){
+  const r = roomOfActive(); if (!r) return;
+  if (!confirm('Delete the room "' + r.name + '"? Every period keeps its desks and seats.')) return;
+  pushUndo(); state = deleteRoom(state, r.id); renderAll();
+}
+const MARK_DEFAULT = { door: [0, 110, 60, 110], window: [0, 330, 40, 160], teacher: [1100, 110, 106, 70], bench: [1100, 330, 160, 50], projector: [440, 20, 400, 30], obstacle: [1100, 560, 110, 110] };
+function addMark(){
+  const r = roomOfActive(); if (!r) return;
+  const kind = el('markKind').value, d = MARK_DEFAULT[kind] || [0, 0, 80, 40];
+  pushUndo();
+  state = setMark(state, r.id, { kind, x: d[0], y: d[1], w: d[2], h: d[3], label: el('markLabel').value.trim() }).state;
+  el('markLabel').value = ''; renderAll();
+}
+function nudgeMark(id, dx, dy){
+  const r = roomOfActive(); const m = r && r.marks.find(x => x.id === id); if (!m) return;
+  pushUndo(); state = setMark(state, r.id, { ...m, x: m.x + dx * ROOM.grid, y: m.y + dy * ROOM.grid }).state; renderAll();
+}
+function dropMark(id){ const r = roomOfActive(); if (!r) return; pushUndo(); state = removeMark(state, r.id, id); renderAll(); }
+function pickNear(id){
+  const r = roomOfActive(); if (!r) return;
+  tapPicked = new Set(desksNear(r, id));
+  renderAll();
+  say(`${tapPicked.size} desk${tapPicked.size === 1 ? '' : 's'} near it chosen. Pick "Choose desks on the floor" in the rules to use them.`, 'good');
+}
+function renderRoom(){
+  const rooms = state.rooms || [], r = roomOfActive();
+  el('roomCount').textContent = rooms.length;
+  const sel = el('roomSelect');
+  sel.textContent = '';
+  const none = document.createElement('option'); none.value = ''; none.textContent = 'No room (this period\'s own desks)'; sel.appendChild(none);
+  rooms.forEach(x => { const o = document.createElement('option'); o.value = x.id; o.textContent = x.name; sel.appendChild(o); });
+  sel.value = r ? r.id : '';
+  el('roomMake').hidden = !!r;
+  el('roomIn').hidden = !r;
+  const mk = el('markKind');
+  if (!mk.options.length) MARK_KINDS.forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = k[0].toUpperCase() + k.slice(1); mk.appendChild(o); });
+  if (!r) return;
+  const names = sectionsIn(state, r.id).map(id => state.sections.find(s => s.id === id).name);
+  el('roomPeriods').textContent = `Shared by ${names.length} period${names.length === 1 ? '' : 's'}: ${names.join(', ')}.`;
+  const list = el('markList');
+  list.textContent = '';
+  r.marks.forEach(m => {
+    const row = document.createElement('div'); row.className = 'row tight'; row.style.marginBottom = '4px';
+    const t = document.createElement('span'); t.style.flex = '1'; t.textContent = m.kind + (m.label ? ': ' + m.label : '');
+    row.appendChild(t);
+    [['\u25C0', -1, 0, 'left'], ['\u25B2', 0, -1, 'up'], ['\u25BC', 0, 1, 'down'], ['\u25B6', 1, 0, 'right']].forEach(([ch, dx, dy, word]) => {
+      const b = document.createElement('button'); b.className = 'btn sm'; b.textContent = ch; b.setAttribute('aria-label', `Move ${m.kind} ${m.label || ''} ${word}`);
+      b.onclick = () => nudgeMark(m.id, dx, dy); row.appendChild(b);
+    });
+    const n = document.createElement('button'); n.className = 'btn sm'; n.textContent = 'Desks near'; n.onclick = () => pickNear(m.id); row.appendChild(n);
+    const x = document.createElement('button'); x.className = 'btn sm'; x.textContent = 'Remove'; x.setAttribute('aria-label', `Remove ${m.kind} ${m.label || ''}`); x.onclick = () => dropMark(m.id); row.appendChild(x);
+    list.appendChild(row);
+  });
+}
+
 /** Same room, next period: copy the active section's desk layout (positions,
     rotation, locked state) into a brand-new section, but leave the roster and
     seat assignments empty — that's the one part of a chart a new class period
@@ -1112,8 +1225,10 @@ function duplicateSection(){
   copy.desks = src.desks.map(d => ({ id: uid(), x: d.x, y: d.y, rot: d.rot, locked: d.locked, ...(d.empty ? { empty: true } : {}) }));
   state.sections.push(copy);
   state.active = copy.id;
+  // Same room, next period: if this one sits in a shared room, so does the copy (same desks, not a copy of them).
+  if (src.room) state = attachSection(state, copy.id, src.room).state;
   renderAll();
-  say(`Duplicated the layout as "${name}". Roster and seats start empty.`, 'good');
+  say(src.room ? `Added "${name}" to the same room. Roster and seats start empty.` : `Duplicated the layout as "${name}". Roster and seats start empty.`, 'good');
 }
 
 /* ============================================================
@@ -1178,7 +1293,8 @@ function loadLayout(id){
   if (!l) return;
   pushUndo();
   const studentIds = new Set(s.students.map(st => st.id));
-  s.desks = l.desks.map(d => ({ ...d }));
+  // In a room the desks are the room's, shared by other periods: a layout then brings its seats only.
+  if (!s.room) s.desks = l.desks.map(d => ({ ...d }));
   const deskIds = new Set(s.desks.map(d => d.id));
   const assign = {};
   for (const [deskId, sid] of Object.entries(l.assign)) {
@@ -1659,6 +1775,15 @@ function renderFloor(){
   if (floorEl) floorEl.classList.toggle('numbered', !!state.numbered);
   const s = sec();
   const total = s.desks.length;
+  const rm = roomOfActive();
+  if (rm) rm.marks.forEach(m => {
+    const n = document.createElement('div');
+    n.className = 'room-mark ' + m.kind;
+    n.style.cssText = `left:${m.x}px;top:${m.y}px;width:${m.w}px;height:${m.h}px;` + (m.rot ? `transform:rotate(${m.rot}deg);` : '');
+    n.textContent = m.label || m.kind;
+    n.setAttribute('role', 'img'); n.setAttribute('aria-label', m.kind + (m.label ? ', ' + m.label : ''));
+    layer.appendChild(n);
+  });
   s.desks.forEach((d, i) => {
     const sid = s.assign[d.id];
     const st = sid ? studentById(sid) : null;
@@ -2282,6 +2407,7 @@ function renderAll(){
   renderSections();
   renderRoster();
   renderLayouts();
+  renderRoom();
   renderRules();
   renderPrefs();
   renderHistory();
@@ -2467,6 +2593,7 @@ function boot(){
 // its own. Kept explicit rather than clever so a missing one is a visible name.
 Object.assign(window, {
   addSection, duplicateSection, renameSection, deleteSection,
+  makeRoom, chooseRoom, deleteThisRoom, addMark,
   saveLayout, loadLayout, renameLayout, deleteLayout,
   addNames, sortRoster, setLastFirst, toggleFlag, editNote, removeStudent,
   choosePhoto, removePhoto, chooseBulkPhotos,
