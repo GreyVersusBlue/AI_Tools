@@ -320,9 +320,19 @@ const ADOPTERS = [
         return [shapeOk && sameMemory && keyed && !apartBroken,
           `new size rule: shape ${shapeOk}, memory ${sameMemory}, keys ${keyed}, apart broken ${apartBroken}; ${J(gotShape)}`];
       }
-      const sameGroups = got.presses.every((x, i) => J(x.groups) === J(want[i].groups) &&
-        want[i].floaters.every(n => x.floaters.includes(n)) && (want[i].floaters.length > 0) === (x.floaters !== ''));
-      const sameMemory = got.saved.pairGen === 3 && sorted(got.saved.pairHistory) === sorted(state.pairHistory) &&
+      /* Since v348 the three skill strategies keep their strategy over last time's partners (search.keepStrategy), so
+         after the first press, which has no memory and (with no pair rule) is the old page's draw for draw, the later presses are held to
+         their shape, to the old group count and to no student lost or twice; what the strategy now achieves is
+         smoke-year-memory.mjs's section 1b. Random and coverage, and everything with a count of none, are compared in full. */
+      const keeps = ['balanced', 'heterogeneous', 'homogeneous'].includes(strategy);
+      const sameAs = (x, w) => J(x.groups) === J(w.groups) && w.floaters.every(n => x.floaters.includes(n)) && (w.floaters.length > 0) === (x.floaters !== '');
+      const shapeAs = (x, w) => x.groups.length === w.groups.length &&
+        new Set(x.groups.flat()).size === x.groups.flat().length && J(x.groups.flat().concat(CLASS.filter(n => x.floaters.includes(n))).sort()) === J(w.groups.flat().concat(w.floaters).sort());
+      // With a pair rule the first press can differ too: the repair now also keeps the strategy where it used to swap it away.
+      const noRules = !apart.length && !together.length;
+      const apartOk = x => apart.every(([a, b]) => !x.groups.some(g => g.includes(CLASS[a]) && g.includes(CLASS[b])));
+      const sameGroups = got.presses.every((x, i) => keeps && (i > 0 || !noRules) ? shapeAs(x, want[i]) && apartOk(x) : sameAs(x, want[i]));
+      const sameMemory = got.saved.pairGen === 3 && (keeps || sorted(got.saved.pairHistory) === sorted(state.pairHistory)) &&
         J(got.mirror) === J({ pairHistory: got.saved.pairHistory, pairGen: got.saved.pairGen });
       const keys = got.saved.groupHistory ? got.saved.groupHistory.keys : [];
       const keyed = keys.length === CLASS.length && keys.every(k => k.indexOf(ids ? 'i:' : 'n:') === 0);

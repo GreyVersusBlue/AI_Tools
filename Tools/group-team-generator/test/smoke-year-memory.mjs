@@ -146,6 +146,26 @@ if (want('1')) {
   await page.context().close();
 }
 
+/* ── 1b. the strategy the teacher picked is kept over last time's partners (v348) ─
+   Measured on the page before (the old golden, five rounds, 26 students): the gap between the best and worst group
+   average under Balanced was 0.33, 1.6, 1.2, 1.8, 1.2 and Homogeneous's widest range inside a group 1, 4, 4, 3, 4: the
+   repeat rule undid the strategy after the first press. The rounds below are the seeded golden scenarios, so a break
+   in the rule moves them: the gap stays under 0.5 every round, and no group spans more than one skill step. */
+if (want('1b')) {
+  const skillOf = n => { const i = nameList(26).indexOf(n); return 1 + ((i * 7) % 5); };
+  for (const [id, measure, bound, what] of [
+    ['balanced-26', g => { const m = g.map(grp => grp.reduce((a, n) => a + skillOf(n), 0) / grp.length); return Math.max(...m) - Math.min(...m); }, 0.5, 'the gap between the best and worst group average'],
+    ['homo-26', g => Math.max(...g.map(grp => Math.max(...grp.map(skillOf)) - Math.min(...grp.map(skillOf)))), 1, 'the widest range of skill inside a group']
+  ]) {
+    const sc = SCENARIOS.find(x => x.id === id);
+    const page = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+    const r = await runScenario(page, BASE, sc);
+    const vals = r.steps.map(st => measure(st.groups.filter(g => g.length)));
+    ok(vals.length === 5 && vals.every(v => v <= bound), `${id}: ${what} stays within ${bound} in all five rounds (${vals.map(v => v.toFixed(2)).join(', ')})`);
+    await page.context().close();
+  }
+}
+
 /* ── 2. long memory ───────────────────────────────────────────────────────── */
 if (want('2')) {
   const names = nameList(12);

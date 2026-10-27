@@ -85,7 +85,7 @@ repo. The published browser, `sv-browser.js`, the Northwind baseline and the 034
 scans 034, which has the same `br-rise` fade, with plain `a11yScan`; it is green on CI and was not changed here. It
 may share the blind spot, if its clock leaves the fade at 0.
 
-## Path 13 P2 increment 5: the improvements, each its own commit (2026-10-27, AI-21, `CACHE_VERSION` v347–)
+## Path 13 P2 increment 5: the improvements, each its own commit (2026-10-27, AI-21, `CACHE_VERSION` v347–v348)
 
 These change results on purpose. For each: what a teacher now sees differently, what proves it, and what still proves the
 old path. Devon's ten P1 answers (2026-10-21, all "keep the default") bind every call.
@@ -120,6 +120,29 @@ were re-recorded, from the page at this version, with an `amended` note in the f
 (or a seventh group of 3) where the old page showed seven groups of 3 and 6 floaters (or a group of 6).
 *Not verified:* nothing on a phone or paper; no teacher has seen the new wording. The page's explanation still reads as
 before ("N students left as floaters today").
+
+**2. 002 keeps the strategy over last time's partners (v348).** *Before:* under Balanced, Heterogeneous and Homogeneous the
+no-repeat search swapped students for recency and had no term for the strategy, so the first press was balanced and every
+reshuffle after it was not. Measured on the page (the seeded golden class, 26 students, five presses): Balanced's gap between
+the best and worst group average was 0.33, 1.6, 1.2, 1.8, 1.2; Homogeneous's widest skill range inside a group 1, 4, 4, 3, 4.
+*Now:* the page passes `search: { keepStrategy: true }` for those three strategies (Random and "Everyone pairs with everyone"
+have no measure and are untouched), so a swap that would worsen the strategy is undone even if it would avoid a repeat: the gap is
+0.33, 0.2, 0.2, 0.2, 0.2 and the range 1, 1, 1, 1, 1. Devon's P13-7 ("the strategy the teacher picked wins, and the result says
+which repeats it kept"): the "Why this grouping" list already named the repeated pairs; it now adds "Your grouping strategy came first,
+so these were kept rather than undo it" when a repeat remains under one of the three. A keep-apart or keep-together rule still
+comes before the strategy (the score is `[hard, strategy, repeats, cost]`). The first press of a class with no pair rule is the
+old page's draw for draw (the golden's first step is byte-identical); with a pair rule even the first press can differ, because
+the repair now also keeps the strategy where it used to swap it away.
+*Not changed:* long memory's own refine (`gtg-memory.js`) runs after the engine and spreads pairings with no knowledge of the
+strategy; a teacher with long memory on and Balanced picked can still see it move students. That is a separate change, not made.
+*Proof:* `smoke-year-memory.mjs`: exactly three of the twelve golden scenarios moved (`balanced-26`, `hetero-26`, `homo-26`; the
+first step of each is unchanged, the rest of the nine and the saved bytes held) and only those were re-recorded, with an `amended`
+note; with the page's `keepStrategy` turned off the same suite reproduces the old golden to the byte, so the port is intact. A new
+section 1b holds the gap under 0.5 and the range at 1 in all five rounds (it fails with the option off: 0.33, 1.60, 1.20, 1.80,
+1.20 and 1, 4, 4, 3, 4). `test:grouping-adopters` compares the first press of a skill-strategy class with no pair rule draw for
+draw and the later presses by shape (group count, nobody lost or twice, keep-apart held); random and coverage cases are
+compared in full as before. The engine's own check (`keepStrategy` holds the balanced gap after four generations) was
+already in `test:grouping` from P1.
 
 ## Path 13 P2 increment 4: 002, 022 and 027 keyed by roster id (2026-10-26, AI-21, `CACHE_VERSION` v344–v346)
 

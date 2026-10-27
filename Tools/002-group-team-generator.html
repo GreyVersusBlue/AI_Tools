@@ -1094,6 +1094,7 @@
   // opts.lockedFlags: booleans parallel to the previous lastGroups.groups —
   // true keeps that group exactly as-is and only reshuffles the rest.
   // Returns { groups, violations, togetherViolations, repeatViolations, floaters, meta }
+  var KEEP_STRATEGIES = ['balanced', 'heterogeneous', 'homogeneous'];
   function makeGroups(opts) {
     opts = opts || {};
     var keyed = keyStudents(students), members = keyed.members;
@@ -1148,7 +1149,10 @@
       strategy: els.strategySelect.value,
       absent: absent, apart: keyPairs(keepApart), together: keyPairs(keepTogether),
       previous: previous, lock: previous && lockedFlagsIn ? lockedFlagsIn : undefined,
-      history: history, rng: Math.random
+      history: history, rng: Math.random,
+      /* The strategy the teacher picked wins over "not last time's partner": the repair no longer
+         undoes a balanced, mixed or readiness grouping to avoid a repeat (Path 13 P2, v348). */
+      search: { keepStrategy: KEEP_STRATEGIES.indexOf(els.strategySelect.value) !== -1 }
     });
     var lockedCount = res.stats.lockedCount, usedLocks = lockedCount > 0, lockedIdxSet = {};
     var keyOfObj = new Map();
@@ -1200,7 +1204,7 @@
       meta: {
         longMemory: longMemory, busiestPairing: busiest,
         rolesFresh: roleResult ? roleResult.fresh : 0, rolesTotal: roleResult ? roleResult.total : 0,
-        strategy: res.stats.strategy, oddMode: oddMode, lockedCount: lockedCount, reshuffledCount: reshuffledCount,
+        strategy: res.stats.strategy, keptStrategy: KEEP_STRATEGIES.indexOf(res.stats.strategy) !== -1, oddMode: oddMode, lockedCount: lockedCount, reshuffledCount: reshuffledCount,
         usedLocks: usedLocks, totalActive: activeStudents.length, groupCountTarget: res.stats.count - lockedCount,
         fallbackNote: res.stats.note === 'one-left' ? 'Only one student was left over, so they were kept as a floater — a pair needs at least two.' : null,
         bonusGroupSize: res.stats.ownGroup,
@@ -1430,7 +1434,8 @@
     var hasPairHistory = !!(state && state.pairHistory && Object.keys(state.pairHistory).length);
     if (hasPairHistory) {
       lines.push(result.repeatViolations.length
-        ? 'Repeats ' + result.repeatViolations.length + ' recent pairing' + (result.repeatViolations.length === 1 ? '' : 's') + ' from the last shuffle or two: ' + pairsText(result.repeatViolations) + '.'
+        ? 'Repeats ' + result.repeatViolations.length + ' recent pairing' + (result.repeatViolations.length === 1 ? '' : 's') + ' from the last shuffle or two: ' + pairsText(result.repeatViolations) + '.' +
+          (result.meta.keptStrategy ? ' Your grouping strategy came first, so these were kept rather than undo it.' : '')
         : 'No recently-paired students ended up together again.');
     }
     if (result.meta.strategy === 'coverage' && result.meta.totalPairsThisGen) {
