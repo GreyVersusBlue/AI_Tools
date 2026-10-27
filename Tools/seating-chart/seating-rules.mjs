@@ -10,6 +10,7 @@
    time a rule is added (the pairs already on the chart become Must rules then),
    so a chart that never uses the block is not changed. */
 import { repairRule, rulesToLegacy, pairKey } from './seating.mjs';
+import { normalizeRules, score } from './seating-solve.mjs';
 
 export const FORM_KINDS = ['apart', 'together', 'partner', 'zone', 'space'];
 export const ZONE_LABEL = {
@@ -125,4 +126,29 @@ export function describeRule(r, nameOf, deskNo) {
   else if (r.kind === 'seat') text = `${names(r.students)} keeps desk ${r.desks.map(deskNo).join(', ')}`;
   else text = `Desk ${r.desks.map(deskNo).join(', ')} stays empty`;
   return { text, strength: r.hard ? 'Must' : `Want: ${WEIGHT_LABEL[r.weight] || 'important'}`, why: r.why || '' };
+}
+
+/** The section as it leaves the device in a link or a file: its rules without `why`, the reason the
+    teacher wrote (the one field of a rule that can describe a child). A section with no rules is returned as is. */
+export function forShare(section) {
+  if (!section || !Array.isArray(section.rules)) return section;
+  return { ...section, rules: section.rules.map(r => ({ ...r, why: '' })) };
+}
+
+/** What the substitute's page says about the rules that are not plain pairs (the pairs keep their
+    sentences from checkConstraints): { broken: [text], kept: [text] }, Must rules only, worded by
+    describeRule, so it names the kind and the students and never the reason. */
+export function subRules(section) {
+  const nameById = {};
+  for (const st of section.students || []) nameById[st.id] = st.name;
+  const nameOf = id => nameById[id] || 'a student who has left';
+  const deskNo = id => (section.desks || []).findIndex(d => d.id === id) + 1;
+  const brokenIds = new Set(score(section, section.assign || {}).broken.filter(b => b.hard).map(b => b.ruleId));
+  const out = { broken: [], kept: [] };
+  for (const r of normalizeRules(section).rules) {
+    if (!r.hard || r.kind === 'seat' || r.kind === 'empty') continue;
+    if ((r.kind === 'apart' || r.kind === 'together') && r.students.length === 2 && !r.anyOf.length) continue;
+    (brokenIds.has(r.id) ? out.broken : out.kept).push(describeRule(r, nameOf, deskNo).text);
+  }
+  return out;
 }

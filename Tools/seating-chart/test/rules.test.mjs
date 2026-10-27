@@ -1,5 +1,5 @@
 // The page's half of the rule language (Path 14 P3 increment 2): pure Node.
-import { buildRule, addRule, removeRule, pruneRules, describeRule } from '../seating-rules.mjs';
+import { buildRule, addRule, removeRule, pruneRules, describeRule, forShare, subRules } from '../seating-rules.mjs';
 import { absorbLegacy } from '../seating.mjs';
 
 let passed = 0, failed = 0;
@@ -68,6 +68,24 @@ ok(!pruneRules(sec()), 'a chart with no rules is not touched');
 eq(describeRule(z.rule, nameOf, deskNo), { text: 'C in the front row', strength: 'Must', why: 'vision' }, 'zone wording');
 const pt = buildRule({ kind: 'partner', students: ['s0'], anyOf: ['s1', 's2'], hard: false, weight: 3 }, sec(), uid).rule;
 eq(describeRule(pt, nameOf, deskNo), { text: 'A needs a partner from: B, C', strength: 'Want: really want', why: '' }, 'partner wording');
+
+// forShare: reasons out, rules in, the chart itself untouched
+const w = sec(); addRule(w, buildRule({ kind: 'space', students: ['s0'], hard: true, why: 'a private reason' }, w, uid).rule);
+const shared = forShare(w);
+ok(shared.rules.length === 1 && shared.rules[0].why === '' && w.rules[0].why === 'a private reason', 'forShare blanks the reason on the copy only');
+ok(forShare(sec()).rules === undefined, 'a section with no rules is returned as it is');
+
+// subRules: kinds and names, no reason; pairs are left to checkConstraints
+const q = sec({ assign: { d0: 's0', d1: 's1', d2: 's2' } });
+q.desks = [{ id: 'd0', x: 40, y: 110 }, { id: 'd1', x: 150, y: 110 }, { id: 'd2', x: 40, y: 260 }];
+addRule(q, buildRule({ kind: 'space', students: ['s0'], hard: true, why: 'a private reason' }, q, uid).rule);
+addRule(q, buildRule({ kind: 'zone', students: ['s0'], zone: 'front', hard: true }, q, uid).rule);
+addRule(q, buildRule({ kind: 'apart', students: ['s0', 's1'], hard: true }, q, uid).rule);
+addRule(q, buildRule({ kind: 'zone', students: ['s2'], zone: 'back', hard: false, weight: 1 }, q, uid).rule);
+const sr = subRules(q);
+eq(sr.broken, ['Needs room (no neighbour): A'], 'a broken Must space rule is named, the pair and the Want rule are not');
+eq(sr.kept, ['A in the front row'], 'a kept Must rule is named');
+ok(!JSON.stringify(sr).includes('private'), 'and neither carries a reason');
 
 console.log(`seating-rules: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

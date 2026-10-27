@@ -457,7 +457,7 @@
     .print-extra:empty{display:none; margin-top:0;}
     .print-extra h3{font-family: var(--font-heading); font-size:14px; color:var(--blue); margin:0 0 5px;}
     .print-extra ul{margin:0 0 10px; padding-left:18px; font-size:12px; line-height:1.5;}
-    .print-violations{border:1px solid #000; padding:8px 12px; margin-bottom:10px;}
+    .print-violations,.print-kept{border:1px solid #000; padding:8px 12px; margin-bottom:10px;}
     .print-notes ul{columns:2; column-gap:22px;}
     .sub-export-flag{display:none;}
     body.printing-sub .sub-export-flag{display:block; text-align:center; font-size:10.5px; opacity:0.7; margin-top:2px;}
@@ -818,7 +818,7 @@ import {
 } from './seating-chart/seating.mjs';
 import { solve, normalizeRules } from './seating-chart/seating-solve.mjs';
 import { explain } from './seating-chart/seating-explain.mjs';
-import { buildRule, addRule, removeRule, pruneRules, describeRule } from './seating-chart/seating-rules.mjs';
+import { forShare, subRules, buildRule, addRule, removeRule, pruneRules, describeRule } from './seating-chart/seating-rules.mjs';
 import { mountSaveBar, defaultStorage } from '../_shared/gvb-save.js';
 const { getParam, decodeState, clearParam } = window.StateLink;
 
@@ -1941,14 +1941,22 @@ function printMetaLine(s){
     can act on. Returns '' when the section has nothing to report, so callers
     can append it unconditionally and rely on .print-extra:empty to hide it. */
 function violationsHTML(section, report){
-  if (report.apartOK && report.togetherOK) return '';
+  const other = subRules(section);
+  if (report.apartOK && report.togetherOK && !other.broken.length) return '';
   const rows = [];
   report.apartBroken.forEach(([a, b]) =>
     rows.push(`<li>${esc(nameIn(section, a))} and ${esc(nameIn(section, b))} are seated next to each other, but should be kept apart.</li>`));
   report.togetherBroken.forEach(([a, b]) =>
     rows.push(`<li>${esc(nameIn(section, a))} and ${esc(nameIn(section, b))} should sit together, but are not seated next to each other.</li>`));
+  other.broken.forEach(t => rows.push(`<li>${esc(t)} &mdash; not kept in this chart.</li>`));
   if (!rows.length) return '';
   return `<div class="print-violations"><h3>Seating rule conflicts</h3><ul>${rows.join('')}</ul></div>`;
+}
+/** The Must rules this chart keeps that are not plain pairs, for the sub export: kind and names, never the reason. */
+function keptRulesHTML(section){
+  const { kept } = subRules(section);
+  if (!kept.length) return '';
+  return `<div class="print-kept"><h3>Rules this chart keeps</h3><ul>${kept.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>`;
 }
 /** Per-student notes for the sub export only — the regular chart print never
     shows these (see the CSS note by .desk .seat above): a note is the most
@@ -1986,7 +1994,7 @@ function preparePrint(){
   if (printMode === 'blank') extra.innerHTML = '';
   else if (printMode === 'sub') {
     extra.innerHTML = `<p class="sub-export-flag">For the substitute &mdash; includes student notes, not shown on a normal print.</p>`
-      + violationsHTML(s, checkConstraints(s)) + notesHTML(s);
+      + violationsHTML(s, checkConstraints(s)) + keptRulesHTML(s) + notesHTML(s);
   } else {
     extra.innerHTML = state.printViolations ? violationsHTML(s, checkConstraints(s)) : '';
   }
@@ -2087,7 +2095,7 @@ function buildPrintPage(s, opts = {}){
     const div = document.createElement('div');
     div.className = 'print-extra';
     div.innerHTML = `<p class="sub-export-flag">For the substitute &mdash; includes student notes, not shown on a normal print.</p>`
-      + violationsHTML(s, checkConstraints(s)) + notesHTML(s);
+      + violationsHTML(s, checkConstraints(s)) + keptRulesHTML(s) + notesHTML(s);
     page.appendChild(div);
   } else if (opts.showViolations){
     const v = violationsHTML(s, checkConstraints(s));
@@ -2114,7 +2122,7 @@ function buildSubCoverPage(){
 
   const rows = state.sections.map((s, i) => {
     const report = checkConstraints(s);
-    const conflicts = report.apartBroken.length + report.togetherBroken.length;
+    const conflicts = report.apartBroken.length + report.togetherBroken.length + subRules(s).broken.length;
     const notes = s.students.filter(st => st.note && st.note.trim()).length;
     const flags = [];
     if (notes) flags.push(notes + ' note' + (notes === 1 ? '' : 's'));
@@ -2384,13 +2392,13 @@ function mountBar(){
     // Photos go in as data: URLs so the sheet can strip and count them for the
     // link and the download can carry them — an `idb:` reference means nothing
     // on another device.
-    getState: () => mapSectionPhotos(sec(), window.SeatingPhoto.inline),
+    getState: () => mapSectionPhotos(forShare(sec()), window.SeatingPhoto.inline),
     param: 'section',
     tool: 'seating-chart',
     title: 'Share this section',
     noun: 'this section',
     filename: () => (sec() && sec().name) || 'seating section',
-    note: 'One section travels — its desks, seats, names, notes and keep-apart rules. The other sections, the saved layouts and the seating history stay on this device.',
+    note: 'One section travels — its desks, seats, names, notes and rules (never the reasons you gave for them). The other sections, the saved layouts and the seating history stay on this device.',
     successMessage: 'Link copied. Opening it anywhere adds this section there as a new section — it never overwrites one already on that device.',
     emptyMessage: 'There is no section to share yet.',
     onMessage: (text, isError) => say(text, isError ? 'bad' : 'good'),
