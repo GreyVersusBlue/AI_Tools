@@ -87,6 +87,11 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-21 (v355), rank 33 DELETED (a gap): Path 13 P3 is whole.** `Rotation.rotateNow`/`tick` gained `finishAt` (the count that
+  ends a run), and 017's station timer runs on `_shared/rotation.js` (`test:gallery-rotation-parity`, 72,000 / 0; 021's
+  64,000 unchanged). 069's circuit and 004's round-robin tab are not this arithmetic and did not move (reasons in the P3
+  bullet). No new port (**next free 8557**). **Left of Path 13: rank 32 (project teams, parked on Devon's questions), rank 34
+  (P4: ties, consolation, re-deciding a match; double elimination, pools and Swiss already exist in 020).**
 - **AI-21 (v353–v354), rank 33 (kept, rewritten), Path 13 P3 steps 1 and 2: the shared bracket and rotation engines.**
   `_shared/bracket.js` (020's pure code, 29 functions, v353) and `_shared/rotation.js` (021's assignment and clock, v354),
   each a port alone behind a parity suite (`test:bracket-parity` 1,860, `test:rotation-parity` 64,000) and a unit suite whose
@@ -743,7 +748,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Increment 5 (AI-14, v300): named sets on 030, an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section, and its storage design under it): made from ticked questions of the bank or a built-in set, a question in a set more than once if wanted; reordered, trimmed, renamed, deleted, printed and pulled into a board whole from “Questions from”; carried in the bank file and imported beside a set already here, never over it; and a Tag filter on 030's list (the chosen source's tags).** **Left:** 018 and 019 pull station questions from it. 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 32 | Path 13 P2 — the rest. **All six splitters call `_shared/grouping.js` (v336–v341); 002, 022 and 027 keep their memory in a `groupHistory` field with the old fields written from it (v341–v343) and key it by roster id (v344–v346); the five improvements are in (002's floater fix v347, `keepStrategy` v348, `together: 'units'` v349, `restarts` for 002 and 022 v350, `method: 'best'` for 022 and 027 v351); the P2 bullet's increments 1–6.** Seating-aware grouping on 002 is in (v352, increment 6). Left: project teams on 002, parked on Devon's six questions (the P2 bullet, increment 6). Hold the twelve golden classes (`golden-old-groupings.json` now carries six re-recorded scenarios, each with an `amended` note), `smoke-rename-follow.mjs`, `test:grouping-parity` and `test:grouping-adopters` | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
-| 33 | Path 13 P3 — the rest: **`_shared/bracket.js` (v353) and `_shared/rotation.js` (v354) are built, 020 and 021 adopt them;** left is step 3, 017's timer (needs a finish-at-N option on `Rotation`), 069's and 004's round-robin tab, one tool per commit, each a port alone (the P3 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 34 | Path 13 P4 — bracket completeness: double elimination, pools, Swiss, ties, consolation | 020 | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 35 | Path 14 P3 — seating constraint solver that explains which soft constraints it broke (**designed 2026-10-05, not built**: the design and eleven questions for Devon are under the P3 bullet) | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 36 | Path 14 P4 — the room, not the grid: a room layer shared across period assignments | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
@@ -5584,7 +5588,7 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
 mode); role rotation with recency memory twice; the bracket algorithm is
 in 020 only (the "same in 021" claim was stale: 021 has no bracket, and
 `_shared/bracket.js` took 020's v353); the station-rotation timer exists in 004's
-round-robin mode, 021, 017 and 069 (021's is `_shared/rotation.js` since v354). ~~002's `pairHistory` keeps two generations, so
+round-robin mode, 021, 017 and 069 (021's and 017's are `_shared/rotation.js` since v354/v355; 069's and 004's are different clocks and stay). ~~002's `pairHistory` keeps two generations, so
 "everyone has worked with everyone this year" is unanswerable.~~ (Stale since 2026-08-13: 002 keeps every pair's
 count for the year, and since v277 has an opt-in long memory and a who-has-not-met list; what no tool has is
 one history for all of them.) 020 still lacks
@@ -6035,10 +6039,18 @@ match; (021's silent overwrite of a saved unit on a name collision was fixed in 
   drawing, the remote, `save()` and the "no stations" refusal. **Calls made:** the module takes its own random source as
   `Bracket.setRng()` rather than a parameter on every builder, so the bodies stay the page's; `rotation.js` holds no
   stations guard in `rotateNow`; both wait in `SHELL_URLS` as `_shared/` files (a page that loads them is 020 or 021,
-  neither a front-of-room tool, but the rule is `_shared/`). **Not done, on purpose, step 3:** 017's timer ends at its
-  `rotations` count (`t.count >= t.rotations` stops the clock in `tick` and in rotate-now), 069's runs off a timeline, and
-  004's round-robin tab was not read; none is a port alone, so none adopted. 017's would need a finish-at-N option in
-  `Rotation.tick` and `rotateNow`, which is a feature to add to the module and to parity together. **Not verified:** nothing
+  neither a front-of-room tool, but the rule is `_shared/`). **Step 3 (v355), whole:** `Rotation.rotateNow` and
+  `Rotation.tick` take an optional last argument, `finishAt`, the count that ends a run; left out they are 021's, and
+  `test:rotation-parity` still gives 64,000 / 0. **017 adopts it** (its start, pause, resume, rotate-now, reset, tick and
+  displayed time; the page keeps its sound, drawing, save() and the start guard that zeroes a finished count), held by
+  `npm run test:gallery-rotation-parity` (72,000 comparisons against `Tools/gallery-walk-qr/test/_legacy.mjs`, a frozen copy
+  of the page's old timer; `{ finish(r); }` without the `break` gives 1,672 differences) and two more `test:rotation` checks
+  (30, each also failing with its rule broken). **069 and 004 were read and do not adopt, because their arithmetic is not
+  this one:** 069's circuit (`circuit-run.js`) reads `performance.now()` against a timeline of work and rest, and its groups
+  start at station `floor(g*n/G)`, where `Rotation` starts group `gi` at `gi`; 004's round-robin tab (`ct-app.js`,
+  `onPhaseZero`) takes one step per zero with `endAt = Date.now() + length` (no `+=`, so no catch-up of a slept tab), counts
+  stations from 1 and has a "repeat when finished" loop, on a `phase` object that is not a `Rotation` clock. Moving either
+  would change what a class sees, so neither moved; the difference is recorded, not decided. **P3 is whole.** **Not verified:** nothing
   ran on a projector or a phone; the full `npm test` was not run.
 - **P4 — Bracket completeness.** Double elimination, pools, Swiss (a scheduler
   that copes with match counts unknown up front), ties/draws, re-deciding a decided

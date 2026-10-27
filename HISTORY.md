@@ -9,6 +9,30 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-21: Path 13 P3 step 3, 017 on the rotation engine (2026-10-27, v355)
+
+**Why.** Rank 33's last step: 017, 069 and 004 each keep a station timer.
+
+**Shipped.** `Rotation.rotateNow(r, now, ms, finishAt)` and `Rotation.tick(r, now, ms, stations, finishAt)`: the rotation that
+brings the count to `finishAt` stops the clock (not running, not paused, nothing left), and `tick` catches up no further.
+Left out, they are 021's (`test:rotation-parity`, 64,000 / 0, untouched). 017's start, pause, resume, rotate-now, reset, tick
+and displayed time now call `Rotation`; its sound, drawing, `save()`, the zero-length refusal and the guard that zeroes a
+finished count on Start stay in the page. `test:gallery-rotation-parity` (72,000 comparisons, 1 to 6 rotations, starting
+counts at and past the end, sleeps of up to twenty minutes) against a frozen copy of the page's timer; removing the `break`
+gives 1,672 differences. `test:rotation` is 30 checks, each also failing with its rule broken.
+
+**Calls made (reversible).** (1) `finishAt` is a trailing optional argument, falsy meaning none, not a mode of the clock.
+(2) `tick` takes a station count, which 017 has no use for: it passes 1. (3) **069 and 004 do not adopt.** 069's
+`circuit-run.js` is a `performance.now()` timeline of work and rest, with groups starting at `floor(g*n/G)`. 004's
+round-robin tab steps once per zero with `endAt = now + length` (so a slept tab does not catch up), counts from 1, and loops
+on request, on a `phase` object. Neither is a port alone; both stay as they are.
+
+**Not verified.** The full `npm test` (a `_shared/` edit selects everything), a real projector or phone. Checked: lint, every
+`check:*`, `check:precache --base origin/main`, `run-suites --only gallery-walk-qr` (4), `--only pe-tournament-stations` (4),
+`--only service-worker` (3), a11y 017.
+
+---
+
 ## AI-21: Path 13 P3 steps 1 and 2, the bracket and rotation engines (2026-10-27, v353–v354)
 
 **Why.** Rank 33: 020's bracket code and 021's rotation clock were the last two pieces of Path 13 that lived only inside a
