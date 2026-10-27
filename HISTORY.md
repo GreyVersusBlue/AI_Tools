@@ -9,6 +9,52 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-22: Path 14 P3 increment 1, the seating solver, its storage and the Why? panel (2026-10-27, v358-v360)
+
+**Why.** Rank 35 was designed on 2026-10-05 (no code) and Devon answered all eleven questions on 2026-10-21: keep the
+default, every one. Three steps, each its own commit and `CACHE_VERSION`.
+
+**v358, the pure solver.** `Tools/seating-chart/seating-solve.mjs` (never imported by `seating.mjs` except for the shape
+helpers below): `normalizeRules`, `zones`, `feasibility` (seven codes), `score`, `solve` (construct by most-constrained
+first, then min-conflicts over moves and swaps, restart while hard > 0, counted budget 40 passes / 4,000 moves, `timeLimitMs`
+2 s only as an emergency stop), `blame` (`impossible` / `held` / `budget`), `rulesToLegacy`, `absorbLegacy`. `assignSeats()` and
+`checkConstraints()` are untouched. `test:seating-solver` (pure Node, 128 assertions, `golden.json` of twelve seeded
+results; rewrite with `--update` and say so). **The measured problems:** a pod is now one rule scored by one function, so the
+pass and the checker cannot disagree (a star of five was broken 45% of the time under the old pass, 0 of 300 seeds now);
+Make grid's diagonal neighbours (10 of 40 desks) are **not** changed (that is `gridDesks()` and `ROOM.neighbor`, a visible
+change to every chart's adjacency; the design left it out and a test pins the 10). Bench (`test/_bench-solver.mjs`, this
+machine): no rules 1 ms, 30 rules median 3 ms, the whole budget on an impossible room 41 ms; times five for the laptop is
+still under the 250 ms target. Mutation checks: seven rule/solver mutations each fail the suite; "empty ignored" survived until
+a score assertion was added (construct already avoids empty desks).
+
+**v359, storage.** `repairSection` keeps `rules` (shape-checked by `repairRule`, in `seating.mjs`), `prefs` (0-3, only when not
+the defaults) and `desk.empty`, **only once used**: a chart saved by v357 loads byte-identical (`test:seating-migration`, with
+`fixtures/saved-v357.json` written by v357's own `repairState`). The 2-member apart/together rules mirror into the old lists
+(`syncLegacy` before a save, lists win on load, a list pair with no rule becomes a Must rule), so a cached older page still
+reads them. 009's year rollover empties `rules` and keeps `prefs` and desk.empty (`br-rollover.js`, fixture and assertions in
+`_rollover-fixtures.mjs`). Not done: stripping `why` from a share link, the sub export's rule names, the Rules block: they have
+no page to hang on until the Rules block exists (left in rank 35).
+
+**v360, the page.** Auto-assign (and Shuffle, which is "try another" because the seed is new each press) calls `solve()`;
+`seating-explain.mjs` words `blame`, `impossible`, `unseated`, soft rules, preferences and dropped rules from ids and codes;
+a **Why?** button opens one sentence per rule the solve could not keep ("Ada Lovelace and Marco Polo are side by side: every
+seat that would mend it is held by Ada Lovelace's pinned seat and Marco Polo's pinned seat."), hidden again by `refreshStatus()`. Names go in with
+`textContent`; the status line keeps its counts. `check:inline-sinks` baseline unchanged (no new dynamic markup sink).
+
+**Decisions (the design's defaults, recorded).** Devon's answers P14-1 to P14-11, all "keep the default", are now written into
+the P3 bullet. Calls made here, not Devon's: (a) a hard `together` against a hard `apart` over two or more of the same students
+drops the together and names it in `dropped`; a soft one is kept for the search to trade off. (b) `feasibility()`'s
+`apart-clique` and `space-too-many` use a greedy clique cover, a valid upper bound, so they never invent an impossibility.
+(c) 005 **is** a shell tool (it is in `SHELL_URLS`, v357), which the design said it was not, so the new modules went in both
+lists. (d) The photos stay as they are (Devon: "keep what exists, add no more photo features").
+
+**Not verified.** No real chart, no classroom laptop (the 250 ms target rests on this machine times five), nothing on paper.
+The Why? sentences were checked against built conflicts, not against a teacher reading them. The mirror's older-page half is
+simulated (an older page's save, written by hand), not run in an older build. `br_rollover_v1` STALE in `check:registry` was
+already there.
+
+---
+
 ## AI-21: Path 13 P4 increment 2, 020's second display (2026-10-27, v357)
 
 **Why.** The last of rank 34. The row said "via Path 8", but `_shared/remote.js` and `Remote.display()` (P1, P3) do not exist;
