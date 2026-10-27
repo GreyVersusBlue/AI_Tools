@@ -499,6 +499,38 @@ const CHECKS = {
     if (cv.counts.a.b !== 2 || cv.counts.b.a !== 2 || cv.counts.a.d !== 0) return 'counts';
     return true;
   },
+  'formGroups: a cost brings the groups near each other, and a broken rule still comes first'(G) {
+    // Twelve students on a line, student i at desk i; the cost of a pair is how far apart they sit.
+    const ms = names(12), at = {};
+    ms.forEach((k, i) => { at[k] = i; });
+    const cost = (a, b) => Math.abs(at[a] - at[b]);
+    const total = r => r.groups.reduce((t, g) => { for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) t += cost(g[i], g[j]); return t; }, 0);
+    let plain = 0, near = 0, worst = 0;
+    for (let seed = 1; seed <= 40; seed++) {
+      const base = { count: 3, strategy: 'random', seed, search: { attempts: 3000 } };
+      plain += total(G.formGroups(ms.map(k => ({ key: k })), base));
+      const r = G.formGroups(ms.map(k => ({ key: k })), Object.assign({ cost }, base));
+      near += total(r);
+      worst = Math.max(worst, total(r));
+      if (flat(r.groups).length !== 12 || new Set(flat(r.groups)).size !== 12) return 'seed ' + seed + ' lost a student';
+      if (r.groups.some(g => g.length !== 4)) return 'seed ' + seed + ' changed a group size';
+    }
+    // Neighbours in fours cost 10 a group (1+2+3+1+2+1), 30 in all; a random deal costs far more.
+    if (!(near / 40 < plain / 40 / 2)) return 'with a cost the groups were not half as spread: ' + (near / 40) + ' against ' + (plain / 40);
+    if (worst > 60) return 'a seed ended at ' + worst + ', past 60';
+    // A keep-apart pair on neighbouring desks is kept apart even though the cost wants them together.
+    for (let seed = 1; seed <= 40; seed++) {
+      const r = G.formGroups(ms.map(k => ({ key: k })), { count: 3, strategy: 'random', seed, cost, apart: [[ms[0], ms[1]]], together: [[ms[0], ms[11]]], search: { attempts: 3000 } });
+      if (r.violations.apart.length || r.violations.together.length) return 'seed ' + seed + ' broke a rule for the cost';
+    }
+    // Locked groups stay as they were.
+    const prev = [ms.slice(0, 4), ms.slice(4, 8).reverse(), ms.slice(8)];
+    const lk = G.formGroups(ms.map(k => ({ key: k })), { count: 3, seed: 5, cost, previous: prev, lock: [false, true, false], search: { attempts: 3000 } });
+    if (J(lk.groups[1]) !== J(prev[1])) return 'a locked group moved';
+    // No cost: the same result as before (the repair has nothing to swap).
+    const a = G.formGroups(ms.map(k => ({ key: k })), { count: 3, seed: 9 }), b = G.formGroups(ms.map(k => ({ key: k })), { count: 3, seed: 9, cost: null });
+    return J(a.groups) === J(b.groups) ? true : 'a null cost changed the groups';
+  },
   'golden: twelve fixed-seed results'(G) {
     const now = goldenResults(G);
     const want = JSON.parse(fs.readFileSync(GOLDEN, 'utf8'));
@@ -546,6 +578,7 @@ function goldenResults(G) {
 
 /* Each check, broken on purpose: [check, text to find in grouping.js, replacement]. */
 const MUTANTS = [
+  ['formGroups: a cost brings the groups near each other, and a broken rule still comes first', "if (cmp(cs, best) < 0) best = cs; else { ga[ia] = ma; gb[ib] = mb; }", "best = cs;"],
   ['plan: sizes add up, spread differs by one, ceil never over, floor never under', "} else count = Math.ceil(n / size);", "} else count = Math.floor(n / size) || 1;"],
   ['plan: 30 by 4 is six 4s and two 3s; floor with floaters is seven 4s and 2 floaters', "if (floaters >= 2) { ownGroup = floaters; floaters = 0; }", "if (floaters >= 3) { ownGroup = floaters; floaters = 0; }"],
   ['plan: floor with floaters or an own group is groups of exactly size, never over it (11 by 4 is 4, 4 and 3 left)', "count && count * size <= n) base = size;", "count && count * size <= n) base = base;"],

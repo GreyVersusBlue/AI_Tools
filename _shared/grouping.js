@@ -825,7 +825,8 @@
      attribute; apart and together: [[a, b]]; previous: [[key]] with lock:
      [bool] (002's locked groups: kept at their index, the count fixed at
      previous.length); history (read, never changed); recency: { penalties:
-     [1000, 100] }; cost(a, b), added for each pair sharing a group; search:
+     [1000, 100] }; cost(a, b), added for each pair sharing a group (and brought down by swaps
+     once nothing else is broken); search:
      { attempts: 800, restarts: 0, keepStrategy: false, together: 'pairs' };
      rng or seed.
      Returns { groups, floaters, absent, seed, violations: { apart, together,
@@ -1098,7 +1099,22 @@
         var at = where(groups);
         var all = apartBroken(at).concat(togetherBroken(at));
         if (mem.any) all = all.concat(repeatPairs(groups));
-        if (!all.length) { stoppedBy = 'nothing'; break; }
+        if (!all.length) {
+          /* Nothing is broken. With a cost to bring down, swap two members of different
+             unlocked groups and keep the swap when the score is better. */
+          if (!costFn) { stoppedBy = 'nothing'; break; }
+          var open = [];
+          for (var ug = 0; ug < groups.length; ug++) { if (!lockedIdx[ug] && groups[ug].length) open.push(ug); }
+          if (open.length < 2) { stoppedBy = 'nothing'; break; }
+          var ga = groups[open[Math.floor(next() * open.length)]], gb = groups[open[Math.floor(next() * open.length)]];
+          if (ga === gb) continue;
+          var ia = Math.floor(next() * ga.length), ib = Math.floor(next() * gb.length);
+          var ma = ga[ia], mb = gb[ib];
+          ga[ia] = mb; gb[ib] = ma;
+          var cs = score(groups, tierOf);
+          if (cmp(cs, best) < 0) best = cs; else { ga[ia] = ma; gb[ib] = mb; }
+          continue;
+        }
         var off = all[Math.floor(next() * all.length)];
         var gi = own(ixOf, '#' + off[0]) ? at[ixOf['#' + off[0]]] : -1;
         if (gi === -1 || lockedIdx[gi]) continue;

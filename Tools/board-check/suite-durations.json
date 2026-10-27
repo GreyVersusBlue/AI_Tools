@@ -61,6 +61,7 @@
     "Tools/data-chart-builder/test/smoke-xlsx.mjs": 6,
     "Tools/group-team-generator/test/smoke-share.mjs": 8,
     "Tools/group-team-generator/test/smoke-pairing-history.mjs": 31,
+    "Tools/group-team-generator/test/smoke-seat-near.mjs": 40,
     "Tools/group-team-generator/test/smoke-year-memory-core.mjs": 9,
     "Tools/group-team-generator/test/smoke-year-memory.mjs": 100,
     "Tools/vocab-flashcard-generator/test/smoke-share.mjs": 7,

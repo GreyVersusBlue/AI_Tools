@@ -231,6 +231,7 @@
     "test:grouping": "node Tools/grouping/test/grouping.test.mjs",
     "test:grouping-parity": "node Tools/grouping/test/parity.test.mjs",
     "test:grouping-adopters": "node Tools/grouping/test/smoke-adopters.mjs",
+    "test:seat-near": "node Tools/group-team-generator/test/smoke-seat-near.mjs",
     "test:named-sets": "node Tools/review-game-board/test/smoke-named-sets.mjs",
     "test:export": "node Tools/export/test/export.test.mjs && node Tools/export/test/smoke-export.mjs",
     "test:trading-card-pdf": "node Tools/historical-trading-card-maker/test/smoke-pdf-export.mjs",

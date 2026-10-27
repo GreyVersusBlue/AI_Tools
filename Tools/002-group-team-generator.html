@@ -251,7 +251,9 @@
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/student-flags.js"></script>
 <script src="../_shared/grouping.js"></script>
+<script src="../_shared/seating-read.js"></script>
 <script src="group-team-generator/gtg-memory.js"></script>
+<script src="group-team-generator/gtg-seating.js"></script>
 </head>
 <body>
 
@@ -325,6 +327,10 @@
       <div class="control-group">
         <label class="check-row" for="long-memory-check"><input type="checkbox" id="long-memory-check"><span>Spread pairings across the whole year (long memory)</span></label>
         <div class="hint" id="long-memory-hint">Off: a reshuffle only avoids repeating the last shuffle or two. On: it also swaps students between groups to give pairs who have worked together least a turn, never at the cost of a keep-apart or keep-together rule or of a locked group.</div>
+      </div>
+      <div class="control-group">
+        <label class="check-row" for="seat-near-check"><input type="checkbox" id="seat-near-check"><span>Seat groups near each other (uses the Seating Chart)</span></label>
+        <div class="hint" id="seat-near-hint" data-off="Off. On: each group is made of students who sit close together in this class's Seating Chart, after the rules above and your grouping strategy have had their say. A student with no desk in the chart is placed without regard to where they sit.">Off. On: each group is made of students who sit close together in this class's Seating Chart, after the rules above and your grouping strategy have had their say. A student with no desk in the chart is placed without regard to where they sit.</div>
       </div>
     </div>
 
@@ -474,6 +480,8 @@
     pairHistoryHint: document.getElementById('pair-history-hint'),
     resetPairHistoryBtn: document.getElementById('reset-pair-history-btn'),
     longMemoryCheck: document.getElementById('long-memory-check'),
+    seatNearCheck: document.getElementById('seat-near-check'),
+    seatNearHint: document.getElementById('seat-near-hint'),
     rolesInput: document.getElementById('roles-input'),
     resetRolesBtn: document.getElementById('reset-roles-btn'),
     explainArea: document.getElementById('explain-area'),
@@ -602,6 +610,7 @@
     /* Written only when used, so a class that never turns these on saves the
        same string it always did. */
     if (els.longMemoryCheck.checked) state.longMemory = true; else delete state.longMemory;
+    if (els.seatNearCheck.checked) state.seatNear = true; else delete state.seatNear;
     if (els.rolesInput.value.trim()) state.rolesText = els.rolesInput.value; else delete state.rolesText;
     if (!Array.isArray(state.absentNames)) state.absentNames = [];
     saveConfig(state.name, state);
@@ -620,6 +629,7 @@
     els.customNamesInput.value = state.customNames || '';
     els.customNamesWrap.style.display = state.namingMode === 'custom' ? '' : 'none';
     els.longMemoryCheck.checked = state.longMemory === true;
+    els.seatNearCheck.checked = state.seatNear === true;
     els.rolesInput.value = typeof state.rolesText === 'string' ? state.rolesText : '';
     if (!Array.isArray(state.absentNames)) state.absentNames = [];
     keepApart = Array.isArray(state.keepApart) ? state.keepApart : [];
@@ -629,6 +639,7 @@
     renderPairList();
     renderTogetherList();
     renderPairHistoryHint();
+    renderSeatNearHint();
     clearTransientGroupState();
   }
 
@@ -847,6 +858,7 @@
     renderAbsentList();
     els.generateBtn.disabled = getActiveStudents().length < 2;
     populatePairSelects();
+    renderSeatNearHint();
     saveCurrentConfig();
   }
 
@@ -1098,6 +1110,36 @@
   /* A shuffle that ends with a keep-apart or keep-together pair broken deals again, up to this many times, and keeps the best
      (v350). It costs nothing when the first deal is clean. */
   var RESTARTS = 10;
+  /* Seat groups near each other (Path 13 P2): the engine's cost is how far apart two students' desks are in
+     the class's Seating Chart. More swaps than the default are allowed, because moving everyone toward their
+     neighbours takes more of them than mending a broken rule. */
+  var SEAT_ATTEMPTS = 3000;
+  function seatingFor(members) {
+    return GtgSeating.build(SeatingRead.read(), SeatingRead, {
+      classNames: [state.rosterName, state.name],
+      members: members.map(function (m) { return { key: m.key, name: m.name }; })
+    });
+  }
+  /* The mean distance between two students of a group, against the mean between any two of the class. */
+  function nearStats(groups, cost, keyOfObj) {
+    var sum = 0, n = 0;
+    groups.forEach(function (g) {
+      for (var i = 0; i < g.length; i++) for (var j = i + 1; j < g.length; j++) { sum += cost(keyOfObj.get(g[i]), keyOfObj.get(g[j])); n++; }
+    });
+    return n ? sum / n : 0;
+  }
+  function seatNoChartText(seat) {
+    if (seat.reason === 'no-chart') return 'No seating chart found. Open the Seating Chart and place this class\'s students, then try again.';
+    if (seat.reason === 'no-section') return 'The Seating Chart has no section named like this class (\'' + (state.rosterName || state.name) + '\'), so it cannot tell where they sit.';
+    return 'Fewer than two of this class\'s students are seated in the Seating Chart' + (seat.section ? ' section \'' + seat.section + '\'' : '') + ', so it cannot tell where they sit.';
+  }
+  function renderSeatNearHint() {
+    if (!state || state.seatNear !== true) { els.seatNearHint.textContent = els.seatNearHint.getAttribute('data-off') || els.seatNearHint.textContent; return; }
+    var seat = seatingFor(students.map(function (s) { return { key: s.name, name: s.name }; }));
+    els.seatNearHint.textContent = seat.found
+      ? 'On, using the Seating Chart section \'' + seat.section + '\': ' + seat.seated + ' of ' + seat.total + ' students have a desk there' + (seat.unseated.length ? ' (not placed by seat: ' + seat.unseated.join(', ') + ')' : '') + '.'
+      : 'On, but ' + seatNoChartText(seat) + ' Groups are made without it until then.';
+  }
   function makeGroups(opts) {
     opts = opts || {};
     var keyed = keyStudents(students), members = keyed.members;
@@ -1142,6 +1184,7 @@
       });
     }
     var lockedFlagsIn = opts.lockedFlags;
+    var seat = state && state.seatNear === true ? seatingFor(members) : null;
 
     var res = Grouping.formGroups(members, {
       count: isSize ? undefined : v, size: isSize ? v : undefined,
@@ -1153,11 +1196,12 @@
       absent: absent, apart: keyPairs(keepApart), together: keyPairs(keepTogether),
       previous: previous, lock: previous && lockedFlagsIn ? lockedFlagsIn : undefined,
       history: history, rng: Math.random,
+      cost: seat && seat.found ? seat.cost : undefined,
       /* The strategy the teacher picked wins over "not last time's partner": the repair no longer
          undoes a balanced, mixed or readiness grouping to avoid a repeat (Path 13 P2, v348). */
       /* A keep-together set (a chain of pairs too) is dealt as one block, so the repair is not what holds it
          together (v349, Devon's P13-8: a block once switched on). With no pair set the old deal is kept. */
-      search: { restarts: RESTARTS, keepStrategy: KEEP_STRATEGIES.indexOf(els.strategySelect.value) !== -1, together: keepTogether.length ? 'units' : 'pairs' }
+      search: { restarts: RESTARTS, attempts: seat && seat.found ? SEAT_ATTEMPTS : undefined, keepStrategy: KEEP_STRATEGIES.indexOf(els.strategySelect.value) !== -1, together: keepTogether.length ? 'units' : 'pairs' }
     });
     var lockedCount = res.stats.lockedCount, usedLocks = lockedCount > 0, lockedIdxSet = {};
     var keyOfObj = new Map();
@@ -1175,7 +1219,9 @@
     var reshuffledCount = activeStudents.length;
     if (usedLocks) groups.forEach(function (g, i) { if (lockedIdxSet[i]) reshuffledCount -= g.length; });
 
-    var longMemory = state && state.longMemory === true;
+    /* Long memory swaps students without knowing where anyone sits, which would undo the seating, so the
+       seating wins and the pass is not run (the recent-repeat bias still is, inside the engine). */
+    var longMemory = state && state.longMemory === true && !(seat && seat.found);
     if (longMemory) {
       GtgMemory.refine(groups, {
         history: state.pairHistory, gen: state.pairGen || 0, apart: keepApart, together: keepTogether,
@@ -1207,7 +1253,8 @@
       floaters: floaters,
       roles: roleResult ? roleResult.byGroup : null,
       meta: {
-        longMemory: longMemory, busiestPairing: busiest,
+        longMemory: longMemory, longMemorySkipped: state && state.longMemory === true && !longMemory, busiestPairing: busiest,
+        seat: seat ? { found: seat.found, reason: seat.reason, section: seat.section, seated: seat.seated, total: seat.total, unseated: seat.unseated, near: seat.found ? nearStats(groups, seat.cost, keyOfObj) : null } : null,
         rolesFresh: roleResult ? roleResult.fresh : 0, rolesTotal: roleResult ? roleResult.total : 0,
         strategy: res.stats.strategy, keptStrategy: KEEP_STRATEGIES.indexOf(res.stats.strategy) !== -1, oddMode: oddMode, lockedCount: lockedCount, reshuffledCount: reshuffledCount,
         togetherTooBig: res.impossible.filter(function (x) { return x.code === 'together-too-big'; }).length, usedLocks: usedLocks, totalActive: activeStudents.length, groupCountTarget: res.stats.count - lockedCount,
@@ -1447,6 +1494,14 @@
           (result.meta.keptStrategy ? ' Your grouping strategy came first, so these were kept rather than undo it.' : '')
         : 'No recently-paired students ended up together again.');
     }
+    if (result.meta.seat) {
+      var st = result.meta.seat;
+      lines.push(st.found
+        ? 'Seat groups near each other is on: students in a group sit about ' + (Math.round(st.near * 10) / 10) + ' desk' + (Math.round(st.near * 10) === 10 ? '' : 's') + ' apart on average, using the Seating Chart section \'' + st.section + '\'' +
+          (st.unseated.length ? '; ' + st.unseated.length + ' student' + (st.unseated.length === 1 ? ' has' : 's have') + ' no desk there and were placed without it.' : '.')
+        : 'Seat groups near each other is on, but ' + seatNoChartText(st) + ' These groups were made without it.');
+      if (result.meta.longMemorySkipped) lines.push('Long memory was skipped for this shuffle, because it cannot see the seating and would undo it.');
+    }
     if (result.meta.strategy === 'coverage' && result.meta.totalPairsThisGen) {
       var np = result.meta.newPairsThisGen, tp = result.meta.totalPairsThisGen;
       lines.push(np + ' of ' + tp + ' pairing' + (tp === 1 ? '' : 's') + ' in this grouping ' + (tp === 1 ? 'is' : 'are') +
@@ -1569,6 +1624,11 @@
     if (!state) return;
     saveCurrentConfig();
     renderPairHistoryHint();
+  });
+  els.seatNearCheck.addEventListener('change', function () {
+    if (!state) return;
+    saveCurrentConfig();
+    renderSeatNearHint();
   });
   els.rolesInput.addEventListener('input', function () { if (state) saveCurrentConfig(); });
   els.resetRolesBtn.addEventListener('click', function () {
