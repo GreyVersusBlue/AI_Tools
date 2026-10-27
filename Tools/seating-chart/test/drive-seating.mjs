@@ -765,6 +765,56 @@ async function buildChart(page) {
   await page.close();
 }
 
+/* ============================================ Leave empty and Fill the gaps (Path 14 P3 increment 2, step 2) === */
+{
+  const page = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  const students = ['Ada Lovelace', 'Marco Polo', 'Mansa Musa', 'Ida B Wells']
+    .map((n, i) => ({ id: 's' + i, name: n, note: '', flag: false, photo: '' }));
+  const desks = ['a', 'b', 'c', 'd', 'e', 'f'].map((id, i) => ({ id, x: 40 + (i % 3) * 130, y: 110 + Math.floor(i / 3) * 130, rot: 0, locked: false }));
+  const FIXTURE = {
+    __v: 1, active: 'p1', theme: 'light', zoom: 'fit', lastFirst: false, numbered: false, mirror: false,
+    printNames: true, printPhotos: true, printViolations: true, currentQuarter: 'Q1',
+    sections: [{ id: 'p1', name: 'Gaps Test', students, desks, assign: { a: 's0', b: 's1', c: 's2' }, apart: [], together: [], layouts: [], history: [] }],
+  };
+  await page.goto(URL_PAGE, { waitUntil: 'load' });
+  await settle(page, 300);
+  await page.evaluate(f => localStorage.setItem('seating-chart-v1', JSON.stringify(f)), FIXTURE);
+  await page.reload({ waitUntil: 'load' });
+  await settle(page, 400);
+  // Fill the gaps: s3 has no desk; the three seated stay exactly where they are
+  await page.click('button[onclick="fillGaps()"]');
+  await settle(page, 1700);
+  let sv = (await stored(page)).sections[0];
+  ok(sv.assign.a === 's0' && sv.assign.b === 's1' && sv.assign.c === 's2', 'Fill the gaps moves nobody who was seated');
+  ok(Object.values(sv.assign).includes('s3'), 'and seats the student who had no desk');
+  ok(/nobody else moved/.test(await page.textContent('#status')), 'and says nobody else moved: ' + await page.textContent('#status'));
+  // Leave empty from the keyboard: the seated student goes back to the pool, the flag is stored
+  await page.focus('.desk[data-id="a"] .seat'); await page.keyboard.press('e');
+  await settle(page, 1700);
+  sv = (await stored(page)).sections[0];
+  const da = sv.desks.find(d => d.id === 'a');
+  ok(da.empty === true && !sv.assign.a, 'E leaves the desk empty and frees its student');
+  ok(/left empty/.test(await page.getAttribute('.desk[data-id="a"] .seat', 'aria-label')), 'the desk says it is left empty');
+  ok(!sv.desks.find(d => d.id === 'b').hasOwnProperty('empty'), 'another desk gets no empty field');
+  // it stays empty through two solves, and through Fill the gaps
+  for (let i = 0; i < 2; i++) { await page.click('button[onclick="autoAssign()"]'); await settle(page, 300); }
+  await page.click('button[onclick="fillGaps()"]'); await settle(page, 1700);
+  sv = (await stored(page)).sections[0];
+  ok(!sv.assign.a && Object.keys(sv.assign).length === 4, 'a desk left empty stays empty through Auto-assign, Shuffle and Fill the gaps');
+  // a tap-to-place onto it is refused
+  await page.focus('.desk[data-id="b"] .seat'); await page.keyboard.press('Enter');
+  await page.focus('.desk[data-id="a"] .seat'); await page.keyboard.press('Enter');
+  ok(/left empty/.test(await page.textContent('#status')), 'placing a student on it is refused with a sentence');
+  // undo brings the desk back; E again turns it off and removes the field
+  await page.keyboard.press('Escape');
+  await page.focus('.desk[data-id="a"] .seat'); await page.keyboard.press('e');
+  await settle(page, 1700);
+  ok(!('empty' in (await stored(page)).sections[0].desks.find(d => d.id === 'a')), 'turning it off removes the field again');
+  const errs = page.__errs.filter(e => !/favicon/.test(e));
+  eq(errs.length, 0, 'no console/page errors in the Leave empty flow' + (errs.length ? ':\n       ' + errs.join('\n       ') : ''));
+  await page.close();
+}
+
 await browser.close();
 server.close();
 

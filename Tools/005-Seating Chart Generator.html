@@ -174,6 +174,7 @@
   .pair.apart{border-left:3px solid var(--warn);}
   .pair.together{border-left:3px solid var(--teal);}
   .pair.other{border-left:3px solid var(--gold);}
+  .desk.leave-empty{border-style:dashed; opacity:.75;}
   .desk.zone-pick{outline:3px dashed var(--teal-deep); outline-offset:2px;}
   #ruleStudents,#ruleAnyOf{width:100%;}
 
@@ -683,6 +684,7 @@
       <div class="grp">
         <button class="btn sm teal" onclick="autoAssign()">Auto-assign</button>
         <button class="btn sm ghost" onclick="autoAssign()" title="Try another arrangement">Shuffle</button>
+        <button class="btn sm ghost" onclick="fillGaps()" title="Seat the students who have no desk and leave everyone else where they are">Fill the gaps</button>
         <button class="btn sm ghost" onclick="clearSeats()">Clear seats</button>
         <button class="btn sm danger" onclick="clearDesks()">Remove desks</button>
       </div>
@@ -1035,6 +1037,15 @@ function pickStudent(){
   el('status').innerHTML = baseStatus() + ` &middot; <span class="good">Picked: ${esc(nameOf(pick.studentId))}</span>`;
 }
 function rotateDesk(id){ pushUndo(); const d = sec().desks.find(x => x.id === id); d.rot = ((d.rot || 0) + 90) % 360; renderFloor(); touch(); }
+/* Leave empty: the solver never seats anyone here (desk.empty, stored only while true). Turning it on
+   unpins the desk and sends its student back to the pool. */
+function toggleEmpty(id){
+  pushUndo();
+  const s = sec(), d = s.desks.find(x => x.id === id);
+  if (d.empty){ delete d.empty; }
+  else { d.empty = true; d.locked = false; delete s.assign[id]; }
+  renderAll();
+}
 function toggleLock(id){ pushUndo(); const d = sec().desks.find(x => x.id === id); d.locked = !d.locked; renderFloor(); touch(); }
 
 /* ============================================================
@@ -1083,7 +1094,7 @@ function duplicateSection(){
   while (taken.has(name)){ name = base + ' ' + n; n++; }
   pushUndo();
   const copy = newSection(name);
-  copy.desks = src.desks.map(d => ({ id: uid(), x: d.x, y: d.y, rot: d.rot, locked: d.locked }));
+  copy.desks = src.desks.map(d => ({ id: uid(), x: d.x, y: d.y, rot: d.rot, locked: d.locked, ...(d.empty ? { empty: true } : {}) }));
   state.sections.push(copy);
   state.active = copy.id;
   renderAll();
@@ -1554,6 +1565,24 @@ function autoAssign(){
   reportConstraints(r);
   showWhy(explain(s, r));
 }
+/* Fill the gaps: seat the students who have no desk and leave everyone else where they are, unless
+   a Must rule can only be mended by moving someone, and then say who moved. */
+function fillGaps(){
+  const s = sec();
+  if (!s.students.length){ say('Add some students first.', 'bad'); return; }
+  if (!s.desks.length){ say('Add some desks first. Try "Make grid".', 'bad'); return; }
+  const before = Object.keys(s.assign).length;
+  pushUndo();
+  const r = solve(s, { quarter: state.currentQuarter, keep: 'all' });
+  s.assign = r.assign;
+  selectedStudent = null;
+  renderAll();
+  const added = Object.keys(r.assign).length - before;
+  const names = (r.moved || []).map(nameOf);
+  const shown = names.slice(0, 4).join(', ') + (names.length > 4 ? ` and ${names.length - 4} more` : '');
+  reportConstraints(r, `${added > 0 ? 'Seated ' + added : 'Seated nobody new'}; ${names.length ? 'moved ' + shown : 'nobody else moved'}.`);
+  showWhy(explain(s, r));
+}
 /* "Why?": one sentence per rule the last auto-assign could not keep. In memory only, and
    hidden again as soon as anything else changes the chart (refreshStatus). Every line goes in
    with textContent: names are the teacher's text, not markup. */
@@ -1576,7 +1605,7 @@ function toggleWhy(){
   btn.setAttribute('aria-expanded', panel.hidden ? 'false' : 'true');
 }
 el('whyBtn').addEventListener('click', toggleWhy);
-function reportConstraints(r){
+function reportConstraints(r, lead){
   const s = sec();
   const report = r || checkConstraints(s);
   const hc = checkHistoryConstraints(s, state.currentQuarter);
@@ -1588,7 +1617,7 @@ function reportConstraints(r){
   if (state.currentQuarter && hc.dueUnseated.length) extra += ` <span class="bad">${hc.dueUnseated.length} still haven't had front row in ${esc(state.currentQuarter)}.</span>`;
   if (report.apartOK && report.togetherOK && !hc.repeats.length && (!state.currentQuarter || !hc.dueUnseated.length)
       && (s.apart.length || s.together.length || s.history.length)) extra = ' <span class="good">All seating rules met.</span>';
-  el('status').innerHTML = baseStatus() + extra;
+  el('status').innerHTML = baseStatus() + (lead ? ` &middot; <span class="good">${esc(lead)}</span>` : '') + extra;
 }
 
 /* ============================================================
@@ -1608,14 +1637,14 @@ function renderFloor(){
     const st = sid ? studentById(sid) : null;
     const node = document.createElement('div');
     node.className = 'desk ' + (st ? 'assigned' : 'empty') + (st && st.flag ? ' flagged' : '')
-      + (d.locked ? ' locked' : '') + (selectedStudent && !st ? ' sel-target' : '') + (tapPicked.has(d.id) ? ' zone-pick' : '');
+      + (d.locked ? ' locked' : '') + (d.empty ? ' leave-empty' : '') + (selectedStudent && !st && !d.empty ? ' sel-target' : '') + (tapPicked.has(d.id) ? ' zone-pick' : '');
     node.style.left = d.x + 'px'; node.style.top = d.y + 'px';
     node.style.transform = (d.rot ? 'rotate(' + d.rot + 'deg)' : '');
     node.dataset.id = d.id;
 
     const label = st
       ? `Seat ${i + 1} of ${total}, ${st.name}${st.flag ? ', flagged' : ''}${d.locked ? ', pinned' : ''}`
-      : `Seat ${i + 1} of ${total}, empty`;
+      : `Seat ${i + 1} of ${total}, ${d.empty ? 'left empty' : 'empty'}`;
     const label2 = label + (tapPicked.has(d.id) ? ', chosen for the rule' : '');
     node.innerHTML =
         `<button class="seat" data-id="${d.id}" aria-label="${esc(label2)}"${st ? ' draggable="true"' : ''}>`
@@ -1624,9 +1653,11 @@ function renderFloor(){
       + `</button>`
       + `<span class="selnote">moving</span>`
       + (d.locked ? `<span class="lockbadge" aria-hidden="true">pinned</span>` : ``)
+      + (d.empty ? `<span class="lockbadge" aria-hidden="true">left empty</span>` : ``)
       + `<span class="seatnum" aria-hidden="true">${i + 1}</span>`
       + `<span class="desk-ctrls">`
       +   `<button class="desk-ctrl" data-act="rot" tabindex="-1" title="Rotate desk (R)" aria-hidden="true">&#8635;</button>`
+      +   `<button class="desk-ctrl ${d.empty ? 'on' : ''}" data-act="empty" tabindex="-1" title="Leave this desk empty so no one is seated here (E)" aria-hidden="true">&#8856;</button>`
       +   `<button class="desk-ctrl ${d.locked ? 'on' : ''}" data-act="lock" tabindex="-1" title="Pin this seat so Shuffle keeps it (P)" aria-hidden="true">&#9679;</button>`
       +   `<button class="desk-ctrl" data-act="del" tabindex="-1" title="Remove this desk (Delete)" aria-hidden="true">&times;</button>`
       + `</span>`;
@@ -1641,6 +1672,7 @@ function renderFloor(){
         if (a === 'del') removeDesk(d.id);
         else if (a === 'rot') rotateDesk(d.id);
         else if (a === 'lock') toggleLock(d.id);
+        else if (a === 'empty') toggleEmpty(d.id);
       });
     });
 
@@ -1682,6 +1714,7 @@ function deskKey(ev, id){
   else if (k === 'Escape' && selectedStudent){ selectedStudent = null; renderAll(); focusDesk(id); }
   else if (k === 'r' || k === 'R'){ ev.preventDefault(); rotateDesk(id); focusDesk(id); }
   else if (k === 'p' || k === 'P'){ ev.preventDefault(); toggleLock(id); focusDesk(id); }
+  else if (k === 'e' || k === 'E'){ ev.preventDefault(); toggleEmpty(id); focusDesk(id); }
   else if (k === 'Delete' || k === 'Backspace'){ ev.preventDefault(); removeDesk(id); }
   else if (k === 'ArrowLeft'){ ev.preventDefault(); move(-step, 0); }
   else if (k === 'ArrowRight'){ ev.preventDefault(); move(step, 0); }
@@ -1750,6 +1783,7 @@ function deskClick(ev, deskId){
   }
   const s = sec();
   const here = s.assign[deskId];
+  if (selectedStudent && s.desks.find(x => x.id === deskId).empty){ say('That desk is left empty. Press E on it to seat someone there.', 'bad'); return; }
   if (selectedStudent){
     pushUndo();
     if (here && here !== selectedStudent){
@@ -1773,6 +1807,7 @@ function deskClick(ev, deskId){
 function deskDrop(ev, deskId){
   const s = sec();
   const sid = dragStudentId; if (!sid) return;
+  if (s.desks.find(x => x.id === deskId).empty){ say('That desk is left empty. Press E on it to seat someone there.', 'bad'); return; }
   pushUndo();
   const occupant = s.assign[deskId];
   const fromDesk = dragFromDeskId;
@@ -2403,7 +2438,7 @@ Object.assign(window, {
   removeRuleById,
   setQuarter, recordHistory, deleteHistoryEntry, printStudentHistory, printClassHistory,
   addDesk, addRow, addPod, makeGrid, clearDesks, clearSeats,
-  autoAssign, syncRuleForm, toggleTapDesks, addRuleFromForm, undo, pickStudent, toggleZoom, toggleMirror, toggleNumbered, toggleToolbarMore,
+  autoAssign, fillGaps, syncRuleForm, toggleTapDesks, addRuleFromForm, undo, pickStudent, toggleZoom, toggleMirror, toggleNumbered, toggleToolbarMore,
   printChart, printAllSections, printBlankChart, printSubExport, printSubExportAll, setPrintOpt,
   poolDragOver, poolDragLeave, poolDrop, poolClick,
 });
