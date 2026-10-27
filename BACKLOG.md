@@ -737,7 +737,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Increment 5 (AI-14, v300): named sets on 030, an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section, and its storage design under it): made from ticked questions of the bank or a built-in set, a question in a set more than once if wanted; reordered, trimmed, renamed, deleted, printed and pulled into a board whole from “Questions from”; carried in the bank file and imported beside a set already here, never over it; and a Tag filter on 030's list (the chosen source's tags).** **Left:** 018 and 019 pull station questions from it. 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 32 | Path 13 P2 — the rest. **All six splitters call `_shared/grouping.js` (v336–v341); 002, 022 and 027 keep their memory in a `groupHistory` field with the old fields written from it (v341–v343) and key it by roster id (v344–v346); the five improvements are in (002's floater fix v347, `keepStrategy` v348, `together: 'units'` v349, `restarts` for 002 and 022 v350, `method: 'best'` for 022 and 027 v351); the P2 bullet's increments 1–6.** Seating-aware grouping on 002 is in (v352, increment 6). Left: project teams on 002, parked on Devon's six questions (the P2 bullet, increment 6). Hold the twelve golden classes (`golden-old-groupings.json` now carries six re-recorded scenarios, each with an `amended` note), `smoke-rename-follow.mjs`, `test:grouping-parity` and `test:grouping-adopters` | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
-| 33 | Path 13 P3 — `_shared/bracket.js` + `_shared/rotation.js`; fix 021’s silent overwrite bug | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
+| 33 | Path 13 P3 — `_shared/bracket.js` + `_shared/rotation.js` (design written v353) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 34 | Path 13 P4 — bracket completeness: double elimination, pools, Swiss, ties, consolation | 020 | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 35 | Path 14 P3 — seating constraint solver that explains which soft constraints it broke (**designed 2026-10-05, not built**: the design and eleven questions for Devon are under the P3 bullet) | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 36 | Path 14 P4 — the room, not the grid: a room layer shared across period assignments | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
@@ -5582,7 +5582,7 @@ round-robin mode, 021, 017 and 069. ~~002's `pairHistory` keeps two generations,
 count for the year, and since v277 has an opt-in long memory and a who-has-not-met list; what no tool has is
 one history for all of them.) 020 still lacks
 double elimination, pools and Swiss scheduling, tie handling and re-deciding a
-match; 021 silently overwrites a saved unit on a name collision (a real bug).
+match; (021's silent overwrite of a saved unit on a name collision was fixed in 77b4405.)
 
 **Phases.**
 
@@ -5989,9 +5989,34 @@ match; 021 silently overwrites a saved unit on a name collision (a real bug).
   `gtg:data:<class>` (no new key); (2) a task list the teacher prints, not one students tick (nothing is student-facing); (3) an
   editable contract template, signed on paper only, nothing recorded; (4) a team counts in the pair memory once, when it is made;
   (5) built in 002 on `previous` and `lock`, now, rather than waiting for a shared home; (6) mid-project changes by hand.
-- **P3 — `_shared/bracket.js` + `_shared/rotation.js`.** Extract 020's bracket and
-  scheduling code and 021's rotation timer; 004's round-robin mode and 017/069's
-  station timers adopt rotation. Fix the 021 overwrite bug in the same PR.
+- **P3 — `_shared/bracket.js` + `_shared/rotation.js`.** *Design (AI-21, 2026-10-27; read from the tree at v352.)*
+  **Two corrections to the text above first.** (a) 021 has **no bracket**: its page and CSS carry the word, but no
+  seeding, advance or match code exists in it, so "the same algorithm line for line in 020 and 021" is stale and
+  `bracket.js` has one source, 020. (b) The 021 silent-overwrite is fixed (77b4405, pinned by `smoke-pe-stations.mjs`).
+  Neither is P3's work. Also, 020 already has double elimination, pools and Swiss (its `smoke-pools-swiss.mjs`), so the
+  parts of P4 that are *code that exists* move with this port; what P4 still owes is in its row.
+  *`bracket.js` (`Bracket`).* The pure part of 020, moved with every body unchanged: `shuffle`, `nextPowerOf2`,
+  `standardSeedOrder`, `buildBracket`, `autoAdvance`, `buildDoubleElimBracket`, `autoAdvanceDouble`, `buildRoundRobin`,
+  `computeStandings`, the pool functions (`distributeIntoPools` … `bracketScoresView`), the Swiss functions and the
+  elimination standings. A state is the same plain object it was, so every saved bracket opens either way. The one
+  difference is `shuffle`, which draws from `Bracket.setRng(fn)`'s generator when one is set and from `Math.random` (looked
+  up at the call) otherwise: a page never sets one, a suite does. **Stays in 020:** rendering, undo, share links,
+  `generateBracketFromPools()` (writes page state), and the station/time scheduling (it reads the page's schedule fields;
+  a later increment may move its arithmetic). 020 keeps `var name = Bracket.name` aliases where its functions were, so
+  the page's call sites do not change.
+  *`rotation.js` (`Rotation`).* From 021: `computeAssignment(groups, stationCount, count)` (group `gi` at station
+  `(gi + count) mod s`, a negative count wrapped) and the countdown the stage runs on `{ running, paused, endAt,
+  remainingMs, count }`: start, pause, resume, rotate-now, reset, and `tick(r, now, ms, stations)` that catches up
+  every rotation a sleeping tab missed (the page's guard of 200). Time is passed in, never read, so a suite pins it.
+  **Stays in 021:** sound, the stage drawing, the remote, `save()`. 004's round-robin mode and 017's and 069's station
+  timers adopt it one tool per commit only when the port is byte-for-byte what they do; read first, since 017's and
+  069's timers may differ (a difference is recorded, not decided).
+  *Parity rule.* Each port is a port alone: a frozen copy of the old code (`test/_legacy.mjs`, copied out of the page
+  by line range) is compared on seeded input with the engine, whole states as JSON after every step
+  (`test:bracket-parity`, `test:rotation-parity`), plus pure unit tests each also run against a copy with its rule broken
+  on purpose (`test:bracket-engine`, `test:rotation`). **Devon's questions:** none are open for P3 as designed; P4's
+  (ties, consolation, re-deciding a match) stay with P4.
+  **Built so far:** *(updated per increment below.)*
 - **P4 — Bracket completeness.** Double elimination, pools, Swiss (a scheduler
   that copes with match counts unknown up front), ties/draws, re-deciding a decided
   match, consolation bracket, team rosters, and a real second-display mode via
