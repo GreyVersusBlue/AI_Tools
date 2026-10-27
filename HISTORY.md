@@ -9,6 +9,31 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-21: Path 13 P4 increment 2, 020's second display (2026-10-27, v357)
+
+**Why.** The last of rank 34. The row said "via Path 8", but `_shared/remote.js` and `Remote.display()` (P1, P3) do not exist;
+what exists is what 021's remote uses, `BroadcastChannel` and `webrtc-pair.js`. Building the Wi-Fi leg meant copying 021's
+~300-line pairing modal a ninth time, so it was not built; the same-browser window, which is a projector on an extended
+desktop, was.
+
+**What shipped.** `?display=1` on 020: `body.display-mode` plus `presenting`, the page's own `render()` run on state the teacher's
+page posts after every render (channel `bracket-tournament-display`, a clone of the saved object, `null` for setup, `hello`
+answered). `save()` is a no-op there; click, key, input, change and submit are stopped in the capture phase (Escape and F pass,
+for `Stage`); the bracket takes no pointer; the toolbar, setup, header and academic card are hidden and `academic.sync()` is
+not called. `_shared/stage.js` and `webrtc-pair.js` untouched. `test:bracket-display` (port 8558): five formats equal the
+teacher's text, a result, a bracket switch, the setup screen and a later window all follow, a press moves nothing and writes
+no key, an academic match's answers and questions never appear; each rule is also broken in the page and must be noticed.
+
+**What did not work / found.** The first break-on-purpose run noticed none of them: the route glob `**/020….html` does not
+match `?display=1`, and a page's own route outranks the context's. The `save()` guard cannot be reached from the display (the
+capture blocker stops everything first), so no break can test it alone; the academic card is kept off twice (not drawn, and
+hidden by CSS), so the suite breaks both at once. A hidden `<input>` aside, the display cannot be driven from outside.
+**Not verified:** a real second monitor or projector, fullscreen on one, Firefox or Safari, a display on another device.
+`check:registry` prints one STALE line (`br_rollover_v1`, backup-restore) that this change did not touch.
+
+**Devon's questions, on their defaults:** (1) same-browser window now, Wi-Fi display with Path 8 P3; (2) the display follows
+the teacher's bracket switch; (3) the Present bar is always on. **Shared lists obliged:** none outside the repo.
+
 ## AI-21: Path 13 P4 increment 1, 020 changes a decided match and allows drawn games (2026-10-27, v356)
 
 **Why.** Rank 34. Its text was stale: double elimination, pools, Swiss, team rosters and a first-round consolation
