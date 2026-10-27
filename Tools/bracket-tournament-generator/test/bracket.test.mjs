@@ -134,6 +134,73 @@ const CHECKS = {
     }
     const counts = B.swissByeCounts(s);
     return Object.values(counts).every((c) => c === 1);
+  },
+  're-deciding gives the match to the loser, and clears every later decision that had used the old winner': (B) => {
+    const s = B.buildBracket('t', names(8), 'asEntered'); playSingle(B, s);
+    const dep = B.dependentsOf(s, 0, 0);
+    const out = B.redecideElimination(s, s.scores, 0, 0);
+    return J(dep) === J([[2, 0], [3, 0]]) && out.ok && J(out.cleared) === J([[2, 0], [3, 0]]) &&
+      s.slots[1][0] === 'P2' && s.winnerSide['1_0'] === 1 && s.slots[2][0] === false && s.slots[3][0] === false &&
+      s.slots[1][1] === 'P3' && s.slots[2][1] === 'P5';
+  },
+  're-deciding clears the scores of what it cleared and leaves other matches alone': (B) => {
+    const s = B.buildBracket('t', names(8), 'asEntered'); playSingle(B, s);
+    ['0_0', '1_0', '2_0', '0_1'].forEach((k) => { s.scores[k] = { a: 5, b: 1 }; });
+    B.redecideElimination(s, s.scores, 0, 0);
+    return J(Object.keys(s.scores)) === J(['0_1']);
+  },
+  're-deciding a match whose next round is undecided clears nothing, and refuses a bye or an undecided match': (B) => {
+    const s = B.buildBracket('t', names(5), 'asEntered'); B.autoAdvance(s);
+    s.slots[1][3] = 'P4'; s.winnerSide['1_3'] = 6;
+    const flip = B.redecideElimination(s, s.scores, 0, 3);
+    const bye = B.redecideElimination(s, s.scores, 0, 0);
+    const open = B.redecideElimination(B.buildBracket('t', names(4), 'asEntered'), {}, 0, 0);
+    return flip.ok && flip.cleared.length === 0 && s.slots[1][3] === 'P5' && !bye.ok && !open.ok && s.slots[1][0] === 'P1';
+  },
+  'a vacated slot and everything decided from it are cleared': (B) => {
+    const s = B.buildBracket('t', names(4), 'asEntered'); playSingle(B, s);
+    s.scores['0_0'] = { a: 2, b: 1 };
+    const gone = B.vacateSlot(s, s.scores, '', 0, 0);
+    return J(gone) === J([[1, 0], [2, 0]]) && s.slots[0][0] === false && s.slots[1][0] === false && s.slots[2][0] === false &&
+      s.slots[1][1] === 'P3' && !('0_0' in s.scores);
+  },
+  'a tied score is a draw only when draws are allowed': (B) =>
+    B.resultFromScores(3, 3, true) === 'draw' && B.resultFromScores(3, 3, false) === null &&
+    B.resultFromScores(3, 2, false) === 0 && B.resultFromScores(2, 3, true) === 1 && B.resultFromScores('x', 1, true) === null,
+  'a draw counts played for both, is worth half a win in the order, and adds no column to a state without one': (B) => {
+    const rr = B.buildRoundRobin('t', ['a', 'b', 'c'], 'asEntered');
+    const set = (x, y, w) => rr.rounds.forEach((r) => r.forEach((m) => { if (m.a === x && m.b === y || m.a === y && m.b === x) m.winner = w === 'draw' ? 'draw' : (m.a === w ? 0 : 1); }));
+    set('a', 'b', 'draw'); set('a', 'c', 'a'); set('b', 'c', 'draw');
+    const rows = B.computeStandings(rr);
+    const plain = B.buildRoundRobin('t', ['a', 'b'], 'asEntered'); plain.rounds[0][0].winner = 0;
+    const sw = B.buildSwiss('t', ['a', 'b', 'c', 'd'], 'asEntered', 2);
+    sw.rounds[0][0].winner = 'draw'; sw.rounds[0][1].winner = 0;
+    const srows = B.computeSwissStandings(sw);
+    return J(rows.map((x) => [x.name, x.w, x.d || 0, x.l, x.played])) === J([['a', 1, 1, 0, 2], ['b', 0, 2, 0, 2], ['c', 0, 1, 1, 2]]) &&
+      B.computeStandings(plain).every((x) => !('d' in x)) &&
+      J(srows.map((x) => x.name)) === J(['b', 'a', 'c', 'd']) && srows.find((x) => x.name === 'c').d === 1 &&
+      B.roundRobinComplete(Object.assign({}, rr));
+  },
+  'changing a result drops a score that says otherwise': (B) => {
+    const sc = { rr0_0: { a: 5, b: 1 } }, m = { a: 'x', b: 'y', winner: 0 };
+    B.setMatchResult(m, sc, 'rr0_0', 0);
+    const kept = 'rr0_0' in sc;
+    B.setMatchResult(m, sc, 'rr0_0', 1);
+    return kept && m.winner === 1 && !('rr0_0' in sc);
+  },
+  'swiss: reopening a round drops the later rounds and their scores': (B) => {
+    const s = B.buildSwiss('t', names(4), 'asEntered', 3);
+    s.rounds[0].forEach((m) => { m.winner = 0; }); s.rounds.push(B.buildSwissRound(s));
+    s.scores.rr0_0 = { a: 3, b: 1 }; s.scores.rr1_0 = { a: 3, b: 1 };
+    const n = B.swissReopen(s, 0), again = B.swissReopen(s, 0);
+    return n === 1 && again === 0 && s.rounds.length === 1 && J(Object.keys(s.scores)) === J(['rr0_0']);
+  },
+  'pools: reopening throws away the drawn bracket and only its scores': (B) => {
+    const s = B.buildPools('t', names(4), 'asEntered', 2, 1);
+    s.bracket = B.buildBracket('b', ['P1', 'P2'], 'ranked');
+    s.scores = { pool0_rr0_0: { a: 1, b: 0 }, br_0_0: { a: 1, b: 0 } };
+    const had = B.poolsReopen(s), none = B.poolsReopen(s);
+    return had && !none && s.bracket === null && J(Object.keys(s.scores)) === J(['pool0_rr0_0']);
   }
 };
 
@@ -147,12 +214,21 @@ const MUTANTS = {
   'a full single-elimination bracket plays n-1 matches to one champion': ['winnerRec.w++; winnerRec.played++;', 'winnerRec.played++;'],
   'random seeding repeats under setRng and uses every name once': ['for (var i = a.length - 1; i > 0; i--)', 'for (var i = a.length - 1; i > 1; i--)'],
   'round robin: n-1 rounds (n even), every pair meets once': ['rest.unshift(rest.pop());', ''],
-  'standings order: wins, then point difference': ['return y.w - x.w || y.diff - x.diff || x.l - y.l || x.name.localeCompare(y.name);\n    });\n  }\n\n  /* ---------- pools', 'return x.w - y.w || y.diff - x.diff || x.l - y.l || x.name.localeCompare(y.name);\n    });\n  }\n\n  /* ---------- pools'],
+  'standings order: wins, then point difference': ['(y.w + (y.d || 0) / 2) - (x.w + (x.d || 0) / 2) || y.diff', '(x.w + (x.d || 0) / 2) - (y.w + (y.d || 0) / 2) || y.diff'],
   'pools deal in a snake': ['(numPools - 1 - posInCycle)', '(posInCycle)'],
   'double elimination: losers bracket shape for 8': ['Math.pow(2, i + 1)', 'Math.pow(2, i)'],
   'double elimination: round-1 losers drop into the losers bracket': ['var loser0 = wbLoserAt(0, m0);', 'var loser0 = false;'],
   'swiss round 1 splits the field; an odd field byes the last entrant': ['arr[i + half]', 'arr[i + 1]'],
-  'swiss never repeats a bye while another player has had none': ['(byeCounts[p] || 0) === minByes', 'true']
+  'swiss never repeats a bye while another player has had none': ['(byeCounts[p] || 0) === minByes', 'true'],
+  're-deciding gives the match to the loser, and clears every later decision that had used the old winner': ['var cleared = clearBelow(obj, scores, prefix, r + 1, m);', 'var cleared = [];'],
+  're-deciding clears the scores of what it cleared and leaves other matches alone': ['(c[0] - 1)', 'c[0]'],
+  're-deciding a match whose next round is undecided clears nothing, and refuses a bye or an undecided match': ["if (typeof a !== 'string' || typeof b !== 'string') return { ok: false, reason: 'a bye or an empty side' };", ''],
+  'a vacated slot and everything decided from it are cleared': ['    obj.slots[k][i] = false;\n    return cleared;', '    return cleared;'],
+  'a tied score is a draw only when draws are allowed': ["return draws ? 'draw' : null;", "return 'draw';"],
+  'a draw counts played for both, is worth half a win in the order, and adds no column to a state without one': ['records[nm].d = (records[nm].d || 0) + 1; records[nm].played++;', 'records[nm].d = (records[nm].d || 0) + 1;'],
+  'changing a result drops a score that says otherwise': ['!== result) delete scores[scoreKey];', '!== result) scores[scoreKey] = sc;'],
+  'swiss: reopening a round drops the later rounds and their scores': ['+mt[1] > roundIdx', '+mt[1] < 0'],
+  'pools: reopening throws away the drawn bracket and only its scores': ["k.indexOf('br_') === 0", "k.indexOf('zz_') === 0"]
 };
 
 let failed = 0, ran = 0;

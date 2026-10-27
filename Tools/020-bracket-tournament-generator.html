@@ -139,6 +139,11 @@
   .slot-bye { color: var(--muted); font-style: italic; cursor: default; background: var(--card-2); }
   .slot-winner { background: var(--good-bg); border-color: var(--good); color: var(--good); font-weight: 700; cursor: default; }
   .slot-decided { cursor: default; }
+  .slot-changeable { cursor: pointer; }
+  .slot-drawn { opacity: 1 !important; text-decoration: none !important; font-style: italic; }
+  .match-tie-note { display: block; width: 100%; font-size: .78rem; color: var(--muted, inherit); }
+  .draws-bar { margin: .4rem 0 .6rem; }
+  .draw-btn { margin-top: .25rem; font-size: .8rem; padding: .15rem .6rem; }
   .slot-decided:not(.slot-winner) { opacity: .5; text-decoration: line-through; }
 
   .match-score-pair { display: flex; align-items: center; gap: .3rem; width: 100%; margin-top: -.05rem; }
@@ -1051,6 +1056,7 @@
             } else if (decidedWinner !== false) {
               slotEl.textContent = contestant;
               slotEl.className = 'slot slot-decided' + (state.winnerSide[(r + 1) + '_' + m] === idx ? ' slot-winner' : '');
+              if (state.winnerSide[(r + 1) + '_' + m] !== idx) makeElimChangeable(slotEl, state, '', r, m, contestant);
             } else {
               slotEl.textContent = contestant;
               slotEl.className = 'slot';
@@ -1232,6 +1238,7 @@
               slotEl = el('div', 'slot slot-empty', 'TBD');
             } else if (decided !== false) {
               slotEl = el('div', 'slot slot-decided' + (c.winnerSide[(r + 1) + '_' + m] === idx ? ' slot-winner' : ''), contestant);
+              if (!blank && c.winnerSide[(r + 1) + '_' + m] !== idx) makeElimChangeable(slotEl, c, 'c', r, m, contestant);
             } else {
               slotEl = el('div', 'slot', contestant);
               if (!blank) {
@@ -1278,7 +1285,19 @@
         var won = !blank && c.third === side;
         var slotEl;
         if (who === false) slotEl = el('div', 'slot slot-empty', 'TBD');
-        else if (c.third !== null) slotEl = el('div', 'slot slot-decided' + (won ? ' slot-winner' : ''), who);
+        else if (c.third !== null) {
+          slotEl = el('div', 'slot slot-decided' + (won ? ' slot-winner' : ''), who);
+          if (!blank && !won && typeof tp.players[0] === 'string' && typeof tp.players[1] === 'string') {
+            slotEl.classList.add('slot-changeable');
+            slotEl.title = 'Click to give this match to ' + who + ' instead';
+            slotEl.addEventListener('click', function () {
+              captureUndoSnapshot();
+              c.third = side;
+              delete state.scores.cthird;                         // the score described the other result
+              render();
+            });
+          }
+        }
         else {
           slotEl = el('div', 'slot', who);
           slotEl.addEventListener('click', function () {
@@ -1871,23 +1890,27 @@
      rule (elimination brackets have one specific crowned winner, not
      necessarily the standings leader by wins — e.g. two finalists can share
      the same win count). */
+  /* wins, a draw counting half: the number the standings are ordered by */
+  function standingPoints(row) { return row.w + (row.d || 0) / 2; }
+
   function renderStandingsTable(records, opts) {
     opts = opts || {};
     var table = document.createElement('table');
     table.className = 'standings-table';
-    var leaderWins = records.length ? records[0].w : 0;
+    var leaderWins = records.length ? standingPoints(records[0]) : 0;
     var showScores = !!opts.hasScores;
+    var showDraws = records.some(function (row) { return row.d; });
     var thead = '<thead><tr>' + (opts.hasSeeds ? '<th class="num">Seed</th>' : '') +
-      '<th>Team</th><th class="num">W</th><th class="num">L</th><th class="num">Played</th>' +
+      '<th>Team</th><th class="num">W</th>' + (showDraws ? '<th class="num">D</th>' : '') + '<th class="num">L</th><th class="num">Played</th>' +
       (showScores ? '<th class="num">PF</th><th class="num">PA</th><th class="num">Diff</th>' : '') +
       '</tr></thead>';
     var tbody = '<tbody>' + records.map(function (row) {
       var isLeader = opts.championName ? (row.name === opts.championName)
-        : (opts.complete && row.w === leaderWins && leaderWins > 0);
+        : (opts.complete && standingPoints(row) === leaderWins && leaderWins > 0);
       var diffText = row.diff > 0 ? ('+' + row.diff) : String(row.diff);
       return '<tr' + (isLeader ? ' class="leader"' : '') + '>' +
         (opts.hasSeeds ? '<td class="num">' + (row.seed || '') + '</td>' : '') +
-        '<td>' + escapeHtml(row.name) + '</td><td class="num">' + row.w + '</td><td class="num">' + row.l +
+        '<td>' + escapeHtml(row.name) + '</td><td class="num">' + row.w + '</td>' + (showDraws ? '<td class="num">' + (row.d || 0) + '</td>' : '') + '<td class="num">' + row.l +
         '</td><td class="num">' + row.played + '</td>' +
         (showScores ? '<td class="num">' + row.pf + '</td><td class="num">' + row.pa + '</td><td class="num">' + diffText + '</td>' : '') +
         '</tr>';
@@ -1917,6 +1940,127 @@
       hasScores: standingsHasScores(state),
       championName: eliminationChampionName(state)
     });
+  }
+
+  /* ---------- changing a decided match (Path 13 P4) ----------
+     A decided slot that lost can be clicked to give the match to that side.
+     The engine does the work (Bracket.redecideElimination and friends); the
+     page asks first when later results would go, and the flip is one Undo. */
+  function makeElimChangeable(slotEl, obj, prefix, r, m, name) {
+    var a = obj.slots[r][m * 2], b = obj.slots[r][m * 2 + 1];
+    if (typeof a !== 'string' || typeof b !== 'string') return;   // a bye was never played
+    slotEl.classList.add('slot-changeable');
+    slotEl.title = 'Click to give this match to ' + name + ' instead';
+    slotEl.addEventListener('click', function () { changeElimination(obj, prefix, r, m); });
+  }
+
+  function changeElimination(obj, prefix, r, m) {
+    var trial = JSON.parse(JSON.stringify(state));                // count what would go, on a copy
+    var out = Bracket.redecideElimination(obj === state ? trial : trial.consolation, trial.scores, r, m, prefix);
+    if (!out.ok) return;
+    var gone = out.cleared.length;
+    if (obj === state && trial.consolation) {
+      BtTeams.reflow(trial, r, m, Bracket);
+      BtTeams.sync(trial, Bracket.autoAdvance);                 // a bye in the consolation moves on again; only real games count
+      gone += BtTeams.decidedCount(state.consolation) - BtTeams.decidedCount(trial.consolation);
+    }
+    if (gone > 0 && !confirm('Changing this result also clears ' + gone + ' later result' + (gone === 1 ? '' : 's') +
+        ' that depended on it. Continue? (Undo brings ' + (gone === 1 ? 'it' : 'them') + ' back.)')) return;
+    captureUndoSnapshot();
+    Bracket.redecideElimination(obj, state.scores, r, m, prefix);
+    if (obj === state && state.consolation) BtTeams.reflow(state, r, m, Bracket);
+    render();
+  }
+
+  /* ---------- drawn games (round robin, pools, Swiss) ---------- */
+  function allGames() {
+    var out = [];
+    (state.rounds || []).forEach(function (round) { round.forEach(function (g) { out.push(g); }); });
+    (state.pools || []).forEach(function (pool) { pool.rounds.forEach(function (round) { round.forEach(function (g) { out.push(g); }); }); });
+    return out;
+  }
+  function hasDraws() { return allGames().some(function (g) { return g.winner === 'draw'; }); }
+
+  function drawsBar() {
+    var bar = document.createElement('div');
+    bar.className = 'draws-bar';
+    var label = document.createElement('label');
+    label.className = 'checkline';
+    var box = document.createElement('input');
+    box.type = 'checkbox';
+    box.id = 'drawsOn';
+    box.checked = !!state.draws;
+    box.disabled = hasDraws();
+    box.addEventListener('change', function () {
+      if (box.checked) state.draws = true; else delete state.draws;
+      save();
+      render();
+    });
+    label.appendChild(box);
+    label.appendChild(document.createTextNode(' Allow drawn games'));
+    bar.appendChild(label);
+    var hint = document.createElement('span');
+    hint.className = 'hint';
+    hint.textContent = box.disabled ? ' A game is drawn, so this stays on.' : ' A tied score or the Draw button records a draw, worth half a win.';
+    bar.appendChild(hint);
+    return bar;
+  }
+
+  /* The score boxes' decider for a game in a round robin, pool or Swiss round:
+     a winner from the score, or a draw when they are allowed. */
+  function gameDecider(getGame) {
+    var fn = function (aNum, bNum) {
+      var g = getGame();
+      if (g.winner !== null) return;                              // decided (e.g. by a click) meanwhile
+      var res = Bracket.resultFromScores(aNum, bNum, !!state.draws);
+      if (res === null) return;
+      captureUndoSnapshot();
+      g.winner = res;
+    };
+    fn.allowsDraw = true;
+    return fn;
+  }
+
+  function changeGame(game, scoreKey, result, reopen) {
+    if (reopen && !confirm(reopen.text)) return;
+    captureUndoSnapshot();
+    if (reopen) reopen.run();
+    Bracket.setMatchResult(game, state.scores, scoreKey, result);
+    render();
+  }
+
+  /* A decided slot: the side that did not win (either side, for a draw) gives the game to its player. */
+  function makeGameChangeable(slotEl, game, side, scoreKey, name, reopen) {
+    if (game.winner === side) return;
+    slotEl.classList.add('slot-changeable');
+    slotEl.title = 'Click to give this game to ' + name + ' instead';
+    slotEl.addEventListener('click', function () { changeGame(game, scoreKey, side, reopen); });
+  }
+
+  function addDrawButton(matchWrap, game, scoreKey, reopen) {
+    if (!state.draws || game.winner === 'draw') return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'secondary draw-btn';
+    btn.textContent = 'Draw';
+    btn.title = 'Record this game as a draw';
+    btn.addEventListener('click', function () { changeGame(game, scoreKey, 'draw', reopen); });
+    matchWrap.appendChild(btn);
+  }
+
+  function poolsReopenFor() {
+    return state.bracket ? {
+      text: 'The bracket was drawn from these pool standings. Changing this result discards that bracket and the scores in it. Continue? (Undo brings it back.)',
+      run: function () { Bracket.poolsReopen(state); }
+    } : null;
+  }
+  function swissReopenFor(roundIdx) {
+    var later = state.rounds.length - 1 - roundIdx;
+    return later > 0 ? {
+      text: 'Changing a result in round ' + (roundIdx + 1) + ' discards the ' + later + ' later round' + (later === 1 ? '' : 's') +
+        ' (they were paired from the old record), with their scores. Continue? (Undo brings ' + (later === 1 ? 'it' : 'them') + ' back.)',
+      run: function () { Bracket.swissReopen(state, roundIdx); }
+    } : null;
   }
 
   /* ---------- structured per-match score entry ----------
@@ -1976,7 +2120,7 @@
       }
       save();
       var rec = state.scores[key];
-      if (decideFn && rec && typeof rec.a === 'number' && typeof rec.b === 'number' && rec.a !== rec.b) {
+      if (decideFn && rec && typeof rec.a === 'number' && typeof rec.b === 'number' && (rec.a !== rec.b || (state.draws && decideFn.allowsDraw))) {
         decideFn(rec.a, rec.b);
       }
       render(); // always — even a plain score edit can change PF/PA/Diff in standings
@@ -1987,6 +2131,12 @@
     wrap.appendChild(aInput);
     wrap.appendChild(sep);
     wrap.appendChild(bInput);
+    if (decideFn && typeof current.a === 'number' && current.a === current.b && !(state.draws && decideFn.allowsDraw)) {
+      var tie = document.createElement('span');                  // an open match with a tied score: say why it is still open
+      tie.className = 'match-tie-note';
+      tie.textContent = decideFn.allowsDraw ? 'Tied: click the winner, or allow drawn games.' : 'Tied: click the winner.';
+      wrap.appendChild(tie);
+    }
 
     var box = { key: key, a: aLabel, b: bLabel, open: !!decideFn, playable: matchPlayable(key, aLabel, bLabel), wrap: wrap, aInput: aInput, bInput: bInput };
     matchBoxes.push(box);
@@ -2024,6 +2174,7 @@
     rrHeading.textContent = 'Round Robin';
     els.bracketView.appendChild(rrHeading);
 
+    els.bracketView.appendChild(drawsBar());
     var rrBox = document.createElement('div');
     rrBox.className = 'bracket';
     state.rounds.forEach(function (round, r) {
@@ -2053,7 +2204,8 @@
             var slotEl = document.createElement('div');
             if (match.winner !== null) {
               slotEl.textContent = pname;
-              slotEl.className = 'slot slot-decided' + (match.winner === side ? ' slot-winner' : '');
+              slotEl.className = 'slot slot-decided' + (match.winner === side ? ' slot-winner' : '') + (match.winner === 'draw' ? ' slot-drawn' : '');
+              makeGameChangeable(slotEl, match, side, 'rr' + r + '_' + m, pname, null);
             } else {
               slotEl.textContent = pname;
               slotEl.className = 'slot';
@@ -2069,14 +2221,9 @@
           });
 
           var scoreKey = 'rr' + r + '_' + m;
-          var decideFn = (match.winner === null) ? (function (roundIdx, matchIdx, aName, bName) {
-            return function (aNum, bNum) {
-              if (state.rounds[roundIdx][matchIdx].winner !== null) return; // decided (e.g. by a click) meanwhile
-              captureUndoSnapshot();
-              state.rounds[roundIdx][matchIdx].winner = aNum > bNum ? 0 : 1;
-            };
-          })(r, m, match.a, match.b) : null;
+          var decideFn = (match.winner === null) ? gameDecider(function () { return state.rounds[r][m]; }) : null;
           matchWrap.appendChild(buildScoreInputs(scoreKey, decideFn, match.a, match.b));
+          addDrawButton(matchWrap, match, scoreKey, null);
 
           var badge = scheduleBadgeFor(scheduleSlots, r, scheduleIndexFor(state, r, m));
           if (badge) matchWrap.appendChild(badge);
@@ -2098,8 +2245,8 @@
 
     if (roundRobinComplete(state)) {
       var standings = computeStandings(state);
-      var topWins = standings.length ? standings[0].w : 0;
-      var leaders = standings.filter(function (row) { return row.w === topWins; }).map(function (row) { return row.name; });
+      var topWins = standings.length ? standingPoints(standings[0]) : 0;
+      var leaders = standings.filter(function (row) { return standingPoints(row) === topWins; }).map(function (row) { return row.name; });
       els.championBanner.textContent = (leaders.length > 1 ? '🏆 Co-Champions: ' : '🏆 Champion: ') + leaders.join(' & ');
       els.championBanner.classList.add('show');
     } else {
@@ -2185,6 +2332,7 @@
     els.bracketView.innerHTML = '';
     els.championBanner.classList.remove('show'); // renderPoolsBracketSection() re-shows it once there's a champion
 
+    els.bracketView.appendChild(drawsBar());
     state.pools.forEach(function (pool, pi) {
       var heading = document.createElement('p');
       heading.className = 'bracket-subtitle';
@@ -2220,7 +2368,8 @@
               var slotEl = document.createElement('div');
               if (match.winner !== null) {
                 slotEl.textContent = pname;
-                slotEl.className = 'slot slot-decided' + (match.winner === side ? ' slot-winner' : '');
+                slotEl.className = 'slot slot-decided' + (match.winner === side ? ' slot-winner' : '') + (match.winner === 'draw' ? ' slot-drawn' : '');
+                makeGameChangeable(slotEl, match, side, 'pool' + pi + '_rr' + r + '_' + m, pname, poolsReopenFor());
               } else {
                 slotEl.textContent = pname;
                 slotEl.className = 'slot';
@@ -2236,14 +2385,9 @@
             });
 
             var scoreKey = 'pool' + pi + '_rr' + r + '_' + m;
-            var decideFn = (match.winner === null) ? (function (poolIdx, roundIdx, matchIdx, aName, bName) {
-              return function (aNum, bNum) {
-                if (state.pools[poolIdx].rounds[roundIdx][matchIdx].winner !== null) return; // decided meanwhile
-                captureUndoSnapshot();
-                state.pools[poolIdx].rounds[roundIdx][matchIdx].winner = aNum > bNum ? 0 : 1;
-              };
-            })(pi, r, m, match.a, match.b) : null;
+            var decideFn = (match.winner === null) ? gameDecider(function () { return state.pools[pi].rounds[r][m]; }) : null;
             matchWrap.appendChild(buildScoreInputs(scoreKey, decideFn, match.a, match.b));
+            addDrawButton(matchWrap, match, scoreKey, poolsReopenFor());
           }
           col.appendChild(matchWrap);
         });
@@ -2493,6 +2637,7 @@
     swHeading.textContent = 'Swiss Rounds';
     els.bracketView.appendChild(swHeading);
 
+    els.bracketView.appendChild(drawsBar());
     var swBox = document.createElement('div');
     swBox.className = 'bracket';
     state.rounds.forEach(function (round, r) {
@@ -2517,7 +2662,8 @@
             var slotEl = document.createElement('div');
             if (match.winner !== null) {
               slotEl.textContent = pname;
-              slotEl.className = 'slot slot-decided' + (match.winner === side ? ' slot-winner' : '');
+              slotEl.className = 'slot slot-decided' + (match.winner === side ? ' slot-winner' : '') + (match.winner === 'draw' ? ' slot-drawn' : '');
+              makeGameChangeable(slotEl, match, side, 'rr' + r + '_' + m, pname, swissReopenFor(r));
             } else {
               slotEl.textContent = pname;
               slotEl.className = 'slot';
@@ -2533,14 +2679,9 @@
           });
 
           var scoreKey = 'rr' + r + '_' + m;
-          var decideFn = (match.winner === null) ? (function (roundIdx, matchIdx, aName, bName) {
-            return function (aNum, bNum) {
-              if (state.rounds[roundIdx][matchIdx].winner !== null) return; // decided meanwhile
-              captureUndoSnapshot();
-              state.rounds[roundIdx][matchIdx].winner = aNum > bNum ? 0 : 1;
-            };
-          })(r, m, match.a, match.b) : null;
+          var decideFn = (match.winner === null) ? gameDecider(function () { return state.rounds[r][m]; }) : null;
           matchWrap.appendChild(buildScoreInputs(scoreKey, decideFn, match.a, match.b));
+          addDrawButton(matchWrap, match, scoreKey, swissReopenFor(r));
         }
         col.appendChild(matchWrap);
       });
@@ -2579,8 +2720,8 @@
 
     if (complete) {
       var finalStandings = computeSwissStandings(state);
-      var topWins = finalStandings.length ? finalStandings[0].w : 0;
-      var leaders = finalStandings.filter(function (row) { return row.w === topWins; }).map(function (row) { return row.name; });
+      var topWins = finalStandings.length ? standingPoints(finalStandings[0]) : 0;
+      var leaders = finalStandings.filter(function (row) { return standingPoints(row) === topWins; }).map(function (row) { return row.name; });
       els.championBanner.textContent = (leaders.length > 1 ? '🏆 Co-Champions: ' : '🏆 Champion: ') + leaders.join(' & ');
       els.championBanner.classList.add('show');
     } else {
@@ -2954,6 +3095,7 @@
       };
       if (decoded.seeds && typeof decoded.seeds === 'object') state.seeds = decoded.seeds;
       if (typeof decoded.seedMode === 'string') state.seedMode = decoded.seedMode;
+      if (decoded.draws === true) state.draws = true;
     } else {
       state = {
         name: name,

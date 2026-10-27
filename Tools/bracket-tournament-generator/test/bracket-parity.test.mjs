@@ -145,7 +145,11 @@ for (let n = 1; n <= 40; n++) for (const mode of MODES) {
 }
 same('shuffle', ...both(99, (B) => B.shuffle(names(30))));
 same('nextPowerOf2', [1, 2, 3, 5, 8, 9, 33].map(OLD.nextPowerOf2), [1, 2, 3, 5, 8, 9, 33].map(NEW.nextPowerOf2));
-same('same surface', Object.keys(OLD).sort(), Object.keys(NEW).filter((k) => k !== 'setRng').sort());
+// setRng is P3's one addition; the P4 names (re-deciding, draws) are new functions beside the old surface,
+// which has to stay whole. The old bodies they touch (the two standings) are held below, with no draws.
+const P4_NEW = ['dependentsOf', 'redecideElimination', 'vacateSlot', 'resultFromScores', 'setMatchResult', 'swissReopen', 'poolsReopen'];
+same('same surface', Object.keys(OLD).sort(), Object.keys(NEW).filter((k) => k !== 'setRng' && !P4_NEW.includes(k)).sort());
+same('P4 additions present', P4_NEW.slice().sort(), Object.keys(NEW).filter((k) => P4_NEW.includes(k)).sort());
 
 console.log(`${checks} checks, ${failures} differences`);
 process.exit(failures ? 1 : 0);

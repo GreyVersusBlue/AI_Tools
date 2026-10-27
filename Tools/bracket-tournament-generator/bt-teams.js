@@ -218,6 +218,32 @@
     return typeof last === 'string' ? last : null;
   }
 
+  /* After the main bracket's match (r, m) was given to its loser (Bracket.redecideElimination):
+     the consolation forgets the first-round loser who changed, with every game decided from
+     them, and a changed semifinal takes the third-place pick away. sync() puts the new loser in. */
+  function reflow(state, r, m, B) {
+    var c = state.consolation;
+    if (!c) return;
+    if (r === 0) {
+      var fr = firstRound(state), feed = layout(fr.length).feed;
+      fr.forEach(function (f, i) {
+        if (f.m === m && c.slots[0][feed[i]] !== null) B.vacateSlot(c, state.scores, 'c', 0, feed[i]);
+      });
+    }
+    if (r === state.slots.length - 3) {
+      c.third = null;
+      if (state.scores) delete state.scores.cthird;
+    }
+  }
+
+  // The decided games a consolation holds: advanced slots, and the third-place pick.
+  function decidedCount(c) {
+    if (!c) return 0;
+    var n = c.third === 0 || c.third === 1 ? 1 : 0;
+    for (var r = 1; r < c.slots.length; r++) c.slots[r].forEach(function (v) { if (v !== false) n++; });
+    return n;
+  }
+
   // How many real games the consolation has for L first-round losers.
   function gameCount(L) { return L < 1 ? 0 : L - 1; }
 
@@ -233,6 +259,8 @@
     fresh: fresh,
     restore: restore,
     sync: sync,
+    reflow: reflow,
+    decidedCount: decidedCount,
     semiLosers: semiLosers,
     thirdPlace: thirdPlace,
     consolationWinner: consolationWinner,

@@ -350,11 +350,15 @@
     state.rounds.forEach(function (round, r) {
       round.forEach(function (m, mi) {
         if (m.a == null || m.b == null || m.winner === null) return;
+        var sc = state.scores && state.scores['rr' + r + '_' + mi];
+        if (m.winner === 'draw') {
+          drawn(records, m, sc);
+          return;
+        }
         var winnerName = m.winner === 0 ? m.a : m.b;
         var loserName = m.winner === 0 ? m.b : m.a;
         records[winnerName].w++; records[winnerName].played++;
         records[loserName].l++; records[loserName].played++;
-        var sc = state.scores && state.scores['rr' + r + '_' + mi];
         if (sc && typeof sc.a === 'number' && typeof sc.b === 'number') {
           records[m.a].pf += sc.a; records[m.a].pa += sc.b;
           records[m.b].pf += sc.b; records[m.b].pa += sc.a;
@@ -362,9 +366,24 @@
       });
     });
     Object.keys(records).forEach(function (k) { records[k].diff = records[k].pf - records[k].pa; });
-    return Object.keys(records).map(function (k) { return records[k]; }).sort(function (x, y) {
-      return y.w - x.w || y.diff - x.diff || x.l - y.l || x.name.localeCompare(y.name);
-    });
+    return Object.keys(records).map(function (k) { return records[k]; }).sort(byRecord);
+  }
+
+  /* A drawn game (P4): each side gets one played and a `d`, and the score, if
+     one was typed, counts for points as in any other game. `d` exists only on a
+     row that has drawn, so a state nobody drew in has the rows it always had. */
+  function drawn(records, m, sc) {
+    [m.a, m.b].forEach(function (nm) { records[nm].d = (records[nm].d || 0) + 1; records[nm].played++; });
+    if (sc && typeof sc.a === 'number' && typeof sc.b === 'number') {
+      records[m.a].pf += sc.a; records[m.a].pa += sc.b;
+      records[m.b].pf += sc.b; records[m.b].pa += sc.a;
+    }
+  }
+
+  /* wins, with a draw worth half a win, then point difference, then fewer
+     losses, then name: with no draws, exactly the order this always was. */
+  function byRecord(x, y) {
+    return (y.w + (y.d || 0) / 2) - (x.w + (x.d || 0) / 2) || y.diff - x.diff || x.l - y.l || x.name.localeCompare(y.name);
   }
 
   /* ---------- pools (round robin groups feeding an elimination bracket) ----
@@ -611,11 +630,15 @@
           return;
         }
         if (m.winner === null) return;
+        var sc = swState.scores && swState.scores['rr' + r + '_' + mi];
+        if (m.winner === 'draw') {
+          drawn(records, m, sc);
+          return;
+        }
         var winnerName = m.winner === 0 ? m.a : m.b;
         var loserName = m.winner === 0 ? m.b : m.a;
         records[winnerName].w++; records[winnerName].played++;
         records[loserName].l++; records[loserName].played++;
-        var sc = swState.scores && swState.scores['rr' + r + '_' + mi];
         if (sc && typeof sc.a === 'number' && typeof sc.b === 'number') {
           records[m.a].pf += sc.a; records[m.a].pa += sc.b;
           records[m.b].pf += sc.b; records[m.b].pa += sc.a;
@@ -623,9 +646,7 @@
       });
     });
     Object.keys(records).forEach(function (k) { records[k].diff = records[k].pf - records[k].pa; });
-    return Object.keys(records).map(function (k) { return records[k]; }).sort(function (x, y) {
-      return y.w - x.w || y.diff - x.diff || x.l - y.l || x.name.localeCompare(y.name);
-    });
+    return Object.keys(records).map(function (k) { return records[k]; }).sort(byRecord);
   }
 
   /* ---------- elimination standings (single & double) ----------
@@ -717,6 +738,109 @@
     });
   }
 
+  /* ---------- re-deciding a match, and draws (Path 13 P4) ----------
+     All of this is new; nothing above changes for a state nobody re-decides or
+     draws in. A "bracket object" is anything shaped { slots, winnerSide }: the
+     single-elimination state, a pools-fed bracket, or a consolation bracket. A
+     match's score is keyed prefix + round + '_' + match, the round being that
+     of the two contestants, which is how the page reads them back. */
+
+  /* Every match that has been decided downstream of slot (k, i), nearest first,
+     as [round of the slot it produced, match]. */
+  function decidedBelow(obj, k, i) {
+    var out = [];
+    while (k + 1 < obj.slots.length) {
+      i = i >> 1; k++;
+      if (obj.slots[k][i] !== false) out.push([k, i]);
+    }
+    return out;
+  }
+
+  /* The decided matches a change to the match that fills slot (r+1, m) would
+     put in doubt: the ones after it, not itself. */
+  function dependentsOf(obj, r, m) { return decidedBelow(obj, r + 1, m); }
+
+  function clearBelow(obj, scores, prefix, k, i) {
+    var gone = decidedBelow(obj, k, i);
+    gone.forEach(function (c) {
+      obj.slots[c[0]][c[1]] = false;
+      delete obj.winnerSide[c[0] + '_' + c[1]];
+      if (scores) delete scores[prefix + (c[0] - 1) + '_' + c[1]];
+    });
+    return gone;
+  }
+
+  /* Gives the match (r, m) to the side that lost it. The match's own score goes
+     (it describes the other result) and so does every later decision, since
+     one of the two players there is now someone who never played it. Returns
+     { ok, cleared: [[round, match]...], reason }; a bye, a match not yet
+     decided or a missing match changes nothing. */
+  function redecideElimination(obj, scores, r, m, prefix) {
+    prefix = prefix || '';
+    var slots = obj.slots;
+    if (!(r >= 0 && r < slots.length - 1) || !(m >= 0 && m < slots[r + 1].length)) return { ok: false, reason: 'no such match' };
+    var a = slots[r][m * 2], b = slots[r][m * 2 + 1];
+    if (typeof a !== 'string' || typeof b !== 'string') return { ok: false, reason: 'a bye or an empty side' };
+    if (slots[r + 1][m] === false) return { ok: false, reason: 'not decided yet' };
+    var was = obj.winnerSide[(r + 1) + '_' + m];
+    var side = (was === m * 2) ? m * 2 + 1 : m * 2;
+    var cleared = clearBelow(obj, scores, prefix, r + 1, m);
+    if (scores) delete scores[prefix + r + '_' + m];
+    slots[r + 1][m] = slots[r][side];
+    obj.winnerSide[(r + 1) + '_' + m] = side;
+    autoAdvance(obj);
+    return { ok: true, cleared: cleared };
+  }
+
+  /* Empties a consolation (or any bracket-object) slot that held a first-round
+     loser who has changed, and everything decided from it. */
+  function vacateSlot(obj, scores, prefix, k, i) {
+    var cleared = clearBelow(obj, scores, prefix, k, i);
+    obj.slots[k][i] = false;
+    return cleared;
+  }
+
+  /* A game in a round robin, pool or Swiss round: 0, 1 or 'draw' from two
+     typed scores. A tie is a draw only when draws are allowed; otherwise null
+     (undecided). */
+  function resultFromScores(a, b, draws) {
+    if (typeof a !== 'number' || typeof b !== 'number') return null;
+    if (a === b) return draws ? 'draw' : null;
+    return a > b ? 0 : 1;
+  }
+
+  /* Changes a decided game to `result` (0, 1 or 'draw'). The score is dropped
+     if it says something else. Nothing else depends on a game in a round robin
+     or a pool before its bracket is drawn; Swiss and pools have their own
+     reopen below for what does. */
+  function setMatchResult(match, scores, scoreKey, result) {
+    match.winner = result;
+    var sc = scores && scores[scoreKey];
+    if (sc && resultFromScores(sc.a, sc.b, true) !== result) delete scores[scoreKey];
+  }
+
+  /* Swiss: drops every round after `roundIdx` (they were paired from the old
+     record) and the scores typed in them. Returns the number of rounds dropped. */
+  function swissReopen(swState, roundIdx) {
+    var dropped = swState.rounds.length - (roundIdx + 1);
+    if (dropped <= 0) return 0;
+    swState.rounds.length = roundIdx + 1;
+    Object.keys(swState.scores || {}).forEach(function (k) {
+      var mt = /^rr(\d+)_/.exec(k);
+      if (mt && +mt[1] > roundIdx) delete swState.scores[k];
+    });
+    return dropped;
+  }
+
+  /* Pools: throws away the bracket drawn from the pool standings, and its
+     scores (the 'br_' keys). True if there was one. */
+  function poolsReopen(poolsState) {
+    if (!poolsState.bracket) return false;
+    poolsState.bracket = null;
+    Object.keys(poolsState.scores || {}).forEach(function (k) { if (k.indexOf('br_') === 0) delete poolsState.scores[k]; });
+    return true;
+  }
+
   root.Bracket = {
     setRng: setRng,
     shuffle: shuffle,
@@ -747,6 +871,13 @@
     eliminationMatches: eliminationMatches,
     computeEliminationStandings: computeEliminationStandings,
     eliminationChampionName: eliminationChampionName,
-    roundRobinComplete: roundRobinComplete
+    roundRobinComplete: roundRobinComplete,
+    dependentsOf: dependentsOf,
+    redecideElimination: redecideElimination,
+    vacateSlot: vacateSlot,
+    resultFromScores: resultFromScores,
+    setMatchResult: setMatchResult,
+    swissReopen: swissReopen,
+    poolsReopen: poolsReopen
   };
 })(typeof window !== 'undefined' ? window : globalThis);
