@@ -81,6 +81,19 @@ const CHECKS = {
     R.tick(a, 3500, 0, 2);
     return a.count === 4 && a.endAt === 4000;
   },
+  'rotate now with a finish count stops the clock on the last rotation': (R) => {
+    const a = clock({ running: true, endAt: 5000, count: 1 }); R.rotateNow(a, 1000, 60000, 3);
+    const b = clock({ paused: true, remainingMs: 9, count: 2 }); R.rotateNow(b, 1000, 60000, 3);
+    return a.count === 2 && a.running && a.endAt === 61000 &&
+      b.count === 3 && !b.paused && !b.running && b.remainingMs === null && b.endAt === null;
+  },
+  'tick with a finish count stops at it and counts no further': (R) => {
+    const a = clock({ running: true, endAt: 10000 });
+    const changed = R.tick(a, 10000 + 9 * 60000, 60000, 1, 3);
+    const b = clock({ running: true, endAt: 10000, count: 0 });
+    return changed === true && a.count === 3 && !a.running && a.endAt === null && a.remainingMs === null &&
+      R.tick(b, 5000, 60000, 1, 3) === false && b.running && b.count === 0;
+  },
   'the display shows the time left, the paused time, or a full rotation': (R) =>
     R.remaining(clock({ running: true, endAt: 5000 }), 2000, 60000) === 3000 &&
     R.remaining(clock({ paused: true, remainingMs: 7 }), 2000, 60000) === 7 &&
@@ -100,6 +113,8 @@ const MUTANTS = {
   'tick leaves a clock with time left alone': ['while (left <= 0 ', 'while (left <= 1 '],
   'tick moves nothing without stations, and is capped at 200 a call': ['guard < 200', 'guard < 500'],
   'a zero-length rotation advances by a second, not forever': ['(totalMs > 0 ? totalMs : 1000)', 'totalMs'],
+  'rotate now with a finish count stops the clock on the last rotation': ['r.count >= finishAt) finish(r);\n    else if', 'r.count > finishAt) finish(r);\n    else if'],
+  'tick with a finish count stops at it and counts no further': ['{ finish(r); break; }', '{ finish(r); }'],
   'the display shows the time left, the paused time, or a full rotation': ['if (r.paused && r.remainingMs != null) return r.remainingMs;', '']
 };
 

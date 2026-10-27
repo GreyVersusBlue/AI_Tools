@@ -18,8 +18,13 @@
    `totalMs` is one rotation's length in ms, read by the page from its inputs
    (0 when unset). `stationCount` is the number of stations.
 
-   NOT HERE. 004's round-robin mode and 017's and 069's station timers, which
-   adopt this one tool at a time only where their arithmetic is the same. */
+   FINISH AT N. rotateNow and tick take an optional last argument, the count at
+   which the run is over (017's "Number of rotations"). Left out, they are 021's.
+   Added at v355 for 017, the third reader of this module's arithmetic.
+
+   NOT HERE. 004's round-robin tab (one step per zero, endAt = now + length, no
+   catch-up) and 069's circuit (a performance.now timeline of work and rest)
+   do not do this arithmetic, so they do not use it. */
 (function (root) {
   'use strict';
 
@@ -73,11 +78,23 @@
     return true;
   }
 
+  /* The clock stops where a run of `finishAt` rotations ends (017's "Number of
+     rotations"): not running, not paused, nothing left on it. count is kept. */
+  function finish(r) {
+    r.running = false;
+    r.paused = false;
+    r.endAt = null;
+    r.remainingMs = null;
+  }
+
   /* One rotation now; a running clock starts a full rotation over, a paused one
-     is left with a full rotation to resume into. */
-  function rotateNow(r, now, totalMs) {
+     is left with a full rotation to resume into. With `finishAt` (a rotation
+     count, left out by 021) the rotation that brings the count to it stops the
+     clock instead. */
+  function rotateNow(r, now, totalMs, finishAt) {
     r.count = r.count + 1;
-    if (r.running) r.endAt = now + totalMs;
+    if (finishAt && r.count >= finishAt) finish(r);
+    else if (r.running) r.endAt = now + totalMs;
     else if (r.paused) r.remainingMs = totalMs;
   }
 
@@ -92,17 +109,20 @@
   /* Catches the count up with the clock: every rotation whose end has passed
      (a tab that slept through several comes back to the right one; at most 200
      in a call, as the page always capped it). Returns true if the count moved.
-     A zero-length rotation advances by a second so it cannot spin. */
-  function tick(r, now, totalMs, stationCount) {
+     A zero-length rotation advances by a second so it cannot spin. With
+     `finishAt` (left out by 021) the rotation that brings the count to it
+     stops the clock, with no further catching up. */
+  function tick(r, now, totalMs, stationCount, finishAt) {
     var left = r.endAt - now;
     var guard = 0;
     var changed = false;
     while (left <= 0 && guard < 200 && stationCount > 0) {
       r.count = r.count + 1;
+      changed = true;
+      if (finishAt && r.count >= finishAt) { finish(r); break; }
       r.endAt += (totalMs > 0 ? totalMs : 1000);
       left = r.endAt - now;
       guard++;
-      changed = true;
     }
     return changed;
   }

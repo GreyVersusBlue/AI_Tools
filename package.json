@@ -235,6 +235,7 @@
     "test:bracket-parity": "node Tools/bracket-tournament-generator/test/bracket-parity.test.mjs",
     "test:rotation": "node Tools/pe-tournament-stations/test/rotation.test.mjs",
     "test:rotation-parity": "node Tools/pe-tournament-stations/test/rotation-parity.test.mjs",
+    "test:gallery-rotation-parity": "node Tools/gallery-walk-qr/test/rotation-parity.test.mjs",
     "test:seat-near": "node Tools/group-team-generator/test/smoke-seat-near.mjs",
     "test:named-sets": "node Tools/review-game-board/test/smoke-named-sets.mjs",
     "test:export": "node Tools/export/test/export.test.mjs && node Tools/export/test/smoke-export.mjs",
