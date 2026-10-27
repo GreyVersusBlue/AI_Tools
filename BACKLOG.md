@@ -6106,6 +6106,28 @@ match; (021's silent overwrite of a saved unit on a name collision was fixed in 
   `test:bracket-redecide`, `test:bracket-engine`, `test:bracket-parity`; `smoke-academic.mjs` strips the additions before
   hashing, so its v276 pins are the old ones. **Not built:** the second-display mode; double-elimination and pools-fed-bracket
   re-deciding; academic-mode marks do not follow a flip. Not tried on a phone or projector.
+  *Second display — design (AI-21, 2026-10-27, v357).* **Path 8's pieces:** `_shared/remote.js` (P1) and
+  `Remote.display()` (P3) are not built, so there is nothing of Path 8 to call; the pieces that exist are what 021's remote
+  already uses, `BroadcastChannel` for a window on the same browser and `webrtc-pair.js` for another device. **Built now: the
+  same-browser leg**, which is the projector on an extended desktop (the usual gym or classroom case); the Wi-Fi leg is left
+  for `Remote.display()` rather than a ninth copy of the pairing modal (Devon's question 1). *What it is.* A button "Open
+  display window" (next to Present) opens `020…html?display=1`; that page is the same file with `body.display-mode`: no
+  toolbar, setup, share, schedule, undo or academic card, and **read-only**: `save()` is a no-op there, every click, input,
+  key and form event on the bracket is stopped in the capture phase, and boot never reads or writes storage (it waits for
+  the teacher's page). It is `presenting` (the Present bar names the match now playing) plus a Fullscreen button on
+  `Stage.mount` (`_shared/stage.js`, unchanged). *What it shows, per format:* whatever that format's own renderer draws
+  (single/double elimination slots and scores, round robin and pools tables and games, Swiss rounds, the consolation and third
+  place, the champion banner), because it runs the page's own `render()` on the teacher's bracket, so a format added later
+  appears with no second renderer. *Staying in step.* The teacher's `render()` posts `{type:'bracket', state}` (a clone of the
+  saved object, or `null` on the setup screen) on channel `bracket-tournament-display`; a new display window sends `hello`
+  and gets the current one. A message carries no command: the display has no way to change a result. *What it never shows:*
+  the academic panel and its questions/answers (`academicCard`/`academicPanel` are removed on the display and `academic.sync()`
+  is not called there), the bracket switcher and other brackets' names, undo, and any control. The saved bracket's `academic`
+  field travels in the state but nothing on the display reads it. *Not covered:* another device (see above); a student-facing
+  page (it is the teacher's projector, not a student device, as Path 8 says). **Devon's questions, built on the defaults:**
+  (1) same-browser window now, Wi-Fi display waits for Path 8 P3 (alternative: copy 021's pairing modal into 020 now);
+  (2) the display follows the teacher's bracket switch (alternative: pinned to the bracket it was opened on); (3) it shows
+  the Present bar always (alternative: only when the teacher is presenting).
 
 **Model.** Fable for P1; Opus for the rest.
 
