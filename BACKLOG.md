@@ -87,6 +87,12 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-21 (v353–v354), rank 33 (kept, rewritten), Path 13 P3 steps 1 and 2: the shared bracket and rotation engines.**
+  `_shared/bracket.js` (020's pure code, 29 functions, v353) and `_shared/rotation.js` (021's assignment and clock, v354),
+  each a port alone behind a parity suite (`test:bracket-parity` 1,860, `test:rotation-parity` 64,000) and a unit suite whose
+  checks also fail with their rule broken (`test:bracket-engine`, `test:rotation`). 021 had no bracket, so "bracket.js from
+  020 and 021" was 020 alone. No new port (**next free 8557**). **Left of Path 13: rank 32 (project teams, parked), rank 33
+  (step 3: 017, 069, 004 adopting rotation), rank 34 (P4).**
 - **AI-21 (v352), rank 32 (kept, rewritten), Path 13 P2 increment 6: seating-aware grouping on 002.** An opt-in
   checkbox (off, so the twelve golden classes are untouched): the Seating Chart's desk distance is the engine's `cost`,
   and the engine now swaps members to bring it down once nothing else is broken (before, `cost` only broke ties and never
@@ -593,7 +599,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **220 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 15 · `print-kit.css` 15 · `print-kit.js` 15 · `stage.js` 11 · `tool-registry.js` 11 · `qr-scan.js` 10 · `school-day.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `grouping.js` 6 · `student-flags.js` 5 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 2 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 15 · `print-kit.css` 15 · `print-kit.js` 15 · `stage.js` 11 · `tool-registry.js` 11 · `qr-scan.js` 10 · `school-day.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `grouping.js` 6 · `student-flags.js` 5 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `seating-read.js` 2 · `backup-crypto.js` 1 · `bracket.js` 1 · `gvb-save.js` 1 (+1 via a module) · `rotation.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **169**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -737,7 +743,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Increment 5 (AI-14, v300): named sets on 030, an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section, and its storage design under it): made from ticked questions of the bank or a built-in set, a question in a set more than once if wanted; reordered, trimmed, renamed, deleted, printed and pulled into a board whole from “Questions from”; carried in the bank file and imported beside a set already here, never over it; and a Tag filter on 030's list (the chosen source's tags).** **Left:** 018 and 019 pull station questions from it. 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 32 | Path 13 P2 — the rest. **All six splitters call `_shared/grouping.js` (v336–v341); 002, 022 and 027 keep their memory in a `groupHistory` field with the old fields written from it (v341–v343) and key it by roster id (v344–v346); the five improvements are in (002's floater fix v347, `keepStrategy` v348, `together: 'units'` v349, `restarts` for 002 and 022 v350, `method: 'best'` for 022 and 027 v351); the P2 bullet's increments 1–6.** Seating-aware grouping on 002 is in (v352, increment 6). Left: project teams on 002, parked on Devon's six questions (the P2 bullet, increment 6). Hold the twelve golden classes (`golden-old-groupings.json` now carries six re-recorded scenarios, each with an `amended` note), `smoke-rename-follow.mjs`, `test:grouping-parity` and `test:grouping-adopters` | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
-| 33 | Path 13 P3 — `_shared/bracket.js` + `_shared/rotation.js` (design written v353) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
+| 33 | Path 13 P3 — the rest: **`_shared/bracket.js` (v353) and `_shared/rotation.js` (v354) are built, 020 and 021 adopt them;** left is step 3, 017's timer (needs a finish-at-N option on `Rotation`), 069's and 004's round-robin tab, one tool per commit, each a port alone (the P3 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 34 | Path 13 P4 — bracket completeness: double elimination, pools, Swiss, ties, consolation | 020 | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 35 | Path 14 P3 — seating constraint solver that explains which soft constraints it broke (**designed 2026-10-05, not built**: the design and eleven questions for Devon are under the P3 bullet) | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 36 | Path 14 P4 — the room, not the grid: a room layer shared across period assignments | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
@@ -5576,8 +5582,9 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
 
 **Why.** Group formation exists four times (002, 022, 027, Name Picker's Groups
 mode); role rotation with recency memory twice; the bracket algorithm is
-"line-for-line the same" in 020 and 021; the station-rotation timer exists in 004's
-round-robin mode, 021, 017 and 069. ~~002's `pairHistory` keeps two generations, so
+in 020 only (the "same in 021" claim was stale: 021 has no bracket, and
+`_shared/bracket.js` took 020's v353); the station-rotation timer exists in 004's
+round-robin mode, 021, 017 and 069 (021's is `_shared/rotation.js` since v354). ~~002's `pairHistory` keeps two generations, so
 "everyone has worked with everyone this year" is unanswerable.~~ (Stale since 2026-08-13: 002 keeps every pair's
 count for the year, and since v277 has an opt-in long memory and a who-has-not-met list; what no tool has is
 one history for all of them.) 020 still lacks
@@ -6016,7 +6023,23 @@ match; (021's silent overwrite of a saved unit on a name collision was fixed in 
   (`test:bracket-parity`, `test:rotation-parity`), plus pure unit tests each also run against a copy with its rule broken
   on purpose (`test:bracket-engine`, `test:rotation`). **Devon's questions:** none are open for P3 as designed; P4's
   (ties, consolation, re-deciding a match) stay with P4.
-  **Built so far:** *(updated per increment below.)*
+  **Built (AI-21, 2026-10-27).** Step 1, v353: `_shared/bracket.js` is 020's pure bracket code, the 29 functions with their
+  bodies unchanged (the bodies are copied by line range, so `test:bracket-parity` finds a drift); 020 aliases the names.
+  `npm run test:bracket-parity` (1,860 comparisons: n = 1 to 40, three seed modes, single and double elimination played
+  out in a random order, round robin, pools 1 to 5 by 1 or 2 advancing, Swiss of 1, 3 and 5 rounds, whole states as JSON
+  after each step; breaking one rule on purpose gives 1,110 differences) and `npm run test:bracket-engine` (14 named
+  checks, each also run against a copy with its rule broken). Step 2, v354: `_shared/rotation.js`, 021's
+  `computeAssignment()` and clock (`start`, `pause`, `resume`, `rotateNow`, `reset`, `tick`, `remaining`), time passed in;
+  `npm run test:rotation-parity` (64,000 comparisons on a fake clock, with sleeps of up to twenty minutes; `guard < 199`
+  gives 9 differences) and `npm run test:rotation` (13 checks, each also failing with its rule broken). 021 keeps sound,
+  drawing, the remote, `save()` and the "no stations" refusal. **Calls made:** the module takes its own random source as
+  `Bracket.setRng()` rather than a parameter on every builder, so the bodies stay the page's; `rotation.js` holds no
+  stations guard in `rotateNow`; both wait in `SHELL_URLS` as `_shared/` files (a page that loads them is 020 or 021,
+  neither a front-of-room tool, but the rule is `_shared/`). **Not done, on purpose, step 3:** 017's timer ends at its
+  `rotations` count (`t.count >= t.rotations` stops the clock in `tick` and in rotate-now), 069's runs off a timeline, and
+  004's round-robin tab was not read; none is a port alone, so none adopted. 017's would need a finish-at-N option in
+  `Rotation.tick` and `rotateNow`, which is a feature to add to the module and to parity together. **Not verified:** nothing
+  ran on a projector or a phone; the full `npm test` was not run.
 - **P4 — Bracket completeness.** Double elimination, pools, Swiss (a scheduler
   that copes with match counts unknown up front), ties/draws, re-deciding a decided
   match, consolation bracket, team rosters, and a real second-display mode via

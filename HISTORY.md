@@ -9,6 +9,36 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-21: Path 13 P3 steps 1 and 2, the bracket and rotation engines (2026-10-27, v353–v354)
+
+**Why.** Rank 33: 020's bracket code and 021's rotation clock were the last two pieces of Path 13 that lived only inside a
+page. P4 (more formats) wants an engine to put them in, and the clock is what 017, 069 and 004 repeat.
+
+**Shipped.** `_shared/bracket.js` (v353): the 29 pure functions of 020, from `shuffle` and `standardSeedOrder` through single
+and double elimination, round robin, pools, Swiss and the elimination standings, with their bodies unchanged and a state the
+same plain object it was, so a bracket saved by the old page opens in the new. `_shared/rotation.js` (v354): 021's
+`computeAssignment()` and the clock, with `now` passed in. Each is held by a frozen copy of the page's code
+(`Tools/bracket-tournament-generator/test/_legacy.mjs`, `Tools/pe-tournament-stations/test/_legacy.mjs`) in a parity suite
+and by a unit suite whose every check also runs against a copy with its rule broken (a check that cannot fail is not counted).
+Mutation on the parity suites: a changed pool deal gives 1,110 differences of 1,860, a cap of 199 rotations for 200 gives 9
+of 64,000, a second changed to 999 ms gives 28.
+
+**Calls made (reversible).** (1) `Bracket.setRng()` is module state, not a parameter of every builder, so the page's
+bodies stay as they were; a page never sets it. (2) `generateBracketFromPools()` and the match-to-station-and-time
+scheduling stay in 020: both read the page. (3) `rotateNow()` has no "no stations" guard; the page keeps it. (4) Step 3 is
+not done: **017's timer is not the same clock** (`t.count >= t.rotations` ends the clock in `tick` and in rotate-now; 021's
+runs forever), 069's runs off a timeline, and 004's round-robin tab was not read. An adoption of 017 needs a finish-at-N
+option in `Rotation` held by the parity suite; that is a feature, and rank 33 says so.
+
+**What was wrong in the brief.** The Path 13 "Why" said 020 and 021 held the same bracket algorithm line for line. 021 has
+no bracket: the words appear in its meta text and CSS only. It also still described the 021 overwrite as open (fixed in
+77b4405). Both are corrected. 020 already had double elimination, pools and Swiss, which rank 34 still lists as to do.
+
+**Not verified.** The full `npm test`, a11y sweep and any real device. Checked: lint, every `check:*`, `run-suites --only
+bracket-tournament-generator` (9) and `--only pe-tournament-stations` (4), a11y 020 and 021, `test:theme`.
+
+---
+
 ## AI-21: Path 13 P2 increment 6, seating-aware grouping on 002 (2026-10-27, v352)
 
 **Why.** The last buildable half of BACKLOG rank 32: "groups that are physically possible given the seating chart".
