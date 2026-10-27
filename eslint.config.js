@@ -56,6 +56,7 @@ const SITE_GLOBALS = {
   ExportKit: 'readonly',
   Bracket: 'readonly',
   Grouping: 'readonly',
+  Rotation: 'readonly',
   QuestionBank: 'readonly',
   RestoreKit: 'readonly',
   BrCrypto: 'readonly',

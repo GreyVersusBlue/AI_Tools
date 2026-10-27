@@ -310,6 +310,8 @@
     "Tools/grouping/test/smoke-adopters.mjs",
     "Tools/bracket-tournament-generator/test/bracket.test.mjs",
     "Tools/bracket-tournament-generator/test/bracket-parity.test.mjs",
+    "Tools/pe-tournament-stations/test/rotation.test.mjs",
+    "Tools/pe-tournament-stations/test/rotation-parity.test.mjs",
     "Tools/review-game-board/test/smoke-named-sets.mjs",
     "Tools/question-bank/test/smoke-seed-sets.mjs",
     "Tools/export/test/export.test.mjs",

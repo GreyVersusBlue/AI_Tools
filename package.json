@@ -233,6 +233,8 @@
     "test:grouping-adopters": "node Tools/grouping/test/smoke-adopters.mjs",
     "test:bracket-engine": "node Tools/bracket-tournament-generator/test/bracket.test.mjs",
     "test:bracket-parity": "node Tools/bracket-tournament-generator/test/bracket-parity.test.mjs",
+    "test:rotation": "node Tools/pe-tournament-stations/test/rotation.test.mjs",
+    "test:rotation-parity": "node Tools/pe-tournament-stations/test/rotation-parity.test.mjs",
     "test:seat-near": "node Tools/group-team-generator/test/smoke-seat-near.mjs",
     "test:named-sets": "node Tools/review-game-board/test/smoke-named-sets.mjs",
     "test:export": "node Tools/export/test/export.test.mjs && node Tools/export/test/smoke-export.mjs",

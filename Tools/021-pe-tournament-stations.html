@@ -27,6 +27,7 @@
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/grouping.js"></script>
+<script src="../_shared/rotation.js"></script>
 <script src="../_shared/stage.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -964,17 +965,8 @@
 
   /* ---------- rotation timer / stage ---------- */
   function computeAssignment(countOverride) {
-    var s = state.stations.length;
-    var map = [];
-    for (var i = 0; i < s; i++) map.push([]);
-    if (s === 0) return map;
     var baseCount = typeof countOverride === 'number' ? countOverride : state.rotation.count;
-    var count = ((baseCount % s) + s) % s;
-    state.groups.forEach(function (g, gi) {
-      var idx = (gi + count) % s;
-      map[idx].push(g);
-    });
-    return map;
+    return Rotation.computeAssignment(state.groups, state.stations.length, baseCount);
   }
 
   function updateStageButtons() {
@@ -1060,14 +1052,7 @@
   function tickDisplay() {
     var r = state.rotation;
     var totalMs = getRotationMs();
-    var display;
-    if (r.running && r.endAt) {
-      display = r.endAt - Date.now();
-    } else if (r.paused && r.remainingMs != null) {
-      display = r.remainingMs;
-    } else {
-      display = totalMs;
-    }
+    var display = Rotation.remaining(r, Date.now(), totalMs);
     els.stageTime.textContent = fmtTime(display);
     els.stageTime.classList.toggle('paused', r.paused);
     if (r.running) els.stageStatus.textContent = 'Running — rotates automatically when the clock hits 0:00';
@@ -1081,17 +1066,7 @@
     var r = state.rotation;
     if (!r.running || !r.endAt) { tickDisplay(); return; }
     maybePlayWarning();
-    var remaining = r.endAt - Date.now();
-    var guard = 0;
-    var changed = false;
-    while (remaining <= 0 && guard < 200 && state.stations.length > 0) {
-      var totalMs = getRotationMs();
-      r.count = r.count + 1;
-      r.endAt += (totalMs > 0 ? totalMs : 1000);
-      remaining = r.endAt - Date.now();
-      guard++;
-      changed = true;
-    }
+    var changed = Rotation.tick(r, Date.now(), getRotationMs(), state.stations.length);
     if (changed) { playRotationAlarm(); flashStage(); save(); renderStage(); }
     else { tickDisplay(); broadcastState(); }
   }
@@ -1103,20 +1078,13 @@
     ensureAudio(); // unlock/create the AudioContext on this user gesture so the 0:00 alarm can play later
     clearMsg();
     var r = state.rotation;
-    r.running = true;
-    r.paused = false;
-    r.endAt = Date.now() + (r.remainingMs != null ? r.remainingMs : totalMs);
-    r.remainingMs = null;
+    Rotation.start(r, Date.now(), totalMs);
     save();
     renderStage();
   }
   function doPause() {
     var r = state.rotation;
-    if (!r.running) return;
-    r.remainingMs = Math.max(0, r.endAt - Date.now());
-    r.running = false;
-    r.paused = true;
-    r.endAt = null;
+    if (!Rotation.pause(r, Date.now())) return;
     save();
     renderStage();
   }
@@ -1124,20 +1092,14 @@
     var r = state.rotation;
     if (!r.paused) return;
     ensureAudio();
-    r.running = true;
-    r.paused = false;
-    r.endAt = Date.now() + (r.remainingMs != null ? r.remainingMs : getRotationMs());
-    r.remainingMs = null;
+    Rotation.resume(r, Date.now(), getRotationMs());
     save();
     renderStage();
   }
   function doRotateNow() {
     if (!state.stations.length) return;
     var r = state.rotation;
-    r.count = r.count + 1;
-    var totalMs = getRotationMs();
-    if (r.running) r.endAt = Date.now() + totalMs;
-    else if (r.paused) r.remainingMs = totalMs;
+    Rotation.rotateNow(r, Date.now(), getRotationMs());
     flashStage();
     playRotateNowTone();
     save();
@@ -1145,11 +1107,7 @@
   }
   function doReset() {
     var r = state.rotation;
-    r.count = 0;
-    r.running = false;
-    r.paused = false;
-    r.endAt = null;
-    r.remainingMs = null;
+    Rotation.reset(r);
     warnedForEndAt = null;
     save();
     renderStage();
