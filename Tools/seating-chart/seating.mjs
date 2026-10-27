@@ -9,6 +9,7 @@
 // works only in the browser.
 
 import { createSaveSlot } from '../../_shared/gvb-save.js';
+import { repairRooms, mirrorDesks } from './seating-room.mjs';
 
 /* ---------------------------------------------------------------------------
    Storage identity. Both of these are permanent.
@@ -146,16 +147,18 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 export function repairState(state, rng = Math.random) {
   if (!state || typeof state !== 'object') return freshState(rng);
 
+  // Path 14 P4: rooms are written only once used, so an older chart loads as it was.
+  const rooms = repairRooms(state.rooms, rng, repairDesks);
   const sections = (Array.isArray(state.sections) ? state.sections : [])
     .filter(s => s && typeof s === 'object')
-    .map((s, i) => repairSection(s, i, rng));
+    .map((s, i) => repairSection(s, i, rng, rooms));
 
   if (!sections.length) sections.push(newSection('Period 1', rng));
 
   const ids = new Set(sections.map(s => s.id));
   const active = ids.has(state.active) ? state.active : sections[0].id;
 
-  return {
+  const out = {
     sections,
     active,
     theme: state.theme === 'dark' ? 'dark' : 'light',
@@ -168,6 +171,8 @@ export function repairState(state, rng = Math.random) {
     printViolations: state.printViolations === false ? false : true,
     currentQuarter: str(state.currentQuarter).trim() || suggestQuarter(todayISO()),
   };
+  if (rooms.length) out.rooms = rooms;
+  return out;
 }
 
 /** The saved zoom level: 'fit' (the default), 'full' (100%), or a number left
@@ -369,7 +374,7 @@ function repairHistoryEntry(h, rng) {
   return { id, date, label, quarter, desks, assign, students };
 }
 
-function repairSection(s, index, rng) {
+function repairSection(s, index, rng, rooms = []) {
   const id = str(s.id) || uid(rng);
   const name = str(s.name).trim() || `Section ${index + 1}`;
 
@@ -389,7 +394,10 @@ function repairSection(s, index, rng) {
     }));
   const studentIds = new Set(students.map(st => st.id));
 
-  const desks = repairDesks(s.desks, rng);
+  // A section in a room keeps `desks` as the room's mirror; a room that is gone is forgotten.
+  const room = rooms.find(r => r.id === s.room) || null;
+  const own = repairDesks(s.desks, rng);
+  const desks = room ? mirrorDesks(room, own) : own;
   const deskIds = new Set(desks.map(d => d.id));
 
   const pairs = list => {
@@ -427,6 +435,7 @@ function repairSection(s, index, rng) {
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
   const out = { id, name, students, apart, together, desks, assign, layouts, history };
+  if (room) out.room = room.id;
 
   // Path 14 P3: rules and prefs are written only once used, so a chart saved
   // before they existed loads exactly as it did. The pair lists win for the

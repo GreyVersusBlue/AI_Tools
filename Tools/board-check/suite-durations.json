@@ -325,6 +325,7 @@
     "Tools/seating-chart/test/migration.test.mjs": 1,
     "Tools/seating-chart/test/explain.test.mjs": 1,
     "Tools/seating-chart/test/rules.test.mjs": 1,
+    "Tools/seating-chart/test/room.test.mjs": 1,
     "Tools/a11y-sweep/test/smoke-a11y-sweep.mjs": 112,
     "Tools/board-check/test/select-suites.test.mjs": 10,
     "Tools/board-check/test/check-entities.test.mjs": 1,
