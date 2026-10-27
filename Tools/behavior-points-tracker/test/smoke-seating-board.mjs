@@ -156,6 +156,26 @@ eq((await gridCardNames()).sort(), ['Aiden Whitfield', 'Brooklyn Bell', 'Casey N
 ok(!(await page.isVisible('#seatingNote')), 'and the seating note is hidden again');
 ok(!(await page.isVisible('#seatingSectionPick')), 'along with the chart picker');
 
+/* ── 6b. the room's marks (Path 14 P4): behind the seats, only when the section sits in a room ── */
+const ROOMED = JSON.parse(JSON.stringify(CHART));
+ROOMED.rooms = [{ id: 'r1', name: 'Room 12', desks: [], marks: [{ id: 'm1', kind: 'door', x: 0, y: 110, w: 60, h: 110, rot: 0, label: 'Hall door' }] }];
+ROOMED.sections[0].room = 'r1';
+await seedChart(ROOMED);
+await page.reload({ waitUntil: 'networkidle' });
+await settle(page, 300);
+await page.selectOption('#layoutMode', 'seating');
+await page.selectOption('#seatingSectionPick', 's1');
+await settle(page, 300);
+eq(await page.$$eval('.seat-room .seat-mark', m => m.map(x => x.textContent)), ['Hall door'], 'a section in a room shows its door on the board');
+eq((await seatCards()).length, 2, 'and the seats are the same two');
+await seedChart(CHART);
+await page.reload({ waitUntil: 'networkidle' });
+await settle(page, 300);
+await page.selectOption('#layoutMode', 'seating');
+await page.selectOption('#seatingSectionPick', 's1');
+await settle(page, 300);
+eq(await page.$$eval('.seat-room .seat-mark', m => m.length), 0, 'a chart with no room shows none');
+
 /* ── 7. no console noise across the whole run ────────────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs.slice(0, 4)));
 eq(page.__blocked.length, 0, 'nothing tried to leave the site: ' + JSON.stringify(page.__blocked.slice(0, 4)));

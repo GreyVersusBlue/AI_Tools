@@ -206,6 +206,37 @@
     });
   }
 
+  /* ---- the room's marks (Path 14 P4) ------------------------------------ */
+
+  var MARK_KINDS = ['door', 'window', 'teacher', 'bench', 'projector', 'obstacle'];
+
+  /** The doors, windows and board the section's room carries, placed the way
+      placeDesks() places desks, or []. Only a reader that asks gets them: no
+      caller of placeDesks() or bounds() sees a mark unless it passes the result
+      on. `mirror` reflects about the DESKS' own extent, the axis placeDesks()
+      uses, so a mark stays beside the desks it was beside. */
+  function marksOf(state, section, opts) {
+    opts = opts || {};
+    var rooms = state && Array.isArray(state.rooms) ? state.rooms : [];
+    var room = null;
+    for (var i = 0; i < rooms.length; i++) { if (rooms[i] && section && rooms[i].id === section.room) { room = rooms[i]; break; } }
+    if (!room || !Array.isArray(room.marks)) return [];
+    var desks = Array.isArray(section.desks) ? section.desks : [];
+    var minX = Infinity, maxX = -Infinity;
+    desks.forEach(function (d) {
+      var x = Number(d && d.x) || 0;
+      if (x < minX) minX = x;
+      if (x + DESK_W > maxX) maxX = x + DESK_W;
+    });
+    var mirror = opts.mirror === true && desks.length > 0;
+    return room.marks.filter(function (m) { return m && MARK_KINDS.indexOf(m.kind) !== -1; }).map(function (m) {
+      var w = Number(m.w) || 0, h = Number(m.h) || 0;
+      var x = Number(m.x) || 0, rot = Number(m.rot) || 0;
+      if (mirror) { x = (minX + maxX) - x - w; rot = -rot; }
+      return { id: m.id, kind: m.kind, label: typeof m.label === 'string' ? m.label : '', x: x, y: Number(m.y) || 0, w: w, h: h, rot: rot };
+    });
+  }
+
   /**
    * The viewBox around a set of placed desks — pass every desk (010's room),
    * or only the ones a caller matched (008's). `frontBand` reserves space
@@ -230,6 +261,18 @@
       if ((p.rot || 0) % 180 !== 0) turned = true;
     });
     var overhang = turned ? (DESK_W - DESK_H) / 2 : 0;
+
+    /* marks the caller asked to have drawn widen the box, by the extent they
+       cover once turned about their own centre */
+    (opts.marks || []).forEach(function (m) {
+      var quarter = Math.abs(m.rot || 0) % 180 === 90;
+      var cx = m.x + m.w / 2, cy = m.y + m.h / 2;
+      var hw = (quarter ? m.h : m.w) / 2, hh = (quarter ? m.w : m.h) / 2;
+      if (cx - hw < minX) minX = cx - hw;
+      if (cx + hw > maxX) maxX = cx + hw;
+      if (cy - hh < minY) minY = cy - hh;
+      if (cy + hh > maxY) maxY = cy + hh;
+    });
 
     return {
       minX: minX, maxX: maxX, minY: minY, maxY: maxY, overhang: overhang,
@@ -326,6 +369,8 @@
     pickSection: pickSection,
 
     placeDesks: placeDesks,
+    marksOf: marksOf,
+    MARK_KINDS: MARK_KINDS,
     bounds: bounds,
     toPercent: toPercent,
 

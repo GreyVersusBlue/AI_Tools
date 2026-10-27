@@ -224,6 +224,24 @@ await settle(page, 300);
 ok(await page.isVisible(panel + ' .seat-map'), 'the map survives into projector mode');
 ok(!(await page.isVisible(panel + ' #seatingPick')), 'with the picker out of the room’s way');
 
+/* ── the room's marks (Path 14 P4): drawn behind the desks when the period sits in a room ─ */
+const ROOMED = JSON.parse(JSON.stringify(CHART));
+ROOMED.rooms = [{ id: 'r1', name: 'Room 12', desks: [], marks: [
+  { id: 'm1', kind: 'door', x: 0, y: 110, w: 60, h: 110, rot: 0, label: 'Hall door' },
+] }];
+ROOMED.sections.find(x => x.name === 'Honors GT').room = 'r1';
+await seed();   // forget the picker's remembered choice and projector mode
+await page.evaluate(([chart, key]) => localStorage.setItem(key, JSON.stringify(chart)), [ROOMED, SEATING_KEY]);
+await page.reload({ waitUntil: 'networkidle' });
+await settle(page, 500);
+eq(await page.$$eval(panel + ' .seat-map .seat-mark', g => g.length), 1, 'a period in a room draws the room\'s door');
+ok((await labels()).includes('Hall door'), 'with its label');
+eq(await page.$$eval(panel + ' .seat-map rect', r => r.length), 3, 'the desks are still one rect each (plus the door)');
+if (await page.isVisible('#projectorBtn.on, body.projector')) await page.click('#projectorBtn');
+await page.selectOption(panel + ' #seatingPick', 's-academic');
+await settle(page, 300);
+eq(await page.$$eval(panel + ' .seat-map .seat-mark', g => g.length), 0, 'a period outside the room draws none');
+
 /* ── no console noise, nothing left the site ───────────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs.slice(0, 4)));
 eq(page.__blocked.length, 0, 'nothing tried to leave the site: ' + JSON.stringify(page.__blocked.slice(0, 4)));
