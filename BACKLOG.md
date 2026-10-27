@@ -87,13 +87,19 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-21 (v352), rank 32 (kept, rewritten), Path 13 P2 increment 6: seating-aware grouping on 002.** An opt-in
+  checkbox (off, so the twelve golden classes are untouched): the Seating Chart's desk distance is the engine's `cost`,
+  and the engine now swaps members to bring it down once nothing else is broken (before, `cost` only broke ties and never
+  moved anyone). New `gtg-seating.js`; `test:seat-near` (port 8556, **next free 8557**, 26). **Project teams are parked on
+  Devon's six unanswered questions** (the P2 bullet has each with a default). **Left of Path 13: rank 32 (project teams),
+  then P3 (rank 33), P4 (rank 34).**
 - **AI-21 (v347–v351), rank 32 (kept, rewritten), Path 13 P2 increment 5: the improvements.** All five, each its own
   commit and `CACHE_VERSION`: 002's floater fix (`sizeRule: 'floor'`, v347), `keepStrategy` (v348), `together: 'units'`
   (v349), `restarts` for 002 and 022 (v350), `method: 'best'` for 022 and 027 (v351). The build found the engine's `floor`
   rule and `'best'` had never run on a page and were wrong (11 by 4 made groups of 5; `'best'` took 1.5 s for 8 students and
   12 roles): both fixed in the engine. Goldens moved only where meant (`golden-old-groupings.json`: 2, 3, 1 scenarios, each
   with an `amended` note). `test:grouping` 93, `test:grouping-adopters` 256, no new port (**next free 8556**).
-  **Next on Path 13: rank 32 item (2)** (seating-aware grouping, project teams), then P3 (rank 33).
+  **Next on Path 13: rank 32 item (2)** (project teams, parked on questions), then P3 (rank 33).
 - **AI-21 (v344–v346), rank 32 (kept, rewritten), Path 13 P2 increment 4: 002, 022 and 027 keyed by roster id.**
   `identify()` with `Roster.idsFor()`; the engine's `absorbLegacy()` reads `idNames` so a name-keyed save follows a
   rename made before the switch; `trackRenames()` stays the detector for what each page keeps by name. No new port
@@ -587,7 +593,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **220 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 15 · `print-kit.css` 15 · `print-kit.js` 15 · `stage.js` 11 · `tool-registry.js` 11 · `qr-scan.js` 10 · `school-day.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `grouping.js` 6 · `student-flags.js` 5 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 15 · `print-kit.css` 15 · `print-kit.js` 15 · `stage.js` 11 · `tool-registry.js` 11 · `qr-scan.js` 10 · `school-day.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `grouping.js` 6 · `student-flags.js` 5 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 2 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **169**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -730,7 +736,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Increment 5 (AI-14, v300): named sets on 030, an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section, and its storage design under it): made from ticked questions of the bank or a built-in set, a question in a set more than once if wanted; reordered, trimmed, renamed, deleted, printed and pulled into a board whole from “Questions from”; carried in the bank file and imported beside a set already here, never over it; and a Tag filter on 030's list (the chosen source's tags).** **Left:** 018 and 019 pull station questions from it. 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
-| 32 | Path 13 P2 — the rest. **All six splitters call `_shared/grouping.js` (v336–v341); 002, 022 and 027 keep their memory in a `groupHistory` field with the old fields written from it (v341–v343) and key it by roster id (v344–v346); the five improvements are in (002's floater fix v347, `keepStrategy` v348, `together: 'units'` v349, `restarts` for 002 and 022 v350, `method: 'best'` for 022 and 027 v351); the P2 bullet's increments 1–5.** Left: seating-aware grouping (`cost` from `SeatingRead`) and project teams on 002. Hold the twelve golden classes (`golden-old-groupings.json` now carries six re-recorded scenarios, each with an `amended` note), `smoke-rename-follow.mjs`, `test:grouping-parity` and `test:grouping-adopters` | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
+| 32 | Path 13 P2 — the rest. **All six splitters call `_shared/grouping.js` (v336–v341); 002, 022 and 027 keep their memory in a `groupHistory` field with the old fields written from it (v341–v343) and key it by roster id (v344–v346); the five improvements are in (002's floater fix v347, `keepStrategy` v348, `together: 'units'` v349, `restarts` for 002 and 022 v350, `method: 'best'` for 022 and 027 v351); the P2 bullet's increments 1–6.** Seating-aware grouping on 002 is in (v352, increment 6). Left: project teams on 002, parked on Devon's six questions (the P2 bullet, increment 6). Hold the twelve golden classes (`golden-old-groupings.json` now carries six re-recorded scenarios, each with an `amended` note), `smoke-rename-follow.mjs`, `test:grouping-parity` and `test:grouping-adopters` | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 33 | Path 13 P3 — `_shared/bracket.js` + `_shared/rotation.js`; fix 021’s silent overwrite bug | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 34 | Path 13 P4 — bracket completeness: double elimination, pools, Swiss, ties, consolation | 020 | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 35 | Path 14 P3 — seating constraint solver that explains which soft constraints it broke (**designed 2026-10-05, not built**: the design and eleven questions for Devon are under the P3 bullet) | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
@@ -5959,6 +5965,30 @@ match; 021 silently overwrites a saved unit on a name collision (a real bug).
   search is now capped at 400,000 orderings with a swap search above it (it took 1.5 s for 8 students and 12 roles). All follow
   Devon's P13-5, -7 and -8; none needed a question. Not changed: 002's long-memory `refine()` still spreads pairings with no
   knowledge of the strategy. Left of P2: item (2), seating-aware grouping and project teams.
+  **Increment 6 (AI-21, 2026-10-27, v352): seating-aware grouping on 002**, one commit. *As built:* (v) a checkbox "Seat groups near
+  each other (uses the Seating Chart)", off by default and saved as `seatNear` only when on, so a class that never uses it saves
+  the same string and the twelve golden classes are unchanged; (w) `Tools/group-team-generator/gtg-seating.js` (`GtgSeating.build`,
+  pure) turns `SeatingRead.read()` into the engine's `cost(a, b)`: the distance between two students' desk centres in desk widths,
+  the section chosen by `SeatingRead.sameClass` against the roster name then the class name (a one-section chart is used whatever
+  it is called; several sections with no match is "no section"), students matched by name (a name twice in the chart or the class,
+  or no desk, is unplaced and each pair with them costs the mean, so the grouping neither seeks nor avoids them); (x) the engine
+  did not use `cost` to move anyone (the repair picked offenders only from broken rules and repeats, so with a cost and nothing broken
+  it stopped at once): when nothing is broken and there is a cost it now swaps two members of different unlocked groups and keeps
+  the swap when the score `[hard, strategy, repeats, cost]` is better; no cost, no change (golden and parity unchanged); (y) the order
+  stays Devon's P13-5/-7: a broken rule, then the teacher's strategy, then not repeating last time's partners, then seating, so
+  after many shuffles the groups loosen (12 in a row are nearer than with it off, the first shuffle is the room's tidy blocks:
+  1.18 desks against the class's 2.58); (z) long memory's `refine()` cannot see seats and would undo them, so while seating is on
+  and found it is skipped and the explanation says so; with no chart, no matching section or fewer than two seated, the hint and the
+  explanation say which and the groups are made without it. 3,000 swaps are allowed (the default is 800). Held by
+  `test:grouping` (93 to 96: the cost check and its mutant) and `test:seat-near` (26: off by default, no chart, a chart, a keep-apart
+  pair on neighbouring desks, two unseated, two unrelated sections, reload, long memory), each seen failing with the swap pass
+  and the page's `cost` taken out.
+  **Project teams, parked (2026-10-27):** the six questions in 002's section ("Project-team mode, for Devon") are unanswered
+  (`DEVON-ANSWERS-2026-10-07.md` 4.1 to 4.6; "the rest of the Qs, leave for later"), so nothing is built. Defaults if they stay
+  unanswered, for whoever builds it: (1) named teams of the same students until the teacher dissolves them, stored in the class's
+  `gtg:data:<class>` (no new key); (2) a task list the teacher prints, not one students tick (nothing is student-facing); (3) an
+  editable contract template, signed on paper only, nothing recorded; (4) a team counts in the pair memory once, when it is made;
+  (5) built in 002 on `previous` and `lock`, now, rather than waiting for a shared home; (6) mid-project changes by hand.
 - **P3 — `_shared/bracket.js` + `_shared/rotation.js`.** Extract 020's bracket and
   scheduling code and 021's rotation timer; 004's round-robin mode and 017/069's
   station timers adopt rotation. Fix the 021 overwrite bug in the same PR.

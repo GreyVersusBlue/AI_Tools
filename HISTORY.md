@@ -9,6 +9,37 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-21: Path 13 P2 increment 6, seating-aware grouping on 002 (2026-10-27, v352)
+
+**Why.** The last buildable half of BACKLOG rank 32: "groups that are physically possible given the seating chart".
+Devon's ten P1 answers bind (all defaults): the teacher's strategy and rules come first, not repeating partners second.
+
+**Shipped.** A checkbox on 002, off by default. `Tools/group-team-generator/gtg-seating.js` reads the chart through
+`SeatingRead` and gives the engine a `cost`: the distance between two students' desks in desk widths. **The engine's `cost` had
+never moved anyone.** P1 added it to the score, but the repair chose what to swap only from broken rules and repeats, so with a
+cost and nothing broken it stopped at once with 'nothing'. It now swaps two members of different unlocked groups when nothing is
+broken and keeps the swap when the score `[hard, strategy, repeats, cost]` is better. With no cost the branch is not reached, so
+the golden and parity suites did not move.
+
+**Calls made (reversible).** Seating ranks below repeats (P13-7), so shuffling twelve times in a row loosens the groups; the
+first shuffle is the room's blocks (1.18 desks against the class's 2.58 average pair) and twelve in a row average nearer than
+off. Long memory's `refine()` is skipped while seating is on and found, because it cannot see seats; the explanation says so.
+A student with no desk (or a name twice in the chart or the class) is placed at the mean distance, so the grouping is neutral
+toward them. A chart of one section is used whatever it is called; with several, one must be named like the class.
+
+**Measured.** 3,000 swaps are enough for 12 students (the optimum of 30 on a line was reached on the five seeds tried); the default 800 was not
+tried on the page. The page's first draft of the suite measured the 'on' groups after 25 'off' shuffles had filled the memory and
+read 2.36 against 2.58: the memory, not the seating. Fixed in the suite, not the assertion.
+
+**Not verified.** No real seating chart from 005 (the suite's chart is hand-built to its shape); classes over about 35, where the
+swap search was not timed; 005's own desk spacing against the 106-px desk width the distance divides by.
+
+**Project teams.** Not built: the six questions are unanswered. BACKLOG's P2 bullet carries them with their defaults.
+
+**Obliges.** `Tools/board-check/suite-durations.json` has `smoke-seat-near.mjs` at a guessed 40 s until the next refresh.
+
+---
+
 ## CI: the suites run as six parallel shard jobs (2026-10-26, AI-34, no `CACHE_VERSION`)
 
 **Why.** Devon approved splitting the CI suites across jobs on 2026-10-07 ("yes, to proceed"); the 2026-10-07 entry below
