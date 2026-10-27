@@ -9,6 +9,39 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-22: Path 14 P3 increment 2, the page half of the seating solver (2026-10-27, v361-v364)
+
+**Why.** Rank 35's leftovers after increment 1, built in the prompt's order, each its own commit and `CACHE_VERSION`. Devon's eleven
+answers (defaults) and "no more photo work" bind every choice below; nothing here decides one of his open questions.
+
+**v361, the Rules block.** The Keep Apart and Put Together blocks are one **Rules** block: kind (keep apart, put together, needs a
+partner from, seat in a zone, needs room), a multi-select of students, a zone select or "Choose desks on the floor" (a tap, or Enter on
+a focused desk, picks it; each chosen desk says so in its label), Must / Want (1 to 3) and a short reason under the no-medical hint.
+`seating-rules.mjs` (pure, `test:seating-rules`) builds, adds, removes, prunes (a removed student or desk leaves every rule; a rule
+left too small goes) and words the rules. The first rule added turns the chart's existing pairs into Must rules; 2-member apart/together
+rules still mirror into the old lists. A chart that never touches the block stores no `rules`. A hard together over a hard apart on the
+same students is refused with a sentence. **Not built:** editing a rule in place (remove and add); a rule's student list is a
+multi-select, not a picker. The block replaced `renderPairs`, so 005's `inline-sinks` baseline went 18 to 16.
+
+**v362, Leave empty and Fill the gaps.** `E` on a focused desk (or its hover button) sets `desk.empty`, unpins it and sends its student
+back to the pool; a tap or drop onto it is refused with a sentence; Duplicate layout keeps the flag. **Fill the gaps** is
+`solve(keep: 'all')` and says who moved ("nobody else moved" in the test).
+
+**v363, preferences.** Four selects under a closed "Preferences for Auto-assign" heading (0 off to 3 really want); `prefs` is stored
+only once changed (the solver already reads `section.prefs`). **Not verified:** that a preference visibly changes a chart on the page
+(the solver suite holds that per preference); the page test holds storage, reload and undo.
+
+**v364, link and sub export.** `forShare()` blanks `why` on the copy that leaves the device (link and downloaded file; the sender's chart
+keeps it); the receiver gets the rules without it. The sub export lists broken non-pair Must rules ("Zheng He in the front row, not kept
+in this chart") and, on the sub pages, the ones it keeps; the cover counts them in "rule conflicts". Pairs keep `checkConstraints`'s
+sentences. Wording is `describeRule`, which has no reason in it. 008, 045, 007, 010 read `desks`, `assign` and `students` only: nothing
+new reaches them. **Caught:** the packet page and the single Sub export are two code paths and the first edit reached only one.
+
+**Checks.** `test:seating` (10 suites, 164-check `drive-seating`), a11y 005, lint, check:precache (--base origin/main), inline-sinks,
+entities, hidden-flex, print-clip, theme. Each new assertion was seen failing once with its rule broken on purpose. A full `--changed`
+run selects all 343 suites here (sw.js changes beyond the version line are site-wide) and was not run to the end: CI is the authority.
+`smoke-photos.mjs` timed out once under memory pressure and passed on both reruns. **Left:** P4 and P5 (ranks 36, 37).
+
 ## AI-22: Path 14 P3 increment 1, the seating solver, its storage and the Why? panel (2026-10-27, v358-v360)
 
 **Why.** Rank 35 was designed on 2026-10-05 (no code) and Devon answered all eleven questions on 2026-10-21: keep the

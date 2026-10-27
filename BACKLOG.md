@@ -87,6 +87,9 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-22 (v364), rank 35 DELETED (a gap): Path 14 P3 is whole.** 005 has the Rules block (`seating-rules.mjs`; kind, students, zone by
+  tapping desks, Must/Want, reason), Leave empty (E) and Fill the gaps, the four preferences, and rules in the share link without `why` and
+  on the sub export. No new port (**next free 8559**). **Left on Path 14: rank 36 (P4, the room) and 37 (P5, live mode, `undo.js`).**
 - **AI-21 (v357), rank 34 DELETED (a gap): Path 13 P4 is whole, and with it Path 13 but for rank 32's project teams.** 020 has
   a second display: "Open display window" (next to Present) opens `020…html?display=1`, a read-only copy of the open
   bracket for the projector. The teacher's `render()` posts the saved object on `BroadcastChannel` `bracket-tournament-display`
@@ -769,7 +772,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Increment 5 (AI-14, v300): named sets on 030, an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section, and its storage design under it): made from ticked questions of the bank or a built-in set, a question in a set more than once if wanted; reordered, trimmed, renamed, deleted, printed and pulled into a board whole from “Questions from”; carried in the bank file and imported beside a set already here, never over it; and a Tag filter on 030's list (the chosen source's tags).** **Left:** 018 and 019 pull station questions from it. 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 32 | Path 13 P2 — the rest. **All six splitters call `_shared/grouping.js` (v336–v341); 002, 022 and 027 keep their memory in a `groupHistory` field with the old fields written from it (v341–v343) and key it by roster id (v344–v346); the five improvements are in (002's floater fix v347, `keepStrategy` v348, `together: 'units'` v349, `restarts` for 002 and 022 v350, `method: 'best'` for 022 and 027 v351); the P2 bullet's increments 1–6.** Seating-aware grouping on 002 is in (v352, increment 6). Left: project teams on 002, parked on Devon's six questions (the P2 bullet, increment 6). Hold the twelve golden classes (`golden-old-groupings.json` now carries six re-recorded scenarios, each with an `amended` note), `smoke-rename-follow.mjs`, `test:grouping-parity` and `test:grouping-adopters` | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
-| 35 | Path 14 P3 — seating constraint solver, what is left after increment 1 (v358-v360: the pure solver, the storage and the Why? panel are built; **left: the Rules block on the page** (kind, students, zone by tapping desks, Must/Want, reason), Leave empty on a desk, Fill the gaps, the four preference settings, `rules` in the share link **without `why`** and on the sub export by kind, 008/045 reading nothing new) | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 36 | Path 14 P4 — the room, not the grid: a room layer shared across period assignments | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 37 | Path 14 P5 — live mode; extract the undo stack into `_shared/undo.js` | 005 | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 38 | Path 15 P1 — split Name Picker: themes as data, sound, one module per pick mode | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
@@ -3217,14 +3219,6 @@ fixed unit dates; the valuable half (a unit defined by instructional days that
   Read from the tree at v245: 032's page, `scv-pacing.js`, `scv-store.js`, `scv-seed.js`, both suites, and the
   two readers (010, 045). Figures marked *measured* came from two pure-Node probes over the shipped 2026-27 seed
   and the shipped modules; they were not kept. Questions that are Devon's are listed at the end and not answered.
-  **Built, increment 1 (AI-22, 2026-10-27, v358-v360; `HISTORY.md` has the detail).** `seating-solve.mjs` (+ `test:seating-solver`,
-  `golden.json`), storage for `rules`/`prefs`/`desk.empty` with the pair-list mirror (`test:seating-migration`), `seating-explain.mjs`
-  and the **Why?** panel behind Auto-assign (`test:seating-explain`, a block in `drive-seating.mjs`). **Devon's answers of 2026-10-21
-  (`DEVON-ANSWERS-2026-10-21.md`, binding) are settled: P14-1 to P14-11, every one "keep the default" as written under "Questions"
-  below, and the photos are closed ("keep what exists, add no more photo features").** Not built, in rank 35: the Rules block, Leave
-  empty, Fill the gaps, the prefs settings row, `rules` in the share link and on the sub export, the `inline-sinks` look at the new
-  block. Two differences from the design: a hard together over a hard apart is dropped and named (a soft one is kept), and 005 is
-  already a shell tool.
   - *What is there today, as read.* Two pacing layers that do not know about each other. (1) `cal.pacing =
     { startDate, lessons, adjustments }`: one lesson sequence, one lesson a school day, placed by `placeLessons()`
     on every render. **It already recomputes** round a no-school tag; a bump is `{ id, beforeLessonId, reason,
@@ -6192,6 +6186,14 @@ un-extracted.
   came from two pure-Node probes that imported the real `seating.mjs` from the worktree and drove
   `assignSeats()` with a seeded generator over invented rooms and names; they were not kept. Questions that
   are Devon's are listed at the end and not answered.
+  **Built (AI-22, 2026-10-27, v358-v364; `HISTORY.md` has the detail).** Increment 1 (v358-v360): `seating-solve.mjs` (+ `test:seating-solver`,
+  `golden.json`), storage for `rules`/`prefs`/`desk.empty` with the pair-list mirror (`test:seating-migration`), `seating-explain.mjs` and the
+  **Why?** panel behind Auto-assign (`test:seating-explain`). Increment 2 (v361-v364): the Rules block on the page (`seating-rules.mjs`,
+  `test:seating-rules`), Leave empty (E on a desk) and Fill the gaps, the four preference settings, `rules` in the share link and file without
+  `why` and on the sub export by kind. **Devon's answers of 2026-10-21 (`DEVON-ANSWERS-2026-10-21.md`, binding) are settled: P14-1 to P14-11,
+  every one "keep the default", and the photos are closed ("keep what exists, add no more photo features").** Two differences from the design:
+  a hard together over a hard apart is dropped and named by the solver (a soft one is kept) and refused by the Rules block, and 005 is already a
+  shell tool. P3 is whole; P4 and P5 are rank 36 and 37.
   - *What is there today, as read.* **The constraint language is five things.** *Keep apart* and *put
     together* are lists of student-id pairs on the section (`apart`, `together`); a pair cannot be both (the
     page enforces it on entry, `repairSection` drops a together pair that is also apart, silently). *A locked
@@ -6508,8 +6510,8 @@ un-extracted.
 **Status.** P1 shipped 2026-09-03. P2 shipped 2026-09-04 (#182, `CACHE_VERSION` v148) with
 010 as its single adopter; 008, 045 and 007 still carry their own readers, for reasons
 recorded in the module header and in this file's "what these phases leave" notes. **P3 designed 2026-10-05
-(AI-22); increment 1 built 2026-10-27 (v358-v360):** the solver, its storage and the Why? panel; the Rules block and the
-rest are left (rank 35). P3–P5 open.
+(AI-22); built 2026-10-27 (v358-v364):** the solver, its storage, the Why? panel, the Rules block, Leave empty, Fill the gaps,
+the four preferences, and rules in the share link and on the sub export. P3 is whole; P4 and P5 open.
 
 **Model.** Fable for P3; Opus otherwise.
 
