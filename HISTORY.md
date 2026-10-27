@@ -9,6 +9,42 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-21: Path 13 P4 increment 1, 020 changes a decided match and allows drawn games (2026-10-27, v356)
+
+**Why.** Rank 34. Its text was stale: double elimination, pools, Swiss, team rosters and a first-round consolation
+bracket with a third-place game (v284) were already in 020. What was missing was a way to fix a wrong tap, and draws.
+
+**Shipped.** (1) A decided slot that lost can be clicked to give the match to that side. Single elimination: the match's
+own score and every later decision that had used the old winner are cleared, the page counts them in a `confirm()` first,
+the flip is one Undo; the first-round consolation takes the changed loser out (and the games decided from them), a changed
+semifinal clears the third-place pick, a consolation game and the third-place game can be flipped the same way. Round
+robin, pools and Swiss: a flip drops a score that names the other result; pools ask before discarding a bracket already
+drawn from them (and its `br_` scores), Swiss before discarding the rounds after the flipped one. Double elimination is not
+offered. (2) "Allow drawn games" (`state.draws`, round robin, pools, Swiss; absent = off): a tied score or a Draw button
+stores `winner: 'draw'`; standings add a `d` field only on a row that has drawn, order by `w + d/2` (then diff, losses,
+name), show a D column only once a draw exists, and the champion banner and `seedOrderFromPools` follow. Every format with
+draws off, and elimination always, shows "Tied: click the winner" on a tied open match. Engine: `Bracket.dependentsOf`,
+`redecideElimination`, `vacateSlot`, `resultFromScores`, `setMatchResult`, `swissReopen`, `poolsReopen`;
+`BtTeams.reflow`/`decidedCount`. Tests: `test:bracket-engine` 46 (nine new, each with its rule broken),
+`test:bracket-parity` 1,861 / 0 (the 1,860 old comparisons untouched), new `test:bracket-redecide` (port 8557; five
+scenarios, eleven break-on-purpose reruns through a route that rewrites the page, and the five v276 saved brackets opened
+without a draws switch, a D column or a drawn game).
+
+**Calls made (reversible), all on the defaults in the P4 bullet.** Re-deciding clears later results (not "flags" them); a
+draw is half a win; elimination refuses a tie and the teacher breaks it by hand; draws are opt-in per bracket and cannot be
+switched off once a game is drawn; double-elimination results can only be undone. The consolation item was closed, not
+built: it already existed.
+
+**What went wrong / what to know.** `smoke-academic.mjs` pins the SHA of the whole bracket card for the v276 saved brackets;
+the draws bar and the `slot-changeable` class/title changed those hashes. The pins were **not** re-recorded: the suite now
+strips exactly those three additions (`plain()`) before hashing, so all 180 checks pass on the old golden and the rest of the
+card is proved byte-identical. `draws` is not backward-compatible with an older page (it would read `'draw'` as a win for
+the second side). **One commit, not two:** the task asked re-deciding and draws as separate commits and version bumps; they
+shared the standings and the page's helpers and were built together, so they landed as one (v356). **Not verified:** nothing
+ran on a phone or projector; academic-tournament mode's stored marks are not touched by a flip (a flipped academic match keeps
+its marks); a pools-fed bracket's own games cannot be changed; the full `npm test` was not run (`_shared/bracket.js` selects
+everything).
+
 ## AI-21: Path 13 P3 step 3, 017 on the rotation engine (2026-10-27, v355)
 
 **Why.** Rank 33's last step: 017, 069 and 004 each keep a station timer.

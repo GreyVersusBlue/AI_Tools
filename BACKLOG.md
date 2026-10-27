@@ -87,11 +87,20 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-21 (v356), rank 34 (kept, rewritten), Path 13 P4 increment 1: 020 changes a decided match and allows drawn games.**
+  Click the losing slot of a decided match to give it to that side (single elimination clears the match's score and every
+  later decision that used the old winner, after a count and a `confirm()`, one Undo; the consolation bracket and the
+  third-place pick follow; round robin, pools and Swiss flip, pools discard a drawn bracket and Swiss the later rounds, each
+  after asking); "Allow drawn games" (round robin, pools, Swiss; `winner: 'draw'`, half a win, a D column once one exists).
+  `test:bracket-redecide` (port 8557, **next free 8558**), `test:bracket-engine` 46, `test:bracket-parity` 1,861 / 0;
+  `smoke-academic.mjs`'s v276 pins held by stripping the three additions, not re-recorded. The first-round consolation and
+  team rosters already existed (v284); that item is closed. **Left of Path 13: rank 32 (project teams, parked on Devon's
+  questions), rank 34 (the second-display mode via Path 8).**
 - **AI-21 (v355), rank 33 DELETED (a gap): Path 13 P3 is whole.** `Rotation.rotateNow`/`tick` gained `finishAt` (the count that
   ends a run), and 017's station timer runs on `_shared/rotation.js` (`test:gallery-rotation-parity`, 72,000 / 0; 021's
   64,000 unchanged). 069's circuit and 004's round-robin tab are not this arithmetic and did not move (reasons in the P3
   bullet). No new port (**next free 8557**). **Left of Path 13: rank 32 (project teams, parked on Devon's questions), rank 34
-  (P4: ties, consolation, re-deciding a match; double elimination, pools and Swiss already exist in 020).**
+  (P4: the second-display mode via Path 8; re-deciding, draws, consolation, pools, Swiss and double elimination exist in 020).**
 - **AI-21 (v353–v354), rank 33 (kept, rewritten), Path 13 P3 steps 1 and 2: the shared bracket and rotation engines.**
   `_shared/bracket.js` (020's pure code, 29 functions, v353) and `_shared/rotation.js` (021's assignment and clock, v354),
   each a port alone behind a parity suite (`test:bracket-parity` 1,860, `test:rotation-parity` 64,000) and a unit suite whose
@@ -748,7 +757,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Increment 5 (AI-14, v300): named sets on 030, an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section, and its storage design under it): made from ticked questions of the bank or a built-in set, a question in a set more than once if wanted; reordered, trimmed, renamed, deleted, printed and pulled into a board whole from “Questions from”; carried in the bank file and imported beside a set already here, never over it; and a Tag filter on 030's list (the chosen source's tags).** **Left:** 018 and 019 pull station questions from it. 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 32 | Path 13 P2 — the rest. **All six splitters call `_shared/grouping.js` (v336–v341); 002, 022 and 027 keep their memory in a `groupHistory` field with the old fields written from it (v341–v343) and key it by roster id (v344–v346); the five improvements are in (002's floater fix v347, `keepStrategy` v348, `together: 'units'` v349, `restarts` for 002 and 022 v350, `method: 'best'` for 022 and 027 v351); the P2 bullet's increments 1–6.** Seating-aware grouping on 002 is in (v352, increment 6). Left: project teams on 002, parked on Devon's six questions (the P2 bullet, increment 6). Hold the twelve golden classes (`golden-old-groupings.json` now carries six re-recorded scenarios, each with an `amended` note), `smoke-rename-follow.mjs`, `test:grouping-parity` and `test:grouping-adopters` | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
-| 34 | Path 13 P4 — bracket completeness: double elimination, pools, Swiss, ties, consolation | 020 | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
+| 34 | Path 13 P4 — the second-display mode for 020 via Path 8. **Built: double elimination, pools, Swiss, team rosters, a first-round consolation (v284), re-deciding a decided match and drawn games (v356; the P4 bullet).** Left: the second display; and, only if asked for, re-deciding in double elimination or in a pools-fed bracket, a draw in an elimination bracket, a 3-1-0 table | 020 | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 35 | Path 14 P3 — seating constraint solver that explains which soft constraints it broke (**designed 2026-10-05, not built**: the design and eleven questions for Devon are under the P3 bullet) | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 36 | Path 14 P4 — the room, not the grid: a room layer shared across period assignments | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 37 | Path 14 P5 — live mode; extract the undo stack into `_shared/undo.js` | 005 | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
@@ -6091,6 +6100,12 @@ match; (021's silent overwrite of a saved unit on a name collision was fixed in 
   a 3-1-0 table, or a draw that is neither); (3) elimination refuses a tie and the teacher breaks it by hand (alternative:
   a sudden-death field); (4) draws are a per-bracket opt-in rather than always on; (5) double-elimination results can't be
   changed, only undone. **Second-display mode** stays for a later session.
+  **Built (AI-21, 2026-10-27, v356).** Increment 1 as designed: re-deciding (single elimination with the consolation and
+  third place, round robin, pools, Swiss) and drawn games (round robin, pools, Swiss), on every default above, in one commit.
+  The three questions' answers are still Devon's. Consolation was already built (v284), so no consolation work was done.
+  `test:bracket-redecide`, `test:bracket-engine`, `test:bracket-parity`; `smoke-academic.mjs` strips the additions before
+  hashing, so its v276 pins are the old ones. **Not built:** the second-display mode; double-elimination and pools-fed-bracket
+  re-deciding; academic-mode marks do not follow a flip. Not tried on a phone or projector.
 
 **Model.** Fable for P1; Opus for the rest.
 
