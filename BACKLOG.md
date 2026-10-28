@@ -6781,6 +6781,35 @@ grades by policy — keep that.
   curve, re-weight) with a before/after distribution drawn by P1; grading window
   from Path 9; roster join so missing students are flagged and triage lists flow to
   085/068. Still no grade persistence without an explicit, visible opt-in.
+  **Design (AI-24, 2026-10-28; written before any code, read against 036 at v415).** *What 036 is.* Four quarter
+  percentages per student (`QUARTERS = 4` in `grade-math.mjs`, used by the page in about thirty places), a Scenarios
+  card that already drops, curves and re-weights (`scenario-math.mjs`, v291) and shows before/after as a table and letter
+  counts, a triage card, and a what-if card. It writes only its settings object, and only when "Remember" is ticked.
+  **No grade is persisted by this phase, whatever the steps below do (Devon's standing policy).**
+  *Step 1, term count and column layout.* A setting `terms` (2 semesters, 3 trimesters, 4 quarters; **default 4**, so a
+  page at its defaults is byte-for-byte today's, held by `golden-old-page.json`). Every pure function takes the count
+  from `opts.terms` and falls back to `QUARTERS`; the page reads it from one `termCount()` and builds the student card,
+  weight boxes, need-on-the-final tab, exports, slips and the mapping panel from it. Labels follow the count (Q1-Q4,
+  T1-T3, S1-S2). The paste window is N consecutive columns from `q1Col`; the column-mapping panel (name column, first
+  term column) already exists and is the "other districts' exports" answer; a semester exam is a third term column with
+  its own weight (3 terms, custom weights), said in the help text. Final needs every term present, as today. The
+  all-four-required wording becomes "all N".
+  *Step 2, before/after chart.* The Scenarios card draws the class distribution of final percentages before and after as
+  two `ChartSvg` histograms on one bucket list and one count axis (the P3 small-multiples approach), plus a letter-count
+  grouped bar; `role="img"`, title/desc, polite announcement, no names in either. The numbers come from
+  `compareClass()`, so no second calculation.
+  *Step 3, roster join.* An optional "Check against a roster" box (a pasted name list, read with `PasteTable`; or the
+  Class Roster Hub list through `_shared/roster.js` when it has one, read-only) that flags a roster name with no row in
+  the paste and a row not on the roster. Matching is on normalised name (case, spaces, "Last, First"); an ambiguous or
+  unmatched name is named, never guessed. Held in memory only.
+  *Step 4, grading window.* The Need-on-the-final tab's "weeks left" line reads the school calendar the way 032 stores
+  it through `_shared/school-day.js` (already loaded by 036 for `need-calendar`); step 4 is built only if that read gives
+  the quarter's end cleanly, else it is listed as the blocker.
+  *Step 5, triage lists out.* Missing-work and one-away lists go to 085/068 only through an existing `_shared/handoffs.js`
+  route the receiving tool already accepts; if none exists, it is listed, not built.
+  *Defaults taken, none of them Devon's open questions:* 4 terms; 2/3/4 only; scenario chart is a class histogram, not
+  per student; **grade persistence stays off (his question: should a teacher be able to opt in to remembering a roster or
+  scores? default: no)**.
 - **P5 — 038 for science.** Regression with R², log axes, multi-series scatter,
   annotation layer (arrows, callouts, shaded regions), multiple charts per printed
   page; handoffs to 065 and 073.
