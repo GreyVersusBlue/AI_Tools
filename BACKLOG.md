@@ -7919,7 +7919,9 @@ runtime, the one content fetch that leaves the browser.
     `_shared/geo-project.js` exactly as the bundled sets are: plate carrée, the stage unit one pixel of the 4000 px
     raster `pixelSizeFor(bounds)` describes, so labels, markers, regions, lines, the grid, the scale bar and the hit
     test need no change. The calibration bounds are the data's box (unwrapped longitudes, so Fiji or Chukotka do
-    not span the world) plus 4% a side, the whole world when it spans 360 degrees. Plate carrée stretches a local map
+    not span the world) plus 4% a side, the whole world when it spans 360 degrees, **and when separate parts sit on both sides of 180
+    (Fiji's islands as two rings)**: the renderer shifts a ring by 360 only when that ring itself crosses 180, so a part wholly at
+    -180..-178 could not be placed at 180..182 without changing the shared module; whole-world is the honest calibration. Plate carrée stretches a local map
     sideways at high latitude as the Europe and Alaska crops already do; that is accepted, because the calibration says
     equirectangular. Each shape is filled on its own (an even-odd path over all shapes would punch holes where
     shapes overlap, as nested watersheds do); borders on/off is the same layer, shown or not. No shaded relief.

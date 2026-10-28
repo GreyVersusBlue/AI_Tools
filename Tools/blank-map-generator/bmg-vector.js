@@ -80,8 +80,31 @@ const STYLE_PAINT = {
   land: { ocean: '#e4eef5', land: '#f6f1e4', stroke: '#5c5a52' },
 };
 
+// Boundary files a teacher dropped on the page (Path 20 P2, bmg-dropped.js): key -> { preset,
+// geojson }, in memory only. The file itself is stored by bmg-geo-store.js; this registry is
+// what lets findPreset() and presetFromBaseMapId() answer for a `custom-...` key.
+const customPresets = new Map();
+
+/** Makes a dropped file's preset known to this module. `parsed` is a parseBoundaryFile() success. */
+export function registerCustomPreset(parsed) {
+  const preset = Object.freeze({
+    key: parsed.key,
+    label: parsed.title,
+    dataset: 'custom',
+    custom: true,
+    bounds: Object.freeze({ ...parsed.bounds }),
+    note: 'Your file: ' + parsed.stats.shapes + ' shape' + (parsed.stats.shapes === 1 ? '' : 's') + ', drawn here on your own machine. It is kept on this device only.',
+  });
+  customPresets.set(parsed.key, { preset, geojson: parsed.geojson });
+  return preset;
+}
+
+export function customPresetList() {
+  return Array.from(customPresets.values(), c => c.preset);
+}
+
 export function findPreset(key) {
-  return BASE_MAP_PRESETS.find(p => p.key === key) || null;
+  return BASE_MAP_PRESETS.find(p => p.key === key) || (customPresets.get(key) || {}).preset || null;
 }
 
 /**
@@ -99,6 +122,18 @@ export function presetFromBaseMapId(id) {
 // Fetched GeoJSON is kept in memory for the life of the page: switching
 // styles or re-cropping a continent shouldn't re-read a 200 KB file.
 const geoCache = new Map();
+
+/** One layer of a preset's geometry: the vendored files for a built-in map, the dropped file (its one layer is both) for a custom one. */
+async function layerFor(preset, which) {
+  if (preset.custom) {
+    const c = customPresets.get(preset.key);
+    if (!c) throw new Error('that dropped file is not loaded; drop it again');
+    return c.geojson;
+  }
+  const files = DATASETS[preset.dataset];
+  if (!files) throw new Error(`unknown base map dataset "${preset.dataset}"`);
+  return loadGeoJson(files[which]);
+}
 
 async function loadGeoJson(file) {
   if (geoCache.has(file)) return geoCache.get(file);
@@ -149,7 +184,8 @@ export function sameBaseMap(a, b) {
 
 export function baseMapTitle(preset, style, borders, shaded, relief = false) {
   const parts = [preset.label];
-  if (preset.dataset === 'us') parts.push(borders ? 'state outlines' : 'national outline');
+  if (preset.custom) parts.push(borders ? 'your file, with boundaries' : 'your file, outline');
+  else if (preset.dataset === 'us') parts.push(borders ? 'state outlines' : 'national outline');
   else parts.push(borders ? 'country outlines' : 'coastlines only');
   if (style === 'land') parts.push('land fill');
   if (relief && !shaded && hasRelief(preset)) parts.push('shaded relief');
@@ -198,6 +234,7 @@ export async function listRegionNames(preset) {
  * entering shade mode on a map that is already drawn costs no second read.
  */
 export async function loadDividedGeoJson(preset) {
+  if (preset && preset.custom) return layerFor(preset, 'divided');
   const files = DATASETS[preset && preset.dataset];
   if (!files) return { type: 'FeatureCollection', features: [] };
   return loadGeoJson(files.divided);
@@ -244,18 +281,17 @@ export async function renderBaseMapCanvas(preset, { style = 'outline', borders =
   // and then throwing nine tenths of it away in the downscale is slow for no
   // gain. Everything else takes the default and is unaffected.
   const { width, height } = pixelSizeFor(bounds, longSide);
-  const files = DATASETS[preset.dataset];
-  if (!files) throw new Error(`unknown base map dataset "${preset.dataset}"`);
+  if (!preset.custom && !DATASETS[preset.dataset]) throw new Error(`unknown base map dataset "${preset.dataset}"`);
   const shading = fills && Object.keys(fills).length ? fills : null;
   // Relief is off under data shading: hill shading behind data colours
   // reads as data. The page disables the toggle too; this is the backstop.
   const reliefImg = relief && !shading && hasRelief(preset) ? await loadReliefImage(preset) : null;
 
-  const whole = await loadGeoJson(files.whole);
+  const whole = await layerFor(preset, 'whole');
   // Data shading is per-region, so it needs the divided file even when the
   // teacher has boundaries switched off — you can still shade Maryland on a
   // borderless map, the shapes just aren't outlined.
-  const divided = (borders || shading) ? await loadGeoJson(files.divided) : null;
+  const divided = (borders || shading) ? await layerFor(preset, 'divided') : null;
 
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -267,9 +303,21 @@ export async function renderBaseMapCanvas(preset, { style = 'outline', borders =
 
   // Land fill comes from the undivided landmass so no seams show between
   // neighbours; the boundaries are stroked on top of it afterwards.
-  traceFeatures(ctx, whole, bounds, width, height);
-  ctx.fillStyle = paint.land;
-  ctx.fill('evenodd');
+  if (preset.custom) {
+    // A dropped file's shapes may overlap (nested watersheds, a district inside a county); one
+    // even-odd path over all of them would punch holes where they do. Each shape is filled on
+    // its own instead, so only its own holes cancel.
+    ctx.fillStyle = paint.land;
+    for (const feature of whole.features) {
+      ctx.beginPath();
+      traceFeature(ctx, feature, bounds, width, height, false);
+      ctx.fill('evenodd');
+    }
+  } else {
+    traceFeatures(ctx, whole, bounds, width, height);
+    ctx.fillStyle = paint.land;
+    ctx.fill('evenodd');
+  }
 
   // The relief multiplies over the land fill only (the path above is still
   // current, so it is the clip). Multiply keeps either style's land colour
@@ -321,7 +369,9 @@ export async function buildBaseMapRecord(preset, { style = 'outline', borders = 
     mime: 'image/png',
     width,
     height,
-    attribution: { ...NATURAL_EARTH_ATTRIBUTION },
+    attribution: preset.custom
+      ? { artist: 'Your file: ' + preset.label, license: 'Supplied by the teacher', licenseUrl: null, descriptionUrl: null }
+      : { ...NATURAL_EARTH_ATTRIBUTION },
     calibration,
     cachedAt: Date.now(),
   };

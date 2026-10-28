@@ -506,6 +506,8 @@
         <label class="baseMapCheck"><input type="checkbox" id="baseMapBorders" checked data-no-pan> Show borders</label>
         <label class="baseMapCheck" id="baseMapReliefLabel"><input type="checkbox" id="baseMapRelief" data-no-pan> Shaded relief</label>
         <button id="btnBaseMap" class="small primary">Use this base map</button>
+        <button id="btnBaseMapFile" class="small" title="Use a GeoJSON or TopoJSON boundary file of your own (a district, a watershed, a historical border) as the base map. You can also drop the file anywhere on this strip.">Your own file&hellip;</button>
+        <input type="file" id="baseMapFile" accept=".geojson,.topojson,.json,application/geo+json,application/json" hidden aria-label="Boundary file (GeoJSON or TopoJSON)">
         <button id="btnChoroToggle" class="small toggle" title="Shade each state or country according to a number you paste in — population, rainfall, votes, anything with one value per place.">Shade by data&hellip;</button>
       </div>
       <p class="hint" id="baseMapHint">Drawn here on your own machine from map data that ships with this tool &mdash; no internet, no searching, and the map arrives already calibrated, so the lat/long grid, scale bar, distance tool and label sets all work straight away.</p>
@@ -884,6 +886,8 @@ import {
   renderBaseMapCanvas, NATURAL_EARTH_ATTRIBUTION,
 } from './blank-map-generator/bmg-vector.js';
 import { buildRegionIndex, hitTestRegion, compactRings, largestRing } from './blank-map-generator/bmg-hittest.js';
+import { parseBoundaryFile } from './blank-map-generator/bmg-dropped.js';
+import { saveDropped, restoreDropped, listDropped } from './blank-map-generator/bmg-geo-store.js';
 
 const store = createStore();
 let project = store.getActiveProject();
@@ -2578,6 +2582,10 @@ el('baseMapSelect').addEventListener('change', renderBaseMapHint);
 renderBaseMapHint();
 
 async function useBuiltInBaseMap() {
+  if (!(await ensureDroppedLoaded(el('baseMapSelect').value))) {
+    setStatus('That file is not stored in this browser any more. Choose “Your own file…” and drop it again.', true);
+    return;
+  }
   const preset = findPreset(el('baseMapSelect').value);
   if (!preset) return;
   const style = el('baseMapStyleSelect').value;
@@ -2624,6 +2632,87 @@ async function useBuiltInBaseMap() {
   }
 }
 el('btnBaseMap').addEventListener('click', useBuiltInBaseMap);
+
+// --- Your own boundary file (Path 20 P2) -----------------------------------
+// A dropped or chosen GeoJSON / TopoJSON file becomes a base map through the same path
+// as a built-in one: bmg-dropped.js reads and checks it, bmg-geo-store.js keeps the clean
+// copy in gvb-media (not the cache), bmg-vector.js draws it as a preset of its own, and
+// useBuiltInBaseMap() does the rest. Nothing is fetched, and nothing runs at page load:
+// the stored files are listed only when the base map list is first opened.
+let droppedListed = false;
+
+function addDroppedOption(preset) {
+  let group = el('baseMapSelect').querySelector('optgroup[data-yours]');
+  if (!group) {
+    group = document.createElement('optgroup');
+    group.label = 'Your files';
+    group.dataset.yours = '1';
+    el('baseMapSelect').appendChild(group);
+  }
+  let opt = Array.from(group.children).find(o => o.value === preset.key);
+  if (!opt) {
+    opt = document.createElement('option');
+    opt.value = preset.key;
+    group.appendChild(opt);
+  }
+  opt.textContent = preset.label;
+}
+
+async function listStoredDropped() {
+  if (droppedListed) return;
+  droppedListed = true;
+  const stored = await listDropped();
+  stored.forEach(f => addDroppedOption({ key: f.key, label: f.title }));
+}
+['focus', 'pointerdown'].forEach(ev => el('baseMapSelect').addEventListener(ev, listStoredDropped, { once: true }));
+
+/** Makes sure a chosen "Your files" entry has its geometry loaded; false if it is not stored here any more. */
+async function ensureDroppedLoaded(key) {
+  if (!/^custom-/.test(key) || findPreset(key)) return true;
+  const preset = await restoreDropped(key);
+  if (preset) addDroppedOption(preset);
+  return !!preset;
+}
+
+async function useDroppedFile(file) {
+  if (!file) return;
+  setStatus('<span class="spinner"></span>Reading ' + escapeHtml(file.name) + '&hellip;');
+  let text;
+  try { text = await file.text(); } catch (e) { setStatus("Couldn't read that file.", true); return; }
+  const parsed = parseBoundaryFile(text, file.name);
+  if (!parsed.ok) { setStatus(escapeHtml(parsed.message), true); return; }
+  let kept = true;
+  let preset;
+  try { preset = await saveDropped(parsed); } catch (err) {
+    kept = false;
+    preset = findPreset(parsed.key);
+    setShareNote(err.message.replace('this image', 'this file'), true);
+  }
+  addDroppedOption(preset);
+  el('baseMapSelect').value = preset.key;
+  renderBaseMapHint();
+  await useBuiltInBaseMap();
+  const notes = parsed.warnings.slice();
+  if (!kept) notes.push('It is not kept on this device, so it will need dropping again after you close the page.');
+  if (notes.length) setShareNote(preset.label + ': ' + notes.join(' '), !kept);
+}
+
+el('btnBaseMapFile').addEventListener('click', () => el('baseMapFile').click());
+el('baseMapFile').addEventListener('change', () => {
+  const file = el('baseMapFile').files && el('baseMapFile').files[0];
+  el('baseMapFile').value = '';
+  useDroppedFile(file);
+});
+{
+  const strip = document.querySelector('.baseMapStrip');
+  const hasFiles = e => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+  strip.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+  strip.addEventListener('drop', e => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    useDroppedFile(e.dataTransfer.files && e.dataTransfer.files[0]);
+  });
+}
 
 // --- Choropleth: shade the base map from pasted data ---------------------
 // The teacher pastes "place, number" rows; bmg-choropleth.js parses, matches
@@ -4551,6 +4640,13 @@ async function loadActiveProjectIntoUI(opts) {
   syncWorksheetControls();
   refreshLabelSetSelect();
   if (project.mapId) {
+    // A map drawn from a dropped file needs the file's shapes back for click-to-shade and data
+    // shading; the picture itself comes from the cache either way.
+    const droppedKey = /^vector:(custom-[0-9a-f]{16}):/.exec(project.mapId);
+    if (droppedKey && !findPreset(droppedKey[1])) {
+      const preset = await restoreDropped(droppedKey[1]).catch(() => null);
+      if (preset) addDroppedOption(preset);
+    }
     const cached = await cache.getCachedMap(project.mapId).catch(() => null);
     if (cached) { displayMap(cached); return; }
     showEmptyMapState(true);
@@ -4669,6 +4765,7 @@ function arrivalSentence(filed, how) {
   const mapId = String(project && project.mapId || '');
   let tail = '';
   if (mapId.startsWith('upload:')) tail = ' Its map was an uploaded picture, which does not travel: upload the same image here and the labels stay where they are.';
+  else if (/^vector:custom-/.test(mapId)) tail = ' Its map was drawn from a boundary file dropped on another device, which does not travel: drop the same file here with “Your own file…” and the labels stay where they are.';
   else if (mapId) tail = ' If the map itself does not appear, pick the same base map or search result again; the labels stay where they are.';
   return `${how} and saved it here as “${filed}”. Nothing you already had was replaced.${tail}`;
 }
