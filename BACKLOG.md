@@ -6660,6 +6660,44 @@ grades by policy — keep that.
   announcements), one grayscale-safe sequential ramp (the `RAMPS` +
   `relativeLuminance()` pair from `bmg-choropleth.js`), one rasterizer, one
   copy/download helper. 037 and 038 adopt it; 038 gets the a11y baseline.
+  **Design (AI-24, 2026-10-28; written before any code, read against 037 and 038 as they are on `main` at v401).**
+  *What 037 has and does not.* The backlog sentence above credits 037 with `<title>/<desc>` and announcements; it has
+  neither in its SVG (the standalone exports have no `<title>`, `<desc>` or `role`), only: the hatch patterns
+  (`hatchF`, `hatchZero`), `relLuminance`/`contrastRatio`/`textColorFor` (real WCAG contrast, both candidates, better one
+  wins), the `n = …` caption, the SVG→PNG rasterizer at 2x on white, and the copy-to-clipboard path with its three
+  fallbacks and an `aria-live` status line. P1 adds the `<title>/<desc>/role="img"` baseline to the module as an option
+  and gives it to 038; 037's output stays byte-identical in step 1.
+  *Where.* `_shared/chart-svg.js`, a classic script publishing `window.ChartSvg` (not a module: 037 and 038 are inline
+  classic scripts, and `export.js` is the precedent for loading one in Node with `vm`). Pure functions that return SVG
+  strings from plain data, no DOM, no `els`; the browser half (rasterize, download, copy) is separate and touches
+  `document` only inside the call.
+  *Surface, built in this order.*
+  (1) **Step 1, the port of 037.** `escapeXml`, `fmt`, `relativeLuminance(hex)`, `contrastRatio(l1, l2)`,
+  `textColorFor(hex)`, `hatchPattern(id, base, stroke)`, `stackedBar(data, opts)` and `histogram(data, opts)` (037's two
+  builders, taking the data object `lastChartData` already is and `opts` for the hatch and colours, defaults = 037's);
+  `toPngBlob(svg, w, h, onBlob, onError)`, `downloadBlob`, `downloadSvg`, `downloadPng`, `copyImage(svg, base, w, h, row)`
+  and `setStatus(row, text, isError)` (037's copy path moved unchanged). 037 calls them; its HTML is not touched and no
+  chart output changes. Held by `test:chart-svg-parity` (a frozen copy of 037's old functions,
+  `Tools/grade-distribution-visualizer/test/_legacy-chart.mjs`, same data, byte-identical SVG, over a grid of score sets
+  and cutoffs) and `test:chart-svg` (pure Node: contrast arithmetic, the label-colour rule on every ramp step, escaping,
+  each builder's invariants, with break-on-purpose mutants), plus the existing `test:grade-dist` browser suite.
+  (2) **Step 2, 038 adopts.** Axes and scales (`niceMax`, `formatNum`, the tick/label drawing), `bar`, `line`, `pie`,
+  `scatter` (with `linearRegression`) and `box`, each taking `{ W, H, pad, title, yLabel, showValues, series, … }`
+  instead of reading 038's DOM. 038 keeps its parsing, column picking, share link and worksheet; it loses its
+  drawing, rasterizer and download code. The a11y baseline lands here: `role="img"` with `<title>` and a generated
+  `<desc>` (type, categories, values), a polite live-region announcement on every redraw, contrast-aware value labels
+  (the white pie percentages on yellow are the failure today), and a hatch per series in the grayscale mode on top of
+  its dash and lightness. A frozen copy of 038's old drawing proves the geometry did not move; the added elements are
+  stripped before the byte comparison. `test:a11y --only 038` clean, its allowlist line deleted if it has one.
+  (3) **Step 3, the ramp.** `RAMPS`/`relativeLuminance()` from `bmg-choropleth.js` move to `ChartSvg.ramp(name, n)` only
+  if the map's luminance-step guarantee (`RAMP_LUMINANCE_STEP`) carries over unchanged; 046's choropleth is held by
+  its existing suites. If it does not fit, it stays and this bullet says why.
+  *What stays where.* Histogram bucketing (`buildBuckets`) and the stats stay in 037 until P3 (item analysis) says what
+  they need; 036 has no chart yet (P4). Colour policy stays the tool's: the module takes hex, the tool decides what
+  they mean. 036 persists no grades and this adds none.
+  *Defaults taken, none of them Devon's open questions:* the 2x PNG on white stays the one rasterizer; a chart's
+  `<desc>` is generated from the data and is English only; `_shared/chart-svg.js` goes in `PRECACHE_URLS` and, as a `_shared/` file (as `geo-project.js` did),
+  in `SHELL_URLS` too.
 - **P2 — `_shared/paste-table.js`.** One parser for pasted spreadsheet regions
   (tabs/commas/semicolons/pipes, header detection, thousands separators, names
   containing the delimiter, a "rows I couldn't read" report rather than guesses),
