@@ -9,6 +9,34 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-28: Path 20 P3 increment 1, the base map drawn from the vectors on screen (2026-10-28, v426-v428)
+
+**What shipped.** Three steps, each its own commit and `CACHE_VERSION`. v426: `Tools/blank-map-generator/bmg-live.js`, the one draw
+function of the P3 design (`parseBaseMapId`, `loadSource`, `drawBaseMap`, `drawExtent`), over `_shared/geo-project.js`. v427: 046's
+screen draws a plain built-in map on `#baseCanvas`, a border 1 px at every zoom, one redraw per animation frame. v428: the map is a
+focusable named group with keyboard pan and zoom and a polite status line naming the zoom and the longitude/latitude window.
+
+**Decided here (cheap to reverse).** `renderBaseMapCanvas()` was not turned into a wrapper as the design said: it stays the raster path
+untouched, and the parity suite holds the live drawing to its bytes at the identity view instead, which gives the same guarantee with no
+risk to 015's panel, the series sheet or the cache records. The raster is still built and cached for every built-in pick, because the
+exports, the locator and the stage's size read it; removing the write waits until the exports draw vectors. A shaded map stays the
+raster until its fills can be rebuilt on load. Nothing here touches a project's stored data (the stage unit is unchanged), so there is
+no `__v` bump and no migration. No decision numbers.
+
+**Verified.** `test:blank-map-live` (pure Node, 11 mutants, all caught), `test:blank-map-live-parity` (48 pairs byte-equal; break-on-purpose
+with the stroke width and fill rule changed fails), `test:blank-map-live-viewer` (port 8585: a 20-event wheel burst is 1 to 2 draws, a
+12x border 4 px or less, reload reopens live at the saved view, shading falls back to the raster and un-shading returns, Download PNG
+identical with the canvas shown or not, axe clean, no off-site request from its own steps; a stroke of 12 px makes it fail),
+`test:blank-map-live-keys` (port 8586: pan directions and amounts, `+ - 0 Home`, a selected label keeps the arrows, the announcement
+computed independently from the saved view; reversing the arrows or dropping the label guard each fail it). `--only blank-map-generator`
+(14 suites), `--only timeline-builder`, `--only theme`, the a11y sweep for 046, all 95 tracked `*.test.mjs` with node, lint,
+`offline:build` + `offline:verify`, and the check:tests/precache(--base)/registry/dedupe/inline-sinks/hidden-flex/entities/print-clip/art/docs-commands/adoption sweeps.
+
+**Not verified.** A real device pixel ratio of 2 (the suites draw at 1), a Chromebook's frame time, a screen reader reading the status
+line, any printed page. **Found.** An empty project asks Wikimedia for a default search at load; that contradicts Devon's 2026-10-07
+answer and is recorded under P3 in `BACKLOG.md` as P5's to remove. **Obliges others.** `Tools/board-check/suite-durations.json` has
+estimates for the four new suites (3, 15, 25, 25 s); refresh with `suite-durations.mjs` from a CI run.
+
 ## AI-28: Path 20 P1's remainder and P2, a dropped boundary file as the base map (2026-10-28, v424-v425)
 
 **What shipped.** v424: 062's `gbq-map.js` dropped its own adapted `unwrapRing`/`drawableRings`/`project`/`traceFeature` and imports
