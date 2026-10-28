@@ -63,7 +63,7 @@ const eq = (a, b, label) => ok(a === b, `${label} (got ${JSON.stringify(a)}, wan
 const server = await serve(PORT);
 const browser = await launch();
 
-console.log('Stage rollout — 001, 004, 017, 021, 023, 025 and 064 on _shared/stage.js');
+console.log('Stage rollout — 001, 004, 017, 021, 023, 025, 030 and 064 on _shared/stage.js');
 
 /** The state every one of these checks reads, for a given stage + button. */
 const readState = (page, stageSel, btnSel) => page.evaluate(({ stageSel, btnSel }) => {
@@ -309,6 +309,35 @@ await driveStage(browser, {
   prep: async page => {
     await page.click('#sampleDeckBtn');
     await settle(page, 300);
+  },
+});
+
+/* ── 030 — Review Game Board (Path 5 P5-1) ───────────────────────────────
+   The body is the stage, as on 004 and 010: the board and both of its overlays
+   (clue, round) are inside it. A board has to exist for the toolbar's button to
+   show, so the prep builds one by hand the way smoke-dark-rollout's does. */
+await driveStage(browser, {
+  label: '030 board',
+  url: BASE + '/Tools/030-review-game-board.html',
+  stage: 'body',
+  stageName: 'body',
+  btn: '#fullscreenBtn',
+  hudded: false,
+  prep: async page => {
+    page.on('dialog', d => d.accept());
+    await page.click('#addCategoryBtn');
+    await settle(page, 250);
+    const blocks = page.locator('.category-block');
+    for (let i = 0, n = await blocks.count(); i < n; i++) {
+      const block = blocks.nth(i);
+      await block.locator('.cat-name-input').fill('Category ' + (i + 1));
+      for (let j = 0, m = await block.locator('.clue-question').count(); j < m; j++) {
+        await block.locator('.clue-question').nth(j).fill('Question ' + (j + 1) + '?');
+        await block.locator('.clue-answer').nth(j).fill('Answer ' + (j + 1));
+      }
+    }
+    await page.click('#buildFromManualBtn');
+    await settle(page, 800);
   },
 });
 

@@ -29,6 +29,7 @@
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
+<script src="../_shared/stage.js"></script>
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/export.js"></script>
 <script src="review-game-board/rgb-store.js"></script>
@@ -93,6 +94,13 @@
     line-height: 1.45;
   }
   .wrap { max-width: 1180px; margin: 0 auto; }
+  /* The fullscreen is _shared/stage.js's (Path 5 P5-1), mounted on <body> so the
+     board, the clue overlay and the round overlay are all inside the subtree
+     the browser fullscreens. A fullscreened <body> is a fixed box that does not
+     scroll by itself, and a tall board must still scroll. The helper's own
+     refused-fullscreen fallback already sets overflow:auto and paints the page's
+     --paper and --ink, which this page defines, so it needs no override. */
+  body.is-fullscreen { overflow-y: auto; }
 
 
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.2rem 1.3rem; margin-bottom: 1.2rem; }
@@ -615,6 +623,7 @@
     <label for="boardSwitch" style="margin:0;font-weight:600;font-size:.85rem;">Board:</label>
     <select id="boardSwitch"></select>
     <button class="secondary" id="projectorBtn" type="button" aria-pressed="false">Projector view</button>
+    <button class="secondary" id="fullscreenBtn" type="button">Fullscreen</button>
     <button class="secondary" id="newBoardBtn">New board</button>
     <button class="secondary" id="editBoardBtn">Edit questions</button>
     <button class="secondary" id="resetGameBtn">Reset game</button>
@@ -989,7 +998,7 @@
   }
 
   var els = {};
-  ['toolbar','boardSwitch','projectorBtn','newBoardBtn','editBoardBtn','resetGameBtn','deleteBoardBtn','storageLine','imageNote',
+  ['toolbar','boardSwitch','projectorBtn','fullscreenBtn','newBoardBtn','editBoardBtn','resetGameBtn','deleteBoardBtn','storageLine','imageNote',
    'printAnswerKeyBtn', 'printQuizBtn', 'exportBoardBtn', 'importBoardBtn', 'importBoardFile', 'printArea',
    'setupCard','boardName','categoriesEditor','addCategoryBtn','buildFromManualBtn',
    'importFile','downloadTemplateBtn','importStatus',
@@ -2393,6 +2402,21 @@
     if (projectorOn && remember && els.boardCard.style.display !== 'none') els.boardCard.scrollIntoView({ block: 'start' });
   }
   els.projectorBtn.addEventListener('click', function () { setProjector(!projectorOn, true); });
+
+  /* Fullscreen and the projector view are two switches, as on 010: the view is
+     a remembered display state a teacher may want without fullscreen (and a
+     reload cannot re-enter fullscreen, which needs a click), so neither turns
+     the other on. The stage ignores every key while a clue or a round is open:
+     Escape then belongs to the overlay (it closes the clue), and on the refused-
+     fullscreen fallback the helper would otherwise also leave the stage. */
+  Stage.mount(document.body, {
+    button: els.fullscreenBtn,
+    labels: { enter: 'Fullscreen', exit: 'Exit fullscreen' },
+    enabled: function () {
+      return !els.overlay.classList.contains('show') && !els.roundOverlay.classList.contains('show') &&
+        els.boardCard.style.display !== 'none' && els.boardsSection.classList.contains('active');
+    }
+  });
   /* P turns it on and off, when the board is what is on the screen and nothing is being typed. */
   document.addEventListener('keydown', function (e) {
     if (!/^p$/i.test(e.key) || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
