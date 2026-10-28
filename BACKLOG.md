@@ -6824,6 +6824,36 @@ grades by policy — keep that.
 - **P5 — 038 for science.** Regression with R², log axes, multi-series scatter,
   annotation layer (arrows, callouts, shaded regions), multiple charts per printed
   page; handoffs to 065 and 073.
+  **Design (AI-24, 2026-10-28, written before any code).** Six steps in the bullet's order, one commit and one
+  `CACHE_VERSION` each; each is whole on its own and the order is the stopping rule.
+  *Where things live.* The fitting is `Tools/data-chart-builder/dcb-fit.js`, a classic script publishing `window.ChartFit` (pure,
+  no DOM; `dcb-fit.test.mjs` loads it with `vm` and holds it to datasets whose answer is known by construction). Drawing stays in
+  `_shared/chart-svg.js`: `scatter()` takes new *optional* inputs only, so a call without them is byte-identical and
+  `test:chart-svg-draw-parity` stays green on the frozen copy (a mutant proves it would notice).
+  *Step 1, regression.* Models: linear, power (y = a·xᵇ), exponential (y = a·eᵇˣ), logarithmic (y = a + b·ln x), quadratic. **R² is
+  always computed on the original y** (1 − SSres/SStot with the model's own predictions), never on the transformed line, so two
+  models are comparable on one number; power/exponential/log fit by least squares on the transformed data and say so in the note;
+  a model that needs x > 0 or y > 0 and has a point that is not says which and leaves it out (a count in the note), and no fit
+  with fewer than 2 usable points (3 for quadratic) is drawn. The page's trendline checkbox stays; a "Model" select appears under it
+  (default linear, so every old state is the same chart), the equation and R² are on the chart (`fit.label`), in the `<desc>`, and
+  as a stat cell. Share state gains `trendModel` only when it is not `linear`.
+  *Step 2, log axes.* `xScale`/`yScale: 'log'` (base 10) on the scatter: decade ticks with 2 and 5 minor gridlines, nonpositive points
+  left out and counted in the `<desc>` and on the page. Linear stays the default and stays byte-identical. Share state: `xLog`,
+  `yLog` only when on.
+  *Step 3, multi-series scatter.* One X column, any number of Y columns (`series: [{label, points}]`); a marker shape per series
+  (circle, square, triangle, diamond) on top of colour so grayscale and colour-blind readers tell them apart, a legend, one fit per
+  series when the trendline is on (R² per series in the `<desc>`). Share state: `scatterYs` (extra Y columns).
+  *Step 4, annotations.* A list of `notes` in data coordinates, drawn after the points: `region` (x1 to x2, optional y band, shaded
+  and hatched, with a label), `arrow` (from a point to a point, label at the tail) and `callout` (text with a leader to a point).
+  Edited on a small card (type, numbers, text, Add/Remove); text is escaped and capped at 60 characters; they travel in the share
+  link (`notes`, validated and capped at 12) and are not stored on the device, like the data.
+  *Step 5, many charts on a printed page.* A "Chart sheet" of up to 6 snapshots (each the SVG string, nothing else) printed 1, 2, 4 or
+  6 to a page through `PrintKit` with its Preview button.
+  *Step 6, handoffs to 065 and 073.* **Only through an existing `_shared/handoffs.js` route a receiver already accepts.** 073's
+  `milestones` link takes a schedule and 065's `template` link takes a report template; neither takes a chart or a data table, so
+  no route exists and none is built from this side. What it would need is listed in the bullet when the step is reached.
+  *Defaults taken, none of them Devon's open questions:* base-10 logs only; R² on the original scale; no weighted fits; no
+  confidence bands; annotations are in memory and the share link, never stored.
 
 **Model.** Opus.
 
