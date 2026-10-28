@@ -297,6 +297,32 @@
       </div>
     </div>
 
+    <div class="card" id="notes-card" style="display:none;">
+      <h2>Annotations</h2>
+      <p class="hint" style="margin-top:0;">Mark the scatter in its own numbers: shade a range, point an arrow, or label a point. They stay on their points if you change the axes. They travel in a share link and are not saved on this device.</p>
+      <div class="control-group">
+        <label for="note-type">Add a</label>
+        <select id="note-type">
+          <option value="region">Shaded region</option>
+          <option value="arrow">Arrow</option>
+          <option value="callout">Callout (a label on a point)</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+        <div style="flex:1;min-width:6.5rem;"><label for="note-a" id="note-a-label">From X</label><input type="number" id="note-a" step="any"></div>
+        <div style="flex:1;min-width:6.5rem;"><label for="note-b" id="note-b-label">To X</label><input type="number" id="note-b" step="any"></div>
+        <div style="flex:1;min-width:6.5rem;"><label for="note-c" id="note-c-label">From Y (optional)</label><input type="number" id="note-c" step="any"></div>
+        <div style="flex:1;min-width:6.5rem;"><label for="note-d" id="note-d-label">To Y (optional)</label><input type="number" id="note-d" step="any"></div>
+      </div>
+      <div class="control-group">
+        <label for="note-text" id="note-text-label">Label (optional)</label>
+        <input type="text" id="note-text" maxlength="60">
+      </div>
+      <div class="btn-row"><button type="button" class="btn-secondary" id="note-add">Add to chart</button></div>
+      <p class="hint" id="notes-msg" role="status"></p>
+      <ul id="notes-list" aria-label="Notes on the chart" style="list-style:none;padding:0;margin:0.4rem 0 0;"></ul>
+    </div>
+
     <div id="msg"></div>
   </div>
 
@@ -358,7 +384,7 @@
 
   var els = {};
   ['data-input', 'has-headers', 'preview-table-wrap', 'preview-table', 'columns-card', 'category-col',
-   'value-cols-list', 'value-cols-note', 'scatter-cols-group', 'scatter-x-col', 'scatter-y-col', 'show-trendline', 'scatter-extra-group', 'scatter-extra-list', 'trend-model-group', 'trend-model', 'fit-note', 'x-log', 'y-log', 'log-note', 'options-card', 'chart-title',
+   'value-cols-list', 'value-cols-note', 'scatter-cols-group', 'scatter-x-col', 'scatter-y-col', 'show-trendline', 'scatter-extra-group', 'scatter-extra-list', 'notes-card', 'note-type', 'note-a', 'note-b', 'note-c', 'note-d', 'note-text', 'note-add', 'notes-msg', 'notes-list', 'trend-model-group', 'trend-model', 'fit-note', 'x-log', 'y-log', 'log-note', 'options-card', 'chart-title',
    'y-axis-label-group', 'y-axis-label', 'show-values', 'sort-row', 'sort-values', 'chart-stage', 'stats-grid', 'filename', 'btn-png', 'btn-svg', 'msg',
    'btn-choose-file', 'file-input', 'dataset-name', 'btn-save-dataset', 'saved-datasets-select',
    'btn-load-dataset', 'btn-delete-dataset', 'btn-undo-delete-dataset', 'grayscale-mode', 'show-error-bars', 'error-bars-config',
@@ -791,8 +817,69 @@
     els.scatterColsGroup.style.display = isScatter ? 'block' : 'none';
     els.sortRow.style.display = (isScatter || isPie || isBox) ? 'none' : 'flex';
     els.yAxisLabelGroup.style.display = isPie ? 'none' : 'block';
+    els.notesCard.style.display = isScatter ? 'block' : 'none';
     renderErrorBarConfig();
   }
+
+  // ── Annotations on the scatter (ChartSvg notes: data coordinates, in memory and the share link only) ──
+  var notes = [];
+  var NOTE_FIELDS = {
+    region: [['From X', 1], ['To X', 1], ['From Y (optional)', 1], ['To Y (optional)', 1], 'Label (optional)'],
+    arrow: [['Tail X', 1], ['Tail Y', 1], ['Head X', 1], ['Head Y', 1], 'Label (optional)'],
+    callout: [['X of the point', 1], ['Y of the point', 1], null, null, 'Text of the label']
+  };
+  function syncNoteForm() {
+    var f = NOTE_FIELDS[els.noteType.value] || NOTE_FIELDS.region;
+    ['a', 'b', 'c', 'd'].forEach(function (k, i) {
+      var inp = els['note' + k.toUpperCase()], lab = document.getElementById('note-' + k + '-label');
+      inp.parentNode.style.display = f[i] ? '' : 'none';
+      if (f[i]) lab.textContent = f[i][0];
+    });
+    document.getElementById('note-text-label').textContent = f[4];
+  }
+  function describeNote(n) {
+    if (n.type === 'region') return 'Shaded region, x ' + n.x1 + ' to ' + n.x2 + ('y1' in n ? ', y ' + n.y1 + ' to ' + n.y2 : '') + (n.text ? ': ' + n.text : '');
+    if (n.type === 'arrow') return 'Arrow from ' + n.x1 + ', ' + n.y1 + ' to ' + n.x2 + ', ' + n.y2 + (n.text ? ': ' + n.text : '');
+    return 'Callout at ' + n.x + ', ' + n.y + ': ' + n.text;
+  }
+  function renderNotesList() {
+    els.notesList.textContent = '';
+    notes.forEach(function (n, i) {
+      var li = document.createElement('li');
+      li.style.cssText = 'display:flex;gap:0.5rem;align-items:center;margin:0.25rem 0;font-size:0.84rem;';
+      var span = document.createElement('span');
+      span.style.flex = '1';
+      span.textContent = describeNote(n);
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'btn-secondary'; btn.textContent = 'Remove';
+      btn.setAttribute('aria-label', 'Remove note: ' + describeNote(n));
+      btn.addEventListener('click', function () {
+        notes.splice(i, 1);
+        renderNotesList(); els.notesMsg.textContent = 'Note removed.'; scheduleRender();
+      });
+      li.appendChild(span); li.appendChild(btn);
+      els.notesList.appendChild(li);
+    });
+  }
+  function noteNum(el) { return el.value.trim() === '' ? null : Number(el.value); }
+  els.noteType.addEventListener('change', syncNoteForm);
+  els.noteAdd.addEventListener('click', function () {
+    var type = els.noteType.value, a = noteNum(els.noteA), b = noteNum(els.noteB), c = noteNum(els.noteC), d = noteNum(els.noteD);
+    var text = els.noteText.value, raw;
+    if (notes.length >= 12) { els.notesMsg.textContent = 'A chart holds 12 notes. Remove one first.'; return; }
+    if (type === 'region') {
+      if ((c === null) !== (d === null)) { els.notesMsg.textContent = 'Fill in both Y values for a band, or neither for the full height.'; return; }
+      raw = { type: 'region', x1: a, x2: b, text: text };
+      if (c !== null) { raw.y1 = c; raw.y2 = d; }
+    } else if (type === 'arrow') raw = { type: 'arrow', x1: a, y1: b, x2: c, y2: d, text: text };
+    else raw = { type: 'callout', x: a, y: b, text: text };
+    var clean = ChartSvg.cleanNotes([raw])[0];
+    if (!clean) { els.notesMsg.textContent = type === 'callout' ? 'A callout needs both numbers and some text.' : type === 'arrow' ? 'An arrow needs four different numbers.' : 'Fill in the numbers for the region.'; return; }
+    notes.push(clean);
+    els.noteA.value = els.noteB.value = els.noteC.value = els.noteD.value = els.noteText.value = '';
+    els.notesMsg.textContent = 'Added. ' + notes.length + ' note' + (notes.length === 1 ? '' : 's') + ' on the chart.';
+    renderNotesList(); scheduleRender();
+  });
 
   function scheduleRender() { clearTimeout(debounceTimer); debounceTimer = setTimeout(render, 100); }
 
@@ -853,6 +940,7 @@
         var xLog = els.xLog.checked, yLog = els.yLog.checked;
         var scOpts = fitObj && model !== 'linear' ? { fit: fitObj } : {};
         if (fitsList && model !== 'linear') scOpts.fits = fitsList;
+        if (notes.length) scOpts.notes = notes;
         if (xLog) scOpts.xScale = 'log';
         if (yLog) scOpts.yScale = 'log';
         svg = ChartSvg.scatter(sc, chartOpts(scOpts));
@@ -1100,6 +1188,7 @@
         xLog: els.xLog.checked || undefined,
         yLog: els.yLog.checked || undefined,
         scatterYs: extraYs.length ? extraYs.slice() : undefined,
+        notes: notes.length ? notes : undefined,
         errorBars: els.showErrorBars.checked,
         errorCols: errorCols,
         title: els.chartTitle.value,
@@ -1155,6 +1244,8 @@
         if (inRange(c.scatterY)) els.scatterYCol.value = c.scatterY;
         extraYs = Array.isArray(c.scatterYs) ? c.scatterYs.filter(function (n, i, a) { return inRange(n) && numericCols.indexOf(n) !== -1 && a.indexOf(n) === i; }).slice(0, 6) : [];
         renderExtraYs();
+        notes = ChartSvg.cleanNotes(c.notes);
+        renderNotesList();
         if (Array.isArray(c.valueCols) && c.valueCols.length) {
           document.querySelectorAll('.value-col-cb').forEach(function (cb) {
             cb.checked = c.valueCols.indexOf(parseInt(cb.value, 10)) !== -1;
@@ -1179,6 +1270,7 @@
 
   // ── Init ─────────────────────────────────────────────────────────────────
   loadSettings();
+  syncNoteForm();
   syncChartTypeUI();
   refreshSavedDatasetsSelect();
   importSharedChart();

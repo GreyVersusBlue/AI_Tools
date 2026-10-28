@@ -10,6 +10,9 @@
 // a zero or negative value is left out and counted on the page and in the <desc>, and the choice travels in a share link.
 // Step 3, more series: with a third numeric column the "More Y columns" group offers it (labelled), ticking it draws two series with
 // their own marker shapes and a legend, each fitted on its own, and the columns travel in a share link.
+// Step 4, annotations: a card on the scatter only; a region, an arrow and a callout are added from numbers, drawn on the chart and
+// named in its <desc>; a bad entry says what is wrong and adds nothing; Remove takes one off; they travel in a share link, and a
+// link whose note text is markup draws it as text.
 // axe finds nothing serious with the select showing. Exits 1 on any failure.
 
 import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
@@ -171,6 +174,51 @@ eq(await page.evaluate(() => Array.from(document.querySelectorAll('#scatter-extr
 await open({ ...base, data: T3 });
 eq(await page.evaluate(() => document.querySelectorAll('#scatter-extra-list input:checked').length), 0, 'a link from before has no extra series');
 eq((await svg()).html.includes('Scatter plot of'), true, 'and draws as a single series');
+
+console.log('step 4 (annotations)');
+await setup();
+eq(await page.evaluate(() => getComputedStyle(document.getElementById('notes-card')).display), 'block', 'the annotation card shows for a scatter');
+await page.evaluate(() => { const r = document.querySelector('input[name="chart-type"][value="bar"]'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); });
+eq(await page.evaluate(() => getComputedStyle(document.getElementById('notes-card')).display), 'none', 'and hides for a bar chart');
+await page.evaluate(() => { const r = document.querySelector('input[name="chart-type"][value="scatter"]'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); });
+await settle(page, 300);
+const addNote = async (type, vals, text) => {
+  await page.selectOption('#note-type', type);
+  for (const [k, v] of Object.entries(vals)) await page.fill('#note-' + k, String(v));
+  await page.fill('#note-text', text || '');
+  await page.click('#note-add');
+  await settle(page, 400);
+};
+await addNote('callout', { a: 4, b: 48 }, 'Turning point');
+s = await svg();
+ok(/r="7"/.test(s.html) && s.html.includes('>Turning point<') && /Callout at 4, 48: Turning point\./.test(s.desc), 'a callout is drawn and in the desc: ' + s.desc);
+ok(/Added\. 1 note on the chart\./.test(await page.textContent('#notes-msg')), 'the form says what happened');
+eq(await page.inputValue('#note-text'), '', 'and clears');
+await addNote('callout', { a: 4, b: 48 }, '');
+ok(/needs both numbers and some text/.test(await page.textContent('#notes-msg')), 'a callout without text is refused: ' + await page.textContent('#notes-msg'));
+await addNote('region', { a: 2, b: 3 }, 'Fast part');
+await addNote('region', { a: 2, b: 3, c: 5 }, '');
+ok(/both Y values/.test(await page.textContent('#notes-msg')), 'half a band is refused');
+await addNote('arrow', { a: 1, b: 20, c: 3, d: 31 }, 'Check this');
+s = await svg();
+ok(/Shaded region across 2 to 3: Fast part\./.test(s.desc) && /Arrow from 1, 20 to 3, 31: Check this\./.test(s.desc), 'region and arrow are in the desc: ' + s.desc);
+ok(/<pattern id="cs-nr"/.test(s.html) && /stroke-width="1.6"/.test(s.html), 'region hatch and arrow drawn');
+eq(await page.evaluate(() => document.querySelectorAll('#notes-list li').length), 3, 'three notes are listed');
+eq(await page.evaluate(() => document.querySelector('#notes-list button').getAttribute('aria-label')), 'Remove note: Callout at 4, 48: Turning point', 'a Remove button says which note');
+await page.click('#notes-list li:first-child button');
+await settle(page, 400);
+eq(await page.evaluate(() => document.querySelectorAll('#notes-list li').length), 2, 'Remove takes one off');
+ok(!/r="7"/.test((await svg()).html), 'and off the chart');
+await page.selectOption('#note-type', 'callout'); await page.fill('#note-a', '500'); await page.fill('#note-b', '5'); await page.fill('#note-text', 'far away'); await page.click('#note-add');
+await settle(page, 400);
+ok(/1 note outside the plot is not drawn\./.test((await svg()).desc), 'a note off the plot is counted, not drawn');
+// share round trip
+const withNotes = { ...base, trendline: false, notes: [{ type: 'callout', x: 3, y: 15, text: '<img src=x onerror=window.__pwned=1>' }, { type: 'bogus' }, { type: 'callout', x: 'a', y: 1, text: 'x' }] };
+await open(withNotes);
+eq(await page.evaluate(() => document.querySelectorAll('#notes-list li').length), 1, 'a link opens with its valid notes only');
+ok(await page.evaluate(() => !document.querySelector('#chart-stage img, #notes-list img') && !window.__pwned && document.querySelector('#chart-stage svg').textContent.includes('<img src=x')), 'note text from a link is text, not markup');
+await open(base);
+eq(await page.evaluate(() => document.querySelectorAll('#notes-list li').length), 0, 'a link from before has no notes');
 
 const scan = await a11yScan(page, { impact: 'serious' });
 ok(!scan.length, 'axe: no serious violation with the Fit select showing: ' + JSON.stringify(scan.map(v => [v.id, v.nodes])));

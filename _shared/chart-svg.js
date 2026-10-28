@@ -164,7 +164,7 @@
      Every chart takes the data the page already builds and an options object `o`:
        { W, H, pad, title, yLabel, showValues, palette (hex list, pie), pointColor,
          trendColor, trend (scatter: draw the fit), fit (scatter: a curve to draw instead of the straight
-         line, { predict(x), label, desc } from dcb-fit.js; nothing changes without it), fits (scatter with sc.series: one fit per series, in order), xScale / yScale ('log': base-10 axis on
+         line, { predict(x), label, desc } from dcb-fit.js; nothing changes without it), notes (scatter: the annotation layer, see Step 4 below), fits (scatter with sc.series: one fit per series, in order), xScale / yScale ('log': base-10 axis on
          the scatter; points at or below 0 are left out and counted in the <desc>), grayscale (hatch per series),
          idPrefix (ids for the <title>, <desc> and patterns: unique per SVG on a page) }
      and returns a standalone SVG string. Each SVG is role="img" with a <title> and a
@@ -214,7 +214,7 @@
       yMax: o.yMax > 0 ? o.yMax : 0,
       idPrefix: o.idPrefix || 'cs',
       kind: o.kind || '',
-      fit: o.fit || null, fits: o.fits || null,
+      fit: o.fit || null, fits: o.fits || null, notes: o.notes || null,
       xScale: o.xScale === 'log' ? 'log' : 'linear', yScale: o.yScale === 'log' ? 'log' : 'linear'
     };
   }
@@ -491,6 +491,97 @@
     return parts.join('');
   }
 
+  /* ---------- Step 4: the annotation layer (the scatter's `notes`) ----------
+
+     A note is placed in DATA coordinates, so it stays on its point when the axes change:
+       { type: 'region',  x1, x2, y1?, y2?, text }     a shaded, hatched band (full height without y1/y2)
+       { type: 'arrow',   x1, y1, x2, y2, text }       from the tail (x1, y1) to the head (x2, y2); text at the tail
+       { type: 'callout', x, y, text }                 a labelled box with a leader to the point
+     cleanNotes() is the only way a list gets in: at most 12, numbers that are finite, text escaped on the way out
+     and capped at 60 characters, anything else dropped. A note that does not fit the plot (outside it, or at or
+     below 0 on a log axis) is not drawn and is counted in the <desc>; a region is clipped to the plot. */
+
+  var NOTE_MAX = 12, NOTE_TEXT_MAX = 60;
+
+  function cleanNotes(list) {
+    var out = [];
+    (Array.isArray(list) ? list : []).forEach(function (n) {
+      if (out.length >= NOTE_MAX || !n || typeof n !== 'object') return;
+      var text = String(n.text == null ? '' : n.text).replace(/[\u0000-\u001f]+/g, ' ').trim().slice(0, NOTE_TEXT_MAX);
+      var num = function (v) { return typeof v === 'number' && isFinite(v) ? v : null; };
+      if (n.type === 'region') {
+        var a = num(n.x1), b = num(n.x2);
+        if (a === null || b === null) return;
+        var r = { type: 'region', x1: Math.min(a, b), x2: Math.max(a, b), text: text };
+        var c1 = num(n.y1), c2 = num(n.y2);
+        if (c1 !== null && c2 !== null) { r.y1 = Math.min(c1, c2); r.y2 = Math.max(c1, c2); }
+        out.push(r);
+      } else if (n.type === 'arrow') {
+        var q = [num(n.x1), num(n.y1), num(n.x2), num(n.y2)];
+        if (q.indexOf(null) !== -1 || (q[0] === q[2] && q[1] === q[3])) return;
+        out.push({ type: 'arrow', x1: q[0], y1: q[1], x2: q[2], y2: q[3], text: text });
+      } else if (n.type === 'callout') {
+        var x = num(n.x), y = num(n.y);
+        if (x === null || y === null || !text) return;
+        out.push({ type: 'callout', x: x, y: y, text: text });
+      }
+    });
+    return out;
+  }
+
+  /* env: { c, toX, toY, xLo, xHi, yLo, yHi, xLog, yLog } -> { defs, under, over, desc } */
+  function noteLayer(notes, env) {
+    var c = env.c, PAD = c.pad, left = PAD.left, right = c.W - PAD.right, top = PAD.top, bottom = c.H - PAD.bottom;
+    var under = [], over = [], sentences = [], skipped = 0, hasRegion = false, ink = '#16222e';
+    function fits(x, y) {   // on a log axis xLo and yLo are above 0, so a note at or below 0 is outside
+      return x >= env.xLo && x <= env.xHi && y >= env.yLo && y <= env.yHi;
+    }
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+    cleanNotes(notes).forEach(function (n, i) {
+      var t = escapeXml(n.text);
+      if (n.type === 'region') {
+        var x1 = clamp(n.x1, env.xLo, env.xHi), x2 = clamp(n.x2, env.xLo, env.xHi);
+        var hasY = 'y1' in n;
+        var y1 = hasY ? clamp(n.y1, env.yLo, env.yHi) : env.yLo, y2 = hasY ? clamp(n.y2, env.yLo, env.yHi) : env.yHi;
+        if (!(x2 > x1) || !(y2 > y1)) { skipped++; return; }
+        hasRegion = true;
+        var px1 = env.toX(x1), px2 = env.toX(x2), py1 = env.toY(y2), py2 = env.toY(y1);
+        under.push('<rect x="' + px1.toFixed(1) + '" y="' + py1.toFixed(1) + '" width="' + (px2 - px1).toFixed(1) + '" height="' + (py2 - py1).toFixed(1) + '" fill="url(#' + c.idPrefix + '-nr)" stroke="#8a97a3" stroke-width="1" stroke-dasharray="2,3"/>');
+        if (n.text) over.push('<text x="' + (px1 + 4).toFixed(1) + '" y="' + (py1 + 12).toFixed(1) + '" font-size="10" font-weight="600" fill="' + ink + '">' + t + '</text>');
+        sentences.push('Shaded region ' + (hasY ? 'from ' + formatNum(n.x1) + ' to ' + formatNum(n.x2) + ' across, ' + formatNum(n.y1) + ' to ' + formatNum(n.y2) + ' up' : 'across ' + formatNum(n.x1) + ' to ' + formatNum(n.x2)) + (n.text ? ': ' + n.text : '') + '.');
+      } else if (n.type === 'arrow') {
+        if (!fits(n.x1, n.y1) || !fits(n.x2, n.y2)) { skipped++; return; }
+        var ax = env.toX(n.x1), ay = env.toY(n.y1), bx = env.toX(n.x2), by = env.toY(n.y2);
+        var ang = Math.atan2(by - ay, bx - ax), hl = 9, spread = 0.5;
+        var h1 = [bx - hl * Math.cos(ang - spread), by - hl * Math.sin(ang - spread)], h2 = [bx - hl * Math.cos(ang + spread), by - hl * Math.sin(ang + spread)];
+        over.push('<line x1="' + ax.toFixed(1) + '" y1="' + ay.toFixed(1) + '" x2="' + bx.toFixed(1) + '" y2="' + by.toFixed(1) + '" stroke="' + ink + '" stroke-width="1.6"/>');
+        over.push('<polygon points="' + bx.toFixed(1) + ',' + by.toFixed(1) + ' ' + h1[0].toFixed(1) + ',' + h1[1].toFixed(1) + ' ' + h2[0].toFixed(1) + ',' + h2[1].toFixed(1) + '" fill="' + ink + '"/>');
+        if (n.text) {
+          var ty = ay - 8 < top + 10 ? ay + 16 : ay - 8;
+          var anchor = ax > right - 80 ? 'end' : ax < left + 80 ? 'start' : 'middle';
+          over.push('<text x="' + ax.toFixed(1) + '" y="' + ty.toFixed(1) + '" text-anchor="' + anchor + '" font-size="10" font-weight="600" fill="' + ink + '" stroke="#ffffff" stroke-width="3" paint-order="stroke">' + t + '</text>');
+        }
+        sentences.push('Arrow from ' + formatNum(n.x1) + ', ' + formatNum(n.y1) + ' to ' + formatNum(n.x2) + ', ' + formatNum(n.y2) + (n.text ? ': ' + n.text : '') + '.');
+      } else {
+        if (!fits(n.x, n.y)) { skipped++; return; }
+        var cx = env.toX(n.x), cy = env.toY(n.y);
+        var w = Math.min(n.text.length * 5.8 + 14, 260), h = 20;
+        var bxp = cx + 16 + w > right ? cx - 16 - w : cx + 16;
+        var byp = cy - 30 < top ? cy + 12 : cy - 30;
+        over.push('<line x1="' + cx.toFixed(1) + '" y1="' + cy.toFixed(1) + '" x2="' + (bxp + w / 2).toFixed(1) + '" y2="' + (byp + h / 2).toFixed(1) + '" stroke="' + ink + '" stroke-width="1.2"/>');
+        over.push('<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="7" fill="none" stroke="' + ink + '" stroke-width="1.4"/>');
+        over.push('<rect x="' + bxp.toFixed(1) + '" y="' + byp.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h + '" rx="4" fill="#ffffff" stroke="' + ink + '" stroke-width="1.2"/>');
+        over.push('<text x="' + (bxp + w / 2).toFixed(1) + '" y="' + (byp + 14).toFixed(1) + '" text-anchor="middle" font-size="10" fill="' + ink + '">' + t + '</text>');
+        sentences.push('Callout at ' + formatNum(n.x) + ', ' + formatNum(n.y) + ': ' + n.text + '.');
+      }
+    });
+    if (skipped) sentences.push(skipped + ' note' + (skipped === 1 ? '' : 's') + ' outside the plot ' + (skipped === 1 ? 'is' : 'are') + ' not drawn.');
+    return {
+      defs: hasRegion ? '<defs><pattern id="' + c.idPrefix + '-nr" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="rgba(108,142,245,.14)"/><line x1="0" y1="0" x2="0" y2="7" stroke="rgba(31,36,48,.35)" stroke-width="1.2"/></pattern></defs>' : '',
+      under: under.join(''), over: over.join(''), desc: sentences.length ? ' ' + sentences.join(' ') : ''
+    };
+  }
+
   /* ---------- Step 3: more than one series on a scatter (shape as well as colour) ---------- */
 
   var SHAPES = ['circle', 'square', 'triangle', 'diamond'];
@@ -577,9 +668,12 @@
     if (fit) desc += ' ' + fit.desc;
     if (trend) desc += ' Trend line y = ' + round2(trend.slope) + 'x ' + (trend.intercept >= 0 ? '+ ' : '- ') + round2(Math.abs(trend.intercept)) + ', R squared ' + round2(trend.r2) + '.';
 
-    var parts = [open(c, 'Scatter plot', desc), titleEl(c), yLog ? logYAxis(c, yd) : axes(c, maxY, null), yAxisLabel(c, multi ? '' : sc.yLabel)];
+    var layer = c.notes && c.notes.length ? noteLayer(c.notes, { c: c, toX: toX, toY: toY, xLo: xLo, xHi: xHi, yLo: yLo, yHi: yHi, xLog: xLog, yLog: yLog }) : null;
+    if (layer) desc += layer.desc;
+    var parts = [open(c, 'Scatter plot', desc, layer && layer.defs), titleEl(c), yLog ? logYAxis(c, yd) : axes(c, maxY, null), yAxisLabel(c, multi ? '' : sc.yLabel)];
     if (xLog) parts.push(logXAxis(c, xd));
     parts.push('<text x="' + (W / 2) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10.5" fill="#5b6b78">' + escapeXml(sc.xLabel) + '</text>');
+    if (layer) parts.push(layer.under);
 
     if (trend) {
       var lineX1 = xOrigin, lineX2 = maxX;
@@ -631,10 +725,11 @@
         legend.push({ label: (se.label || 'Series') + (sf && sf.r2 != null ? ' (R² ' + round2(sf.r2) + ')' : ''), shape: shape, color: color });
       });
       parts.push(markerLegend(c, legend));
-      parts[0] = open(c, 'Scatter plot', desc);
+      parts[0] = open(c, 'Scatter plot', desc, layer && layer.defs);
     } else pts.forEach(function (p) {
       parts.push('<circle cx="' + toX(p.x).toFixed(1) + '" cy="' + toY(p.y).toFixed(1) + '" r="4" fill="' + c.pointColor + '" opacity="0.75"/>');
     });
+    if (layer) parts.push(layer.over);
     parts.push('</svg>');
     return parts.join('');
   }
@@ -806,6 +901,7 @@
     niceMax: niceMax,
     formatNum: formatNum,
     round2: round2,
+    cleanNotes: cleanNotes,
     linearRegression: linearRegression,
     bar: bar,
     line: line,
