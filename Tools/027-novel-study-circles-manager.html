@@ -29,6 +29,7 @@
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/grouping.js"></script>
+<script src="../_shared/undo.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -542,37 +543,46 @@
   // }
   var state = null;
 
-  // Single-level undo for "Delete this meeting" and "Reset role history" —
-  // adapted from 022-lab-group-role-randomizer.html's undoSnapshot pattern.
-  // Kept out of `state` (and so out of localStorage/export) on purpose: it's
-  // a scratch copy of just the field the last destructive action touched,
+  // Undo for "Delete this meeting" and "Reset role history", one step each,
+  // newest last (_shared/undo.js). Kept out of `state` (and so out of
+  // localStorage/export) on purpose: each step is a scratch copy of just the
+  // field the destructive action touched,
   // { type: 'meeting-delete'|'history-reset', meetings: <deep clone> | groupHistory }.
-  // Overwritten by the next destructive action (single level, not a stack)
-  // and cleared by anything that could make it stale — logging a new
-  // meeting (touches both meetings and history) or switching/loading a
+  // The button names the newest step (undoLabels runs alongside the stack).
+  // The whole stack is cleared by anything that could make it stale — logging
+  // a new meeting (touches both meetings and history) or switching/loading a
   // project.
-  var undoSnapshot = null;
+  var undoStack = UndoStack.create({ limit: 30, onChange: syncUndoButton });
+  var undoLabels = [];
 
   function deepClone(obj) {
     return obj === undefined ? obj : JSON.parse(JSON.stringify(obj));
   }
 
+  function syncUndoButton(u) {
+    if (!els.undoBtn) return;
+    els.undoBtn.disabled = !u.canUndo();
+    els.undoBtn.textContent = u.canUndo() ? 'Undo: ' + undoLabels[undoLabels.length - 1] : 'Undo';
+  }
+
   function invalidateUndo() {
-    undoSnapshot = null;
-    els.undoBtn.disabled = true;
-    els.undoBtn.textContent = 'Undo';
+    undoLabels = [];
+    undoStack.clear();
   }
 
   function armUndo(type, label) {
-    if (type === 'meeting-delete') undoSnapshot = { type: type, meetings: deepClone(state.meetings) };
-    else if (type === 'history-reset') undoSnapshot = { type: type, groupHistory: state.groupHistory };
+    var snap;
+    if (type === 'meeting-delete') snap = { type: type, meetings: state.meetings };
+    else if (type === 'history-reset') snap = { type: type, groupHistory: state.groupHistory };
     else return;
-    els.undoBtn.disabled = false;
-    els.undoBtn.textContent = 'Undo: ' + label;
+    undoLabels.push(label);
+    undoStack.push(snap);
   }
 
   els.undoBtn.addEventListener('click', function () {
-    if (!undoSnapshot || !state) return;
+    if (!undoStack.canUndo() || !state) return;
+    undoLabels.pop();
+    var undoSnapshot = undoStack.undo();
     if (undoSnapshot.type === 'meeting-delete') {
       state.meetings = undoSnapshot.meetings || [];
       saveCurrent();
@@ -586,7 +596,6 @@
       renderHistoryHint();
       showMsg('Restored role history for this project.', true);
     }
-    invalidateUndo();
   });
 
   function escapeHtml(s) {

@@ -209,6 +209,7 @@
     "Tools/image-to-pdf/test/smoke-portfolio.mjs": 2,
     "Tools/roleplay-scenario-generator/test/smoke-success-criteria.mjs": 8,
     "Tools/novel-study-circles-manager/test/smoke-multi-book-unit.mjs": 7,
+    "Tools/novel-study-circles-manager/test/smoke-undo.mjs": 9,
     "Tools/seating-chart/test/drive-seating.mjs": 19,
     "Tools/seating-chart/test/smoke-share.mjs": 6,
     "Tools/seating-chart/test/smoke-photos.mjs": 7,

@@ -155,7 +155,7 @@
     "test:math-drill-frac-exp-eq": "node Tools/math-drill-generator/test/smoke-frac-exp-eq.mjs",
     "test:docx-merger": "node Tools/docx-merger/test/smoke-per-file-options.mjs",
     "test:roleplay": "node Tools/roleplay-scenario-generator/test/smoke-success-criteria.mjs",
-    "test:novel-study": "node Tools/novel-study-circles-manager/test/smoke-multi-book-unit.mjs",
+    "test:novel-study": "node Tools/novel-study-circles-manager/test/smoke-multi-book-unit.mjs && node Tools/novel-study-circles-manager/test/smoke-undo.mjs",
     "test:bracket": "node Tools/bracket-tournament-generator/test/smoke-standings.mjs && node Tools/bracket-tournament-generator/test/smoke-pools-swiss.mjs && node Tools/bracket-tournament-generator/test/smoke-share.mjs",
     "test:bracket-academic-core": "node Tools/bracket-tournament-generator/test/smoke-academic-core.mjs",
     "test:bracket-academic": "node Tools/bracket-tournament-generator/test/smoke-academic.mjs",
