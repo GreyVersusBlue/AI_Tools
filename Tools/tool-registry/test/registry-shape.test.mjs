@@ -256,7 +256,8 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
      three that hold a family's names are marked student data in the registry.
      crh_flags_v1: Path 3 P5's flags (v305), absent today and do not cold call
      by student id. Marks on named students, so the rollover deletes it whole. */
-  const SINCE_THE_MIGRATION = ['pcl_idnames_v1', 'conf-who', 'conf-receipts', 'conf-demo-state', 'crh_flags_v1'];
+  const SINCE_THE_MIGRATION = ['pcl_idnames_v1', 'conf-who', 'conf-receipts', 'conf-demo-state', 'crh_flags_v1',
+    'escape-room-builder:monitor-record' /* 019's teacher-monitor play record, v396 (Path 18 P4): team names, so student data */];
 
   /* Keys the old list DID have a chance to cover and did not, which a later
      session has deliberately reclassified. This is a different excuse from the
@@ -412,6 +413,7 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
       if (!/\.(js|mjs|html)$/.test(d.name)) continue;
       const src = fs.readFileSync(path.join(SITE, rel), 'utf8');
       for (const m of src.matchAll(/MediaDB\.(?:store|images)\(\{\s*ns:\s*'([a-z0-9-]+)'/g)) found.add(m[1]);
+      for (const m of src.matchAll(/EscapeRoomImage\s*=\s*create\(\s*'([a-z0-9-]+)'/g)) found.add(m[1]);   // 019's own default store, which er-image.js builds at load
       for (const m of src.matchAll(/\.forNamespace\(\s*'([a-z0-9-]+)'/g)) found.add(m[1]);   // er-image.js's per-tool store (018's pictures)
       if (/MediaDB\.(?:store|images)\(\{\s*ns:\s*NS\b/.test(src)) for (const m of src.matchAll(/\bNS\s*=\s*'([a-z0-9-]+)'/g)) found.add(m[1]);
     }
