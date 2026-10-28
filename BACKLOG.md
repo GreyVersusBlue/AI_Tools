@@ -87,6 +87,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-26 (v380-v382), rank 53 kept and cut, Path 18 P2 built except the typed short code.** 018 loads a hunt through `Stations.read`/`write` and keys its live run (marks, attempts, hints, the check-in station) by station id; 019 loads a room the same way, builds every link and code with `Stations.playPayload`/`playUrl` (`v: 2`, `ids`, `next: 'end'` kept), and a move or delete keeps a station's go-to link; `lock.html` decodes through `playRead`, saves progress keyed by id when the code has ids (index keys when it does not), honours "End here", and `monitor.html` passes the id through; both share links carry station ids. `Stations.budget()` has a body and 019 refuses a code under 4 px a module at the printed canvas by station number. `smoke-legacy-codes` (port 8569, **next free 8570**). Not built: the typed short code (student-facing).
 - **AI-26 (v378-v379), rank 53 deleted and the list renumbered, Path 18 P1 built: `_shared/stations.js` and ids on disk in 018 and 019.** The module (`read`, `write`, `ensureIds`, `playable`, `playPayload`, `playUrl`, `playRead`, `check`, `nextOf`, `reachable`, `remapRun`, `upgradeProgress`; `budget()` reserved) with `test:stations` (pure Node, parity against the pages' own functions cut out of the HTML, five mutants) and `test:stations-smoke` (port 8568, **next free 8569**); both pages call `Stations.ensureIds()` on save and on load. Nothing else in either page, `lock.html` or `monitor.html` changed. Rank 53 is now P2.
 - **AI-22 (v377), rank 37 rewritten, Path 14 P5 increment 3: live mode on 005.** Opt-in "Live mode" (Stage on the floor); a tap marks a student absent today through `_shared/student-flags.js`, a student on no roster for the session only; no tap edits the chart. `smoke-live` (port 8567, **next free 8568**). 018 and 043 decided out (a second step replaces the first). A point in 008 and a pass in 001 not built: neither tool takes anything in (design in the P5 bullet). Left on rank 37: 003 (no undo today) and the 008/001 routes, which are Devon's.
 - **AI-22 (v376), rank 37 rewritten, Path 14 P5 increment 2: `_shared/undo.js` in 002, 021 and 027.** Each walks back every step, not one snapshot (002 every shuffle, 021 every Reset / New unit, 027 every meeting delete / history reset, its button still naming the step); `smoke-undo` for each (ports 8564, 8565, 8566; **next free 8567**). 024 decided out (its stack cannot reach depth 2). Left on rank 37: 003 (no undo today), 018 and 043 (timed windows) and live mode.
@@ -796,7 +797,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 50 | Path 17 P3 — PDF in: vendor `pdf.js`, merge/insert/extract/rotate existing PDFs | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 51 | Path 17 P4 — imposition. **Built (AI-13, v248, under Path 7 P4): 011 has booklet, 2/4/6/9 pages to a side with cut marks, either flip edge, creep.** Left: print and fold a 16-page booklet once and record it; then, only if asked for, a preset for a one-sided printer (fronts, then backs) and signatures for a thick booklet, both already in `ExportKit` | 011 | ¼ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 52 | Path 17 P5 — OCR, decision first: a vendored Tesseract build against the offline promise | 011 | ½ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
-| 53 | Path 18 P2 — both tools on the schema (`Stations.read`/`write`; run, `next` and progress keyed by id), plus the payload budget (`budget()` has no body yet) and a printed short-code fallback. **P1 shipped (v378-v379):** `_shared/stations.js` exists and every saved station already carries an `id`; P2 starts from the P1 bullet's "What P1's build left for P2" | 018 | 1 | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
+| 53 | Path 18 P2, what is left: the printed short-code fallback typed into `lock.html` (**held: student-facing, Devon's "nothing is student-facing right now" stands**), then the three loose ends of the schema step (`next` stored as an id on disk, `er-match.js` folded into `stations.js`, the two share `getState`/`normalize*` functions through `read()`/`write()`). **Shipped (v380-v382):** both tools on `Stations.read`/`write`, 018's run keyed by id, 019's codes from `playPayload`/`playUrl` and `lock.html` reading `playRead` with id-keyed progress, `budget()` and its refusal in 019 | 018 | ½ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
 | 54 | Path 18 P3 — feature parity between 018 and 019; questions from the bank | 019 | 2+ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
 | 55 | Path 18 P4 — the debrief print: per-team path, time per station, misses, reflection page | 019 | 1 | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
 | 56 | Path 18 P5 — decide the product: two entry points on one engine, or one tool with a mode switch | 018 | ¼ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
@@ -7304,9 +7305,28 @@ images; the picture prints on the card), so a code's size no longer grows with t
     reading; the build copies today's functions from the files into the suite, not from this text. Finding (1) is
     read off `buildRoomPayload` and `renderClue`, not reproduced in a player. The older-cache cases were read, not
     reproduced, and `smoke-legacy-codes.mjs` is the first thing that would.
-- **P2 — Both tools on the schema**, plus the payload budget from Path 6 (Share
-  sheet) on each station's own code (one station per code since #320) and a printed
-  short-code fallback typed into `lock.html`.
+- **P2 — Both tools on the schema, built in part (AI-26, 2026-10-28, v380-v382).** Three commits.
+  **v380, 018:** `loadHuntByName` runs the saved hunt through `Stations.read` then `write` once, so an index-keyed
+  run comes back keyed by station id (`run.by === 'id'`; `remapRun` drops a mark past the valid list), and every
+  site that read `marks[i]`, `attempts[i]`, `hintsUsed[i]` or `checkinStation` now keys on the station's id
+  (`validStations()` carries `id`; `checkinIdx()` finds the check-in station, the first when it is gone). The
+  share link's stations carry `id`; an arrival keeps them and gets a new hunt id. **v381, 019 and the player:**
+  `loadSetByName` goes through `read`/`write` too; `buildRoomPayload`, `stationPayloadFor`, `playerLinkFor` and
+  `encodeRoom` are deleted for `Stations.playPayload`/`playUrl` (so every link now carries `v: 2` and `ids`, and "End
+  here" stays `'end'`); moving or deleting a station re-points every go-to link by id (before, a move left each
+  link on whatever stood at that position). `lock.html` loads `stations.js`, decodes through `playRead`, converts
+  progress at the storage edge only (id-keyed when the code has `ids`, index-keyed when it does not; an old
+  index-keyed progress is upgraded on its next save; id-keyed progress opened by a code without ids shows "Your
+  next clue is at another station" and advances nothing, design case G2), ends the room on `'end'`, and tells
+  `monitor.html` the station id. **v382, the budget:** `Stations.budget(set, { ecLevel, px })` plans each
+  station's printed code through `QrDraw.plan` at the 600 px canvas (4 px a module is the measured floor); 019
+  names a station that falls under it ("Station 2's code is N bytes, M modules across ... Shorten its clue,
+  answers or hint") and disables Print codes. Suites: `test:stations` (352; the parity half now reads
+  `_old-019-functions.txt`, 019's functions frozen at v379), `test:stations-smoke` (the 018 run assertion now
+  expects id keys), `test:stations-legacy` (`smoke-legacy-codes.mjs`, port 8569: C1/C2/C3, G1, G2, R4, resume,
+  a 019 move and delete, a 018 move, the budget message).
+  **Left, and why.** (1) **The typed short code in `lock.html`.** Devon (2026-10-05, standing) "nothing is student-facing right now" covers question 1, which names a short code typed into `lock.html` as one of three things that would deepen the line, so nothing was built; the 018/019 card keeps its paper code word. Two codes per card (P18-4) is the shape when it is allowed: the paper word stays, a typed code (the station id is the obvious text) opens that station on a device. (2) `next` is still a position on disk (the page's saved shape, so a page from an older cache reads it; the design's "next an id" would need a `write()` that emits ids and a fixture change). (3) `er-match.js` is not folded into `stations.js`; `check()` still calls `EscapeRoomMatch`. (4) Both pages keep their own `getState` and `normalize*` field by field (ids added to each) rather than `write()`/`read()`. (5) 018 `validStations()` is still the page's own, and 019's `unreachableStations` walks the payload (with `'end'` honoured) rather than calling `reachable`. None of the five changes what a teacher sees; (2) to (5) are cleanup.
+  **Not verified:** no real phone read a v2 code; the older-cache case (`lock.html` from before this commit opening a P2 code) is argued from the design, not run, because `smoke-legacy-codes` has no pre-P2 `lock.html` to serve (the design's `git show v255:` copy was not set up).
 - **P3 — Feature parity.** 019 gains teams/timing/hints/leaderboard; 018 gains
   per-answer branching, "a required set in any order", station images, and the
   player page. Questions come from the bank (Path 12).
