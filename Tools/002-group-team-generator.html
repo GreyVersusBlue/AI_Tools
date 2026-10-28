@@ -251,6 +251,7 @@
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/student-flags.js"></script>
 <script src="../_shared/grouping.js"></script>
+<script src="../_shared/undo.js"></script>
 <script src="../_shared/seating-read.js"></script>
 <script src="group-team-generator/gtg-memory.js"></script>
 <script src="group-team-generator/gtg-seating.js"></script>
@@ -501,7 +502,8 @@
   var keepTogether = [];    // [[nameA, nameB]]
   var lastGroups = null;    // last generated result, for reshuffle/export
   var lockedFlags = [];     // parallel to lastGroups.groups — true means "leave this group alone on reshuffle"
-  var undoSnapshot = null;  // single-level undo of the last shuffle (groups + pairHistory + locks)
+  // One snapshot per shuffle, newest last (_shared/undo.js): groups + pairHistory + locks, so Undo walks back every shuffle.
+  var undoStack = UndoStack.create({ limit: 30, onChange: function (u) { if (els.undoBtn) els.undoBtn.disabled = !u.canUndo(); } });
   var state = null;         // { name, names, mode, splitValue, strategy, oddMode, namingMode, customNames, absentNames, keepApart, keepTogether }
   var COLOR_TEAM_NAMES = ['Red', 'Blue', 'Green', 'Gold', 'Purple', 'Orange', 'Teal', 'Pink', 'Silver', 'Sapphire'];
   var STRATEGY_LABELS = {
@@ -1643,9 +1645,8 @@
   function clearTransientGroupState() {
     lastGroups = null;
     lockedFlags = [];
-    undoSnapshot = null;
+    undoStack.clear();
     els.regenerateBtn.disabled = true;
-    els.undoBtn.disabled = true;
     els.exportRow.style.display = 'none';
     els.explainArea.innerHTML = '';
     els.warnArea.innerHTML = '';
@@ -1665,30 +1666,35 @@
     };
   }
 
+  /** Record the groups on screen before a shuffle replaces them (nothing to record before the first). */
+  function pushUndo() {
+    var snap = snapshotForUndo();
+    if (snap) undoStack.push(snap);
+  }
+
   els.generateBtn.addEventListener('click', function () {
     if (getActiveStudents().length < 2) return;
     clearMsg();
-    undoSnapshot = snapshotForUndo();
+    pushUndo();
     lockedFlags = [];
     renderResults(makeGroups());
-    els.undoBtn.disabled = !undoSnapshot;
     saveCurrentConfig();
     renderPairHistoryHint();
   });
   els.regenerateBtn.addEventListener('click', function () {
     clearMsg();
-    undoSnapshot = snapshotForUndo();
+    pushUndo();
     var result = makeGroups({ lockedFlags: lockedFlags });
     // A lock request that turned out invalid (e.g. a locked member went
     // absent) silently falls back to a full reshuffle inside makeGroups —
     // clear the stale flags so the new groups aren't mislabeled as locked.
     if (!result.meta.usedLocks && lockedFlags.some(Boolean)) lockedFlags = [];
     renderResults(result);
-    els.undoBtn.disabled = !undoSnapshot;
     saveCurrentConfig();
     renderPairHistoryHint();
   });
   els.undoBtn.addEventListener('click', function () {
+    var undoSnapshot = undoStack.undo();
     if (!undoSnapshot) return;
     if (state) {
       state.pairHistory = undoSnapshot.pairHistory; state.pairGen = undoSnapshot.pairGen;
@@ -1697,8 +1703,6 @@
     }
     lockedFlags = undoSnapshot.lockedFlags.slice();
     renderResults(undoSnapshot.lastGroups);
-    undoSnapshot = null;
-    els.undoBtn.disabled = true;
     saveCurrentConfig();
     renderPairHistoryHint();
     showMsg('Reverted to the previous shuffle.');

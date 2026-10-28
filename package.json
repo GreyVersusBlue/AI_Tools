@@ -35,7 +35,7 @@
     "test:timer": "node Tools/classroom-timer/test/smoke-strip.mjs && node Tools/classroom-timer/test/smoke-remote.mjs && node Tools/classroom-timer/test/smoke-board-core.mjs && node Tools/classroom-timer/test/smoke-board.mjs",
     "test:blank-map": "node Tools/blank-map-generator/test/smoke-starters.mjs && node Tools/blank-map-generator/test/smoke-choropleth.mjs && node Tools/blank-map-generator/test/smoke-hittest.mjs && node Tools/blank-map-generator/test/smoke-timeline-handoff.mjs && node Tools/blank-map-generator/test/smoke-label-colors.mjs && node Tools/blank-map-generator/test/smoke-relief.mjs",
     "test:blank-map-relief": "node Tools/blank-map-generator/test/smoke-relief.mjs",
-    "test:groups": "node Tools/group-team-generator/test/smoke-share.mjs && node Tools/group-team-generator/test/smoke-pairing-history.mjs",
+    "test:groups": "node Tools/group-team-generator/test/smoke-share.mjs && node Tools/group-team-generator/test/smoke-pairing-history.mjs && node Tools/group-team-generator/test/smoke-undo.mjs",
     "test:year-memory-core": "node Tools/group-team-generator/test/smoke-year-memory-core.mjs",
     "test:year-memory": "node Tools/group-team-generator/test/smoke-year-memory.mjs",
     "test:vocab-share": "node Tools/vocab-flashcard-generator/test/smoke-share.mjs && node Tools/vocab-flashcard-generator/test/printables-logic.test.mjs && node Tools/vocab-flashcard-generator/test/smoke-printables.mjs",

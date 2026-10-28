@@ -72,6 +72,7 @@
     "Tools/group-team-generator/test/smoke-year-memory-core.mjs",
     "Tools/group-team-generator/test/smoke-year-memory.mjs",
     "Tools/group-team-generator/test/smoke-seat-near.mjs",
+    "Tools/group-team-generator/test/smoke-undo.mjs",
     "Tools/vocab-flashcard-generator/test/smoke-share.mjs",
     "Tools/vocab-conjugation-drill/test/smoke-share.mjs",
     "Tools/schedule-browser/test/smoke-personal-notes.mjs",
