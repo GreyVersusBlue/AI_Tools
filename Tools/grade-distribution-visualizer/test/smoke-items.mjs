@@ -231,6 +231,30 @@ await settle(page, 400);
 const scan = await a11yScan(page, { impact: 'serious' });
 ok(!scan.length, 'axe: no serious or critical violation with the section on screen: ' + JSON.stringify(scan));
 
+// 12. trend: small multiples of the compared assignments, one scale
+await page.fill('#scoreInput', ['92', '88', '76', '64', '95', '91'].join('\n'));
+await page.dispatchEvent('#scoreInput', 'input');
+page.once('dialog', d => d.accept('Unit 5 Test'));
+await page.click('#newListBtn');
+await settle(page, 300);
+await page.fill('#scoreInput', ['0', '40', '55', '62', '70', '71', '72', '75', '78', '80', '85'].join('\n'));
+await page.dispatchEvent('#scoreInput', 'input');
+await settle(page, 300);
+await page.check('#compareChecks input[value="Unit 4 Test"]');
+await settle(page, 400);
+const sm = await page.$$eval('.sm-cell svg', svgs => svgs.map(v => ({
+  title: v.querySelector('title').textContent,
+  cats: v.querySelectorAll('text[text-anchor="end"][transform]').length,
+  top: Math.max(...Array.from(v.querySelectorAll('text[text-anchor="end"][font-size="10"]')).map(t => parseFloat(t.textContent))) })));
+eq(sm.length, 2, 'two panels: this assignment and the one compared');
+ok(/^Unit 5 Test: mean .*n = 11$/.test(sm[0].title) && /^Unit 4 Test: mean .*n = 6$/.test(sm[1].title), 'each panel names its assignment, mean and n, current first: ' + JSON.stringify(sm.map(x => x.title)));
+eq(sm[0].top, sm[1].top, 'both panels share one count axis');
+eq(sm[0].cats, sm[1].cats, 'and one list of score buckets (the zero bucket is on both)');
+const heading = await page.textContent('#compareWrap');
+ok(/Score distributions side by side/.test(heading), 'with its heading');
+const scanSm = await a11yScan(page, { impact: 'serious' });
+ok(!scanSm.length, 'axe: no serious violation with the small multiples on screen: ' + JSON.stringify(scanSm));
+
 await browser.close();
 server.close();
 console.log(`\n${passed} passed, ${failed} failed`);

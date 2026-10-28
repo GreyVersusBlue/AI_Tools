@@ -172,6 +172,9 @@
   .items-table .tier-reteach { font-weight: 700; }
   .items-table .tier-watch { font-style: italic; }
   .items-table .tier-secure { color: var(--muted); }
+  .sm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .6rem; margin: .4rem 0 1rem; }
+  .sm-cell { margin: 0; break-inside: avoid; }
+  .sm-cell svg { width: 100%; height: auto; display: block; border: 1px solid var(--line); border-radius: 6px; }
   label.item-sub { font-weight: 500; margin-top: .2rem; }
   .item-section { border-top: 1px solid var(--line); padding-top: .6rem; margin-top: .4rem; }
   .items-gap { font-weight: 700; }
@@ -914,7 +917,7 @@
       D: d.cutD != null ? d.cutD : 60
     };
     var letters = computeLetters(parsed.scores, cutoffs);
-    return { name: d.name, stats: stats, letters: letters };
+    return { name: d.name, stats: stats, letters: letters, scores: parsed.scores };
   }
 
   function renderComparison() {
@@ -1004,14 +1007,40 @@
         var count = tr.letters[l];
         var p = pct(count, tr.n);
         if (p <= 0) return '';
-        return '<div class="stack-seg ' + l + '" style="width:' + p + '%;" title="' + l + ': ' + count + ' (' + fmt(p, 1) + '%)">' +
+        return '<div class="stack-seg ' + l + '" style="width:' + p + '%;color:' + textColorFor(LETTER_HEX[l]) + ';" title="' + l + ': ' + count + ' (' + fmt(p, 1) + '%)">' +
           (p >= 8 ? (fmt(p, 0) + '%') : '') + '</div>';
       }).join('');
       return '<div class="compare-trend-row"><div class="compare-trend-label">' + escapeHtml(tr.name) + '</div>' +
         '<div class="stack-bar compare-trend-bar">' + segs + '</div></div>';
     }).join('') + '</div>';
 
-    els.compareWrap.innerHTML = '<h3>' + heading + '</h3>' + missingHtml + deltaHtml + trendHtml + tableHtml;
+    // Small multiples: one small histogram per assignment, every one on the same buckets and the
+    // same count axis, so a shape that moves from one to the next is the class and not the scale.
+    var width = parseInt(els.bucketWidth.value, 10) || 10;
+    var sets = [{ name: curName, stats: curStats, scores: parsedCur.scores }].concat(present);
+    var drawn = sets.map(function (o) { return buildBuckets(o.scores, width); });
+    var shared = 0;
+    drawn.forEach(function (bs) { bs.forEach(function (b) { if (b.count > shared) shared = b.count; }); });
+    // Every assignment gets the same bucket list: a zero bucket on one is a zero bucket (possibly empty) on all.
+    var anyZero = drawn.some(function (bs) { return bs[0].isZero; });
+    drawn = drawn.map(function (bs, i) {
+      if (anyZero && !bs[0].isZero) {
+        bs = bs.slice(); bs.unshift({ start: 0, end: 0, label: '0', count: 0, isZero: true });
+        var f = bs[1]; if (f.start === 0 && f.end > 0) { bs[1] = Object.assign({}, f, { label: '1\u2013' + f.end }); }
+      }
+      return bs;
+    });
+    var yMax = ChartSvg.niceMax(shared * 1.15);
+    var cells = sets.map(function (o, i) {
+      var built = { categories: drawn[i].map(function (b) { return b.label; }), series: [{ label: 'Students', color: '#2171b5', values: drawn[i].map(function (b) { return b.count; }) }] };
+      var svg = ChartSvg.bar(built, { W: 300, H: 230, pad: { top: 34, right: 10, bottom: 56, left: 34 }, title: o.name + ': mean ' + fmt(o.stats.mean, 1) + ', n = ' + o.stats.n, yLabel: 'Students', showValues: true, yMax: yMax, idPrefix: 'gdm' + i });
+      return '<figure class="sm-cell">' + svg + '</figure>';
+    }).join('');
+    var smallHtml = '<h3>Score distributions side by side</h3>' +
+      '<p class="chart-note">Same score buckets (width ' + width + ') and the same count axis (0 to ' + yMax + ') in every panel, current assignment first.</p>' +
+      '<div class="sm-grid">' + cells + '</div>';
+
+    els.compareWrap.innerHTML = '<h3>' + heading + '</h3>' + missingHtml + deltaHtml + trendHtml + smallHtml + tableHtml;
   }
 
   function refreshCompareOptions() {
@@ -1121,6 +1150,7 @@
     if (!state.items) state.items = [{ label: '', text: '' }];
     applyStateToForm();
     refreshSwitcher();
+    els.toolbar.style.display = '';   // it was shown only by a new assignment, so a reload hid the switcher and Delete
     renderOutput();
   }
 
