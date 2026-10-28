@@ -6743,6 +6743,37 @@ grades by policy — keep that.
   class miss" chart, a printed reteach priority list; section-vs-section comparison
   (3rd vs 6th period); trend across a quarter as small multiples; a plain-language
   "what this says" page for a PLC binder.
+  **Design (AI-24, 2026-10-28; written before any code, read against 037 at v410).** *What 037 stores today.* One record
+  per assignment under `gvb-grade-distribution:data:<name>` (name, the pasted score text, which may carry student names,
+  the four cutoffs, bucket width, compare names); the registry already marks the key `student: true, rollover: reduce`.
+  P3 adds fields to that record and **no key**, and nothing about a student that the pasted text did not already hold:
+  the item tables are pasted text of the same kind, and no screen or sheet P3 builds prints a name. 036's never-persist
+  policy is 036's.
+  *Input.* A second box, "Per-question scores", a pasted region read by `PasteTable.parse(text, { header: 'auto' })`: one
+  row per student, one column per question. The first column is a name column when any of its cells is not a number (a
+  column of ids is read as a question, as before); the header row gives the question labels, else Q1..Qn. A row whose
+  first cell starts "points", "max", "possible" or "out of" gives each question's points possible; **default: without
+  that row, a question is out of the highest score seen in its column** (all zeros: out of 1), so a 1/0 right-or-wrong
+  export works unmarked. A blank cell is "did not attempt" and leaves that student out of that question; a cell that is
+  not a number, or a score over a stated maximum, is named by row and column and left out, never guessed. Stored as
+  `items: [{ label, text }]` and `itemLine` (percent) on the assignment record; a record without them is unchanged.
+  Sections (step 3) are more entries in `items`, which is why it is a list from the start.
+  *Computed* (`Tools/grade-distribution-visualizer/gd-items.js`, a classic script publishing `GradeItems`, pure, loaded
+  by `vm` in the suite): per question n, mean, **percent correct** (mean / points possible), how many earned full credit,
+  how many zero; the priority order (lowest percent correct first, ties in question order); and a tier against the reteach
+  line: **below the line: reteach; within 10 points above it: watch; otherwise secure. Default line 70 %**, a box the
+  teacher can change. *Drawn:* the missed-questions chart is `ChartSvg.bar` of percent *missed* in question order with the
+  line stated in the `<desc>` (title, desc, role="img", polite announcement, download/copy buttons as 037's other charts); the
+  reteach list is a ranked table beside it.
+  *Printed.* The reteach priority list is a `.pk-page.pk-paper` sheet through the print kit (`PrintKit.setPage`, and
+  `PrintKit.preview({ area })` as 032's wall calendar does), built in a sheet of its own so 037's output-panel print is
+  unchanged: rank, question, percent correct, how many missed it, the tier, and a write-in column for the reteach plan.
+  *Sections and trend.* Step 3: one more `items` entry per section, a chart of percent correct per question with one series
+  per section (the same bar chart, grayscale-hatched), and a table of the gap. Step 4: the compare selection drawn as small
+  multiples, one mini histogram per assignment on a shared axis, in picked order, with the mean as a line under them. Step 5: a
+  page of plain sentences generated from the same numbers (what was strong, what to reteach, who is spread, what changed), printed through the kit.
+  *Defaults taken, none of them Devon's open questions:* percent correct against the column maximum when none is
+  given; 70 % and a 10-point watch band; English sentences only; no question text or standard (those are Path 12's bank).
 - **P4 — 036 modelling.** Parameterize term count and column layout (trimesters,
   semester exams, other districts' exports); scenario modelling (drop lowest,
   curve, re-weight) with a before/after distribution drawn by P1; grading window
