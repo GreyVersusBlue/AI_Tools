@@ -5,6 +5,8 @@
 //   - a stacked bar's segments add up to the bar, its percentages to the class, and every
 //     pattern it paints with is defined; a histogram bar's height is its count's share of the
 //     tallest; nothing from a name or label reaches the markup unescaped;
+//   - the one luminance formula: ChartSvg's agrees to the last digit with 046's choropleth ramps' (bmg-choropleth.js keeps
+//     RAMPS and its own copy: it is an ES module the map imports, ChartSvg a classic script; BACKLOG Path 16 P1 step 3);
 //   - the output is well-formed XML (balanced tags, one root, no raw "<" in text).
 // Each property is then checked against a deliberately broken module, which must fail it.
 //
@@ -12,6 +14,7 @@
 // Pure Node, no browser, no port. Exits 1 on any failure.
 
 import { loadChartSvg } from './_load-chart-svg.mjs';
+import { RAMPS, relativeLuminance as mapLuminance } from '../../blank-map-generator/bmg-choropleth.js';
 
 const mk = (scores, name = 'T') => {
   const cut = { A: 90, B: 80, C: 70, D: 60 };
@@ -52,6 +55,7 @@ function check(C) {
     const pick = C.textColorFor(h), other = pick === C.INK_HEX ? '#ffffff' : C.INK_HEX;
     ok(ratio(h, pick) >= ratio(h, other), 'label colour on ' + h + ' is not the better one');
   }
+  for (const r of RAMPS) for (const hex of r.stops) ok(C.relativeLuminance(hex) === mapLuminance(hex), 'luminance of ' + r.key + ' ' + hex + ' differs from the map\'s');
   ok(C.relativeLuminance('#000000') === 0 && Math.abs(C.relativeLuminance('#ffffff') - 1) < 1e-9, 'luminance endpoints');
   ok(Math.abs(C.contrastRatio(0, 1) - 21) < 1e-9, 'black on white is 21:1');
 

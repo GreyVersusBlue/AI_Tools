@@ -9,6 +9,40 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-24: Path 16 P1, `_shared/chart-svg.js` built; 037 and 038 adopt it (2026-10-28, v402-v403)
+
+**Step 1 (v402), a port.** 037's contrast rule, hatch patterns, `n =` caption, both SVG builders (stacked bar, histogram), the
+2x-on-white rasterizer and the copy/download path moved into one classic script, `window.ChartSvg` (not a module: 037 and 038
+are inline classic scripts; `export.js` is the precedent). 037's HTML is otherwise untouched and its charts are
+byte-identical: `test:chart-svg-parity` runs 1,441 data cases through the new code and a frozen copy of the old
+(`Tools/grade-distribution-visualizer/test/_legacy-chart.mjs`), plus the colour arithmetic, and 9 deliberate defects
+must each be caught; `test:chart-svg` holds the properties on their own (>= 4.5:1 labels on every ramp step, segments
+sum to the bar, heights are shares, nothing unescaped, well-formed XML) with 10 mutants. `test:grade-dist` (the clipboard
+suite) and the a11y sweep for 037 pass.
+
+**Step 2 (v403), 038 adopts.** `niceMax`, `formatNum`, `linearRegression`, the axes and `bar`/`line`/`pie`/`scatter`/`box`/
+`blankAxes` take the page's state as an options object; 038 keeps parsing, column picking, the share link and the
+worksheet. `test:chart-svg-draw-parity` (553 drawings against the frozen `_legacy-draw.mjs`, a11y envelope and pie label
+colour normalized away, 12 mutants), `test:chart-svg-a11y` (13 mutants) and the browser suite `test:chart-builder-a11y`
+(port 8577) hold it. The baseline: `role="img"` + `aria-labelledby` on a `<title>` and a generated `<desc>` (types, categories,
+values, shares, the fit, capped at 12 items, escaped), a polite announcement on every redraw, pie percentages in the better of
+ink and white (white on the yellow slice was 1.6:1), a hatch per later series in grayscale mode, ids with a prefix so the
+printed worksheet and the chart never share one. **Found on the way:** 038's value-column checkboxes had no label at all (axe
+"critical"); the empty-page sweep never reached them. Fixed with `for`/`id`. The a11y allowlist needed no change (038 was never on it).
+
+**Step 3 not done, on purpose.** Moving `RAMPS` to `ChartSvg.ramp()` does not fit: `bmg-choropleth.js` is an ES module
+imported by 046 and `smoke-choropleth`; ChartSvg is a classic script. 046 would depend on a global having loaded first and the
+pure-Node import would break, for no behaviour gained. `chart-svg.test.mjs` instead pins ChartSvg's luminance to the map's on
+every ramp stop (the formula was written twice). Reversible: a `ramps` ES module both import is the clean version if a third
+reader appears.
+
+**Housekeeping.** Rank 43 deleted, ranks after it moved up one (the earlier gaps in the table stay as they were); live in-text
+refs I could verify against a row were moved with them, three stale ones (rank 100, 116, 98: no such row today) were left.
+`SHELL_URLS` and `PRECACHE_URLS` both list the file (v403 also bumped for the page changes). Shared lists this obliges others to
+touch: `suites.json`, `suite-durations.json` (new suites costed at 1/20), `package.json`, `eslint.config.js` (`ChartSvg` global).
+`offline:build` and `offline:verify` pass (all 11 entry points) with this change. Not verified: a screen reader reading the `<desc>`;
+the grayscale hatches on paper; 037 and 038 opened from a `file://` offline copy (the verify's 11 entry points do not include them).
+
 ## AI-28: offline:verify fixed, Path 20 P1 ported to `_shared/geo-project.js` (2026-10-28, v401)
 
 **The offline failure (part A).** `npm run offline:verify` had failed on 046 with `Uncaught TypeError: Failed to
