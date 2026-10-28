@@ -642,12 +642,12 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **220 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `media-db.js` 16 · `export.js` 15 · `print-kit.css` 15 · `print-kit.js` 15 · `stage.js` 13 · `tool-registry.js` 11 · `qr-scan.js` 10 · `school-day.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `grouping.js` 6 · `student-flags.js` 6 · `undo.js` 6 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `rotation.js` 2 · `seating-read.js` 2 · `stations.js` 2 · `backup-crypto.js` 1 · `bracket.js` 1 · `gvb-save.js` 1 (+1 via a module) · `stations-debrief.css` 1 · `stations-debrief.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `media-db.js` 16 · `stage.js` 16 · `export.js` 15 · `print-kit.css` 15 · `print-kit.js` 15 · `tool-registry.js` 11 · `qr-scan.js` 10 · `school-day.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `grouping.js` 6 · `student-flags.js` 6 · `undo.js` 6 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `rotation.js` 2 · `seating-read.js` 2 · `stations.js` 2 · `backup-crypto.js` 1 · `bracket.js` 1 · `gvb-save.js` 1 (+1 via a module) · `stations-debrief.css` 1 · `stations-debrief.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **168**, contiguous (counted 2026-10-28 after rank 53 shipped). Path 21 is finished; per-tool rows start at rank **78**; 159–167 are Path 22 P6–P14 |
 | Art | **130** ledger entries: 046's relief (29,726 B), 030's board backdrop and tiles (5,348 B), 042's ten seals and ribbons (84,170 B), 071's twelve pictures (157,454 B), 080's piece atlas (43,318 B), 87 tool icons, the sprite (58,032 B), 4 shortcut PNGs, the 4 app-mark PNGs (14,457 B), the 4 hero WebPs (64,832 B), the test tile's light/dark pair |
-| Dark mode / fullscreen | 92 of 92 themed pages native dark (`path5:next`; 8 live pages load no `a11y.js`: 035 is the documented exception (`CLAUDE.md`), the rest are standalone on purpose); `stage.js` on 10 pages. Path 5 is finished |
+| Dark mode / fullscreen | 92 of 92 themed pages native dark (`path5:next`; 8 live pages load no `a11y.js`: 035 is the documented exception (`CLAUDE.md`), the rest are standalone on purpose); `stage.js` on 16 pages. Path 5 is finished |
 | CI | Pull requests run `--changed`; a push to `main` runs everything. Since 2026-10-26 the suites run as six parallel shard jobs (`--shard i/6`, ~21 min each by `suite-durations.json`, not yet seen on a CI run), with a `guards` job and one `test` check that is green only if all are. A PR touching `_shared/`, `index.html`, `package.json` or `Tools/board-check/` is site-wide: all 331 suites, ~121 min summed |
 | Lint | clean |
 
@@ -1986,10 +1986,12 @@ subtree, so live controls must live inside it).
   helper's fallback rule is injected into `<head>` *after* the page's own `<style>` and paints
   `var(--paper, #fff)` — a same-specificity override ties and loses on order, which would have put
   a white board in front of the room.
-  **The one question this phase leaves open, written here because the ranked row is gone:** 030,
-  064 and 017 each run a projector surface off a fixed `inset: 0` overlay rather than the
-  Fullscreen API. Whether any of them should become a `Stage.mount` is a judgement call nobody has
-  made. And **007 hand-rolls `requestFullscreen`**; it loaded no `a11y.js` until AI-35, so the picker could not
+  **The one question this phase left open is answered and done (Devon, 2026-10-21: "Move them to
+  the shared fullscreen"; AI-31, v398–v400).** 017's rotation projector and 064's review game
+  (hidden overlays, 001's shape) and 030's board (`<body>` mounted, 010's shape: its clue and round
+  overlays are modals that open on every tile, so fullscreening *them* would flip the screen mode
+  per clue; the Projector view stays its own remembered switch) now open through `Stage.mount`;
+  all three are in `smoke-stage-rollout.mjs`. `stage.js` is at 16 pages. And **007 hand-rolls `requestFullscreen`**; it loaded no `a11y.js` until AI-35, so the picker could not
   see it at all. Now it has one (its own picker's; see HISTORY "AI-35"), and `path5:next` lists it as hand-rolled.
   **82 of 82 (100%) native, nothing on the filter, no hand-rolled stage among them.** Each
   converted page went into `PAGES` in `Tools/theme/test/smoke-dark-rollout.mjs` — more than once

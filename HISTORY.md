@@ -9,6 +9,24 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-31: Path 5 P5-1, the three home-made projector overlays move to the shared fullscreen (2026-10-28, v398-v400)
+
+Devon's 2026-10-21 answer to Path 5's one open question was "Move them to the shared fullscreen". One tool per commit, each with its own `CACHE_VERSION`; `_shared/stage.js` did not change.
+
+**v398, 017.** The rotation projector (`#projectorView`) is a `Stage.mount` in 001's shape: it stays `hidden` until opened, is un-hidden first (an element that is `display:none` cannot be fullscreened) and then entered, `fullscreenKey: false` with `f` in the hotkey map, and the stage's `onChange` is the one place it closes. Its own Escape handler went (the helper's handles the fallback; real fullscreen's Escape is the browser's). `#projectorView.is-fullscreen` restates the dark background because the helper's injected fallback rule paints `var(--paper)` after the page's `<style>`. `rotation-parity` stays green.
+
+**v399, 064.** The review game overlay, same shape; "Pause & close" is the stage's `exitButton` and its `onChange` saves the game first, so every way out (button, F, Escape on the fallback, the browser's Escape) pauses it as before. F only ever *leaves*: a game needs its teams chosen, so F cannot start one (the rollout suite takes `fOnlyLeaves`). The page's own Escape branch went.
+
+**v400, 030.** `<body>` is the stage (010's shape) with a Fullscreen button beside Projector view and F. The `enabled` gate switches the stage's keys off while a clue or round overlay is open or the board is not showing, so Escape closes the clue and does not also leave a fallback stage.
+
+**Decided, reversible.** (a) 030's clue overlay is not itself the stage: it opens on every tile, and a fullscreen entered and left per clue flips the projector's screen mode each time. (b) Projector view and Fullscreen are two switches on 030 (as on 010): the view is remembered per tab and a reload cannot re-enter fullscreen without a click. Folding them into one button is a small change in `setProjector`.
+
+**Changed tests.** `gallery-walk-qr/smoke-projector` closes the view with F (headless Chromium ignores Escape in real fullscreen; Escape on the fallback is in the rollout suite). `smoke-stage-rollout` gained 017, 064 and 030 (238 assertions, was 190).
+
+**Not verified.** A real projector, a Chromebook, or a real Escape out of real fullscreen (only the fallback's Escape is driven). 030's tall board scrolling in real fullscreen was set (`body.is-fullscreen {overflow-y:auto}`) but not scrolled by a test.
+
+---
+
 ## AI-26: Path 18 P4, the debrief for a 019 room (2026-10-28, v395-v397)
 
 **v395, one sheet for both tools.** 018's debrief layout (path table, summary line, reflection page) moved out of the page into `_shared/stations-debrief.js` (`StationsDebrief.render(host, teams, opts)`, one `PrintKit.renderCards` call) with `_shared/stations-debrief.css`; 018 calls it and its inline rules went. `smoke-print` now counts five `renderCards` calls in the page, one `StationsDebrief.render`, and the one in the module (it said six in the page before).
