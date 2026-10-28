@@ -9,6 +9,16 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-22: Path 14 P5 increment 3, live mode on 005; 018 and 043 decided out (2026-10-28, v377)
+
+The design is in the P5 bullet in `BACKLOG.md`. **Live mode** is opt-in: a "Live mode" button beside Actual size mounts `Stage` (`_shared/stage.js`) on `#floorWrap` (`fullscreenKey: false`; `hud: #liveBtn`, because a button outside the stage is under the overlay and could not be pressed to leave, which `smoke-live` found the first time it ran). While live, a tap on a seat toggles *absent today* through `_shared/student-flags.js` (`crh_flags_v1`, by the id `Roster.idIndex()/idFor()` finds from the name, the section's name as the hint); a student on no saved roster is absent for the live session only and writes nothing; no tap touches the chart, desk controls hide and seats do not drag. 005 is now a second writer of `crh_flags_v1` (006 was the only one); the key is spelled out in the `setItem` so `check:registry` can read it. `smoke-live.mjs` (`npm run test:seating-live`, port 8567, 21 assertions), seen failing five ways with the write broken.
+
+**Decided, not built: 018 and 043.** Each keeps one cleared/deleted thing for a timed window and a second step replaces the first (018 clears its timer and buffer; 043 says so in a comment), so a stack would never hold two. Recorded as 024 was.
+
+**Not built: a point in 008 and a pass in 001.** Neither tool takes anything in: no query parameter, no `Handoffs` entry to receive. The design lists the two honest routes (a handoff entry plus a receiver in each, or 005 writing their storage the way 003 writes 037's), both cross-tool schema changes and, for a link, a student's name in browser history against `handoffs.js`'s "published only" rule. Left for Devon; not forced.
+
+Checks: `--only seating-chart` (16 suites), a11y 005, `test:theme`, lint, `check:precache --base origin/main`, `check:registry` (`br_rollover_v1` STALE pre-existing), `check:entities`, `check:hidden-flex`, `check:print-clip`, `check:inline-sinks`, `check:dedupe`, `check:docs-commands`, `check:adoption --check` (stage.js 13, student-flags.js 6; the header row is rewritten). Not run: the whole `--changed` list (`sw.js` is site-wide), a real projector or a phone.
+
 ## AI-22: Path 14 P5 increment 2, `_shared/undo.js` in 002, 021 and 027 (2026-10-28, v374-v376)
 
 One tool per commit, each with its own `CACHE_VERSION` and its own `smoke-undo.mjs`, seen failing once with `limit: 1`. Path 13's `test:grouping-parity` (122,352), `test:grouping-adopters` (256) and `test:rotation-parity` (64,000 checks) are unchanged and green, and 002's golden classes were not touched.
