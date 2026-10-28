@@ -41,6 +41,12 @@ function check(C) {
   ok(desc(bar).includes('B &amp; &lt;C&gt; 7.5') && desc(bar).includes('Mass (g)') && desc(bar).includes('Vol'), 'bar desc misses the values');
   ok(desc(pie).includes('(50%)') && desc(pie).includes('(30%)'), 'pie desc misses the shares');
   ok(/R squared 1\b|R squared 0\.99/.test(desc(sc)) && desc(sc).includes('Trend line'), 'scatter desc misses the fit');
+  // a curve handed in by the page (dcb-fit.js): drawn, labelled and described; absent without trend
+  const fit = { predict: x => 2 * x * x, label: 'y = 2x²  (R² = 1)', desc: 'Power fit y = 2x^2, R squared 1, from 3 points.' };
+  const scf = C.scatter({ points: [{ x: 1, y: 2 }, { x: 2, y: 8 }, { x: 3, y: 18 }], xLabel: 'T', yLabel: 'D' }, { ...o, fit });
+  ok(/<polyline points="[^"]+"[^>]*stroke-dasharray/.test(scf) && scf.includes('y = 2x²  (R² = 1)'), 'scatter with a fit draws no curve or label');
+  ok(desc(scf).includes('Power fit y = 2x^2') && !desc(scf).includes('Trend line'), 'scatter desc misses the fit or keeps the line');
+  ok(!/<polyline/.test(C.scatter({ points: [{ x: 1, y: 2 }, { x: 2, y: 8 }], xLabel: 'T', yLabel: 'D' }, { ...o, trend: false, fit })), 'a fit is drawn with the trendline off');
   ok(desc(bx).includes('median 5') && desc(bx).includes('1 to 10'), 'box desc misses the summary');
   ok(/Nothing is plotted/.test(desc(blank)) && !desc(blank).includes('7.5'), 'blank worksheet desc leaks the data');
   const long = Array.from({ length: 400 }, (_, i) => 'c' + i);

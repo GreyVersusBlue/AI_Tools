@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v419';
+const CACHE_VERSION = 'v420';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -308,6 +308,7 @@ const PRECACHE_URLS = [
   "Tools/current-events-discussion-guide-generator/cedg-readability.js",
   "Tools/055-daily-editing-warmup-generator.html",
   "Tools/038-data-chart-builder.html",
+  "Tools/data-chart-builder/dcb-fit.js",
   "Tools/056-dbq-source-packet-builder.html",
   "Tools/dbq-source-packet-builder/dbq-image.js",
   "Tools/057-dichotomous-key-builder.html",

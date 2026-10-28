@@ -163,7 +163,8 @@
 
      Every chart takes the data the page already builds and an options object `o`:
        { W, H, pad, title, yLabel, showValues, palette (hex list, pie), pointColor,
-         trendColor, trend (scatter: draw the fit), grayscale (hatch per series),
+         trendColor, trend (scatter: draw the fit), fit (scatter: a curve to draw instead of the straight
+         line, { predict(x), label, desc } from dcb-fit.js; nothing changes without it), grayscale (hatch per series),
          idPrefix (ids for the <title>, <desc> and patterns: unique per SVG on a page) }
      and returns a standalone SVG string. Each SVG is role="img" with a <title> and a
      <desc> that says what the picture says (type, categories, values), so a screen
@@ -211,7 +212,8 @@
       xLabel: o.xLabel || '',
       yMax: o.yMax > 0 ? o.yMax : 0,
       idPrefix: o.idPrefix || 'cs',
-      kind: o.kind || ''
+      kind: o.kind || '',
+      fit: o.fit || null
     };
   }
 
@@ -455,6 +457,9 @@
     var trend = c.trend ? linearRegression(sc.points) : null;
     var desc = 'Scatter plot of ' + sc.yLabel + ' against ' + sc.xLabel + ', ' + sc.points.length + ' point' + (sc.points.length === 1 ? '' : 's') + '.';
     if (sc.points.length) desc += ' ' + sc.xLabel + ' runs from ' + formatNum(Math.min.apply(null, xs)) + ' to ' + formatNum(Math.max.apply(null, xs)) + '; ' + sc.yLabel + ' from ' + formatNum(Math.min.apply(null, ys)) + ' to ' + formatNum(Math.max.apply(null, ys)) + '.';
+    var fit = c.trend && c.fit && typeof c.fit.predict === 'function' ? c.fit : null;
+    if (fit) trend = null;
+    if (fit) desc += ' ' + fit.desc;
     if (trend) desc += ' Trend line y = ' + round2(trend.slope) + 'x ' + (trend.intercept >= 0 ? '+ ' : '- ') + round2(Math.abs(trend.intercept)) + ', R squared ' + round2(trend.r2) + '.';
 
     var parts = [open(c, 'Scatter plot', desc), titleEl(c), axes(c, maxY, null), yAxisLabel(c, sc.yLabel)];
@@ -467,6 +472,21 @@
       parts.push('<line x1="' + toX(lineX1).toFixed(1) + '" y1="' + toY(lineY1).toFixed(1) + '" x2="' + toX(lineX2).toFixed(1) + '" y2="' + toY(lineY2).toFixed(1) + '" stroke="' + c.trendColor + '" stroke-width="2" stroke-dasharray="5,4"/>');
       var eq = 'y = ' + round2(trend.slope) + 'x ' + (trend.intercept >= 0 ? '+ ' : '- ') + round2(Math.abs(trend.intercept)) + '  (R² = ' + round2(trend.r2) + ')';
       parts.push('<text x="' + (W - PAD.right) + '" y="' + (PAD.top - 6) + '" text-anchor="end" font-size="10" fill="' + c.trendColor + '">' + escapeXml(eq) + '</text>');
+    }
+
+    if (fit) {
+      /* a curve: sampled across the plot, broken wherever it leaves it or is not a number */
+      var segs = [], cur = [], steps = 120;
+      for (var si = 0; si <= steps; si++) {
+        var fx = xOrigin + (maxX - xOrigin) * si / steps, fy = fit.predict(fx);
+        if (isFinite(fy) && fy >= 0 && fy <= maxY) cur.push(toX(fx).toFixed(1) + ',' + toY(fy).toFixed(1));
+        else if (cur.length) { segs.push(cur); cur = []; }
+      }
+      if (cur.length) segs.push(cur);
+      segs.forEach(function (sg) {
+        if (sg.length > 1) parts.push('<polyline points="' + sg.join(' ') + '" fill="none" stroke="' + c.trendColor + '" stroke-width="2" stroke-dasharray="5,4"/>');
+      });
+      parts.push('<text x="' + (W - PAD.right) + '" y="' + (PAD.top - 6) + '" text-anchor="end" font-size="10" fill="' + c.trendColor + '">' + escapeXml(fit.label) + '</text>');
     }
 
     sc.points.forEach(function (p) {
