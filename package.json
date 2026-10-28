@@ -201,6 +201,7 @@
     "test:store": "node Tools/store/test/envelope.test.mjs && node Tools/store/test/smoke-quota-banner.mjs",
     "test:registry": "node Tools/tool-registry/test/registry-shape.test.mjs",
     "test:roster": "node Tools/roster/test/roster.test.mjs",
+    "test:undo": "node Tools/undo/test/undo.test.mjs",
     "test:student-flags": "node Tools/roster/test/student-flags.test.mjs",
     "test:student-flags-smoke": "node Tools/roster/test/smoke-student-flags.mjs",
     "test:flag-adopters": "node Tools/roster/test/smoke-flag-adopters.mjs",

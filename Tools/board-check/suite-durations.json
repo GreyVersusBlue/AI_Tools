@@ -250,6 +250,7 @@
     "Tools/tool-registry/test/registry-shape.test.mjs": 1,
     "Tools/roster/test/roster.test.mjs": 1,
     "Tools/roster/test/student-flags.test.mjs": 1,
+    "Tools/undo/test/undo.test.mjs": 1,
     "Tools/roster/test/smoke-student-flags.mjs": 34,
     "Tools/roster/test/smoke-flag-adopters.mjs": 12,
     "Tools/roster/test/smoke-picker-rollout.mjs": 43,

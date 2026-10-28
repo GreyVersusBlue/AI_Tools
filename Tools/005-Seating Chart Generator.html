@@ -25,6 +25,7 @@
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
+<script src="../_shared/undo.js"></script>
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
@@ -906,11 +907,12 @@ let erasing = false;
 function touch(){ if (typeof followRoom === 'function') followRoom(); if (autosaver && !erasing) autosaver.mark(); }
 
 /* ---- undo, cold-call picker ---- */
-let undoStack = [];
-function pushUndo(){ undoStack.push(JSON.stringify(state)); if (undoStack.length > 60) undoStack.shift(); }
+const undoStack = UndoStack.create({ limit: 60 });   // _shared/undo.js; no redo here, so undo() passes no current
+function pushUndo(){ undoStack.push(state); }
 function undo(){
-  if (!undoStack.length) return;
-  state = JSON.parse(undoStack.pop());
+  const prev = undoStack.undo();
+  if (!prev) return;
+  state = prev;
   if (!sec()) state.active = state.sections[0].id;
   selectedStudent = null;
   renderAll();
@@ -2036,7 +2038,7 @@ document.addEventListener('pointermove', ev => {
 document.addEventListener('pointerup', () => {
   if (!moving) return;
   if (moving.moved){
-    undoStack.push(moving.snap0); if (undoStack.length > 60) undoStack.shift();
+    undoStack.pushRaw(moving.snap0);
     const d = sec().desks.find(x => x.id === moving.id);
     d.x = snap(parseFloat(moving.el.style.left));
     d.y = snap(parseFloat(moving.el.style.top));
@@ -2567,7 +2569,7 @@ document.addEventListener('keydown', e => {
 /** An imported file or an erased save has to be taken up whole. */
 function setState(next){
   state = next;
-  undoStack = [];
+  undoStack.clear();
   selectedStudent = null; dragStudentId = null; dragFromDeskId = null;
   pickedSet = new Set(); pickedSection = null; lastPicked = null;
   applyZoom(); renderAll();
