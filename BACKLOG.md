@@ -7903,6 +7903,45 @@ runtime, the one content fetch that leaves the browser.
 - **P2 — Dropped GeoJSON/TopoJSON.** Accept a dropped file as a base map (district
   boundaries, watersheds, historical borders), with the same calibration path as
   the bundled sets; store in the media store (Path 4).
+  *Design (AI-28, 2026-10-28, written before the build; there was none).*
+  - *Accepted.* GeoJSON (FeatureCollection, Feature, a bare Polygon/MultiPolygon, a GeometryCollection of those)
+    and TopoJSON (a Topology; one object is used, or the one with the most shapes when there are several, and the
+    page says so). Only Polygon and MultiPolygon are drawn; points and lines are counted and reported, never
+    dropped silently. **TopoJSON needs no new vendored library**: its arcs (transform, delta coding, the `~i`
+    reversed sign, each arc after the first dropping its repeated start) decode in about forty lines inside the
+    module, so nothing for Devon to decide. Limits: 8 MB of text, 400,000 vertices, 5,000 shapes (the largest built-in
+    layer is 14,446 vertices and draws in about 5 ms; these are a safety margin). Coordinates must be longitude and
+    latitude in degrees; **reprojection is not offered** (it would need a library): a file whose numbers are far
+    outside +-180/+-90, or whose `crs` names anything but CRS84/EPSG:4326, is refused with the fix named
+    (re-save as WGS 84; mapshaper.org does it). Shapefile, KML, zip and the like are refused by extension with the same
+    kind of sentence. Nothing is fetched, and nothing runs at load.
+  - *Projection.* The dropped file is a preset of its own (`dataset: 'custom'`) in `bmg-vector.js`, drawn through
+    `_shared/geo-project.js` exactly as the bundled sets are: plate carrée, the stage unit one pixel of the 4000 px
+    raster `pixelSizeFor(bounds)` describes, so labels, markers, regions, lines, the grid, the scale bar and the hit
+    test need no change. The calibration bounds are the data's box (unwrapped longitudes, so Fiji or Chukotka do
+    not span the world) plus 4% a side, the whole world when it spans 360 degrees. Plate carrée stretches a local map
+    sideways at high latitude as the Europe and Alaska crops already do; that is accepted, because the calibration says
+    equirectangular. Each shape is filled on its own (an even-odd path over all shapes would punch holes where
+    shapes overlap, as nested watersheds do); borders on/off is the same layer, shown or not. No shaded relief.
+  - *Stored, and where.* The cleaned file (each feature reduced to `properties.name` and its geometry, coordinates
+    rounded to 4 decimals, about 11 m) is a Blob in `gvb-media` under the `bmg-geo` namespace, keyed
+    `custom-<16 hex>` from a hash of the cleaned features, so the same file always has the same key and a project that
+    used it finds it when the file is dropped on another machine. **Not in `bmg-maps`**: that database is a cache
+    ("Clear cached maps" empties it, the registry marks it safe to leave out of a backup) and a dropped file does not
+    come back by itself; `gvb-media` is backed up by default and "Clear cached maps" leaves it alone (the answer to
+    P3's question 4 stands: that button is unchanged). The rendered PNG is derived and stays in `bmg-maps` under the
+    usual `vector:custom-<hex>:<bounds>:<style>...` id. The shapes are loaded back for a project only when its map id
+    names one (`restoreDropped`), and the stored files are listed in the base map list the first time it is
+    opened, never at page load. A name comes from `name`/`NAME`/... or the first short string property, else "Shape N";
+    click-to-shade and data shading work off it as they do for countries.
+  - *A bad file says.* One sentence, in the status line, naming what is wrong and the fix: not JSON, JSON that is
+    not GeoJSON, a file type that is not read, too big (with its size), too many points/shapes, not longitude/latitude
+    (with one offending point), a `crs` that is not WGS 84, no areas to draw (points/lines only), an arc number that
+    is not in the file. A file that is partly usable is drawn and the note lists what was left out.
+  - *Share links.* A share link carries the project, not the picture, and not the file: the arrival says the map was
+    drawn from a boundary file to be dropped again (same file, same key, labels stay where they are).
+  - *Not decided here, and so not built:* storing several layers from one file (a TopoJSON's other objects are
+    ignored and said so); reprojection; a "forget this file" button (a stored file is in `gvb-media`, where 009 clears it).
 - **P3 — Live vector viewer (Fable).** Render the base map as vectors in the
   viewer (SVG or canvas re-render on zoom) so zoom is sharp, keeping the raster
   path for poster export and the print pipeline. *Fable for keeping hit-testing,
