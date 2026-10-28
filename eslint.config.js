@@ -57,6 +57,7 @@ const SITE_GLOBALS = {
   PrintKit: 'readonly',
   ExportKit: 'readonly',
   ChartSvg: 'readonly',
+  PasteTable: 'readonly',
   Bracket: 'readonly',
   Grouping: 'readonly',
   Rotation: 'readonly',

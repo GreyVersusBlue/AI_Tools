@@ -239,6 +239,7 @@
     "Tools/blank-map-generator/test/geo-project-parity.test.mjs": 1,
     "Tools/grade-distribution-visualizer/test/chart-svg.test.mjs": 1,
     "Tools/grade-distribution-visualizer/test/chart-svg-parity.test.mjs": 1,
+    "Tools/paste-table/test/paste-table.test.mjs": 1,
     "Tools/timeline-builder/test/label-packing.test.mjs": 1,
     "Tools/civics-role-card-generator/test/smoke-file-transfer.mjs": 3,
     "Tools/current-events-discussion-guide-generator/test/readability.test.mjs": 1,

@@ -259,6 +259,7 @@
     "Tools/blank-map-generator/test/geo-project-parity.test.mjs",
     "Tools/grade-distribution-visualizer/test/chart-svg.test.mjs",
     "Tools/grade-distribution-visualizer/test/chart-svg-parity.test.mjs",
+    "Tools/paste-table/test/paste-table.test.mjs",
     "Tools/service-worker/test/smoke-sw-update.mjs",
     "Tools/service-worker/test/smoke-sw-tiers.mjs",
     "Tools/service-worker/test/smoke-storage-persist.mjs",
