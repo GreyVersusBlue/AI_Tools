@@ -63,7 +63,7 @@ const eq = (a, b, label) => ok(a === b, `${label} (got ${JSON.stringify(a)}, wan
 const server = await serve(PORT);
 const browser = await launch();
 
-console.log('Stage rollout — 001, 004, 017, 021, 023 and 025 on _shared/stage.js');
+console.log('Stage rollout — 001, 004, 017, 021, 023, 025 and 064 on _shared/stage.js');
 
 /** The state every one of these checks reads, for a given stage + button. */
 const readState = (page, stageSel, btnSel) => page.evaluate(({ stageSel, btnSel }) => {
@@ -105,7 +105,7 @@ const fillsViewport = box => box[2] >= 1270 && box[3] >= 890;
  * leaves — which is also the only way to check that 001's F reaches a stage
  * whose element was display:none when the key was pressed.
  */
-async function driveStage(browser, { label, url, stage, stageName, btn, enterBtn, prep, hudded }) {
+async function driveStage(browser, { label, url, stage, stageName, btn, enterBtn, prep, hudded, fOnlyLeaves }) {
   const enterSel = enterBtn || btn;
   const twoButton = !!enterBtn;
 
@@ -151,11 +151,16 @@ async function driveStage(browser, { label, url, stage, stageName, btn, enterBtn
       s = await readState(page, stage, btn);
       eq(s.fs, null, `${label}: the view's own Exit button leaves fullscreen`);
       ok(!/is-fullscreen/.test(s.cls), `${label}: the class is gone after Exit (${s.cls})`);
-      await page.evaluate(() => document.activeElement && document.activeElement.blur());
-      await page.keyboard.press('f');
+      if (fOnlyLeaves) {
+        // the view needs setup the tool asks for (064's game: teams), so F cannot open it; re-enter by the button
+        await page.click(enterSel);
+      } else {
+        await page.evaluate(() => document.activeElement && document.activeElement.blur());
+        await page.keyboard.press('f');
+      }
       await settle(page, 400);
       s = await readState(page, stage, btn);
-      eq(s.fs, stageName, `${label}: F re-enters — the stage element was display:none when the key was pressed`);
+      eq(s.fs, stageName, `${label}: ${fOnlyLeaves ? 'the enter button re-enters' : 'F re-enters — the stage element was display:none when the key was pressed'}`);
     }
 
     await page.keyboard.press('f');
@@ -285,6 +290,26 @@ await driveStage(browser, {
   btn: '#pjExit',
   enterBtn: '#projectorBtn',
   hudded: false,
+});
+
+/* ── 064 — Trading Card Maker, review game (Path 5 P5-1) ──────────────────
+   001's shape again, with a sample deck loaded first so the game can start: the
+   editor's Start button un-hides the overlay and enters, "Pause & close" is the
+   exit button inside it, and F only ever leaves (a game needs its teams chosen,
+   so F cannot start one). */
+await driveStage(browser, {
+  label: '064 game',
+  url: BASE + '/Tools/064-historical-trading-card-maker.html',
+  stage: '#gameOverlay',
+  stageName: 'gameOverlay',
+  btn: '#gmCloseBtn',
+  enterBtn: '#gmStartBtn',
+  hudded: false,
+  fOnlyLeaves: true,
+  prep: async page => {
+    await page.click('#sampleDeckBtn');
+    await settle(page, 300);
+  },
 });
 
 /* ── 004 — Classroom Timer (Path 5 P3) ────────────────────────────────────
