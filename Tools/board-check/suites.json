@@ -265,6 +265,7 @@
     "Tools/paste-table/test/paste-table-036-parity.test.mjs",
     "Tools/paste-table/test/paste-table-037-parity.test.mjs",
     "Tools/paste-table/test/paste-table-075-parity.test.mjs",
+    "Tools/paste-table/test/paste-table-006-parity.test.mjs",
     "Tools/service-worker/test/smoke-sw-update.mjs",
     "Tools/service-worker/test/smoke-sw-tiers.mjs",
     "Tools/service-worker/test/smoke-storage-persist.mjs",

@@ -283,6 +283,31 @@ console.log('Class Roster Hub — bulk import, xlsx, split and diff');
   await page.close();
 }
 
+/* ── 9. A pasted region with short rows says which lines are short (Path 16 P2) ── */
+{
+  const page = await open();
+  await page.evaluate(() => {
+    const dt = new DataTransfer();
+    dt.setData('text/plain', 'Name\tPeriod\nAda Lovelace\t3\nGrace Hopper\nNellie Bly\t5\n');
+    document.getElementById('namesInput').dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  });
+  await settle(page, 400);
+  ok(!(await page.locator('#importOverlay').isHidden()), '9: a pasted table opens the mapping dialog');
+  eq((await page.locator('#importRaggedNote').textContent()).trim(),
+    '1 row has fewer cells than the widest (line 3), so the missing cells are blank.',
+    '9: the short row is named by its line');
+  await page.close();
+  const clean = await open();
+  await clean.evaluate(() => {
+    const dt = new DataTransfer();
+    dt.setData('text/plain', 'Name\tPeriod\nAda Lovelace\t3\nGrace Hopper\t4\n');
+    document.getElementById('namesInput').dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  });
+  await settle(clean, 400);
+  ok(await clean.locator('#importRaggedNote').isHidden(), '9: a table with no short rows shows no note');
+  await clean.close();
+}
+
 await browser.close();
 server.close();
 

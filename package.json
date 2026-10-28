@@ -45,6 +45,7 @@
     "test:paste-table-036-parity": "node Tools/paste-table/test/paste-table-036-parity.test.mjs",
     "test:paste-table-037-parity": "node Tools/paste-table/test/paste-table-037-parity.test.mjs",
     "test:paste-table-075-parity": "node Tools/paste-table/test/paste-table-075-parity.test.mjs",
+    "test:paste-table-006-parity": "node Tools/paste-table/test/paste-table-006-parity.test.mjs",
     "test:groups": "node Tools/group-team-generator/test/smoke-share.mjs && node Tools/group-team-generator/test/smoke-pairing-history.mjs && node Tools/group-team-generator/test/smoke-undo.mjs",
     "test:year-memory-core": "node Tools/group-team-generator/test/smoke-year-memory-core.mjs",
     "test:year-memory": "node Tools/group-team-generator/test/smoke-year-memory.mjs",
