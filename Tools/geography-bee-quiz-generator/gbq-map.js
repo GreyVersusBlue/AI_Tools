@@ -24,10 +24,13 @@
 // drawing below is a ~120-line local renderer against the same data, which is
 // exactly the fallback 015 shipped for the same reason.
 //
-// The antimeridian handling (`unwrapRing`/`drawableRings`) is adapted from
-// bmg-vector.js. It is the third copy of that logic on the site now — see the
-// note in `improvement prompts/_site-requests.md`; it wants to move into
-// `_shared/`, which is out of bounds for this round.
+// The projection, the antimeridian handling (`unwrapRing`/`drawableRings`) and
+// the path tracing are `_shared/geo-project.js`, the one copy 046 and 015 use
+// too (Path 20 P1). They were this module's own adapted copy until v424; the
+// frozen original is `test/_legacy-gbq-geo.mjs`, held equal by `npm run
+// test:geo-bee-parity`.
+
+import { projectPoint, traceFeature } from '../../_shared/geo-project.js';
 
 const DATA_URL = name => new URL('../blank-map-generator/data/' + name, import.meta.url);
 
@@ -176,65 +179,6 @@ function polygonsOf(feature) {
   return [];
 }
 
-/* Adapted from bmg-vector.js — see the header note. Natural Earth clamps a ring
-   that straddles the antimeridian to ±180, so drawing it as-is rules a line
-   clean across the map. Rewriting the longitudes so no step exceeds 180° fixes
-   it; a ring that ends up more than 360° wide encircles the globe (Antarctica)
-   and is closed through the pole when filling only. */
-function unwrapRing(ring) {
-  const out = [[ring[0][0], ring[0][1]]];
-  for (let i = 1; i < ring.length; i++) {
-    let lon = ring[i][0];
-    const prev = out[i - 1][0];
-    while (lon - prev > 180) lon -= 360;
-    while (prev - lon > 180) lon += 360;
-    out.push([lon, ring[i][1]]);
-  }
-  return out;
-}
-
-function drawableRings(ring, forStroke) {
-  const un = unwrapRing(ring);
-  const first = un[0][0], last = un[un.length - 1][0];
-  const encircles = Math.abs(last - first) > 180;
-  if (encircles && !forStroke) {
-    const meanLat = un.reduce((sum, p) => sum + p[1], 0) / un.length;
-    const pole = meanLat < 0 ? -90 : 90;
-    un.push([last, pole], [first, pole]);
-  }
-  let min = Infinity, max = -Infinity;
-  for (const p of un) { if (p[0] < min) min = p[0]; if (p[0] > max) max = p[0]; }
-  const shifts = [0];
-  if (max > 180) shifts.push(-360);
-  if (min < -180) shifts.push(360);
-  return shifts.map(shift => ({
-    points: shift ? un.map(p => [p[0] + shift, p[1]]) : un,
-    closed: !(encircles && forStroke),
-  }));
-}
-
-/** Plate carrée, the same projection 046 renders in, so a snippet and a printed blank map agree about where a place is. */
-function project(bounds, w, h, lon, lat) {
-  return {
-    x: ((lon - bounds.west) / (bounds.east - bounds.west)) * w,
-    y: ((bounds.north - lat) / (bounds.north - bounds.south)) * h,
-  };
-}
-
-function traceFeature(ctx, feature, bounds, w, h, forStroke) {
-  for (const poly of polygonsOf(feature)) {
-    for (const ring of poly) {
-      for (const { points, closed } of drawableRings(ring, forStroke)) {
-        for (let i = 0; i < points.length; i++) {
-          const p = project(bounds, w, h, points[i][0], points[i][1]);
-          if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
-        }
-        if (closed) ctx.closePath();
-      }
-    }
-  }
-}
-
 /** The region's largest polygon, as a lon/lat box — used to pick a crop and to decide whether it needs a locator ring. */
 function mainBox(feature) {
   let best = null;
@@ -355,8 +299,8 @@ export async function renderSnippet({ dataset = 'world', region, context = null,
     const box = mainBox(target);
     let ringed = false;
     if (box) {
-      const a = project(bounds, w, h, box.west, box.north);
-      const b = project(bounds, w, h, box.east, box.south);
+      const a = projectPoint(bounds, w, h, box.west, box.north);
+      const b = projectPoint(bounds, w, h, box.east, box.south);
       const boxW = Math.abs(b.x - a.x), boxH = Math.abs(b.y - a.y);
       if (Math.max(boxW, boxH) < Math.max(w, h) * 0.07) {
         const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;

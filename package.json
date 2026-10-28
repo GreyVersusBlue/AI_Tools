@@ -37,6 +37,7 @@
     "test:blank-map-relief": "node Tools/blank-map-generator/test/smoke-relief.mjs",
     "test:geo-project": "node Tools/blank-map-generator/test/geo-project.test.mjs",
     "test:geo-project-parity": "node Tools/blank-map-generator/test/geo-project-parity.test.mjs",
+    "test:geo-bee-parity": "node Tools/geography-bee-quiz-generator/test/geo-bee-parity.test.mjs",
     "test:chart-svg": "node Tools/grade-distribution-visualizer/test/chart-svg.test.mjs",
     "test:gd-items": "node Tools/grade-distribution-visualizer/test/gd-items.test.mjs",
     "test:gd-items-smoke": "node Tools/grade-distribution-visualizer/test/smoke-items.mjs",

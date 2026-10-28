@@ -814,7 +814,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 56 | Path 19 P3 — conjugation pattern engine for Spanish and French, with irregular overrides. **Designed, not built (AI-27, 2026-10-06): the design is in the P3 bullet**; the engine can be built before P1 and P2, its storage on the word record cannot | 039 | 2+ | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 57 | Path 19 P4 — printables: Frayer page, spaced repetition, fill-in-the-blank, word wall as a system | 040 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 58 | Path 19 P5 — audio: TTS on study mode, teacher-recorded pronunciations into the media store | 051 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
-| 59 | Path 20 P1, what is left — switch `gbq-map.js`'s adapted `unwrapRing`/`drawableRings` to `_shared/geo-project.js` (the port itself shipped in v401), and the curriculum gazetteer only if a second tool wants it | `_shared/`, 062 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
+| 59 | Path 20 P1, what is left — the curriculum gazetteer only if a second tool wants it (the port shipped in v401; 062's `gbq-map.js` switched to `_shared/geo-project.js` in v424) | `_shared/` | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 60 | Path 20 P2 — dropped GeoJSON/TopoJSON as a base map | 046 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 61 | Path 20 P3 — live vector viewer, keeping the raster path for poster export (**designed 2026-10-06, not built**: the design, its measurements and six questions for Devon are under the P3 bullet; P1 and P2 are not built and the design does not wait for them) | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 62 | Path 20 P4 — time slices for annotations; two-way selective handoff with 015 | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
@@ -7892,10 +7892,11 @@ runtime, the one content fetch that leaves the browser.
   (every recorded path operation of the four files under all nine presets, stroke and fill, whole and per feature;
   `drawableRings` for every ring; the region index and 3,721 hit-test points per preset; the re-exports), and by
   `npm run test:geo-project` (hand-made shapes with known answers plus 15 deliberate defects that must each be
-  caught). Both are pure Node, no port. **Left in P1:** (a) `gbq-map.js` still carries its own adapted
-  `unwrapRing`/`drawableRings`; it loads `bmg-vector.js` by dynamic import with a fallback for a stale service
-  worker, so switching it is a behaviour change to a second tool, not part of a port, and wants its own suite run.
-  (b) The curriculum gazetteer: there is one copy, in `Tools/timeline-builder/tlb-places.js` (a classic script,
+  caught). Both are pure Node, no port. **Done since (v424, AI-28):** `gbq-map.js` (062) imports `projectPoint`/`traceFeature` from the shared module
+  and its own adapted `unwrapRing`/`drawableRings`/`project`/`traceFeature` are gone; the old functions are frozen in
+  `Tools/geography-bee-quiz-generator/test/_legacy-gbq-geo.mjs` and `npm run test:geo-bee-parity` (pure Node, three
+  mutants) holds the traces equal across both datasets, every crop and three bitmap sizes; `test:geo-bee` is green.
+  **Left in P1:** the curriculum gazetteer: there is one copy, in `Tools/timeline-builder/tlb-places.js` (a classic script,
   015 only), and 046's label sets are a different shape (`[name, lat, lon]` triples for a map's own projection), so
   "the copy 015 duplicated" is not a duplicate today; lifting it needs a decision on module versus global that no
   second reader has asked for yet. Not done, and rank 59 says so. 062 (`gbq-map.js`) draws its own thumbnails from the data and still carries the copy in (a).
