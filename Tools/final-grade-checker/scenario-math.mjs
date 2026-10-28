@@ -275,6 +275,45 @@ export function compareClass(students, scenario, pageOpts) {
   };
 }
 
+// ── The class, drawn: before and after ─────────────────────────────────────
+
+/** The percentage bins the before/after chart counts into, low edge in percent. */
+export const PERCENT_BINS = [
+  { label: 'Under 50', lo: -Infinity }, { label: '50\u201359', lo: 50 }, { label: '60\u201369', lo: 60 },
+  { label: '70\u201379', lo: 70 }, { label: '80\u201389', lo: 80 }, { label: '90\u201399', lo: 90 },
+  { label: '100 and over', lo: 100 },
+];
+
+/**
+ * What the two charts draw, from compareClass()'s result and nothing else, so the picture cannot
+ * disagree with the table: counts of final letters and of percentage averages, before and after.
+ * A student with no final on either side is in neither (named in `excluded`), so both columns
+ * always count the same students. The percentage is the one in the table (an average held in
+ * ten-thousandths), put in the bin whose low edge it reaches.
+ */
+export function distributions(cmp) {
+  const both = (cmp && cmp.rows || []).filter(r => r.before && r.after);
+  const letters = ['A', 'B', 'C', 'D', 'F'];
+  const lettersOf = key => letters.map(l => both.filter(r => r[key].finalLetter === l).length);
+  const pct4 = (r, key) => key === 'after' ? r.after.pct4 : Math.round(r.before.pctAvg * 10000);
+  const binOf = v4 => {
+    let k = 0;
+    PERCENT_BINS.forEach((b, i) => { if (v4 >= b.lo * 10000) k = i; });
+    return k;
+  };
+  const pctOf = key => {
+    const out = PERCENT_BINS.map(() => 0);
+    both.forEach(r => { out[binOf(pct4(r, key))]++; });
+    return out;
+  };
+  return {
+    n: both.length,
+    excluded: ((cmp && cmp.rows) || []).length - both.length,
+    letters: { categories: letters, before: lettersOf('before'), after: lettersOf('after') },
+    percent: { categories: PERCENT_BINS.map(b => b.label), before: pctOf('before'), after: pctOf('after') },
+  };
+}
+
 // ── Words ────────────────────────────────────────────────────────────────────
 
 const pts = h => (h / 100).toString();

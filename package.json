@@ -124,6 +124,7 @@
     "test:final-grade-scenarios": "node Tools/final-grade-checker/test/smoke-scenarios.mjs",
     "test:final-grade-terms-core": "node Tools/final-grade-checker/terms.test.mjs",
     "test:final-grade-terms": "node Tools/final-grade-checker/test/smoke-terms.mjs",
+    "test:final-grade-scenario-chart": "node Tools/final-grade-checker/test/smoke-scenario-chart.mjs",
     "test:final-grade": "node Tools/final-grade-checker/grade-math.test.mjs && node Tools/final-grade-checker/test/smoke-whatif.mjs && node Tools/final-grade-checker/test/smoke-triage.mjs",
     "test:school-calendar": "node Tools/school-calendar/test/smoke-pacing.mjs && node Tools/school-calendar/test/smoke-week.mjs",
     "test:school-calendar-weeks-core": "node Tools/school-calendar/test/smoke-weeks-core.mjs",

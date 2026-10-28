@@ -25,6 +25,7 @@
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/export.js"></script>
+<script src="../_shared/chart-svg.js"></script>
 <script src="../_shared/school-day.js"></script>
 <link rel="stylesheet" href="../_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css">
 <link rel="stylesheet" href="../_shared/theme.css">
@@ -182,6 +183,11 @@
   .sc-note.warn { color: var(--color-warn); font-weight: 600; }
   .sc-summary { margin-top: 10px; font-size: 13px; line-height: 1.55; }
   .sc-summary:empty { display: none; }
+  .sc-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-4); margin-top: 10px; }
+  .sc-chart { margin: 0; }
+  .sc-chart svg { width: 100%; height: auto; display: block; border: 1px solid var(--color-divider); border-radius: 4px; }
+  .sc-chart-actions { display: flex; gap: var(--space-2); margin-top: 6px; }
+  .sc-chart-actions .btn { font-size: 12px; padding: 4px 10px; }
   .sc-scroll { max-height: 340px; overflow: auto; margin-top: 8px; border: 1px solid var(--color-divider); }
   .sc-table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
   .sc-table caption { text-align: left; font-weight: 700; padding: 6px 8px; font-size: 12px; }
@@ -478,6 +484,22 @@
       </div>
       <div id="sc-note" class="sc-note" role="status" aria-live="polite"></div>
       <div id="sc-summary" class="sc-summary" role="status" aria-live="polite"></div>
+      <div id="sc-charts" class="sc-charts" hidden>
+        <figure class="sc-chart" id="sc-chart-letters">
+          <div class="sc-chart-svg"></div>
+          <figcaption class="sc-chart-actions no-print">
+            <button class="btn btn-secondary" type="button" data-sc-dl="letters-svg">Download letters chart (SVG)</button>
+            <button class="btn btn-secondary" type="button" data-sc-dl="letters-png">PNG</button>
+          </figcaption>
+        </figure>
+        <figure class="sc-chart" id="sc-chart-percent">
+          <div class="sc-chart-svg"></div>
+          <figcaption class="sc-chart-actions no-print">
+            <button class="btn btn-secondary" type="button" data-sc-dl="percent-svg">Download percentage chart (SVG)</button>
+            <button class="btn btn-secondary" type="button" data-sc-dl="percent-png">PNG</button>
+          </figcaption>
+        </figure>
+      </div>
       <div id="sc-scroll" class="sc-scroll" tabindex="0" role="region" aria-label="Scenario results by student" hidden>
         <table class="sc-table" id="sc-table"></table>
       </div>
@@ -600,7 +622,7 @@ import {
   termsOf, termLabel, termNoun,
 } from './final-grade-checker/grade-math.mjs';
 import {
-  cleanScenario, compareClass, describeScenario, isNoScenario,
+  cleanScenario, compareClass, describeScenario, isNoScenario, distributions,
 } from './final-grade-checker/scenario-math.mjs';
 
 /** How close `value` sits to the nearest letter-boundary in `cutoffs` (grade-math.mjs's
@@ -1363,9 +1385,11 @@ function renderScenario(students) {
   if (!students || !students.length || isNoScenario(scenario)) {
     summary.textContent = students && students.length ? describeScenario(scenario, termCount()) : '';
     box.hidden = true;
+    $('sc-charts').hidden = true;
     return;
   }
   const c = compareClass(students, scenario, calcOpts());
+  drawScenarioCharts(c);
   const parts = [`${c.up} up`, `${c.down} down`, `${c.same} unchanged`];
   if (c.noFinal) parts.push(`${c.noFinal} with no final on one side or both (a ${noun()} that counts is missing)`);
   summary.textContent = '';
@@ -1403,6 +1427,44 @@ function renderScenario(students) {
   table.append(cap, thead, tbody);
   box.hidden = false;
 }
+
+// The before/after pictures: the same numbers as the table (compareClass), counted by
+// distributions() and drawn by the shared ChartSvg. No name is in either picture.
+const scChartSvgs = { letters: '', percent: '' };
+function drawScenarioCharts(cmp) {
+  const d = distributions(cmp);
+  const box = $('sc-charts');
+  if (!d.n) { box.hidden = true; return; }
+  const yMax = ChartSvg.niceMax(Math.max(1, ...d.letters.before, ...d.letters.after, ...d.percent.before, ...d.percent.after) * 1.15);
+  const series = (cat) => [
+    { label: 'Real grades', values: d[cat].before, color: '#6c8ef5' },
+    { label: 'With the scenario', values: d[cat].after, color: '#fbbf24' },
+  ];
+  scChartSvgs.letters = ChartSvg.bar({ categories: d.letters.categories, series: series('letters') },
+    { W: 480, H: 300, grayscale: true, showValues: true, yMax, yLabel: 'Students', idPrefix: 'scl',
+      title: `Final letters, real and with the scenario (${d.n} students)`, pad: { top: 40, right: 16, bottom: 56, left: 44 } });
+  scChartSvgs.percent = ChartSvg.bar({ categories: d.percent.categories, series: series('percent') },
+    { W: 480, H: 300, grayscale: true, showValues: true, yMax, yLabel: 'Students', idPrefix: 'scp',
+      title: `Percentage average, real and with the scenario (${d.n} students)`, pad: { top: 40, right: 16, bottom: 56, left: 44 } });
+  [['letters', 'sc-chart-letters'], ['percent', 'sc-chart-percent']].forEach(([k, id]) => {
+    const host = $(id).querySelector('.sc-chart-svg');
+    host.textContent = '';
+    const doc = new DOMParser().parseFromString(scChartSvgs[k], 'image/svg+xml').documentElement;
+    host.append(document.importNode(doc, true));
+  });
+  box.hidden = false;
+}
+function downloadScenarioChart(which) {
+  const [k, kind] = which.split('-');
+  const svg = scChartSvgs[k];
+  if (!svg) return;
+  const base = 'scenario-' + (k === 'letters' ? 'final-letters' : 'percentage-average');
+  if (kind === 'svg') ChartSvg.downloadSvg(svg, base); else ChartSvg.downloadPng(svg, base, 960, 600);
+}
+document.getElementById('sc-charts').addEventListener('click', e => {
+  const b = e.target.closest('[data-sc-dl]');
+  if (b) downloadScenarioChart(b.dataset.scDl);
+});
 
 function refreshScenario() { if (currentStudents && currentStudents.length && mode !== 'manual') renderScenario(currentStudents); }
 
