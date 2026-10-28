@@ -678,6 +678,9 @@
       keys: [
         { k: 'escape-room-builder:rooms' },
         { k: 'escape-room-progress:' },
+        /* The teacher monitor's record of a room's play (Path 18 P4): when each team moved off each station,
+           under the team names the teacher typed, so it is student data. Kept on the teacher's device only. */
+        { k: 'escape-room-builder:monitor-record', student: true },
       ],
       prefixes: [
         { p: 'escape-room-builder:', legacy: true },

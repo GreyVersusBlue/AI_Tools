@@ -325,6 +325,7 @@
     "Tools/qr-scavenger-hunt-builder/test/smoke-debrief.mjs": 12,
     "Tools/escape-room-builder/test/er-board.test.mjs": 1,
     "Tools/escape-room-builder/test/smoke-monitor-board.mjs": 8,
+    "Tools/escape-room-builder/test/smoke-monitor-record.mjs": 8,
     "Tools/export/test/smoke-export.mjs": 2,
     "Tools/export/test/smoke-csv-adopters.mjs": 11,
     "Tools/export/test/smoke-sheet-adopters.mjs": 16,

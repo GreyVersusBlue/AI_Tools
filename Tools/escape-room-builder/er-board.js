@@ -18,7 +18,7 @@
   /** Takes one message from a device (the shape lock.html sends: station, id, total, done, score)
       and notes when it arrived. `now` is the monitor's clock in ms. */
   function applyMessage(device, msg, now) {
-    var before = passed(device), wasDone = !!device.done;
+    var before = passed(device), wasDone = !!device.done, wasId = device.stationId || null;
     device.station = msg.station || 0;
     device.stationId = typeof msg.id === 'string' ? msg.id : null;
     device.total = msg.total || 0;
@@ -29,6 +29,16 @@
     if (after !== before || typeof device.lastAt !== 'number') device.lastAt = now;
     if (device.done && !wasDone) device.doneAt = now;
     if (!device.done) device.doneAt = null;   // a restarted room is not finished
+    // The record (Path 18 P4): a station is solved when the device moves off it, or finishes while on it.
+    // The time is the monitor's clock, as every time here is. A device whose code carries no station ids
+    // (an older printed code) names nothing, so it records nothing; a restart from the end starts the record again.
+    if (!device.marks || typeof device.marks !== 'object') device.marks = {};
+    // A room can send a team back to an earlier station, so a lower station number is not a restart; a finished
+    // room that is not finished any more is, and the first solve of a station is the one kept.
+    if (wasDone && !device.done) device.marks = {};
+    else if (wasId && (device.stationId !== wasId || (device.done && !wasDone))) {
+      if (!device.marks[wasId]) device.marks[wasId] = { at: now };
+    }
     return device;
   }
 
@@ -48,6 +58,54 @@
     return global.Stations.rank(rows);
   }
 
+  /** The record a monitor keeps of a room's play, in the shape `Stations.debrief` reads as a run
+      (`raceStartAt`, `teams [{ name, code, marks, attempts, hintsUsed, penaltyMs }]`), so the debrief has one
+      rule and not a second. A device reports where a team is, not its wrong tries or hints, so `attempts`
+      and `hintsUsed` are empty here by design and the sheet is drawn `without` them. Student devices are
+      not asked for anything: this is only what the monitor already heard. `at` is when it was kept. */
+  function toRecord(devices, clockStart, at) {
+    return {
+      v: 1, at: typeof at === 'number' ? at : null,
+      raceStartAt: typeof clockStart === 'number' ? clockStart : null,
+      teams: devices.filter(function (d) { return d.marks && Object.keys(d.marks).length; }).map(function (d) {
+        var marks = {};
+        Object.keys(d.marks).forEach(function (id) { marks[id] = { at: d.marks[id].at }; });
+        return { name: nameOf(d), code: '', marks: marks, attempts: {}, hintsUsed: {}, penaltyMs: 0 };
+      })
+    };
+  }
+
+  /** A stored record, or null when it is not one. Anything else in a team is dropped. */
+  function cleanRecord(raw) {
+    if (!raw || typeof raw !== 'object' || raw.v !== 1 || !Array.isArray(raw.teams)) return null;
+    var teams = [];
+    raw.teams.forEach(function (t) {
+      if (!t || typeof t !== 'object' || !t.marks || typeof t.marks !== 'object') return;
+      var marks = {};
+      Object.keys(t.marks).forEach(function (id) {
+        var m = t.marks[id];
+        if (m && typeof m === 'object' && typeof m.at === 'number' && isFinite(m.at)) marks[id] = { at: m.at };
+      });
+      teams.push({ name: typeof t.name === 'string' ? t.name.slice(0, 80) : '', code: '', marks: marks, attempts: {}, hintsUsed: {}, penaltyMs: 0 });
+    });
+    return { v: 1, at: typeof raw.at === 'number' ? raw.at : null,
+      raceStartAt: typeof raw.raceStartAt === 'number' && isFinite(raw.raceStartAt) ? raw.raceStartAt : null, teams: teams };
+  }
+
+  /** Which saved room a record belongs to: the one that holds the most of its station ids, ties to the first.
+      `sets` is the room store's `{ name: room }`; returns the name, or null when no room holds any. */
+  function roomFor(sets, record) {
+    var ids = {};
+    (record && record.teams || []).forEach(function (t) { Object.keys(t.marks || {}).forEach(function (id) { ids[id] = true; }); });
+    var best = null, bestN = 0;
+    Object.keys(sets || {}).forEach(function (name) {
+      var r = sets[name], n = 0;
+      (r && Array.isArray(r.stations) ? r.stations : []).forEach(function (st) { if (st && ids[st.id]) n++; });
+      if (n > bestN) { best = name; bestN = n; }
+    });
+    return best;
+  }
+
   /** 83000 -> "1:23"; 3723000 -> "1:02:03". */
   function formatElapsed(ms) {
     var t = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
@@ -55,5 +113,6 @@
     return h ? h + ':' + pad(m) + ':' + pad(s) : m + ':' + pad(s);
   }
 
-  global.ErBoard = { passed: passed, applyMessage: applyMessage, leaderboard: leaderboard, formatElapsed: formatElapsed, nameOf: nameOf };
+  global.ErBoard = { passed: passed, applyMessage: applyMessage, leaderboard: leaderboard, formatElapsed: formatElapsed, nameOf: nameOf,
+    toRecord: toRecord, cleanRecord: cleanRecord, roomFor: roomFor };
 })(typeof window !== 'undefined' ? window : this);

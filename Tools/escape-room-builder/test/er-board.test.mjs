@@ -4,7 +4,7 @@
 //   node Tools/escape-room-builder/test/er-board.test.mjs      (or: npm run test:er-board)
 //
 // Both are classic scripts publishing on window, so they run in a vm context with no document.
-// Three deliberately broken copies of er-board.js must each make the suite fail. Exits 1 on failure.
+// Deliberately broken copies of er-board.js must each make the suite fail. Exits 1 on failure.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -60,6 +60,49 @@ function suite(src, stationsSrc) {
   B.applyMessage(d, { station: 0, total: 4, done: false }, 6000);
   eq([d.doneAt, d.lastAt], [null, 6000], 'A: a restarted room is no longer finished');
 
+  // the record (Path 18 P4)
+  const m = dev(1, { name: 'Owls', total: 3 });
+  B.applyMessage(m, { station: 0, id: 'aaaa', total: 3 }, 1000);
+  eq(m.marks, {}, 'M: nothing is solved on arrival');
+  B.applyMessage(m, { station: 0, id: 'aaaa', total: 3, score: 1 }, 1500);
+  eq(m.marks, {}, 'M: a message from the same station solves nothing');
+  B.applyMessage(m, { station: 1, id: 'bbbb', total: 3 }, 2000);
+  eq(m.marks, { aaaa: { at: 2000 } }, 'M: moving on solves the station left, at the monitor\'s clock');
+  B.applyMessage(m, { station: 0, id: 'aaaa', total: 3 }, 2500);
+  eq(m.marks, { aaaa: { at: 2000 }, bbbb: { at: 2500 } }, 'M: a team sent back to an earlier station keeps its first solve and solves the one it left');
+  B.applyMessage(m, { station: 2, id: 'cccc', total: 3 }, 3000);
+  eq(m.marks.aaaa, { at: 2000 }, 'M: a station solved twice keeps the first time');
+  B.applyMessage(m, { station: 3, total: 3, done: true }, 4000);
+  eq(m.marks.cccc, { at: 4000 }, 'M: finishing solves the last station');
+  B.applyMessage(m, { station: 3, total: 3, done: true }, 4500);
+  eq(Object.keys(m.marks).length, 4 - 1, 'M: a repeated done message adds nothing');
+  const noId = dev(2, { total: 3 });
+  B.applyMessage(noId, { station: 0, total: 3 }, 100); B.applyMessage(noId, { station: 1, total: 3 }, 200);
+  eq(noId.marks, {}, 'M: a code with no station ids records nothing (it names no station)');
+  B.applyMessage(m, { station: 0, id: 'aaaa', total: 3 }, 5000);
+  eq(m.marks, {}, 'M: a room restarted after it finished starts its record again');
+
+  const rec = B.toRecord([Object.assign(dev(1, { name: 'Owls' }), { marks: { aaaa: { at: 2000 }, bbbb: { at: 2500 } } }), dev(2, { name: 'Quiet' })], 1000, 9999);
+  eq([rec.v, rec.at, rec.raceStartAt, rec.teams.length], [1, 9999, 1000, 1], 'T: a record holds the clock start and only the teams that solved something');
+  eq(rec.teams[0], { name: 'Owls', code: '', marks: { aaaa: { at: 2000 }, bbbb: { at: 2500 } }, attempts: {}, hintsUsed: {}, penaltyMs: 0 }, 'T: a team is the run shape Stations.debrief reads');
+  eq(B.toRecord([], null, null).raceStartAt, null, 'T: no clock, no start');
+  eq(B.cleanRecord(JSON.parse(JSON.stringify(rec))), rec, 'T: a record survives JSON');
+  eq(B.cleanRecord({ v: 2, teams: [] }), null, 'T: another version is not read');
+  eq(B.cleanRecord('x'), null, 'T: a string is not a record');
+  eq(B.cleanRecord({ v: 1, teams: [{ name: 'a', marks: { x: { at: 'soon' }, y: { at: 5, extra: 1 } }, hintsUsed: { x: 1 } }, null, { name: 'no marks' }] }).teams,
+    [{ name: 'a', code: '', marks: { y: { at: 5 } }, attempts: {}, hintsUsed: {}, penaltyMs: 0 }], 'T: a stored record keeps only well-formed marks and drops what else it carried');
+  const rooms = { Alpha: { stations: [{ id: 'zzzz' }] }, Beta: { stations: [{ id: 'aaaa' }, { id: 'bbbb' }] }, Gamma: { stations: [{ id: 'aaaa' }] }, Delta: { stations: [{ id: 'aaaa' }, { id: 'bbbb' }] } };
+  eq(B.roomFor(rooms, rec), 'Beta', 'T: the room that holds most of the record\'s stations (a tie goes to the first)');
+  eq(B.roomFor({ Alpha: rooms.Alpha }, rec), null, 'T: no room holds any: none');
+  eq(B.roomFor({}, rec), null, 'T: no rooms: none');
+
+  // the record feeds Stations.debrief unchanged
+  const room = S.read({ kind: 'room', name: 'Beta', stations: [{ id: 'aaaa', clue: 'c1', answers: ['one'], next: 'bbbb' }, { id: 'bbbb', clue: 'c2', answers: ['two'] }] });
+  const deb = S.debrief(room, rec);
+  eq(deb.length, 1, 'D: one team');
+  eq(deb[0].path.map(p => [p.id, p.sinceStartMs, p.legMs]), [['aaaa', 1000, 1000], ['bbbb', 1500, 500]], 'D: the path, from the clock the teacher started');
+  eq([deb[0].finished, deb[0].misses, deb[0].hints], [true, 0, 0], 'D: all stations reached; nothing counted for tries or hints');
+
   // leaderboard
   const a = dev(1, { name: 'Owls', total: 4 }), b = dev(2, { name: '  ', total: 4 }), c = dev(3, { name: 'Hawks', total: 4 });
   B.applyMessage(a, { station: 2, total: 4 }, 100);
@@ -94,6 +137,11 @@ const MUTANTS = [
   ['a message with no progress moves the last time', "if (after !== before || typeof device.lastAt !== 'number') device.lastAt = now;", "device.lastAt = now;"],
   ['a finish before the start gets a negative time', "d.doneAt >= clockStart ? d.doneAt - clockStart : null", "true ? d.doneAt - clockStart : null"],
   ['a blank name stays blank', "(typeof d.name === 'string' && d.name.trim()) || ('Team ' + d.id)", "d.name"],
+  ['a station is solved on every message', "if (wasId && (device.stationId !== wasId || (device.done && !wasDone))) {", "if (wasId) {"],
+  ['a restart keeps the old record', "if (wasDone && !device.done) device.marks = {};", "if (false) device.marks = {};"],
+  ['a later solve overwrites the first', "if (!device.marks[wasId]) device.marks[wasId] = { at: now };", "device.marks[wasId] = { at: now };"],
+  ['a stored mark with a text time is kept', "typeof m.at === 'number' && isFinite(m.at)", "m.at !== undefined"],
+  ['the room is the last one with a match', "if (n > bestN) { best = name; bestN = n; }", "if (n >= bestN && n > 0) { best = name; bestN = n; }"],
   ['the score ranks', "done: p, count: p,", "done: p + (typeof d.score === 'number' ? d.score : 0), count: p,"]
 ];
 let mutantFail = 0;

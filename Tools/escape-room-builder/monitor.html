@@ -16,6 +16,7 @@
 <script src="../../_shared/qr-scan.js"></script>
 <script src="../../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../../_shared/qr-draw.js"></script>
+<script src="../../_shared/store.js"></script>
 <script src="../../_shared/stations.js"></script>
 <script src="er-board.js"></script>
 <script src="../../_shared/vendor/jsqr/jsqr.js"></script>
@@ -108,6 +109,14 @@
   </div>
 
   <div class="card">
+    <div class="card-title">Record of the Room</div>
+    <p class="status-line" id="recordLine" style="margin-top:0;"></p>
+    <div class="btn-row">
+      <button class="danger" id="clearRecordBtn" type="button">Clear the record</button>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-title">Add a Device</div>
     <p class="pairing-step">Have the team open their escape room link, tap <strong>Connect to teacher monitor</strong> near the bottom of their clue screen, and follow the same two steps there.</p>
     <div class="btn-row">
@@ -146,7 +155,7 @@
 
   var els = {};
   ['rosterTable', 'rosterBody', 'rosterEmpty', 'addDeviceBtn', 'pairingBox', 'offerQr', 'offerText',
-   'clockBtn', 'clockReadout', 'boardTable', 'boardBody', 'boardEmpty', 'copyOfferBtn', 'scanAnswerBtn', 'scanVideo', 'answerInput', 'connectDeviceBtn', 'cancelPairingBtn', 'pairingStatus'
+   'clockBtn', 'clockReadout', 'recordLine', 'clearRecordBtn', 'boardTable', 'boardBody', 'boardEmpty', 'copyOfferBtn', 'scanAnswerBtn', 'scanVideo', 'answerInput', 'connectDeviceBtn', 'cancelPairingBtn', 'pairingStatus'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var devices = []; // { id, pc, channel, station, total, done, connected }
@@ -158,6 +167,33 @@
   function escapeText(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 
   var clockStart = null;   // the teacher's Start, ms; times on the board are measured from it
+
+  // The record of the room (Path 18 P4): when each team moved off each station, by the monitor's own clock,
+  // kept on this device only (never sent anywhere, never asked of a student's phone) so it outlives the page.
+  // It is the run Stations.debrief reads. A device reports where a team is, not its wrong tries or hints, so
+  // none are kept. Saving replaces the last record only once a new device has moved a team off a station.
+  var RECORD_KEY = 'escape-room-builder:monitor-record';
+  var kept = window.ErBoard.cleanRecord(Store.get(RECORD_KEY, { version: 1, migrate: function (v, d) { return d; }, 'default': null }));
+  function saveRecord() {
+    var rec = window.ErBoard.toRecord(devices, clockStart, Date.now());
+    if (!rec.teams.length) return;   // nothing solved yet: leave what is kept alone
+    kept = rec;
+    Store.set(RECORD_KEY, rec, { version: 1 });
+    renderRecord();
+  }
+  function renderRecord() {
+    if (!kept || !kept.teams.length) { els.recordLine.textContent = 'Nothing kept yet. Once a team moves on from a station, the monitor keeps when it did, on this device.'; els.clearRecordBtn.disabled = true; return; }
+    var stops = kept.teams.reduce(function (n, t) { return n + Object.keys(t.marks).length; }, 0);
+    els.recordLine.textContent = 'Kept on this device' + (kept.at ? ' (last updated ' + new Date(kept.at).toLocaleString() + ')' : '') + ': ' + kept.teams.length +
+      ' team' + (kept.teams.length === 1 ? '' : 's') + ', ' + stops + ' station' + (stops === 1 ? '' : 's') + ' passed' +
+      (kept.raceStartAt === null ? ', no clock started' : '') + '. It holds when each team reached each station; wrong tries and hints are not reported to the monitor.';
+    els.clearRecordBtn.disabled = false;
+  }
+  els.clearRecordBtn.addEventListener('click', function () {
+    if (!window.confirm('Clear the kept record of this room? This cannot be undone.')) return;
+    Store.remove(RECORD_KEY); kept = null; renderRecord();
+  });
+
 
   function renderBoard() {
     var rows = window.ErBoard.leaderboard(devices, clockStart);
@@ -176,7 +212,7 @@
   }
   els.clockBtn.addEventListener('click', function () {
     clockStart = clockStart == null ? Date.now() : null;
-    renderClock(); renderBoard();
+    renderClock(); renderBoard(); saveRecord();
   });
   setInterval(function () { if (clockStart != null) renderClock(); }, 1000);
 
@@ -194,7 +230,7 @@
     var t = e.target;
     if (!t.classList || !t.classList.contains('team-name')) return;
     devices.forEach(function (d) { if (String(d.id) === t.getAttribute('data-device')) d.name = t.value; });
-    renderBoard();
+    renderBoard(); saveRecord();
   });
 
   function drawRoster() {
@@ -259,7 +295,7 @@
         var msg;
         try { msg = JSON.parse(e.data); } catch (err) { return; }
         window.ErBoard.applyMessage(device, msg, Date.now());
-        renderRoster();
+        renderRoster(); saveRecord();
       });
       renderRoster();
       resetPairingBox();
@@ -306,7 +342,8 @@
 
   renderRoster();
   renderClock();
-  window.__monitor = { devices: devices, render: renderRoster };   // for the suite: it adds devices without a WebRTC pairing
+  renderRecord();
+  window.__monitor = { devices: devices, render: renderRoster, save: saveRecord, kept: function () { return kept; } };   // for the suite: it adds devices without a WebRTC pairing
 })();
 </script>
 <script>
