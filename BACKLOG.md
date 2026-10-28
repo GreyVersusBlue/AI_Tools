@@ -87,6 +87,56 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-22 (v368), rank 36 rewritten (P4 increment 2): marks dragged, printed and read.** 005 drags a mark (pointer, snapped, undoable) and moves it by arrow keys; the room's marks print on the live page, Print all and the sub packet; `SeatingRead.marksOf` / `bounds({ marks })` and 008's `layoutSeats({ marks })` put them in 010's and 008's pictures, and a reader that does not ask is unchanged. Port 8560 used (**next free 8561**). Left on rank 36: editing a mark in place, a zone rule that remembers its mark. Rank 37 (P5) untouched.
+- **AI-22 (v366), rank 36 rewritten (P4 increment 1): the room layer.** `seating-room.mjs` + a Room card on 005; a room is shared by periods through a mirror in `section.desks`, so no reader changed. Port 8559 used (**next free 8560**). Left on Path 14: the rest of rank 36 (marks dragged and printed, marks in the readers) and rank 37 (P5).
+- **AI-22 (v364), rank 35 DELETED (a gap): Path 14 P3 is whole.** 005 has the Rules block (`seating-rules.mjs`; kind, students, zone by
+  tapping desks, Must/Want, reason), Leave empty (E) and Fill the gaps, the four preferences, and rules in the share link without `why` and
+  on the sub export. No new port (**next free 8559**). **Left on Path 14: rank 36 (P4, the room) and 37 (P5, live mode, `undo.js`).**
+- **AI-21 (v357), rank 34 DELETED (a gap): Path 13 P4 is whole, and with it Path 13 but for rank 32's project teams.** 020 has
+  a second display: "Open display window" (next to Present) opens `020…html?display=1`, a read-only copy of the open
+  bracket for the projector. The teacher's `render()` posts the saved object on `BroadcastChannel` `bracket-tournament-display`
+  (`null` on the setup screen; a new window says `hello` and is answered); the display runs the page's own `render()` on it, so
+  every format draws as it does for the teacher. It never saves, reads no storage, stops every click, key and edit before any
+  handler, hides the toolbar, setup and the academic card (questions and answers never reach it), shows the Present bar, and has
+  a Fullscreen button on `Stage.mount` (`_shared/stage.js`, unchanged). **Same browser only (an extended desktop):** Path 8
+  P1/P3 (`Remote`, `Remote.display()`) are not built, so the Wi-Fi leg is not either, and was not copied from 021. New
+  `test:bracket-display` (port 8558, **next free 8559**, 33 checks, five formats, every rule also failing when broken in the
+  page). Not tried on a real projector or a second monitor. **Left of Path 13: rank 32 (project teams on 002, parked on Devon's
+  six questions); the "only if asked for" items (double-elimination re-deciding, a draw in elimination, a 3-1-0 table); the
+  Wi-Fi display, which waits for Path 8 P3.**
+- **AI-21 (v356), rank 34 (kept, rewritten), Path 13 P4 increment 1: 020 changes a decided match and allows drawn games.**
+  Click the losing slot of a decided match to give it to that side (single elimination clears the match's score and every
+  later decision that used the old winner, after a count and a `confirm()`, one Undo; the consolation bracket and the
+  third-place pick follow; round robin, pools and Swiss flip, pools discard a drawn bracket and Swiss the later rounds, each
+  after asking); "Allow drawn games" (round robin, pools, Swiss; `winner: 'draw'`, half a win, a D column once one exists).
+  `test:bracket-redecide` (port 8557, **next free 8558**), `test:bracket-engine` 46, `test:bracket-parity` 1,861 / 0;
+  `smoke-academic.mjs`'s v276 pins held by stripping the three additions, not re-recorded. The first-round consolation and
+  team rosters already existed (v284); that item is closed. **Left of Path 13: rank 32 (project teams, parked on Devon's
+  questions), rank 34 (the second-display mode via Path 8).**
+- **AI-21 (v355), rank 33 DELETED (a gap): Path 13 P3 is whole.** `Rotation.rotateNow`/`tick` gained `finishAt` (the count that
+  ends a run), and 017's station timer runs on `_shared/rotation.js` (`test:gallery-rotation-parity`, 72,000 / 0; 021's
+  64,000 unchanged). 069's circuit and 004's round-robin tab are not this arithmetic and did not move (reasons in the P3
+  bullet). No new port (**next free 8557**). **Left of Path 13: rank 32 (project teams, parked on Devon's questions), rank 34
+  (P4: the second-display mode via Path 8; re-deciding, draws, consolation, pools, Swiss and double elimination exist in 020).**
+- **AI-21 (v353–v354), rank 33 (kept, rewritten), Path 13 P3 steps 1 and 2: the shared bracket and rotation engines.**
+  `_shared/bracket.js` (020's pure code, 29 functions, v353) and `_shared/rotation.js` (021's assignment and clock, v354),
+  each a port alone behind a parity suite (`test:bracket-parity` 1,860, `test:rotation-parity` 64,000) and a unit suite whose
+  checks also fail with their rule broken (`test:bracket-engine`, `test:rotation`). 021 had no bracket, so "bracket.js from
+  020 and 021" was 020 alone. No new port (**next free 8557**). **Left of Path 13: rank 32 (project teams, parked), rank 33
+  (step 3: 017, 069, 004 adopting rotation), rank 34 (P4).**
+- **AI-21 (v352), rank 32 (kept, rewritten), Path 13 P2 increment 6: seating-aware grouping on 002.** An opt-in
+  checkbox (off, so the twelve golden classes are untouched): the Seating Chart's desk distance is the engine's `cost`,
+  and the engine now swaps members to bring it down once nothing else is broken (before, `cost` only broke ties and never
+  moved anyone). New `gtg-seating.js`; `test:seat-near` (port 8556, **next free 8557**, 26). **Project teams are parked on
+  Devon's six unanswered questions** (the P2 bullet has each with a default). **Left of Path 13: rank 32 (project teams),
+  then P3 (rank 33), P4 (rank 34).**
+- **AI-21 (v347–v351), rank 32 (kept, rewritten), Path 13 P2 increment 5: the improvements.** All five, each its own
+  commit and `CACHE_VERSION`: 002's floater fix (`sizeRule: 'floor'`, v347), `keepStrategy` (v348), `together: 'units'`
+  (v349), `restarts` for 002 and 022 (v350), `method: 'best'` for 022 and 027 (v351). The build found the engine's `floor`
+  rule and `'best'` had never run on a page and were wrong (11 by 4 made groups of 5; `'best'` took 1.5 s for 8 students and
+  12 roles): both fixed in the engine. Goldens moved only where meant (`golden-old-groupings.json`: 2, 3, 1 scenarios, each
+  with an `amended` note). `test:grouping` 93, `test:grouping-adopters` 256, no new port (**next free 8556**).
+  **Next on Path 13: rank 32 item (2)** (project teams, parked on questions), then P3 (rank 33).
 - **AI-21 (v344–v346), rank 32 (kept, rewritten), Path 13 P2 increment 4: 002, 022 and 027 keyed by roster id.**
   `identify()` with `Roster.idsFor()`; the engine's `absorbLegacy()` reads `idNames` so a name-keyed save follows a
   rename made before the switch; `trackRenames()` stays the detector for what each page keeps by name. No new port
@@ -580,7 +630,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **220 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 15 · `print-kit.css` 15 · `print-kit.js` 15 · `stage.js` 11 · `tool-registry.js` 11 · `qr-scan.js` 10 · `school-day.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `grouping.js` 6 · `student-flags.js` 5 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 15 · `print-kit.css` 15 · `print-kit.js` 15 · `stage.js` 12 · `tool-registry.js` 11 · `qr-scan.js` 10 · `school-day.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `grouping.js` 6 · `student-flags.js` 5 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `rotation.js` 2 · `seating-read.js` 2 · `backup-crypto.js` 1 · `bracket.js` 1 · `gvb-save.js` 1 (+1 via a module) · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **169**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -723,11 +773,8 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Increment 5 (AI-14, v300): named sets on 030, an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section, and its storage design under it): made from ticked questions of the bank or a built-in set, a question in a set more than once if wanted; reordered, trimmed, renamed, deleted, printed and pulled into a board whole from “Questions from”; carried in the bank file and imported beside a set already here, never over it; and a Tag filter on 030's list (the chosen source's tags).** **Left:** 018 and 019 pull station questions from it. 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
-| 32 | Path 13 P2 — the rest. **All six splitters call `_shared/grouping.js` (v336–v341); 002, 022 and 027 keep their memory in a `groupHistory` field with the old fields written from it (v341–v343) and key it by roster id (v344–v346); the P2 bullet's increments 1–4.** Left: (1) the improvements, each its own commit and `CACHE_VERSION`: 002's floater fix (`sizeRule: 'floor'`), `keepStrategy`, `together: 'units'`, `restarts`, and `method: 'best'` for 022 and 027; (2) seating-aware grouping (`cost` from `SeatingRead`) and project teams on 002. Hold the twelve golden classes, `smoke-rename-follow.mjs`, `test:grouping-parity` and `test:grouping-adopters` | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
-| 33 | Path 13 P3 — `_shared/bracket.js` + `_shared/rotation.js`; fix 021’s silent overwrite bug | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
-| 34 | Path 13 P4 — bracket completeness: double elimination, pools, Swiss, ties, consolation | 020 | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
-| 35 | Path 14 P3 — seating constraint solver that explains which soft constraints it broke (**designed 2026-10-05, not built**: the design and eleven questions for Devon are under the P3 bullet) | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
-| 36 | Path 14 P4 — the room, not the grid: a room layer shared across period assignments | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
+| 32 | Path 13 P2 — the rest. **All six splitters call `_shared/grouping.js` (v336–v341); 002, 022 and 027 keep their memory in a `groupHistory` field with the old fields written from it (v341–v343) and key it by roster id (v344–v346); the five improvements are in (002's floater fix v347, `keepStrategy` v348, `together: 'units'` v349, `restarts` for 002 and 022 v350, `method: 'best'` for 022 and 027 v351); the P2 bullet's increments 1–6.** Seating-aware grouping on 002 is in (v352, increment 6). Left: project teams on 002, parked on Devon's six questions (the P2 bullet, increment 6). Hold the twelve golden classes (`golden-old-groupings.json` now carries six re-recorded scenarios, each with an `amended` note), `smoke-rename-follow.mjs`, `test:grouping-parity` and `test:grouping-adopters` | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
+| 36 | Path 14 P4 — the room, not the grid. **Built (AI-22, v365-v368): the design in the P4 bullet; `seating-room.mjs`; a Room card on 005 (one room shared by periods); marks dragged and moved by arrow keys, printed on the live page, Print all and the sub packet; marks in 010's and 008's pictures through `SeatingRead.marksOf` / `layoutSeats({ marks })`.** Left: edit a mark in place (resize, turn, relabel); a zone rule that remembers its mark instead of a desk list; marks in 007's and 045's pictures if wanted; the two open questions are Devon's | 005 | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 37 | Path 14 P5 — live mode; extract the undo stack into `_shared/undo.js` | 005 | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 38 | Path 15 P1 — split Name Picker: themes as data, sound, one module per pick mode | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
 | 39 | Path 15 P2 — per-day history rollup keyed on student ids | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
@@ -5563,13 +5610,14 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
 
 **Why.** Group formation exists four times (002, 022, 027, Name Picker's Groups
 mode); role rotation with recency memory twice; the bracket algorithm is
-"line-for-line the same" in 020 and 021; the station-rotation timer exists in 004's
-round-robin mode, 021, 017 and 069. ~~002's `pairHistory` keeps two generations, so
+in 020 only (the "same in 021" claim was stale: 021 has no bracket, and
+`_shared/bracket.js` took 020's v353); the station-rotation timer exists in 004's
+round-robin mode, 021, 017 and 069 (021's and 017's are `_shared/rotation.js` since v354/v355; 069's and 004's are different clocks and stay). ~~002's `pairHistory` keeps two generations, so
 "everyone has worked with everyone this year" is unanswerable.~~ (Stale since 2026-08-13: 002 keeps every pair's
 count for the year, and since v277 has an opt-in long memory and a who-has-not-met list; what no tool has is
 one history for all of them.) 020 still lacks
 double elimination, pools and Swiss scheduling, tie handling and re-deciding a
-match; 021 silently overwrites a saved unit on a name collision (a real bug).
+match; (021's silent overwrite of a saved unit on a name collision was fixed in 77b4405.)
 
 **Phases.**
 
@@ -5942,13 +5990,160 @@ match; 021 silently overwrites a saved unit on a name collision (a real bug).
   rename onto a name with roles unbinds the student from the id, and roleless members are dropped after each
   hand-out so the map keeps its order. Held by `test:grouping-adopters` (231, two 002 classes keyed by id) and
   `smoke-rename-follow.mjs` (66). No new question.
-- **P3 — `_shared/bracket.js` + `_shared/rotation.js`.** Extract 020's bracket and
-  scheduling code and 021's rotation timer; 004's round-robin mode and 017/069's
-  station timers adopt rotation. Fix the 021 overwrite bug in the same PR.
-- **P4 — Bracket completeness.** Double elimination, pools, Swiss (a scheduler
-  that copes with match counts unknown up front), ties/draws, re-deciding a decided
-  match, consolation bracket, team rosters, and a real second-display mode via
-  Path 8.
+  **Increment 5 (AI-21, 2026-10-27, v347–v351): the improvements**, one commit and one `CACHE_VERSION` each, each changing a result
+  on purpose (`HISTORY.md` has what a teacher now sees, the measurements and what proves each). (q) 002's "Students per group" with
+  floaters or an own group is groups of that size (`sizeRule: 'floor'`; 30 by 4: seven groups of 4 and 2 floaters, not eight of 3 and 6;
+  the engine's `floor` also now makes every group exactly `size` and pops to `plan()`'s size, which it did not); (r) 002 passes
+  `search.keepStrategy` for balanced, mixed and readiness, and says when a repeat was kept for it; (s) 002 passes `together: 'units'`
+  when it has a keep-together pair (a block; none with no pair, which would have moved every golden class), and names a set too
+  big for a group; (t) 002 and 022 pass `restarts: 10`; (u) 022 and 027 hand out roles with `method: 'best'`, whose exhaustive
+  search is now capped at 400,000 orderings with a swap search above it (it took 1.5 s for 8 students and 12 roles). All follow
+  Devon's P13-5, -7 and -8; none needed a question. Not changed: 002's long-memory `refine()` still spreads pairings with no
+  knowledge of the strategy. Left of P2: item (2), seating-aware grouping and project teams.
+  **Increment 6 (AI-21, 2026-10-27, v352): seating-aware grouping on 002**, one commit. *As built:* (v) a checkbox "Seat groups near
+  each other (uses the Seating Chart)", off by default and saved as `seatNear` only when on, so a class that never uses it saves
+  the same string and the twelve golden classes are unchanged; (w) `Tools/group-team-generator/gtg-seating.js` (`GtgSeating.build`,
+  pure) turns `SeatingRead.read()` into the engine's `cost(a, b)`: the distance between two students' desk centres in desk widths,
+  the section chosen by `SeatingRead.sameClass` against the roster name then the class name (a one-section chart is used whatever
+  it is called; several sections with no match is "no section"), students matched by name (a name twice in the chart or the class,
+  or no desk, is unplaced and each pair with them costs the mean, so the grouping neither seeks nor avoids them); (x) the engine
+  did not use `cost` to move anyone (the repair picked offenders only from broken rules and repeats, so with a cost and nothing broken
+  it stopped at once): when nothing is broken and there is a cost it now swaps two members of different unlocked groups and keeps
+  the swap when the score `[hard, strategy, repeats, cost]` is better; no cost, no change (golden and parity unchanged); (y) the order
+  stays Devon's P13-5/-7: a broken rule, then the teacher's strategy, then not repeating last time's partners, then seating, so
+  after many shuffles the groups loosen (12 in a row are nearer than with it off, the first shuffle is the room's tidy blocks:
+  1.18 desks against the class's 2.58); (z) long memory's `refine()` cannot see seats and would undo them, so while seating is on
+  and found it is skipped and the explanation says so; with no chart, no matching section or fewer than two seated, the hint and the
+  explanation say which and the groups are made without it. 3,000 swaps are allowed (the default is 800). Held by
+  `test:grouping` (93 to 96: the cost check and its mutant) and `test:seat-near` (26: off by default, no chart, a chart, a keep-apart
+  pair on neighbouring desks, two unseated, two unrelated sections, reload, long memory), each seen failing with the swap pass
+  and the page's `cost` taken out.
+  **Project teams, parked (2026-10-27):** the six questions in 002's section ("Project-team mode, for Devon") are unanswered
+  (`DEVON-ANSWERS-2026-10-07.md` 4.1 to 4.6; "the rest of the Qs, leave for later"), so nothing is built. Defaults if they stay
+  unanswered, for whoever builds it: (1) named teams of the same students until the teacher dissolves them, stored in the class's
+  `gtg:data:<class>` (no new key); (2) a task list the teacher prints, not one students tick (nothing is student-facing); (3) an
+  editable contract template, signed on paper only, nothing recorded; (4) a team counts in the pair memory once, when it is made;
+  (5) built in 002 on `previous` and `lock`, now, rather than waiting for a shared home; (6) mid-project changes by hand.
+- **P3 — `_shared/bracket.js` + `_shared/rotation.js`.** *Design (AI-21, 2026-10-27; read from the tree at v352.)*
+  **Two corrections to the text above first.** (a) 021 has **no bracket**: its page and CSS carry the word, but no
+  seeding, advance or match code exists in it, so "the same algorithm line for line in 020 and 021" is stale and
+  `bracket.js` has one source, 020. (b) The 021 silent-overwrite is fixed (77b4405, pinned by `smoke-pe-stations.mjs`).
+  Neither is P3's work. Also, 020 already has double elimination, pools and Swiss (its `smoke-pools-swiss.mjs`), so the
+  parts of P4 that are *code that exists* move with this port; what P4 still owes is in its row.
+  *`bracket.js` (`Bracket`).* The pure part of 020, moved with every body unchanged: `shuffle`, `nextPowerOf2`,
+  `standardSeedOrder`, `buildBracket`, `autoAdvance`, `buildDoubleElimBracket`, `autoAdvanceDouble`, `buildRoundRobin`,
+  `computeStandings`, the pool functions (`distributeIntoPools` … `bracketScoresView`), the Swiss functions and the
+  elimination standings. A state is the same plain object it was, so every saved bracket opens either way. The one
+  difference is `shuffle`, which draws from `Bracket.setRng(fn)`'s generator when one is set and from `Math.random` (looked
+  up at the call) otherwise: a page never sets one, a suite does. **Stays in 020:** rendering, undo, share links,
+  `generateBracketFromPools()` (writes page state), and the station/time scheduling (it reads the page's schedule fields;
+  a later increment may move its arithmetic). 020 keeps `var name = Bracket.name` aliases where its functions were, so
+  the page's call sites do not change.
+  *`rotation.js` (`Rotation`).* From 021: `computeAssignment(groups, stationCount, count)` (group `gi` at station
+  `(gi + count) mod s`, a negative count wrapped) and the countdown the stage runs on `{ running, paused, endAt,
+  remainingMs, count }`: start, pause, resume, rotate-now, reset, and `tick(r, now, ms, stations)` that catches up
+  every rotation a sleeping tab missed (the page's guard of 200). Time is passed in, never read, so a suite pins it.
+  **Stays in 021:** sound, the stage drawing, the remote, `save()`. 004's round-robin mode and 017's and 069's station
+  timers adopt it one tool per commit only when the port is byte-for-byte what they do; read first, since 017's and
+  069's timers may differ (a difference is recorded, not decided).
+  *Parity rule.* Each port is a port alone: a frozen copy of the old code (`test/_legacy.mjs`, copied out of the page
+  by line range) is compared on seeded input with the engine, whole states as JSON after every step
+  (`test:bracket-parity`, `test:rotation-parity`), plus pure unit tests each also run against a copy with its rule broken
+  on purpose (`test:bracket-engine`, `test:rotation`). **Devon's questions:** none are open for P3 as designed; P4's
+  (ties, consolation, re-deciding a match) stay with P4.
+  **Built (AI-21, 2026-10-27).** Step 1, v353: `_shared/bracket.js` is 020's pure bracket code, the 29 functions with their
+  bodies unchanged (the bodies are copied by line range, so `test:bracket-parity` finds a drift); 020 aliases the names.
+  `npm run test:bracket-parity` (1,860 comparisons: n = 1 to 40, three seed modes, single and double elimination played
+  out in a random order, round robin, pools 1 to 5 by 1 or 2 advancing, Swiss of 1, 3 and 5 rounds, whole states as JSON
+  after each step; breaking one rule on purpose gives 1,110 differences) and `npm run test:bracket-engine` (14 named
+  checks, each also run against a copy with its rule broken). Step 2, v354: `_shared/rotation.js`, 021's
+  `computeAssignment()` and clock (`start`, `pause`, `resume`, `rotateNow`, `reset`, `tick`, `remaining`), time passed in;
+  `npm run test:rotation-parity` (64,000 comparisons on a fake clock, with sleeps of up to twenty minutes; `guard < 199`
+  gives 9 differences) and `npm run test:rotation` (13 checks, each also failing with its rule broken). 021 keeps sound,
+  drawing, the remote, `save()` and the "no stations" refusal. **Calls made:** the module takes its own random source as
+  `Bracket.setRng()` rather than a parameter on every builder, so the bodies stay the page's; `rotation.js` holds no
+  stations guard in `rotateNow`; both wait in `SHELL_URLS` as `_shared/` files (a page that loads them is 020 or 021,
+  neither a front-of-room tool, but the rule is `_shared/`). **Step 3 (v355), whole:** `Rotation.rotateNow` and
+  `Rotation.tick` take an optional last argument, `finishAt`, the count that ends a run; left out they are 021's, and
+  `test:rotation-parity` still gives 64,000 / 0. **017 adopts it** (its start, pause, resume, rotate-now, reset, tick and
+  displayed time; the page keeps its sound, drawing, save() and the start guard that zeroes a finished count), held by
+  `npm run test:gallery-rotation-parity` (72,000 comparisons against `Tools/gallery-walk-qr/test/_legacy.mjs`, a frozen copy
+  of the page's old timer; `{ finish(r); }` without the `break` gives 1,672 differences) and two more `test:rotation` checks
+  (30, each also failing with its rule broken). **069 and 004 were read and do not adopt, because their arithmetic is not
+  this one:** 069's circuit (`circuit-run.js`) reads `performance.now()` against a timeline of work and rest, and its groups
+  start at station `floor(g*n/G)`, where `Rotation` starts group `gi` at `gi`; 004's round-robin tab (`ct-app.js`,
+  `onPhaseZero`) takes one step per zero with `endAt = Date.now() + length` (no `+=`, so no catch-up of a slept tab), counts
+  stations from 1 and has a "repeat when finished" loop, on a `phase` object that is not a `Rotation` clock. Moving either
+  would change what a class sees, so neither moved; the difference is recorded, not decided. **P3 is whole.** **Not verified:** nothing
+  ran on a projector or a phone; the full `npm test` was not run.
+- **P4 — Bracket completeness.** *Design (AI-21, 2026-10-27; read from the tree at v355.)* **What exists already (the old
+  text of this bullet was stale):** double elimination, pools, Swiss (`smoke-pools-swiss.mjs`), team rosters
+  (`bt-teams.js`, `smoke-teams*.mjs`) and a **first-round consolation bracket with a third-place game** for single
+  elimination, opt-in (v284, `state.consolation`). Not built: **re-deciding a decided match**, **ties/draws**, and a real
+  **second-display mode** (Path 8). Increment 1 below builds the first two; the consolation item is closed, not built.
+  *Re-deciding.* Today a decided slot has no handler: a wrong tap can only be undone by the single-level Undo, and not
+  at all once a later pick is made. Offered by clicking the **losing** slot of a decided match ("Change result"); a title
+  says so. Per format: **single elimination**: the other side becomes the winner; the match's own score is cleared
+  (a 21-18 for the old winner would contradict the new one), and every **later match that had already been decided
+  is cleared too** (its result, side and score), because one of its two players is now someone who never played it;
+  an undecided later match just gets the new name. A first-round flip with a consolation bracket takes that one loser
+  out of the consolation (slot and the chain it had decided) and puts the new loser in; a semifinal flip clears the
+  third-place pick. A bye match cannot be changed. **Round robin**: the winner (or draw) flips; nothing depends on it.
+  **Pools**: a pool game flips freely until the bracket is drawn from the pools; after that the page asks first and
+  **discards the drawn bracket and its scores** (`br_` keys), since seeding came from the standings. **Swiss**: flips
+  freely in the **latest** round; in an earlier round the page asks first and **discards the rounds after it** (they were
+  paired from the old record) and their scores. **Double elimination is not offered** (a flip moves a loser between two
+  brackets and the grand final; the default is Undo or remake; left out, not designed). Whenever results would be
+  cleared the page says how many (a `confirm()` naming the count); the flip itself is one Undo step.
+  Storage: nothing new. Every state is the plain object it was. The helpers are pure and live in `_shared/bracket.js`
+  (`Bracket.redecideElimination(state, r, m)`, `Bracket.dependentsOf(...)`, `Bracket.swissReopen`, `Bracket.poolsReopen`).
+  *Ties.* Opt-in per bracket, **round robin, pools and Swiss only**, a checkbox "Allow drawn games" above the rounds
+  (`state.draws = true`; absent = off, and an absent field is every saved bracket, unchanged). A drawn match stores
+  `winner: 'draw'`; every existing test of `winner !== null` reads it as decided, and no slot is highlighted.
+  A **tied score** (21-21) records a draw when draws are on; with them off it does what it did (sits there, now with a
+  visible "Tied: pick the winner" note on every format). A "Draw" button sits under an undecided match when draws are on.
+  Standings: a draw gives each side one **played** and half a win's worth of rank (`w + d/2` sorts, then point
+  difference, then fewer losses, then name, exactly the old order when nobody drew); a `d` column appears only once
+  a draw exists (so a no-draw state yields byte-identical standings, which `test:bracket-parity` holds). The champion
+  banner and `seedOrderFromPools` use that order, so a Swiss or pool field with draws pairs and seeds from it. **Elimination
+  refuses** a tied score (no winner can advance) and says so; resolving it is a pick by click (the teacher's tiebreak),
+  no overtime field. Old pages given a state with `'draw'` read it as a win for the second side: draws are not
+  backward-compatible, and an older page is no concern after a deploy.
+  *Left out on purpose:* double-elimination re-decide, a draw in an elimination bracket, a tiebreak rule engine, a 3/1/0
+  points table, the second-display mode. **Devon's questions, each built on its default:** (1) re-deciding clears later
+  results, with a count and Undo (the alternative: keep them and flag them); (2) a draw is worth half a win (alternatives:
+  a 3-1-0 table, or a draw that is neither); (3) elimination refuses a tie and the teacher breaks it by hand (alternative:
+  a sudden-death field); (4) draws are a per-bracket opt-in rather than always on; (5) double-elimination results can't be
+  changed, only undone. **Second-display mode:** built in v357 (below).
+  **Built (AI-21, 2026-10-27, v356).** Increment 1 as designed: re-deciding (single elimination with the consolation and
+  third place, round robin, pools, Swiss) and drawn games (round robin, pools, Swiss), on every default above, in one commit.
+  The three questions' answers are still Devon's. Consolation was already built (v284), so no consolation work was done.
+  `test:bracket-redecide`, `test:bracket-engine`, `test:bracket-parity`; `smoke-academic.mjs` strips the additions before
+  hashing, so its v276 pins are the old ones. **Not built:** the second-display mode; double-elimination and pools-fed-bracket
+  re-deciding; academic-mode marks do not follow a flip. Not tried on a phone or projector.
+  **Second display built (AI-21, v357):** as designed below, on the three defaults; the Wi-Fi leg waits for Path 8 P3.
+  *Second display — design (AI-21, 2026-10-27, v357).* **Path 8's pieces:** `_shared/remote.js` (P1) and
+  `Remote.display()` (P3) are not built, so there is nothing of Path 8 to call; the pieces that exist are what 021's remote
+  already uses, `BroadcastChannel` for a window on the same browser and `webrtc-pair.js` for another device. **Built now: the
+  same-browser leg**, which is the projector on an extended desktop (the usual gym or classroom case); the Wi-Fi leg is left
+  for `Remote.display()` rather than a ninth copy of the pairing modal (Devon's question 1). *What it is.* A button "Open
+  display window" (next to Present) opens `020…html?display=1`; that page is the same file with `body.display-mode`: no
+  toolbar, setup, share, schedule, undo or academic card, and **read-only**: `save()` is a no-op there, every click, input,
+  key and form event on the bracket is stopped in the capture phase, and boot never reads or writes storage (it waits for
+  the teacher's page). It is `presenting` (the Present bar names the match now playing) plus a Fullscreen button on
+  `Stage.mount` (`_shared/stage.js`, unchanged). *What it shows, per format:* whatever that format's own renderer draws
+  (single/double elimination slots and scores, round robin and pools tables and games, Swiss rounds, the consolation and third
+  place, the champion banner), because it runs the page's own `render()` on the teacher's bracket, so a format added later
+  appears with no second renderer. *Staying in step.* The teacher's `render()` posts `{type:'bracket', state}` (a clone of the
+  saved object, or `null` on the setup screen) on channel `bracket-tournament-display`; a new display window sends `hello`
+  and gets the current one. A message carries no command: the display has no way to change a result. *What it never shows:*
+  the academic panel and its questions/answers (`academicCard`/`academicPanel` are removed on the display and `academic.sync()`
+  is not called there), the bracket switcher and other brackets' names, undo, and any control. The saved bracket's `academic`
+  field travels in the state but nothing on the display reads it. *Not covered:* another device (see above); a student-facing
+  page (it is the teacher's projector, not a student device, as Path 8 says). **Devon's questions, built on the defaults:**
+  (1) same-browser window now, Wi-Fi display waits for Path 8 P3 (alternative: copy 021's pairing modal into 020 now);
+  (2) the display follows the teacher's bracket switch (alternative: pinned to the bracket it was opened on); (3) it shows
+  the Present bar always (alternative: only when the teacher is presenting).
 
 **Model.** Fable for P1; Opus for the rest.
 
@@ -5993,6 +6188,14 @@ un-extracted.
   came from two pure-Node probes that imported the real `seating.mjs` from the worktree and drove
   `assignSeats()` with a seeded generator over invented rooms and names; they were not kept. Questions that
   are Devon's are listed at the end and not answered.
+  **Built (AI-22, 2026-10-27, v358-v364; `HISTORY.md` has the detail).** Increment 1 (v358-v360): `seating-solve.mjs` (+ `test:seating-solver`,
+  `golden.json`), storage for `rules`/`prefs`/`desk.empty` with the pair-list mirror (`test:seating-migration`), `seating-explain.mjs` and the
+  **Why?** panel behind Auto-assign (`test:seating-explain`). Increment 2 (v361-v364): the Rules block on the page (`seating-rules.mjs`,
+  `test:seating-rules`), Leave empty (E on a desk) and Fill the gaps, the four preference settings, `rules` in the share link and file without
+  `why` and on the sub export by kind. **Devon's answers of 2026-10-21 (`DEVON-ANSWERS-2026-10-21.md`, binding) are settled: P14-1 to P14-11,
+  every one "keep the default", and the photos are closed ("keep what exists, add no more photo features").** Two differences from the design:
+  a hard together over a hard apart is dropped and named by the solver (a soft one is kept) and refused by the Rules block, and 005 is already a
+  shell tool. P3 is whole; P4 and P5 are rank 36 and 37.
   - *What is there today, as read.* **The constraint language is five things.** *Keep apart* and *put
     together* are lists of student-id pairs on the section (`apart`, `together`); a pair cannot be both (the
     page enforces it on entry, `repairSection` drops a together pair that is also apart, silently). *A locked
@@ -6301,6 +6504,23 @@ un-extracted.
   so one physical room is drawn once. Reuse 035's tile editor where sensible;
   decide whether the room model lives here or in a shared "my classroom" store 035
   also writes.
+  **Designed (AI-22, 2026-10-27; built in steps, see Status).** *Storage.* `rooms: [{ id, name, desks: [{id,x,y,rot}],
+  marks: [{ id, kind, x, y, w, h, rot, label }] }]` beside `sections` in `seating-chart-v1`, and `section.room` (a room id).
+  Both exist only once used, so a chart saved before them loads byte-identical (`fixtures/saved-v357.json` is the proof).
+  `kind` is door, window, teacher, bench, projector or obstacle. **A section in a room keeps its own `desks` field as a
+  mirror of the room's desks** (geometry from the room; `locked` and `empty` stay the section's own, since they are about
+  that period's seating), the way the pair lists mirror `rules`: `_shared/seating-read.js` and its readers (010, 008, 045,
+  007, 002) read `section.desks` and never learn a room exists, so they work unchanged and a cached older page still
+  draws every period. A load with a missing room drops `section.room` and keeps the desks. Editing the room (one place)
+  rewrites the mirror in every attached section and drops a seat on a desk that is gone. Attaching a section to a room
+  keeps the seats on desks the room has and unseats the rest (counted, never silent). *How P3 reads it.* Zones, Leave empty,
+  "front row" and the solver read `section.desks` as now (the mirror); the room adds `desksNear(room, markId, radius)`,
+  which gives a door or window mark's nearby desks as a desk list for a tapped zone (P14-8) so "near the door" is a zone
+  rule over desks, not a new rule kind. A mark never changes adjacency (`ROOM.neighbor` is unchanged). *035's tile editor:*
+  not imported (no cross-tool coupling); the mark kinds and the snap grid are the vocabulary to line up with if 035 ever
+  shares a classroom. **Open questions for Devon, defaults built:** (a) does the room live in 005's own storage or in a
+  shared "my classroom" store 035 also writes (default: 005's, no new shared store); (b) are a period's saved layouts kept
+  per room or per section (default: per section, unchanged). Nothing here decides either beyond the default.
 - **P5 — Live mode + undo extraction.** Project the chart; tap a seat to mark
   absent, award a point (008), or start a pass (001). Extract the undo stack into
   `_shared/undo.js` and adopt it in the tools whose undo is a single in-memory
@@ -6309,7 +6529,8 @@ un-extracted.
 **Status.** P1 shipped 2026-09-03. P2 shipped 2026-09-04 (#182, `CACHE_VERSION` v148) with
 010 as its single adopter; 008, 045 and 007 still carry their own readers, for reasons
 recorded in the module header and in this file's "what these phases leave" notes. **P3 designed 2026-10-05
-(AI-22), not built:** the design and eleven questions for Devon are under the P3 bullet. P3–P5 open.
+(AI-22); built 2026-10-27 (v358-v364):** the solver, its storage, the Why? panel, the Rules block, Leave empty, Fill the gaps,
+the four preferences, and rules in the share link and on the sub export. P3 is whole; P4 and P5 open.
 
 **Model.** Fable for P3; Opus otherwise.
 

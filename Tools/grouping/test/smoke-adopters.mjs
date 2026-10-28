@@ -40,6 +40,27 @@ const J = x => JSON.stringify(x);
 const mirrored = got => !!got.groupHistory && Array.isArray(got.groupHistory.keys) &&
   J(G.history.toLegacyRoles(got.groupHistory)) === J(got.history);
 
+/* Since v351 022 and 027 hand roles out with method 'best' (the cheapest assignment), so the roles are no longer the old
+   picker's draw for draw (that picker is still the engine's 'greedy', held by test:grouping-parity). A hand-out is held by
+   what it must be: roles from the list, none twice in a group, and the role memory exactly the old map plus what was
+   handed out, in order (the shape the old page wrote). `groups` is one list per hand-out of lists of { name, role }. */
+function rolesOk(before, groups, roles, history) {
+  const expect = JSON.parse(JSON.stringify(before));
+  let valid = true;
+  groups.forEach(group => {
+    const seen = new Set();
+    group.forEach(({ name, role }) => {
+      if (!role) return;
+      if (!roles.includes(role)) valid = false;
+      expect[name] = (expect[name] || []).concat(role).slice(-30);
+    });
+    const byName = new Map(group.map(x => [x.name, x.role]));
+    [...byName.values()].filter(Boolean).forEach(r => { if (seen.has(r)) valid = false; seen.add(r); });
+  });
+  const sorted = o => J(Object.keys(o).sort().map(k => [k, o[k]]));
+  return valid && sorted(expect) === sorted(history);
+}
+
 const CLASS = ['Ada Lovelace', 'Marco Polo', 'Nellie Bly', 'Zheng He', 'Grace Hopper', 'Ida B Wells',
   'Mae Jemison', 'Alan Turing', 'Rosa Parks', 'Carl Sagan', 'Mary Seacole', 'Nikola Tesla', 'Katherine Johnson'];
 const SEEDS = [1, 7, 42, 20261025, 3735928559];
@@ -147,19 +168,11 @@ const ADOPTERS = [
     },
     compare(got, names, [mode, v], rng) {
       const groups = L.nsc027(names, { mode, splitValue: String(v) }, rng);
-      const legacyState = { history: JSON.parse(JSON.stringify(got.before)) };
-      const meetings = [];
-      for (let m = 0; m < 3; m++) {
-        const picker = L.rolePicker(legacyState, rng);
-        meetings.push(groups.map(g => {
-          const asg = picker.assignRolesForGroup(g, got.roles);
-          g.forEach(nm => picker.recordHistory(nm, asg[nm]));
-          return g.map(nm => ({ name: nm, role: asg[nm] }));
-        }));
-      }
       const mirror = mirrored(got);
-      return [mirror && got.meetings.length === 3 && Object.keys(got.history).length > 0 && J(got.groups) === J(groups) && J(got.meetings) === J(meetings) && J(got.history) === J(legacyState.history),
-        `mirror ${mirror}; groups ${J(got.groups)} vs ${J(groups)}; meetings ${J(got.meetings)} vs ${J(meetings)}`];
+      const flatGroups = got.meetings.flatMap(mt => mt.map(g => g.map(x => ({ name: x.name, role: x.role }))));
+      const rolesGood = rolesOk(got.before, flatGroups, got.roles, got.history);
+      return [mirror && got.meetings.length === 3 && Object.keys(got.history).length > 0 && J(got.groups) === J(groups) && rolesGood,
+        `mirror ${mirror}; roles ok ${rolesGood}; groups ${J(got.groups)} vs ${J(groups)}; meetings ${J(got.meetings)}`];
     },
     cases: [['count', 3], ['count', 5], ['size', 4], ['size', 3], ['count', 20]]
   },
@@ -205,30 +218,29 @@ const ADOPTERS = [
       }, [mode, v, pairs, seed, this.names]);
     },
     compare(got, names, [mode, v, pairs], rng) {
-      const legacyState = { history: JSON.parse(JSON.stringify(got.before)) };
-      const presses = [];
-      let apartBroken = 0;
-      for (let m = 0; m < 3; m++) {
-        let groups;
-        if (!pairs.length) groups = L.lab022(names, { mode, splitValue: String(v), keepApart: [] }, rng).groups;
-        else { // the page's own construction of the engine call, run here on the same numbers
-          const apart = pairs.map(([a, b]) => [String(a), String(b)]);
-          const k = Math.max(1, Math.min(mode === 'size' ? Math.ceil(names.length / v) : v, names.length));
-          const res = G.formGroups(names.map((n, i) => ({ key: String(i), name: n })), { count: k, apart, rng });
-          apartBroken += res.violations.apart.length;
-          groups = res.groups.map(g => g.map(key => names[+key]));
-        }
-        const picker = L.rolePicker(legacyState, rng);
-        presses.push(groups.map(g => {
-          const asg = picker.assignRolesForGroup(g, got.roles);
-          g.forEach(nm => picker.recordHistory(nm, asg[nm]));
-          return g.map(nm => ({ name: nm, role: asg[nm] }));
-        }));
+      /* The first press splits from the start of the stream, so its groups are the old page's draw for draw (with no pair; with
+         pairs, the page's own engine call run here); after it the roles have drawn a different number of numbers than the old
+         picker, so the later presses are held to shape: every student once, the group count, keep-apart kept. */
+      let apartBroken = 0, first;
+      if (!pairs.length) first = L.lab022(names, { mode, splitValue: String(v), keepApart: [] }, rng).groups;
+      else {
+        const apart = pairs.map(([a, b]) => [String(a), String(b)]);
+        const k = Math.max(1, Math.min(mode === 'size' ? Math.ceil(names.length / v) : v, names.length));
+        const res = G.formGroups(names.map((n, i) => ({ key: String(i), name: n })), { count: k, apart, rng, search: { restarts: 10 } });
+        first = res.groups.map(g => g.map(key => names[+key]));
       }
+      const named = got.presses.map(p => p.map(g => g.map(x => x.name)));
+      const sameFirst = J(named[0]) === J(first);
+      const shapeOk = named.every(p => p.length === first.length && J(p.flat().slice().sort()) === J(names.slice().sort()));
+      got.presses.forEach(p => p.forEach(g => {
+        const n = g.map(x => x.name);
+        pairs.forEach(([a, b]) => { if (n.includes(names[a]) && n.includes(names[b])) apartBroken++; });
+      }));
+      const rolesGood = rolesOk(got.before, got.presses.flat(), got.roles, got.history);
       const pairsOk = !pairs.length || (got.keepApart.length === pairs.length && apartBroken === 0 && !/keep-apart/.test(got.warn));
       const mirror = mirrored(got);
-      return [mirror && pairsOk && Object.keys(got.history).length > 0 && J(got.presses) === J(presses) && J(got.history) === J(legacyState.history),
-        `mirror ${mirror}; pairs ok ${pairsOk} (${got.keepApart.length} stored, ${apartBroken} broken, warn ${J(got.warn)}); same presses ${J(got.presses) === J(presses)}; presses ${J(got.presses)} vs ${J(presses)}`];
+      return [mirror && pairsOk && Object.keys(got.history).length > 0 && sameFirst && shapeOk && rolesGood,
+        `mirror ${mirror}; pairs ok ${pairsOk} (${got.keepApart.length} stored, ${apartBroken} broken, warn ${J(got.warn)}); first press ${sameFirst}; shape ${shapeOk}; roles ok ${rolesGood}; presses ${J(got.presses)}`];
     },
     cases: [['count', 3, []], ['count', 5, []], ['size', 4, []], ['size', 3, []], ['count', 20, []],
       ['count', 4, [[1, 2], [3, 4], [5, 6], [1, 7]]]]
@@ -293,10 +305,46 @@ const ADOPTERS = [
         want.push({ groups: r.groups.map(g => g.map(st => st.name)), floaters: r.floaters.map(st => st.name) });
       }
       const gotShape = got.presses.map(x => ({ groups: x.groups, floaters: x.floaters }));
-      const sameGroups = got.presses.every((x, i) => J(x.groups) === J(want[i].groups) &&
-        want[i].floaters.every(n => x.floaters.includes(n)) && (want[i].floaters.length > 0) === (x.floaters !== ''));
       const sorted = o => J(Object.keys(o).sort().map(k => [k, o[k]]));
-      const sameMemory = got.saved.pairGen === 3 && sorted(got.saved.pairHistory) === sorted(state.pairHistory) &&
+      /* Since v347 "students per group" with floaters or an own group means groups of that size and the rest left
+         over, so it is no longer the old page's deal (the old page rounded the group count up and popped every group
+         down). That is the one intended change: those cases are held to the new rule by shape, the memory and the keys
+         are held exactly as before, and the old path (a group count, or size with "extra") is still compared
+         draw for draw below. */
+      if (mode === 'size' && odd !== 'extra') {
+        const present = CLASS.filter((_, i) => !absent.includes(i));
+        const full = Math.floor(present.length / v), rem = present.length % v;
+        const shapeOk = got.presses.every((x, i) => {
+          const left = present.filter(n => x.floaters.includes(n)).length;
+          const inGroups = x.groups.reduce((a, g) => a + g.length, 0);
+          const everyone = inGroups + left === present.length && new Set(x.groups.flat()).size === inGroups;
+          if (i === 2) return everyone;    // group 1 locked: the rest are dealt round it, so only "everyone once" is held
+          const sizes = x.groups.map(g => g.length);
+          const want = odd === 'floater' ? Array(full).fill(v).concat([])
+            : Array(full).fill(v).concat(rem >= 2 ? [rem] : []);
+          const wantLeft = odd === 'floater' ? rem : (rem === 1 ? 1 : 0);
+          return everyone && J(sizes) === J(want) && left === wantLeft;
+        });
+        const sameMemory = got.saved.pairGen === 3 && J(got.mirror) === J({ pairHistory: got.saved.pairHistory, pairGen: got.saved.pairGen });
+        const keys = got.saved.groupHistory ? got.saved.groupHistory.keys : [];
+        const keyed = keys.length === CLASS.length && keys.every(k => k.indexOf(ids ? 'i:' : 'n:') === 0);
+        const apartBroken = apart.some(([a, b]) => got.presses.some(x => x.groups.some(g => g.includes(CLASS[a]) && g.includes(CLASS[b]))));
+        return [shapeOk && sameMemory && keyed && !apartBroken,
+          `new size rule: shape ${shapeOk}, memory ${sameMemory}, keys ${keyed}, apart broken ${apartBroken}; ${J(gotShape)}`];
+      }
+      /* Since v348 the three skill strategies keep their strategy over last time's partners (search.keepStrategy), so
+         after the first press, which has no memory and (with no pair rule) is the old page's draw for draw, the later presses are held to
+         their shape, to the old group count and to no student lost or twice; what the strategy now achieves is
+         smoke-year-memory.mjs's section 1b. Random and coverage, and everything with a count of none, are compared in full. */
+      const keeps = ['balanced', 'heterogeneous', 'homogeneous'].includes(strategy);
+      const sameAs = (x, w) => J(x.groups) === J(w.groups) && w.floaters.every(n => x.floaters.includes(n)) && (w.floaters.length > 0) === (x.floaters !== '');
+      const shapeAs = (x, w) => x.groups.length === w.groups.length &&
+        new Set(x.groups.flat()).size === x.groups.flat().length && J(x.groups.flat().concat(CLASS.filter(n => x.floaters.includes(n))).sort()) === J(w.groups.flat().concat(w.floaters).sort());
+      // With a pair rule the first press can differ too: the repair now also keeps the strategy where it used to swap it away.
+      const noRules = !apart.length && !together.length;
+      const apartOk = x => apart.every(([a, b]) => !x.groups.some(g => g.includes(CLASS[a]) && g.includes(CLASS[b])));
+      const sameGroups = got.presses.every((x, i) => keeps && (i > 0 || !noRules) ? shapeAs(x, want[i]) && apartOk(x) : sameAs(x, want[i]));
+      const sameMemory = got.saved.pairGen === 3 && (keeps || sorted(got.saved.pairHistory) === sorted(state.pairHistory)) &&
         J(got.mirror) === J({ pairHistory: got.saved.pairHistory, pairGen: got.saved.pairGen });
       const keys = got.saved.groupHistory ? got.saved.groupHistory.keys : [];
       const keyed = keys.length === CLASS.length && keys.every(k => k.indexOf(ids ? 'i:' : 'n:') === 0);
@@ -304,12 +352,15 @@ const ADOPTERS = [
     },
     cases: [
       ['random', 'extra', 'count', 3, [], [], []],
-      ['balanced', 'floater', 'size', 4, [], [], [2]],
+      ['balanced', 'floater', 'size', 4, [], [], []],
+      ['balanced', 'floater', 'size', 4, [], [], [2, 9]],
+      ['random', 'pair', 'size', 5, [], [], []],
       ['heterogeneous', 'extra', 'count', 4, [[0, 1], [2, 3]], [[4, 5]], []],
       ['homogeneous', 'floater', 'count', 5, [], [], []],
-      ['coverage', 'pair', 'size', 3, [[6, 7]], [], [9]],
+      ['coverage', 'pair', 'size', 3, [[6, 7]], [], []],
+      ['random', 'extra', 'size', 4, [], [], []],
       ['heterogeneous', 'extra', 'count', 4, [[0, 1], [2, 3]], [[4, 5]], [], true],
-      ['coverage', 'pair', 'size', 3, [[6, 7]], [], [9], true]
+      ['coverage', 'pair', 'size', 3, [[6, 7]], [], [], true]
     ]
   }
 ];
@@ -420,6 +471,141 @@ try {
     });
     ok(J(back.groupHistory) === J(out.groupHistory) && J(back.history) === J(out.history), `${a.tool}: a new file reads back as the same memory`);
     ok(errors.length === 0, `${a.tool}: files: no page errors (${errors.join(' | ')})`);
+    await page.close();
+  }
+
+  /* ── restarts (v350): a shuffle that ends with a keep-apart pair together deals again ──
+     A fixed class found by search on the engine (Path 13 P2 increment 5): 30 students in 3 groups with these 22 keep-apart pairs
+     are satisfiable, and one deal and its repair leave a pair together in 31% of shuffles (1,852 of 6,000 seeds); with ten
+     restarts none of 6,000 did. 30 unseeded presses on each page: the chance the old rule passes all of them is under
+     one in a million, and the new one's chance of failing is under 2%. */
+  const RS_PAIRS = [['S22', 'S30'], ['S13', 'S08'], ['S30', 'S13'], ['S06', 'S28'], ['S02', 'S20'], ['S23', 'S26'], ['S25', 'S20'], ['S27', 'S05'],
+    ['S20', 'S14'], ['S19', 'S06'], ['S20', 'S29'], ['S01', 'S22'], ['S20', 'S10'], ['S13', 'S20'], ['S26', 'S12'], ['S05', 'S30'], ['S22', 'S20'],
+    ['S07', 'S15'], ['S13', 'S14'], ['S25', 'S07'], ['S04', 'S14'], ['S30', 'S26']];
+  /* 002 keeps a pairing memory, which gives its repair more to do and fails less often, so it has a class of its own: 28
+     pairs, found the same way on the engine with ten presses of memory a class: one deal and its repair leave a pair together
+     in 35% of presses (71 of 200), with ten restarts none of 200 did. */
+  const RS_PAIRS_002 = [['S27', 'S14'], ['S16', 'S14'], ['S11', 'S29'], ['S06', 'S15'], ['S16', 'S19'], ['S11', 'S03'], ['S29', 'S03'], ['S29', 'S14'],
+    ['S16', 'S08'], ['S24', 'S01'], ['S04', 'S13'], ['S10', 'S15'], ['S27', 'S28'], ['S30', 'S28'], ['S19', 'S17'], ['S28', 'S17'], ['S16', 'S03'],
+    ['S25', 'S11'], ['S14', 'S03'], ['S14', 'S24'], ['S13', 'S06'], ['S29', 'S17'], ['S23', 'S12'], ['S30', 'S21'], ['S18', 'S24'], ['S21', 'S24'],
+    ['S10', 'S07'], ['S11', 'S10']];
+  const RS_NAMES = Array.from({ length: 30 }, (_, i) => 'S' + String(i + 1).padStart(2, '0'));
+  const apartBrokenIn = (groups, pairs) => pairs.filter(([a, b]) => groups.some(g => g.includes(a) && g.includes(b))).length;
+  {
+    console.log('002 — restarts keep a keep-apart class clean');
+    const page = await prepPage(browser, BASE, { width: 1280, height: 950 });
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto(BASE + '/Tools/002-group-team-generator.html', { waitUntil: 'networkidle' });
+    await page.evaluate(() => localStorage.clear());
+    await page.reload({ waitUntil: 'networkidle' });
+    await settle(page, 200);
+    await page.fill('#names-input', RS_NAMES.join('\n'));
+    await page.dispatchEvent('#names-input', 'input');
+    await page.click('label[for="mode-count"]');
+    await page.fill('#split-value', '3');
+    for (const [a, b] of RS_PAIRS_002) { await page.selectOption('#pair-a', a); await page.selectOption('#pair-b', b); await page.click('#add-pair-btn'); }
+    let broken = 0;
+    for (let i = 0; i < 30; i++) {
+      await page.click(i ? '#regenerate-btn' : '#generate-btn');
+      const groups = await page.evaluate(() => [...document.querySelectorAll('#results .group-card')].map(c => [...c.querySelectorAll('li > span:first-child')].map(x => x.textContent)));
+      if (groups.length !== 3 || groups.flat().length !== 30 || apartBrokenIn(groups, RS_PAIRS_002)) broken++;
+    }
+    ok(broken === 0, `002: 30 presses of a 30-student, 28-pair class left a pair together ${broken} time(s)`);
+    ok(errors.length === 0, `002: restarts: no page errors (${errors.join(' | ')})`);
+    await page.close();
+  }
+  {
+    console.log('022 — restarts keep a keep-apart class clean');
+    const page = await prepPage(browser, BASE, { width: 1280, height: 950 });
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto(BASE + '/Tools/022-lab-group-role-randomizer.html', { waitUntil: 'networkidle' });
+    await page.evaluate(() => localStorage.clear());
+    await page.reload({ waitUntil: 'networkidle' });
+    await settle(page, 200);
+    const broken = await page.evaluate(([names, pairs]) => {
+      const cur = () => JSON.parse(localStorage.getItem('lgrr_rosters'))[localStorage.getItem('lgrr_current')];
+      const ta = document.getElementById('namesInput');
+      ta.value = names.join('\n');
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      const radio = document.getElementById('mode-count');
+      radio.checked = true;
+      radio.dispatchEvent(new Event('change', { bubbles: true }));
+      const sv = document.getElementById('splitValue');
+      sv.value = '3';
+      sv.dispatchEvent(new Event('input', { bubbles: true }));
+      pairs.forEach(([a, b]) => {
+        document.getElementById('pairA').value = a;
+        document.getElementById('pairB').value = b;
+        document.getElementById('addPairBtn').click();
+      });
+      let bad = 0;
+      for (let i = 0; i < 30; i++) {
+        document.getElementById('shuffleBtn').click();
+        const groups = cur().lastGroups.map(g => g.members.map(m => m.name));
+        if (groups.length !== 3 || groups.flat().length !== 30 || pairs.some(([a, b]) => groups.some(g => g.includes(a) && g.includes(b)))) bad++;
+      }
+      return bad;
+    }, [RS_NAMES, RS_PAIRS]);
+    ok(broken === 0, `022: 30 presses of a 30-student, 22-pair class left a pair together ${broken} time(s)`);
+    ok(errors.length === 0, `022: restarts: no page errors (${errors.join(' | ')})`);
+    await page.close();
+  }
+
+  /* ── roles by the cheapest assignment (v351) ──
+     Greedy picking handed a student the role they held last time in 1.0 to 4.0% of hand-outs (measured on the engine, 4 to 6
+     students and 3 to 5 roles over 12 meetings, 300 classes each); the cheapest assignment never did. 500 meetings of one
+     group of 4 with 3 roles on each page: greedy repeats in about 4% of hand-outs there, so the chance it repeats nothing is nil. */
+  for (const tool of ['022', '027']) {
+    console.log(`${tool} — a role is never the one held last time`);
+    const page = await prepPage(browser, BASE, { width: 1280, height: 950 });
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    const url = tool === '022' ? '/Tools/022-lab-group-role-randomizer.html' : '/Tools/027-novel-study-circles-manager.html';
+    await page.goto(BASE + url, { waitUntil: 'networkidle' });
+    await page.evaluate(() => localStorage.clear());
+    await page.reload({ waitUntil: 'networkidle' });
+    await settle(page, 200);
+    const out = await page.evaluate(([tool, names]) => {
+      const key = tool === '022' ? ['lgrr_rosters', 'lgrr_current'] : ['novel-study-circles', 'novel-study-circles-current'];
+      const cur = () => JSON.parse(localStorage.getItem(key[0]))[localStorage.getItem(key[1])];
+      const ta = document.getElementById('namesInput');
+      ta.value = names.join('\n');
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      const radio = document.getElementById('mode-count');
+      radio.checked = true;
+      radio.dispatchEvent(new Event('change', { bubbles: true }));
+      const sv = document.getElementById('splitValue');
+      sv.value = '1';
+      sv.dispatchEvent(new Event('input', { bubbles: true }));
+      if (tool === '027') document.getElementById('splitBtn').click();
+      // Three roles for four students: the shape where picking greedily repeats most (4%; measured above).
+      while (document.querySelectorAll('#roleList [data-remove-role]').length > 3) document.querySelector('#roleList [data-remove-role]').click();
+      let repeats = 0, handed = 0, rolesN = 0;
+      for (let i = 0; i < 500; i++) {
+        const before = JSON.parse(JSON.stringify(cur().history || {}));
+        let given;
+        if (tool === '022') {
+          document.getElementById('shuffleBtn').click();
+          given = cur().lastGroups[0].members;
+        } else {
+          document.getElementById('logMeetingBtn').click();
+          given = cur().meetings[0].groups[0].assignment;
+        }
+        rolesN = cur().roles.filter(r => (r.name || '').trim()).length;
+        given.forEach(x => {
+          if (!x.role) return;
+          handed++;
+          const held = before[x.name] || [];
+          if (held.length && held[held.length - 1] === x.role) repeats++;
+        });
+      }
+      return { repeats, handed, rolesN };
+    }, [tool, CLASS.slice(0, 4)]);
+    ok(out.rolesN === 3 && out.handed >= 500 * 3, `${tool}: the roles were handed out (${out.handed} hand-outs, ${out.rolesN} roles)`);
+    ok(out.repeats === 0, `${tool}: a student got the role they held last time ${out.repeats} time(s) in 500 meetings`);
+    ok(errors.length === 0, `${tool}: roles: no page errors (${errors.join(' | ')})`);
     await page.close();
   }
 } finally {

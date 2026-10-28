@@ -211,6 +211,9 @@
      changes at all — only how the cards are positioned differs. */
   .seat-room { position: relative; width: 100%; background: var(--desk); border: 1px dashed var(--line-strong); border-radius: 10px; margin-bottom: .9rem; overflow: hidden; }
   .seat-room .front-label { position: absolute; top: .4rem; left: 50%; transform: translateX(-50%); font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); pointer-events: none; }
+  .seat-room .seat-mark { position: absolute; box-sizing: border-box; display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden; pointer-events: none;
+    border: 1.5px dashed var(--muted); background: var(--line); opacity: .55; color: var(--muted); font-size: .66rem; font-weight: 700; }
+  .seat-room .seat-mark.door { border-style: solid; }
   .seat-room .student-card.seat-card {
     position: absolute; margin: 0; display: flex; flex-direction: column; align-items: center;
     justify-content: center; padding: .2rem; overflow: hidden; min-width: 0;
@@ -817,6 +820,7 @@
       layout: window.SeatingLayout.layoutSeats(section, names, {
         mirror: seatingCache.mirror === true,
         altNames: altNamesForSeating(names),
+        marks: window.SeatingLayout.roomMarks(seatingCache, section),
       }),
     };
   }
@@ -1102,8 +1106,13 @@
         (seat.rot ? ' transform: rotate(' + seat.rot + 'deg);' : '');
       return cardHtml(seat.name, cumulative, 'seat-card', style);
     }).join('');
+    var marksHtml = (sc.layout.marks || []).map(function (m) {
+      return '<div class="seat-mark ' + escapeAttr(m.kind) + '" aria-hidden="true" style="left:' + m.leftPct.toFixed(3) + '%; top:' + m.topPct.toFixed(3) + '%; ' +
+        'width:' + m.wPct.toFixed(3) + '%; height:' + m.hPct.toFixed(3) + '%;' + (m.rot ? ' transform: rotate(' + m.rot + 'deg);' : '') + '">' +
+        escapeHtml(m.label || m.kind) + '</div>';
+    }).join('');
     var roomHtml = '<div class="seat-room" style="grid-column:1/-1;aspect-ratio:' + box.w + '/' + box.h + ';">' +
-      '<span class="front-label">Front of room</span>' + seatsHtml + '</div>';
+      '<span class="front-label">Front of room</span>' + marksHtml + seatsHtml + '</div>';
     var unseatedSet = {};
     sc.layout.unseated.forEach(function (n) { unseatedSet[n] = true; });
     var unseatedNames = names.filter(function (n) { return unseatedSet[n]; });

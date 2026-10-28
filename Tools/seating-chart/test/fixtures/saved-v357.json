@@ -1,0 +1,382 @@
+{
+ "sections": [
+  {
+   "id": "secA",
+   "name": "Period 1",
+   "students": [
+    {
+     "id": "s0",
+     "name": "Student 0",
+     "note": "",
+     "flag": false,
+     "photo": ""
+    },
+    {
+     "id": "s1",
+     "name": "Student 1",
+     "note": "",
+     "flag": false,
+     "photo": ""
+    },
+    {
+     "id": "s2",
+     "name": "Student 2",
+     "note": "front row, vision",
+     "flag": false,
+     "photo": ""
+    },
+    {
+     "id": "s3",
+     "name": "Student 3",
+     "note": "",
+     "flag": true,
+     "photo": ""
+    },
+    {
+     "id": "s4",
+     "name": "Student 4",
+     "note": "",
+     "flag": false,
+     "photo": ""
+    },
+    {
+     "id": "s5",
+     "name": "Student 5",
+     "note": "",
+     "flag": false,
+     "photo": ""
+    },
+    {
+     "id": "s6",
+     "name": "Student 6",
+     "note": "",
+     "flag": false,
+     "photo": ""
+    },
+    {
+     "id": "s7",
+     "name": "Student 7",
+     "note": "",
+     "flag": false,
+     "photo": ""
+    },
+    {
+     "id": "s8",
+     "name": "Student 8",
+     "note": "",
+     "flag": false,
+     "photo": ""
+    },
+    {
+     "id": "s9",
+     "name": "Student 9",
+     "note": "",
+     "flag": false,
+     "photo": ""
+    }
+   ],
+   "apart": [
+    [
+     "s0",
+     "s1"
+    ],
+    [
+     "s4",
+     "s5"
+    ]
+   ],
+   "together": [
+    [
+     "s6",
+     "s7"
+    ],
+    [
+     "s7",
+     "s8"
+    ]
+   ],
+   "desks": [
+    {
+     "id": "d0",
+     "x": 396,
+     "y": 110,
+     "rot": 0,
+     "locked": true
+    },
+    {
+     "id": "d1",
+     "x": 528,
+     "y": 110,
+     "rot": 0,
+     "locked": false
+    },
+    {
+     "id": "d2",
+     "x": 660,
+     "y": 110,
+     "rot": 0,
+     "locked": false
+    },
+    {
+     "id": "d3",
+     "x": 770,
+     "y": 110,
+     "rot": 0,
+     "locked": false
+    },
+    {
+     "id": "d4",
+     "x": 396,
+     "y": 198,
+     "rot": 0,
+     "locked": false
+    },
+    {
+     "id": "d5",
+     "x": 528,
+     "y": 198,
+     "rot": 0,
+     "locked": false
+    },
+    {
+     "id": "d6",
+     "x": 660,
+     "y": 198,
+     "rot": 0,
+     "locked": false
+    },
+    {
+     "id": "d7",
+     "x": 770,
+     "y": 198,
+     "rot": 0,
+     "locked": false
+    },
+    {
+     "id": "d8",
+     "x": 396,
+     "y": 308,
+     "rot": 0,
+     "locked": false
+    },
+    {
+     "id": "d9",
+     "x": 528,
+     "y": 308,
+     "rot": 0,
+     "locked": false
+    },
+    {
+     "id": "d10",
+     "x": 660,
+     "y": 308,
+     "rot": 0,
+     "locked": false
+    },
+    {
+     "id": "d11",
+     "x": 770,
+     "y": 308,
+     "rot": 0,
+     "locked": false
+    }
+   ],
+   "assign": {
+    "d0": "s0",
+    "d1": "s1",
+    "d2": "s2",
+    "d3": "s3",
+    "d4": "s4",
+    "d5": "s5",
+    "d6": "s6",
+    "d7": "s7",
+    "d8": "s8",
+    "d9": "s9"
+   },
+   "layouts": [
+    {
+     "id": "L1",
+     "name": "Groups",
+     "desks": [
+      {
+       "id": "d0",
+       "x": 396,
+       "y": 110,
+       "rot": 0,
+       "locked": true
+      },
+      {
+       "id": "d1",
+       "x": 528,
+       "y": 110,
+       "rot": 0,
+       "locked": false
+      },
+      {
+       "id": "d2",
+       "x": 660,
+       "y": 110,
+       "rot": 0,
+       "locked": false
+      },
+      {
+       "id": "d3",
+       "x": 770,
+       "y": 110,
+       "rot": 0,
+       "locked": false
+      }
+     ],
+     "assign": {
+      "d0": "s0"
+     }
+    }
+   ],
+   "history": [
+    {
+     "id": "n2c7777",
+     "date": "2026-09-01",
+     "label": "Unit 1",
+     "quarter": "Q1",
+     "desks": [
+      {
+       "id": "d0",
+       "x": 396,
+       "y": 110
+      },
+      {
+       "id": "d1",
+       "x": 528,
+       "y": 110
+      },
+      {
+       "id": "d2",
+       "x": 660,
+       "y": 110
+      },
+      {
+       "id": "d3",
+       "x": 770,
+       "y": 110
+      },
+      {
+       "id": "d4",
+       "x": 396,
+       "y": 198
+      },
+      {
+       "id": "d5",
+       "x": 528,
+       "y": 198
+      },
+      {
+       "id": "d6",
+       "x": 660,
+       "y": 198
+      },
+      {
+       "id": "d7",
+       "x": 770,
+       "y": 198
+      },
+      {
+       "id": "d8",
+       "x": 396,
+       "y": 308
+      },
+      {
+       "id": "d9",
+       "x": 528,
+       "y": 308
+      },
+      {
+       "id": "d10",
+       "x": 660,
+       "y": 308
+      },
+      {
+       "id": "d11",
+       "x": 770,
+       "y": 308
+      }
+     ],
+     "assign": {
+      "d0": "s0",
+      "d1": "s1",
+      "d2": "s2",
+      "d3": "s3",
+      "d4": "s4",
+      "d5": "s5",
+      "d6": "s6",
+      "d7": "s7",
+      "d8": "s8",
+      "d9": "s9"
+     },
+     "students": [
+      {
+       "id": "s0",
+       "name": "Student 0"
+      },
+      {
+       "id": "s1",
+       "name": "Student 1"
+      },
+      {
+       "id": "s2",
+       "name": "Student 2"
+      },
+      {
+       "id": "s3",
+       "name": "Student 3"
+      },
+      {
+       "id": "s4",
+       "name": "Student 4"
+      },
+      {
+       "id": "s5",
+       "name": "Student 5"
+      },
+      {
+       "id": "s6",
+       "name": "Student 6"
+      },
+      {
+       "id": "s7",
+       "name": "Student 7"
+      },
+      {
+       "id": "s8",
+       "name": "Student 8"
+      },
+      {
+       "id": "s9",
+       "name": "Student 9"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "secB",
+   "name": "Period 2",
+   "students": [],
+   "apart": [],
+   "together": [],
+   "desks": [],
+   "assign": {},
+   "layouts": [],
+   "history": []
+  }
+ ],
+ "active": "secA",
+ "theme": "light",
+ "zoom": "fit",
+ "lastFirst": false,
+ "numbered": false,
+ "mirror": false,
+ "printNames": false,
+ "printPhotos": true,
+ "printViolations": true,
+ "currentQuarter": "Q1"
+}

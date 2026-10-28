@@ -67,6 +67,10 @@ const FIXTURE = {
       id: 'p1', name: 'Period 2 Geography', students: STUDENTS, desks: DESKS,
       assign: { f0: 's0', f1: 's1', b0: 's2', b1: 's3' },
       apart: [['s0', 's2']], together: [], layouts: [], history: [],
+      rules: [
+        { id: 'legacy:apart:s0|s2', kind: 'apart', hard: true, weight: 2, students: ['s0', 's2'], desks: [], zone: '', anyOf: [], why: 'sat badly together in March' },
+        { id: 'z1', kind: 'zone', hard: true, weight: 3, students: ['s1'], desks: [], zone: 'front', anyOf: [], why: 'IEP: vision' },
+      ],
     },
     {
       // A second section, so "only the ACTIVE section travels" is provable
@@ -127,6 +131,14 @@ ok(!JSON.stringify(payload).includes('data:image'), 'and no image bytes are anyw
 eq(payload.students.find(s => s.id === 's0').note, 'front row, please', 'the note beside that photo does travel');
 eq(JSON.stringify(payload.apart), JSON.stringify([['s0', 's2']]), 'and so do the keep-apart rules');
 
+/* Path 14 P3: the rules travel, the reasons for them do not. */
+ok(Array.isArray(payload.rules) && payload.rules.length === 2, 'the rules travel in the link: ' + JSON.stringify(payload.rules));
+ok(payload.rules.some(r => r.kind === 'zone' && r.zone === 'front' && r.students.join() === 's1'), 'including the zone rule');
+ok(payload.rules.every(r => r.why === ''), 'with every reason left out');
+ok(!url.includes('vision') && !JSON.stringify(payload).includes('vision') && !JSON.stringify(payload).includes('March'), 'and the words of a reason are nowhere in the payload');
+const mine = await page.evaluate(() => JSON.parse(localStorage.getItem('seating-chart-v1')).sections[0].rules.map(r => r.why));
+ok(mine.includes('IEP: vision'), 'while the sender still has them on their own chart: ' + JSON.stringify(mine));
+
 /* The sheet must SAY it dropped the photo — a policy nobody is told about is
    indistinguishable from a bug. */
 await page.click('#shareBtn');
@@ -142,6 +154,7 @@ const parsed = JSON.parse(file);
 eq(parsed.aplp.tool, 'seating-chart', 'the file says which tool it belongs to');
 eq(parsed.aplp.param, 'section', 'and which parameter it is a payload for');
 eq(parsed.state.students.find(s => s.id === 's0').photo, PHOTO, 'byte for byte, the photo that was on the chart');
+ok(!file.includes('vision') && !file.includes('March'), 'the downloaded file carries no reason either');
 /* The reader half of the same loop: Share.unwrap() turns that envelope back
    into a link payload. P1 shipped a download no adopter's importer could
    open; this is the assertion that keeps it closed. */
@@ -185,6 +198,7 @@ const got = arrived.sections.find(s => s.name === 'Period 2 Geography');
 eq(got.students.length, 4, 'with every student');
 eq(got.students.find(s => s.name === 'Ada Lovelace').photo, '',
   'and the stripped photo repaired to an empty string rather than a null that renders as one');
+ok(got.rules && got.rules.length === 2 && got.rules.every(r => r.why === ''), 'the receiver has the rules, without the reasons: ' + JSON.stringify(got.rules && got.rules.map(r => r.why)));
 ok(/Imported "Period 2 Geography"/.test(await other.textContent('#status')), 'the status bar says what arrived');
 eq(new URL(other.url()).searchParams.get('section'), null,
   'the parameter is consumed on open, so a refresh cannot import it twice');

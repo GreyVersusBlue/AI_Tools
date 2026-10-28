@@ -45,6 +45,13 @@ const KEY = 'gvb-question-bank';
 const OLD_KEY = 'gvb-review-board-bank:entries';
 const PRINT = process.argv.includes('--print');
 const GOLDEN = path.join(path.dirname(fileURLToPath(import.meta.url)), 'golden-old-brackets.json');
+// Path 13 P4 put three things on the card that the v276 page did not have: the "Allow drawn games" bar on a
+// round robin, pools or Swiss page, and a class and a title on a decided slot that can be changed. They are
+// taken out before hashing, so every pin below still holds the rest of the card byte for byte.
+const plain = h => String(h)
+  .replace(/<div class="draws-bar">.*?<\/div>/gs, '')
+  .replace(/ slot-changeable/g, '')
+  .replace(/ title="Click to give this [^"]*"/g, '');
 const sha = t => crypto.createHash('sha256').update(String(t)).digest('hex').slice(0, 16);
 
 let passed = 0, failed = 0;
@@ -158,20 +165,20 @@ async function pinsOf(storage) {
   for (const t of TYPES) {
     await page.selectOption('#bracketSwitch', t.name);
     await settle(page, 250);
-    pins[t.name + ': the bracket card'] = sha(await page.evaluate(() => document.getElementById('bracketCard').innerHTML));
+    pins[t.name + ': the bracket card'] = sha(plain(await page.evaluate(() => document.getElementById('bracketCard').innerHTML)));
     pins[t.name + ': the champion banner'] = sha(await page.evaluate(() => { const b = document.getElementById('championBanner'); return b.className + '|' + b.textContent; }));
     await page.check('#printBlank');
     await page.click('#printBtn');
     await settle(page, 150);
-    pins[t.name + ': the blank printed sheet'] = sha(await page.evaluate(() => window.__printedCard));
+    pins[t.name + ': the blank printed sheet'] = sha(plain(await page.evaluate(() => window.__printedCard)));
     await page.uncheck('#printBlank');
     await page.click('#printBtn');
     await settle(page, 150);
-    pins[t.name + ': the printed bracket'] = sha(await page.evaluate(() => window.__printedCard + '|' + window.__printedClass));
+    pins[t.name + ': the printed bracket'] = sha(plain(await page.evaluate(() => window.__printedCard + '|' + window.__printedClass)));
     pins[t.name + ': the share link'] = sha(await shareLink(page));
     const live = '#bracketView .slot:not(.slot-bye):not(.slot-empty):not(.slot-decided)';
     if (await page.locator(live).count()) { await page.locator(live).first().click(); await settle(page, 200); }
-    pins[t.name + ': the card after one more pick'] = sha(await page.evaluate(() => document.getElementById('bracketCard').innerHTML));
+    pins[t.name + ': the card after one more pick'] = sha(plain(await page.evaluate(() => document.getElementById('bracketCard').innerHTML)));
     pins[t.name + ': what is stored for it after that pick'] = sha(await page.evaluate(n => localStorage.getItem('gvb-bracket:data:' + n), t.name));
   }
   pins['storage at the end'] = sha(JSON.stringify(await stored(page)));
@@ -194,7 +201,7 @@ if (PRINT) {
   await open(fresh, doubleLink.replace(/^[^?]*/, URL_020));
   const linkPins = {
     'an old link: storage after it opens': sha(JSON.stringify(await stored(fresh))),
-    'an old link: the bracket card': sha(await fresh.evaluate(() => document.getElementById('bracketCard').innerHTML)),
+    'an old link: the bracket card': sha(plain(await fresh.evaluate(() => document.getElementById('bracketCard').innerHTML))),
   };
   await fresh.context().close();
   const pins = Object.assign(await pinsOf(storage), linkPins);
@@ -210,7 +217,7 @@ const golden = JSON.parse(fs.readFileSync(GOLDEN, 'utf8'));
   const fresh = await fixedPage({});
   await open(fresh, URL_020 + golden.doubleLink);
   now['an old link: storage after it opens'] = sha(JSON.stringify(await stored(fresh)));
-  now['an old link: the bracket card'] = sha(await fresh.evaluate(() => document.getElementById('bracketCard').innerHTML));
+  now['an old link: the bracket card'] = sha(plain(await fresh.evaluate(() => document.getElementById('bracketCard').innerHTML)));
   await fresh.context().close();
   ok(Object.keys(golden.pins).length >= 38, 'the golden file holds every pin (' + Object.keys(golden.pins).length + ')');
   for (const k of Object.keys(golden.pins)) eq(now[k], golden.pins[k], k + ' is what the v276 page gave');

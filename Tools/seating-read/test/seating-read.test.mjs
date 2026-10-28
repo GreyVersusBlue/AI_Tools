@@ -248,5 +248,47 @@ const SECTION = CHART.sections[1];
   eq(seen, 2, '9: ...and nothing arrives after');
 }
 
+/* ---- the room's marks (Path 14 P4 increment 2) ---- */
+{
+  const sec = CHART.sections[1];
+  const withRoom = {
+    ...CHART,
+    rooms: [{ id: 'r1', name: 'Room 12', desks: [], marks: [
+      { id: 'm1', kind: 'door', x: 0, y: 110, w: 60, h: 110, rot: 0, label: 'Hall door' },
+      { id: 'm2', kind: 'projector', x: 440, y: -40, w: 400, h: 30, rot: 90, label: '' },
+      { id: 'm3', kind: 'sofa', x: 1, y: 1, w: 5, h: 5, rot: 0, label: 'unknown kind' },
+    ] }],
+    sections: CHART.sections.map(x => (x.id === 's2' ? { ...x, room: 'r1' } : x)),
+  };
+  const roomed = withRoom.sections[1];
+  eq(S.marksOf(CHART, sec), [], 'a chart with no rooms has no marks');
+  eq(S.marksOf(withRoom, CHART.sections[0]), [], 'a period outside the room has none');
+  eq(S.marksOf(withRoom, { ...roomed, room: 'gone' }), [], 'a missing room has none');
+  eq(S.marksOf(null, roomed), [], 'no chart, no marks');
+  const marks = S.marksOf(withRoom, roomed);
+  eq(marks.map(m => m.id), ['m1', 'm2'], 'a period in the room gets its marks, a kind the room does not know left out');
+  eq(marks[0], { id: 'm1', kind: 'door', label: 'Hall door', x: 0, y: 110, w: 60, h: 110, rot: 0 }, 'a mark comes back as plain placed numbers');
+
+  // readers that do not ask see exactly what they saw before
+  const plain = S.placeDesks(sec), plainBox = S.bounds(plain, { frontBand: S.FRONT_BAND });
+  eq(S.placeDesks(roomed), plain, 'placeDesks is the same with a room on the section');
+  eq(S.bounds(S.placeDesks(roomed), { frontBand: S.FRONT_BAND }), plainBox, 'bounds is the same unless marks are passed');
+  eq(S.bounds(plain, { frontBand: S.FRONT_BAND, marks: [] }), plainBox, 'and the same with an empty list');
+
+  // a reader that asks gets a box that holds them (the turned projector is 30 wide, 400 tall about its centre)
+  const wide = S.bounds(plain, { frontBand: S.FRONT_BAND, marks });
+  ok(wide.minX <= 0 && wide.minY <= -40 - 185, 'the box grows to hold a door and a turned board (' + wide.minX + ', ' + wide.minY + ')');
+  eq(wide.maxX, 640 + 15, 'and by the turned board\'s own width on the right (centre 640, 15 either side)');
+  eq(wide.minY, -225, 'and 200 above its centre at the top (centre y -25)');
+
+  // mirroring reflects about the desks' extent, the axis placeDesks uses
+  const flipped = S.marksOf(withRoom, roomed, { mirror: true });
+  const mp = S.placeDesks(roomed, { mirror: true });
+  const minX = Math.min(...sec.desks.map(d => d.x)), maxX = Math.max(...sec.desks.map(d => d.x)) + S.DESK_W;
+  eq(flipped[0].x, minX + maxX - 0 - 60, 'a mirrored door sits on the far side of the desks');
+  eq(flipped[1].rot, -90, 'and its turn reflects with it');
+  ok(mp.length === plain.length, 'mirrored desks unaffected');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) { console.log('\nFailures:'); fails.forEach(f => console.log('  - ' + f)); process.exit(1); }

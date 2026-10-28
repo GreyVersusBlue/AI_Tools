@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v346';
+const CACHE_VERSION = 'v368';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -119,6 +119,7 @@ const SHELL_URLS = [
   "Tools/command-center/remote.html",
   "Tools/002-group-team-generator.html",
   "Tools/group-team-generator/gtg-memory.js",
+  "Tools/group-team-generator/gtg-seating.js",
   "Tools/001-hall-pass-log.html",
   "Tools/name-picker/fonts/bungee-latin-400-normal.woff2",
   "Tools/name-picker/fonts/bungee-latin-ext-400-normal.woff2",
@@ -141,6 +142,10 @@ const SHELL_URLS = [
   "Tools/school-calendar/scv-store.js",
   "Tools/school-calendar/scv-weeks.js",
   "Tools/seating-chart/scg-photo.js",
+  "Tools/seating-chart/seating-explain.mjs",
+  "Tools/seating-chart/seating-room.mjs",
+  "Tools/seating-chart/seating-rules.mjs",
+  "Tools/seating-chart/seating-solve.mjs",
   "Tools/seating-chart/seating.mjs",
   "_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css",
   "_shared/a11y.css",
@@ -155,6 +160,7 @@ const SHELL_URLS = [
   "_shared/print-kit.css",
   "_shared/print-kit.js",
   "_shared/export.js",
+  "_shared/bracket.js",
   "_shared/grouping.js",
   "_shared/question-bank.js",
   "_shared/countdown.js",
@@ -162,6 +168,7 @@ const SHELL_URLS = [
   "_shared/qr-scan.js",
   "_shared/restore-kit.js",
   "_shared/roster.js",
+  "_shared/rotation.js",
   "_shared/school-day.js",
   "_shared/seating-read.js",
   "_shared/share.js",
@@ -328,6 +335,7 @@ const PRECACHE_URLS = [
   "Tools/graph-paper-generator/gpg-store.js",
   "Tools/002-group-team-generator.html",
   "Tools/group-team-generator/gtg-memory.js",
+  "Tools/group-team-generator/gtg-seating.js",
   "Tools/001-hall-pass-log.html",
   "Tools/064-historical-trading-card-maker.html",
   "Tools/historical-trading-card-maker/htcm-store.js",
@@ -454,6 +462,10 @@ const PRECACHE_URLS = [
   "Tools/073-science-fair-project-tracker.html",
   "Tools/074-science-safety-label-maker.html",
   "Tools/seating-chart/scg-photo.js",
+  "Tools/seating-chart/seating-explain.mjs",
+  "Tools/seating-chart/seating-room.mjs",
+  "Tools/seating-chart/seating-rules.mjs",
+  "Tools/seating-chart/seating-solve.mjs",
   "Tools/seating-chart/seating.mjs",
   "Tools/084-socratic-seminar-prep-organizer.html",
   "Tools/075-staff-directory-builder.html",
@@ -509,6 +521,7 @@ const PRECACHE_URLS = [
   "_shared/print-kit.css",
   "_shared/print-kit.js",
   "_shared/export.js",
+  "_shared/bracket.js",
   "_shared/grouping.js",
   "_shared/question-bank.js",
   "_shared/countdown.js",
@@ -516,6 +529,7 @@ const PRECACHE_URLS = [
   "_shared/qr-scan.js",
   "_shared/restore-kit.js",
   "_shared/roster.js",
+  "_shared/rotation.js",
   "_shared/school-day.js",
   "_shared/seating-read.js",
   "_shared/share.js",

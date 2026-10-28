@@ -24,7 +24,7 @@
    NOT HERE. 002's long-memory refine and its Hungarian role rotation
    (Tools/group-team-generator/gtg-memory.js, v277) came after the design; they
    stay 002's and run after formGroups() exactly where they run today. Stations
-   and timers are rotation (P3). Brackets, pools and Swiss are P3 and P4.
+   and timers are rotation (P3). Brackets, pools and Swiss are bracket.js (P3).
 
    A MEMBER is { key, name, attrs }: `key` any string unique in the call (a
    bare string is a member whose key and name are that string), `attrs` an
@@ -138,7 +138,8 @@
      → { count, sizes, floaters, ownGroup, note }. Draws nothing.
      sizeRule, for `size`: 'ceil' (002, 022, 027: never over the size),
      'near' (087: floor, plus one when the remainder is at least half a
-     group) or 'floor' (never under, once n >= size). remainder: 'spread'
+     group) or 'floor' (never under, once n >= size; with floaters or an
+     own group every group is exactly `size` and the rest are left over). remainder: 'spread'
      (some groups get one more; 002's stored word 'extra' too), 'floaters'
      or 'own-group' (two or more left over make a group of their own, one
      stays a floater with a note; 002's 'pair'). The count is clamped to
@@ -168,6 +169,10 @@
       if (!opts.allowEmpty) count = Math.max(1, Math.min(count, n));
     }
     var base = count ? Math.floor(n / count) : 0;
+    /* 'floor' with the rest left over: every group is `size` (never over it), the rest
+       are floaters or a group of their own. Spread keeps floor's "never under". */
+    if (rule === 'floor' && remainder !== 'spread' && size !== null && (opts.count === undefined || opts.count === null) &&
+        count && count * size <= n) base = size;
     var extra = count ? n - base * count : 0;
     var sizes = [], floaters = 0, ownGroup = 0, note = null;
     for (var i = 0; i < count; i++) sizes.push(base + (remainder === 'spread' && i < extra ? 1 : 0));
@@ -820,7 +825,8 @@
      attribute; apart and together: [[a, b]]; previous: [[key]] with lock:
      [bool] (002's locked groups: kept at their index, the count fixed at
      previous.length); history (read, never changed); recency: { penalties:
-     [1000, 100] }; cost(a, b), added for each pair sharing a group; search:
+     [1000, 100] }; cost(a, b), added for each pair sharing a group (and brought down by swaps
+     once nothing else is broken); search:
      { attempts: 800, restarts: 0, keepStrategy: false, together: 'pairs' };
      rng or seed.
      Returns { groups, floaters, absent, seed, violations: { apart, together,
@@ -921,6 +927,8 @@
     var impossible = findImpossible(apart, together, present, target.length + (p.ownGroup ? 1 : 0), largest);
 
     var remainder = REMAINDERS[opts.remainder] || 'spread';
+    var floorExact = opts.sizeRule === 'floor' && remainder !== 'spread' && !useLocks &&
+      (opts.count === undefined || opts.count === null) && p.sizes.length > 0;
 
     function deal() {
       var groups = base.map(function (g) { return g.slice(); });
@@ -935,8 +943,14 @@
         // Under 'units' a block is dealt before any single, so the end of a
         // group is a single and popping never splits a block.
         var minSize = Math.min.apply(null, target.map(function (i) { return groups[i].length; }));
+        /* sizeRule 'floor': the size plan() gave is the size asked for (never over it), not the smallest group dealt. */
+        if (floorExact) minSize = p.sizes[0];
         target.forEach(function (i) {
           while (groups[i].length > minSize) floaters.push(groups[i].pop());
+        });
+        // A deal that was uneven (heterogeneous tiers) leaves a group short: fill it from the leftovers.
+        if (floorExact) target.forEach(function (i) {
+          while (groups[i].length < minSize && floaters.length) groups[i].push(floaters.pop());
         });
         if (remainder === 'own-group' && floaters.length >= 2) { groups.push(floaters); floaters = []; }
       }
@@ -1085,7 +1099,22 @@
         var at = where(groups);
         var all = apartBroken(at).concat(togetherBroken(at));
         if (mem.any) all = all.concat(repeatPairs(groups));
-        if (!all.length) { stoppedBy = 'nothing'; break; }
+        if (!all.length) {
+          /* Nothing is broken. With a cost to bring down, swap two members of different
+             unlocked groups and keep the swap when the score is better. */
+          if (!costFn) { stoppedBy = 'nothing'; break; }
+          var open = [];
+          for (var ug = 0; ug < groups.length; ug++) { if (!lockedIdx[ug] && groups[ug].length) open.push(ug); }
+          if (open.length < 2) { stoppedBy = 'nothing'; break; }
+          var ga = groups[open[Math.floor(next() * open.length)]], gb = groups[open[Math.floor(next() * open.length)]];
+          if (ga === gb) continue;
+          var ia = Math.floor(next() * ga.length), ib = Math.floor(next() * gb.length);
+          var ma = ga[ia], mb = gb[ib];
+          ga[ia] = mb; gb[ib] = ma;
+          var cs = score(groups, tierOf);
+          if (cmp(cs, best) < 0) best = cs; else { ga[ia] = ma; gb[ib] = mb; }
+          continue;
+        }
         var off = all[Math.floor(next() * all.length)];
         var gi = own(ixOf, '#' + off[0]) ? at[ixOf['#' + off[0]]] : -1;
         if (gi === -1 || lockedIdx[gi]) continue;
@@ -1186,7 +1215,7 @@
      022's and 027's picker draw for draw: members in shuffled order, each
      takes the open role it held longest ago, a random 0 to 0.5 added to each
      score. 'best' is the cheapest whole assignment over the same scores,
-     every ordering tried up to 8 members and greedy then pair swaps above,
+     every ordering tried up to 8 members and 400,000 orderings, greedy then swaps above,
      ties broken by rng. `history` is the memory, or { key: [role] }. */
   function rotateRoles(groups, roles, history, opts) {
     opts = isObj(opts) ? opts : {};
@@ -1221,7 +1250,11 @@
           return slots.map(function (r) { return (r === null ? 0 : recencyScore(held(k), r)) + next() * 1e-3; });
         });
         var pickBest = null, bestCost = Infinity;
-        if (ms.length <= 8) {
+        /* Every ordering for a small group, unless there are so many roles that the orderings run past 400,000
+           (8 members and 10 roles is 1.8 million, a second and a half on a phone): then the greedy pick and swaps below. */
+        var orderings = 1;
+        for (var oi = 0; oi < ms.length && orderings <= 400000; oi++) orderings *= (slots.length - oi);
+        if (ms.length <= 8 && orderings <= 400000) {
           permutations(ms.length, slots.length, function (pk) {
             var c = 0;
             for (var i = 0; i < pk.length; i++) c += cost[i][pk[i]];
@@ -1242,6 +1275,10 @@
                 var now = cost[a][pickBest[a]] + cost[b][pickBest[b]];
                 var sw = cost[a][pickBest[b]] + cost[b][pickBest[a]];
                 if (sw < now - 1e-9) { var tmp = pickBest[a]; pickBest[a] = pickBest[b]; pickBest[b] = tmp; improved = true; }
+              }
+              // ...and a role nobody has yet, when it costs this member less.
+              for (var u = 0; u < slots.length; u++) {
+                if (pickBest.indexOf(u) === -1 && cost[a][u] < cost[a][pickBest[a]] - 1e-9) { pickBest[a] = u; improved = true; }
               }
             }
           }

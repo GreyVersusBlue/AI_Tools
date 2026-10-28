@@ -28,6 +28,7 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <script src="../_shared/print-kit.js"></script>
+<script src="../_shared/rotation.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -1628,10 +1629,7 @@
   function tickTimerDisplay() {
     var t = state.timer;
     var totalMs = getRotationMs();
-    var display;
-    if (t.running && t.endAt) display = t.endAt - Date.now();
-    else if (t.paused && t.remainingMs != null) display = t.remainingMs;
-    else display = totalMs;
+    var display = Rotation.remaining(t, Date.now(), totalMs);
     els.timerClock.textContent = fmtTime(display);
     els.timerClock.classList.toggle('paused', t.paused);
     var complete = !t.running && !t.paused && t.count >= t.rotations && t.count > 0;
@@ -1751,17 +1749,7 @@
     if (!state) return;
     var t = state.timer;
     if (!t.running || !t.endAt) { tickTimerDisplay(); return; }
-    var remaining = t.endAt - Date.now();
-    var guard = 0, changed = false;
-    while (remaining <= 0 && guard < 200) {
-      var totalMs = getRotationMs();
-      t.count++;
-      changed = true;
-      if (t.count >= t.rotations) { t.running = false; t.endAt = null; t.remainingMs = null; break; }
-      t.endAt += (totalMs > 0 ? totalMs : 1000);
-      remaining = t.endAt - Date.now();
-      guard++;
-    }
+    var changed = Rotation.tick(t, Date.now(), getRotationMs(), 1, t.rotations);
     if (changed) { rotateFlashUntil = Date.now() + 2500; playRotationAlarm(); save(); renderTimerUI(); }
     else tickTimerDisplay();
   }
@@ -1774,31 +1762,20 @@
     clearMsg();
     var t = state.timer;
     if (t.count >= t.rotations) t.count = 0;
-    t.running = true;
-    t.paused = false;
-    t.endAt = Date.now() + (t.remainingMs != null ? t.remainingMs : totalMs);
-    t.remainingMs = null;
+    Rotation.start(t, Date.now(), totalMs);
     save();
     renderTimerUI();
   });
   els.timerPauseBtn.addEventListener('click', function () {
     var t = state.timer;
-    if (!t.running) return;
-    t.remainingMs = Math.max(0, t.endAt - Date.now());
-    t.running = false;
-    t.paused = true;
-    t.endAt = null;
+    if (!Rotation.pause(t, Date.now())) return;
     save();
     renderTimerUI();
   });
   els.timerResumeBtn.addEventListener('click', function () {
     var t = state.timer;
-    if (!t.paused) return;
+    if (!Rotation.resume(t, Date.now(), getRotationMs())) return;
     ensureAudio();
-    t.running = true;
-    t.paused = false;
-    t.endAt = Date.now() + (t.remainingMs != null ? t.remainingMs : getRotationMs());
-    t.remainingMs = null;
     save();
     renderTimerUI();
   });
@@ -1806,22 +1783,13 @@
     var t = state.timer;
     if (t.count >= t.rotations) return;
     rotateFlashUntil = Date.now() + 2500;
-    t.count++;
-    var totalMs = getRotationMs();
-    if (t.count >= t.rotations) { t.running = false; t.paused = false; t.endAt = null; t.remainingMs = null; }
-    else if (t.running) t.endAt = Date.now() + totalMs;
-    else if (t.paused) t.remainingMs = totalMs;
+    Rotation.rotateNow(t, Date.now(), getRotationMs(), t.rotations);
     save();
     renderTimerUI();
   });
   els.timerResetBtn.addEventListener('click', function () {
     if (!confirm('Reset the rotation timer back to the start?')) return;
-    var t = state.timer;
-    t.count = 0;
-    t.running = false;
-    t.paused = false;
-    t.endAt = null;
-    t.remainingMs = null;
+    Rotation.reset(state.timer);
     save();
     renderTimerUI();
   });

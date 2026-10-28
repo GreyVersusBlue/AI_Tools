@@ -1131,14 +1131,25 @@
   function seatingSvg(state, section) {
     var placed = SeatingRead.placeDesks(section, { mirror: state.mirror === true });
     if (!placed.length) return null;
-    var box = SeatingRead.bounds(placed, { frontBand: SeatingRead.FRONT_BAND });
+    var marks = SeatingRead.marksOf(state, section, { mirror: state.mirror === true });
+    var box = SeatingRead.bounds(placed, { frontBand: SeatingRead.FRONT_BAND, marks: marks });
     var vx = box.vx, vy = box.vy, vw = box.vw, vh = box.vh;
     var pad = SeatingRead.PAD;
 
     var numbered = state.numbered === true;
     var filled = 0;
 
-    var body = placed.map(function (p) {
+    /* the room's doors, windows and board, behind the desks; a chart whose period sits in no room has none */
+    var markSvg = marks.map(function (m) {
+      var mx = m.x + m.w / 2, my = m.y + m.h / 2;
+      var g = '<rect x="' + m.x + '" y="' + m.y + '" width="' + m.w + '" height="' + m.h + '" rx="4" fill="var(--line)" fill-opacity="' +
+        (m.kind === 'obstacle' ? '.55' : '.25') + '" stroke="var(--muted)" stroke-width="1.5"' + (m.kind === 'door' ? '' : ' stroke-dasharray="6 4"') + '/>' +
+        '<text x="' + mx + '" y="' + (my + 4) + '" text-anchor="middle" font-size="12" font-weight="600" fill="var(--muted)">' +
+        escapeHtml(m.label || m.kind) + '</text>';
+      return '<g class="seat-mark seat-mark-' + m.kind + '"' + (m.rot ? ' transform="rotate(' + m.rot + ' ' + mx + ' ' + my + ')"' : '') + '>' + g + '</g>';
+    }).join('');
+
+    var body = markSvg + placed.map(function (p) {
       var x = p.x, y = p.y, rot = p.rot, i = p.index;
       var cx = x + SEAT_DESK_W / 2, cy = y + SEAT_DESK_H / 2;
       var student = p.student;

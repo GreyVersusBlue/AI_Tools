@@ -76,6 +76,17 @@ const FIXTURE = {
   ],
 };
 
+// Path 14 P3: rules that are not pairs. Period 1 breaks two (a zone rule and a space rule) and Period 2
+// keeps one; every rule carries a reason that must not reach the paper.
+FIXTURE.sections[0].rules = [
+  { id: 'legacy:apart:p1-s0|p1-s1', kind: 'apart', hard: true, weight: 2, students: ['p1-s0', 'p1-s1'], desks: [], zone: '', anyOf: [], why: '' },
+  { id: 'z1', kind: 'zone', hard: true, weight: 3, students: ['p1-s3'], desks: [], zone: 'front', anyOf: [], why: 'secret reason one' },
+  { id: 'sp1', kind: 'space', hard: true, weight: 3, students: ['p1-s0'], desks: [], zone: '', anyOf: [], why: 'secret reason two' },
+];
+FIXTURE.sections[1].rules = [
+  { id: 'z2', kind: 'zone', hard: true, weight: 3, students: ['p2-s0'], desks: [], zone: 'front', anyOf: [], why: 'secret reason three' },
+];
+
 const packetPages = () => page.evaluate(() =>
   Array.from(document.querySelectorAll('#printAllWrap .print-page')).map(p => ({
     title: p.querySelector('.print-head h2') ? p.querySelector('.print-head h2').textContent : '',
@@ -145,7 +156,12 @@ ok(/Leaves at 9:40/.test(pages[1].text), 'with the note itself');
 ok(/504 plan/.test(pages[2].text), 'and the second section carries its own');
 ok(!/Leaves at 9:40/.test(pages[2].text), 'notes do not leak between sections');
 ok(pages[1].hasViolations, 'a broken keep-apart rule is reported on the page it belongs to');
-ok(!pages[2].hasViolations, 'and a section with no rules reports nothing');
+ok(!pages[2].hasViolations, 'and a section whose rules are all kept reports no conflict');
+ok(/Zheng He in the front row \u2014 not kept in this chart/.test(pages[1].text), 'a broken zone rule is named with its kind and student: ' + pages[1].text.slice(-300));
+ok(/Needs room \(no neighbour\): Ada Lovelace \u2014 not kept/.test(pages[1].text), 'and so is a broken space rule');
+ok(/Rules this chart keeps/.test(pages[2].text) && /Grace Hopper in the front row/.test(pages[2].text), 'a kept rule is listed on its own page');
+ok(/3 rule conflicts/.test(pages[0].text), 'the contents page counts every broken Must rule: ' + pages[0].text);
+ok(!pages.some(p => /secret reason/.test(p.text)), 'and no reason appears anywhere in the packet');
 ok(/For the substitute/.test(pages[1].text), 'each section page is flagged as the sub copy');
 
 /* ── 5. "Print all sections" is unchanged — no notes, no cover ──────────── */

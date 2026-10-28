@@ -240,6 +240,7 @@
       reads: [
         'crh_students_v1',
         'np_rosters',
+        'seating-chart-v1',
       ],
     },
     {

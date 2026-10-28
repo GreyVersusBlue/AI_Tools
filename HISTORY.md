@@ -9,6 +9,288 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-22: drive-seating's "refused with a sentence" flake (2026-10-27, test only, no CACHE_VERSION)
+
+The check at "placing a student on it is refused with a sentence" (`Tools/seating-chart/test/drive-seating.mjs`, from v362) failed about 1 run in 3
+under CPU load. **The page was right; the test assumed a random result.** The Auto-assign and Shuffle presses just above it are random, so which four of
+the five non-empty desks hold a student is too, and desk `b` was empty in about a third of runs: the first Enter picked nothing up, the second Enter on the
+left-empty desk had no selection to refuse, and `#status` still read Fill the gaps' "Seated nobody new; nobody else moved." (seen directly: status text,
+no `.selected` desk). A late zoom announcement, the autosave and the status timers were checked and are not involved. The test now picks up from a desk
+the stored chart says is seated and waits for `.desk.selected` before the second press (a named condition, no longer sleep). Proved: 22 of 22 green
+with four busy loops running (before: 3 failures in 8 under the same load); changing the refusal sentence on the page made it fail again.
+
+- `Tools/class-screen/test/smoke-widgets.mjs` ("Add picture" click intercepted by the a11y widget) fails the same way on a clean `origin/main` worktree:
+  it was already failing before AI-22's changes; not fixed here.
+- `Tools/group-team-generator/test/smoke-seat-near.mjs` flaked once for an earlier session; 0 failures in 20 back-to-back runs here, so not reproduced
+  and not changed.
+
+## AI-22: Path 14 P4 increment 2, marks dragged, printed and read (2026-10-27, v367-v368)
+
+Audit entry AI-22, rank 36 (2+, Partial). Two steps, each its own commit and `CACHE_VERSION`.
+
+- **Step 3 (v367), 005.** A mark on the floor is picked up with the pointer (snapped to the grid, undoable) and moved with the arrow keys with
+  focus kept (`markNode()` is the one node for floor and paper). Marks stay out of the drag when the floor is mirrored (the desks' own guard;
+  the node is not `movable` then). The room's marks print on the live page, every page of Print all and the whole-day sub packet; the printed
+  box (`printLayoutFor(desks, marks)`) widens to hold a mark outside the desks. A period outside the room, and a chart with no room, print as
+  before. `test:seating-room-marks` (19, port 8560); removing the print-all mark line was seen failing it (3 FAILs). The mirror guard inside
+  `markPointerDown` is belt and braces: the test cannot reach it, because the node is not draggable when mirrored.
+- **Step 4 (v368), the readers.** `SeatingRead.marksOf(state, section, { mirror })` and `bounds(placed, { marks })`: a reader that does not pass
+  marks gets exactly what it got (held in `test:seating-read`: `placeDesks` and `bounds` equal with and without a room). 010's SVG draws the marks
+  behind the desks (`test:command-center` seating panel, 38; removing the draw was seen failing it). 008 keeps its own module: `layoutSeats(...,
+  { marks })` adds `marks` (percent boxes) and widens the box only when asked, `roomMarks(parsed, section)` reads them; 008's tap board draws
+  them aria-hidden and not tappable (`smoke-seating-layout` 53, `smoke-seating-board` 30; dropping the argument was seen failing it). 045, 007
+  and 002 do not ask and were not touched; `smoke-seat-near` (002) and the 045 suites pass.
+- **Not done / not verified.** A mark cannot be resized, turned or relabelled after it is added (remove and add again); a zone rule still holds a
+  desk list, not the mark it came from; 007's and 045's pictures draw no marks. `class-screen/test/smoke-widgets.mjs` fails here at "Add picture"
+  (the a11y widget intercepts the click); it does not load anything this change touched, but I did not run it against `origin/main`.
+  `smoke-seat-near` failed once (25/1) and passed on three re-runs; not diagnosed. No real classroom, no paper.
+
+## AI-22: Path 14 P4 increment 1, the room layer (2026-10-27, v365-v366)
+
+Audit entry AI-22, rank 36 (2+, Partial). P4 had no written design, so the first commit is one, in the P4 bullet of `BACKLOG.md`.
+
+- **The design.** `rooms: [{ id, name, desks: [{id,x,y,rot}], marks: [{id,kind,x,y,w,h,rot,label}] }]` beside `sections`, and `section.room`.
+  Both exist only once used, so a chart saved before them loads byte-identical. **A section in a room keeps `desks` as a mirror of the room's**
+  (geometry from the room; `locked` and `empty` stay the period's own), the way the pair lists mirror `rules`: `_shared/seating-read.js` and
+  010, 008, 045, 007 and 002 read `section.desks` and were not touched. A room that is missing on load is forgotten and the desks stay. A mark never
+  changes adjacency; P3's zones, Leave empty and "front row" read the mirror as before. 035's tile editor was not imported (no coupling).
+- **Step 1 (v365).** `seating-room.mjs` (pure; imports nothing so `seating.mjs` can import it) and the repair wiring; `test:seating-room` (33):
+  the pre-change fixture round-trips byte-identical, a drifted mirror is put back on load, locked stays per period, a removed desk drops its seat
+  and is counted. Each of three breaks (always write `rooms`; no mirror on load; locked not kept) was seen failing once.
+- **Step 2 (v366).** A Room card on 005: make a room of this floor, put a period in a room, marks (door, window, teacher, bench, projector,
+  obstacle) drawn on the floor and nudged by arrows, "Desks near" chooses the desks near a mark for a tapped-zone rule, delete the room. Desk edits
+  reach the room in `touch()`, so every period follows; duplicating a period in a room keeps the copy in it; in a room a saved layout brings its
+  seats only; the share link drops the room id. `test:seating-room-page` (21, port 8559); removing the `touch()` call was seen failing it.
+- **Devon's open questions, defaults built, nothing decided past them.** (a) Room in 005's own storage or a shared "my classroom" store 035 also
+  writes: 005's own. (b) Saved layouts per room or per section: per section.
+- **Not done / not verified.** Marks cannot be dragged (arrows only); only the shown period's marks print, and "print all" and the sub export do not
+  draw marks; a file or backup carries `rooms` only because it is the whole key (009's restore not exercised for it); no real classroom use.
+
+## AI-22: Path 14 P3 increment 2, the page half of the seating solver (2026-10-27, v361-v364)
+
+**Why.** Rank 35's leftovers after increment 1, built in the prompt's order, each its own commit and `CACHE_VERSION`. Devon's eleven
+answers (defaults) and "no more photo work" bind every choice below; nothing here decides one of his open questions.
+
+**v361, the Rules block.** The Keep Apart and Put Together blocks are one **Rules** block: kind (keep apart, put together, needs a
+partner from, seat in a zone, needs room), a multi-select of students, a zone select or "Choose desks on the floor" (a tap, or Enter on
+a focused desk, picks it; each chosen desk says so in its label), Must / Want (1 to 3) and a short reason under the no-medical hint.
+`seating-rules.mjs` (pure, `test:seating-rules`) builds, adds, removes, prunes (a removed student or desk leaves every rule; a rule
+left too small goes) and words the rules. The first rule added turns the chart's existing pairs into Must rules; 2-member apart/together
+rules still mirror into the old lists. A chart that never touches the block stores no `rules`. A hard together over a hard apart on the
+same students is refused with a sentence. **Not built:** editing a rule in place (remove and add); a rule's student list is a
+multi-select, not a picker. The block replaced `renderPairs`, so 005's `inline-sinks` baseline went 18 to 16.
+
+**v362, Leave empty and Fill the gaps.** `E` on a focused desk (or its hover button) sets `desk.empty`, unpins it and sends its student
+back to the pool; a tap or drop onto it is refused with a sentence; Duplicate layout keeps the flag. **Fill the gaps** is
+`solve(keep: 'all')` and says who moved ("nobody else moved" in the test).
+
+**v363, preferences.** Four selects under a closed "Preferences for Auto-assign" heading (0 off to 3 really want); `prefs` is stored
+only once changed (the solver already reads `section.prefs`). **Not verified:** that a preference visibly changes a chart on the page
+(the solver suite holds that per preference); the page test holds storage, reload and undo.
+
+**v364, link and sub export.** `forShare()` blanks `why` on the copy that leaves the device (link and downloaded file; the sender's chart
+keeps it); the receiver gets the rules without it. The sub export lists broken non-pair Must rules ("Zheng He in the front row, not kept
+in this chart") and, on the sub pages, the ones it keeps; the cover counts them in "rule conflicts". Pairs keep `checkConstraints`'s
+sentences. Wording is `describeRule`, which has no reason in it. 008, 045, 007, 010 read `desks`, `assign` and `students` only: nothing
+new reaches them. **Caught:** the packet page and the single Sub export are two code paths and the first edit reached only one.
+
+**Checks.** `test:seating` (10 suites, 164-check `drive-seating`), a11y 005, lint, check:precache (--base origin/main), inline-sinks,
+entities, hidden-flex, print-clip, theme. Each new assertion was seen failing once with its rule broken on purpose. A full `--changed`
+run selects all 343 suites here (sw.js changes beyond the version line are site-wide) and was not run to the end: CI is the authority.
+`smoke-photos.mjs` timed out once under memory pressure and passed on both reruns. **Left:** P4 and P5 (ranks 36, 37).
+
+## AI-22: Path 14 P3 increment 1, the seating solver, its storage and the Why? panel (2026-10-27, v358-v360)
+
+**Why.** Rank 35 was designed on 2026-10-05 (no code) and Devon answered all eleven questions on 2026-10-21: keep the
+default, every one. Three steps, each its own commit and `CACHE_VERSION`.
+
+**v358, the pure solver.** `Tools/seating-chart/seating-solve.mjs` (never imported by `seating.mjs` except for the shape
+helpers below): `normalizeRules`, `zones`, `feasibility` (seven codes), `score`, `solve` (construct by most-constrained
+first, then min-conflicts over moves and swaps, restart while hard > 0, counted budget 40 passes / 4,000 moves, `timeLimitMs`
+2 s only as an emergency stop), `blame` (`impossible` / `held` / `budget`), `rulesToLegacy`, `absorbLegacy`. `assignSeats()` and
+`checkConstraints()` are untouched. `test:seating-solver` (pure Node, 128 assertions, `golden.json` of twelve seeded
+results; rewrite with `--update` and say so). **The measured problems:** a pod is now one rule scored by one function, so the
+pass and the checker cannot disagree (a star of five was broken 45% of the time under the old pass, 0 of 300 seeds now);
+Make grid's diagonal neighbours (10 of 40 desks) are **not** changed (that is `gridDesks()` and `ROOM.neighbor`, a visible
+change to every chart's adjacency; the design left it out and a test pins the 10). Bench (`test/_bench-solver.mjs`, this
+machine): no rules 1 ms, 30 rules median 3 ms, the whole budget on an impossible room 41 ms; times five for the laptop is
+still under the 250 ms target. Mutation checks: seven rule/solver mutations each fail the suite; "empty ignored" survived until
+a score assertion was added (construct already avoids empty desks).
+
+**v359, storage.** `repairSection` keeps `rules` (shape-checked by `repairRule`, in `seating.mjs`), `prefs` (0-3, only when not
+the defaults) and `desk.empty`, **only once used**: a chart saved by v357 loads byte-identical (`test:seating-migration`, with
+`fixtures/saved-v357.json` written by v357's own `repairState`). The 2-member apart/together rules mirror into the old lists
+(`syncLegacy` before a save, lists win on load, a list pair with no rule becomes a Must rule), so a cached older page still
+reads them. 009's year rollover empties `rules` and keeps `prefs` and desk.empty (`br-rollover.js`, fixture and assertions in
+`_rollover-fixtures.mjs`). Not done: stripping `why` from a share link, the sub export's rule names, the Rules block: they have
+no page to hang on until the Rules block exists (left in rank 35).
+
+**v360, the page.** Auto-assign (and Shuffle, which is "try another" because the seed is new each press) calls `solve()`;
+`seating-explain.mjs` words `blame`, `impossible`, `unseated`, soft rules, preferences and dropped rules from ids and codes;
+a **Why?** button opens one sentence per rule the solve could not keep ("Ada Lovelace and Marco Polo are side by side: every
+seat that would mend it is held by Ada Lovelace's pinned seat and Marco Polo's pinned seat."), hidden again by `refreshStatus()`. Names go in with
+`textContent`; the status line keeps its counts. `check:inline-sinks` baseline unchanged (no new dynamic markup sink).
+
+**Decisions (the design's defaults, recorded).** Devon's answers P14-1 to P14-11, all "keep the default", are now written into
+the P3 bullet. Calls made here, not Devon's: (a) a hard `together` against a hard `apart` over two or more of the same students
+drops the together and names it in `dropped`; a soft one is kept for the search to trade off. (b) `feasibility()`'s
+`apart-clique` and `space-too-many` use a greedy clique cover, a valid upper bound, so they never invent an impossibility.
+(c) 005 **is** a shell tool (it is in `SHELL_URLS`, v357), which the design said it was not, so the new modules went in both
+lists. (d) The photos stay as they are (Devon: "keep what exists, add no more photo features").
+
+**Not verified.** No real chart, no classroom laptop (the 250 ms target rests on this machine times five), nothing on paper.
+The Why? sentences were checked against built conflicts, not against a teacher reading them. The mirror's older-page half is
+simulated (an older page's save, written by hand), not run in an older build. `br_rollover_v1` STALE in `check:registry` was
+already there.
+
+---
+
+## AI-21: Path 13 P4 increment 2, 020's second display (2026-10-27, v357)
+
+**Why.** The last of rank 34. The row said "via Path 8", but `_shared/remote.js` and `Remote.display()` (P1, P3) do not exist;
+what exists is what 021's remote uses, `BroadcastChannel` and `webrtc-pair.js`. Building the Wi-Fi leg meant copying 021's
+~300-line pairing modal a ninth time, so it was not built; the same-browser window, which is a projector on an extended
+desktop, was.
+
+**What shipped.** `?display=1` on 020: `body.display-mode` plus `presenting`, the page's own `render()` run on state the teacher's
+page posts after every render (channel `bracket-tournament-display`, a clone of the saved object, `null` for setup, `hello`
+answered). `save()` is a no-op there; click, key, input, change and submit are stopped in the capture phase (Escape and F pass,
+for `Stage`); the bracket takes no pointer; the toolbar, setup, header and academic card are hidden and `academic.sync()` is
+not called. `_shared/stage.js` and `webrtc-pair.js` untouched. `test:bracket-display` (port 8558): five formats equal the
+teacher's text, a result, a bracket switch, the setup screen and a later window all follow, a press moves nothing and writes
+no key, an academic match's answers and questions never appear; each rule is also broken in the page and must be noticed.
+
+**What did not work / found.** The first break-on-purpose run noticed none of them: the route glob `**/020….html` does not
+match `?display=1`, and a page's own route outranks the context's. The `save()` guard cannot be reached from the display (the
+capture blocker stops everything first), so no break can test it alone; the academic card is kept off twice (not drawn, and
+hidden by CSS), so the suite breaks both at once. A hidden `<input>` aside, the display cannot be driven from outside.
+**Not verified:** a real second monitor or projector, fullscreen on one, Firefox or Safari, a display on another device.
+`check:registry` prints one STALE line (`br_rollover_v1`, backup-restore) that this change did not touch.
+
+**Devon's questions, on their defaults:** (1) same-browser window now, Wi-Fi display with Path 8 P3; (2) the display follows
+the teacher's bracket switch; (3) the Present bar is always on. **Shared lists obliged:** none outside the repo.
+
+## AI-21: Path 13 P4 increment 1, 020 changes a decided match and allows drawn games (2026-10-27, v356)
+
+**Why.** Rank 34. Its text was stale: double elimination, pools, Swiss, team rosters and a first-round consolation
+bracket with a third-place game (v284) were already in 020. What was missing was a way to fix a wrong tap, and draws.
+
+**Shipped.** (1) A decided slot that lost can be clicked to give the match to that side. Single elimination: the match's
+own score and every later decision that had used the old winner are cleared, the page counts them in a `confirm()` first,
+the flip is one Undo; the first-round consolation takes the changed loser out (and the games decided from them), a changed
+semifinal clears the third-place pick, a consolation game and the third-place game can be flipped the same way. Round
+robin, pools and Swiss: a flip drops a score that names the other result; pools ask before discarding a bracket already
+drawn from them (and its `br_` scores), Swiss before discarding the rounds after the flipped one. Double elimination is not
+offered. (2) "Allow drawn games" (`state.draws`, round robin, pools, Swiss; absent = off): a tied score or a Draw button
+stores `winner: 'draw'`; standings add a `d` field only on a row that has drawn, order by `w + d/2` (then diff, losses,
+name), show a D column only once a draw exists, and the champion banner and `seedOrderFromPools` follow. Every format with
+draws off, and elimination always, shows "Tied: click the winner" on a tied open match. Engine: `Bracket.dependentsOf`,
+`redecideElimination`, `vacateSlot`, `resultFromScores`, `setMatchResult`, `swissReopen`, `poolsReopen`;
+`BtTeams.reflow`/`decidedCount`. Tests: `test:bracket-engine` 46 (nine new, each with its rule broken),
+`test:bracket-parity` 1,861 / 0 (the 1,860 old comparisons untouched), new `test:bracket-redecide` (port 8557; five
+scenarios, eleven break-on-purpose reruns through a route that rewrites the page, and the five v276 saved brackets opened
+without a draws switch, a D column or a drawn game).
+
+**Calls made (reversible), all on the defaults in the P4 bullet.** Re-deciding clears later results (not "flags" them); a
+draw is half a win; elimination refuses a tie and the teacher breaks it by hand; draws are opt-in per bracket and cannot be
+switched off once a game is drawn; double-elimination results can only be undone. The consolation item was closed, not
+built: it already existed.
+
+**What went wrong / what to know.** `smoke-academic.mjs` pins the SHA of the whole bracket card for the v276 saved brackets;
+the draws bar and the `slot-changeable` class/title changed those hashes. The pins were **not** re-recorded: the suite now
+strips exactly those three additions (`plain()`) before hashing, so all 180 checks pass on the old golden and the rest of the
+card is proved byte-identical. `draws` is not backward-compatible with an older page (it would read `'draw'` as a win for
+the second side). **One commit, not two:** the task asked re-deciding and draws as separate commits and version bumps; they
+shared the standings and the page's helpers and were built together, so they landed as one (v356). **Not verified:** nothing
+ran on a phone or projector; academic-tournament mode's stored marks are not touched by a flip (a flipped academic match keeps
+its marks); a pools-fed bracket's own games cannot be changed; the full `npm test` was not run (`_shared/bracket.js` selects
+everything).
+
+## AI-21: Path 13 P3 step 3, 017 on the rotation engine (2026-10-27, v355)
+
+**Why.** Rank 33's last step: 017, 069 and 004 each keep a station timer.
+
+**Shipped.** `Rotation.rotateNow(r, now, ms, finishAt)` and `Rotation.tick(r, now, ms, stations, finishAt)`: the rotation that
+brings the count to `finishAt` stops the clock (not running, not paused, nothing left), and `tick` catches up no further.
+Left out, they are 021's (`test:rotation-parity`, 64,000 / 0, untouched). 017's start, pause, resume, rotate-now, reset, tick
+and displayed time now call `Rotation`; its sound, drawing, `save()`, the zero-length refusal and the guard that zeroes a
+finished count on Start stay in the page. `test:gallery-rotation-parity` (72,000 comparisons, 1 to 6 rotations, starting
+counts at and past the end, sleeps of up to twenty minutes) against a frozen copy of the page's timer; removing the `break`
+gives 1,672 differences. `test:rotation` is 30 checks, each also failing with its rule broken.
+
+**Calls made (reversible).** (1) `finishAt` is a trailing optional argument, falsy meaning none, not a mode of the clock.
+(2) `tick` takes a station count, which 017 has no use for: it passes 1. (3) **069 and 004 do not adopt.** 069's
+`circuit-run.js` is a `performance.now()` timeline of work and rest, with groups starting at `floor(g*n/G)`. 004's
+round-robin tab steps once per zero with `endAt = now + length` (so a slept tab does not catch up), counts from 1, and loops
+on request, on a `phase` object. Neither is a port alone; both stay as they are.
+
+**Not verified.** The full `npm test` (a `_shared/` edit selects everything), a real projector or phone. Checked: lint, every
+`check:*`, `check:precache --base origin/main`, `run-suites --only gallery-walk-qr` (4), `--only pe-tournament-stations` (4),
+`--only service-worker` (3), a11y 017.
+
+---
+
+## AI-21: Path 13 P3 steps 1 and 2, the bracket and rotation engines (2026-10-27, v353–v354)
+
+**Why.** Rank 33: 020's bracket code and 021's rotation clock were the last two pieces of Path 13 that lived only inside a
+page. P4 (more formats) wants an engine to put them in, and the clock is what 017, 069 and 004 repeat.
+
+**Shipped.** `_shared/bracket.js` (v353): the 29 pure functions of 020, from `shuffle` and `standardSeedOrder` through single
+and double elimination, round robin, pools, Swiss and the elimination standings, with their bodies unchanged and a state the
+same plain object it was, so a bracket saved by the old page opens in the new. `_shared/rotation.js` (v354): 021's
+`computeAssignment()` and the clock, with `now` passed in. Each is held by a frozen copy of the page's code
+(`Tools/bracket-tournament-generator/test/_legacy.mjs`, `Tools/pe-tournament-stations/test/_legacy.mjs`) in a parity suite
+and by a unit suite whose every check also runs against a copy with its rule broken (a check that cannot fail is not counted).
+Mutation on the parity suites: a changed pool deal gives 1,110 differences of 1,860, a cap of 199 rotations for 200 gives 9
+of 64,000, a second changed to 999 ms gives 28.
+
+**Calls made (reversible).** (1) `Bracket.setRng()` is module state, not a parameter of every builder, so the page's
+bodies stay as they were; a page never sets it. (2) `generateBracketFromPools()` and the match-to-station-and-time
+scheduling stay in 020: both read the page. (3) `rotateNow()` has no "no stations" guard; the page keeps it. (4) Step 3 is
+not done: **017's timer is not the same clock** (`t.count >= t.rotations` ends the clock in `tick` and in rotate-now; 021's
+runs forever), 069's runs off a timeline, and 004's round-robin tab was not read. An adoption of 017 needs a finish-at-N
+option in `Rotation` held by the parity suite; that is a feature, and rank 33 says so.
+
+**What was wrong in the brief.** The Path 13 "Why" said 020 and 021 held the same bracket algorithm line for line. 021 has
+no bracket: the words appear in its meta text and CSS only. It also still described the 021 overwrite as open (fixed in
+77b4405). Both are corrected. 020 already had double elimination, pools and Swiss, which rank 34 still lists as to do.
+
+**Not verified.** The full `npm test`, a11y sweep and any real device. Checked: lint, every `check:*`, `run-suites --only
+bracket-tournament-generator` (9) and `--only pe-tournament-stations` (4), a11y 020 and 021, `test:theme`.
+
+---
+
+## AI-21: Path 13 P2 increment 6, seating-aware grouping on 002 (2026-10-27, v352)
+
+**Why.** The last buildable half of BACKLOG rank 32: "groups that are physically possible given the seating chart".
+Devon's ten P1 answers bind (all defaults): the teacher's strategy and rules come first, not repeating partners second.
+
+**Shipped.** A checkbox on 002, off by default. `Tools/group-team-generator/gtg-seating.js` reads the chart through
+`SeatingRead` and gives the engine a `cost`: the distance between two students' desks in desk widths. **The engine's `cost` had
+never moved anyone.** P1 added it to the score, but the repair chose what to swap only from broken rules and repeats, so with a
+cost and nothing broken it stopped at once with 'nothing'. It now swaps two members of different unlocked groups when nothing is
+broken and keeps the swap when the score `[hard, strategy, repeats, cost]` is better. With no cost the branch is not reached, so
+the golden and parity suites did not move.
+
+**Calls made (reversible).** Seating ranks below repeats (P13-7), so shuffling twelve times in a row loosens the groups; the
+first shuffle is the room's blocks (1.18 desks against the class's 2.58 average pair) and twelve in a row average nearer than
+off. Long memory's `refine()` is skipped while seating is on and found, because it cannot see seats; the explanation says so.
+A student with no desk (or a name twice in the chart or the class) is placed at the mean distance, so the grouping is neutral
+toward them. A chart of one section is used whatever it is called; with several, one must be named like the class.
+
+**Measured.** 3,000 swaps are enough for 12 students (the optimum of 30 on a line was reached on the five seeds tried); the default 800 was not
+tried on the page. The page's first draft of the suite measured the 'on' groups after 25 'off' shuffles had filled the memory and
+read 2.36 against 2.58: the memory, not the seating. Fixed in the suite, not the assertion.
+
+**Not verified.** No real seating chart from 005 (the suite's chart is hand-built to its shape); classes over about 35, where the
+swap search was not timed; 005's own desk spacing against the 106-px desk width the distance divides by.
+
+**Project teams.** Not built: the six questions are unanswered. BACKLOG's P2 bullet carries them with their defaults.
+
+**Obliges.** `Tools/board-check/suite-durations.json` has `smoke-seat-near.mjs` at a guessed 40 s until the next refresh.
+
+---
+
 ## CI: the suites run as six parallel shard jobs (2026-10-26, AI-34, no `CACHE_VERSION`)
 
 **Why.** Devon approved splitting the CI suites across jobs on 2026-10-07 ("yes, to proceed"); the 2026-10-07 entry below
@@ -84,6 +366,124 @@ repo. The published browser, `sv-browser.js`, the Northwind baseline and the 034
 **Not checked.** The run on GitHub's runner itself (it lands with the next wave). `Tools/schedule-browser/test/smoke-dark-theme.mjs`
 scans 034, which has the same `br-rise` fade, with plain `a11yScan`; it is green on CI and was not changed here. It
 may share the blind spot, if its clock leaves the fade at 0.
+
+## Path 13 P2 increment 5: the improvements, each its own commit (2026-10-27, AI-21, `CACHE_VERSION` v347–v351)
+
+These change results on purpose. For each: what a teacher now sees differently, what proves it, and what still proves the
+old path. Devon's ten P1 answers (2026-10-21, all "keep the default") bind every call.
+
+**1. 002's "Students per group" with floaters or an own group means groups of that size (v347).** *Before:* the group count
+was `ceil(n / size)` and every group was then popped down to the smallest one dealt, so 30 students at "4 per group,
+leave the leftovers as floaters" made eight groups of 3 and **6 floaters**, and "put the leftovers in their own group" made
+eight groups of 3 and a ninth of 6. *Now:* seven groups of 4 and **2 floaters**, or seven of 4 and a group of 2; 27 at 4 is six
+of 4 and 3 floaters (or a group of 3); 5 at 4 is one group of 4 and 1 floater; fewer students than the size is one group of
+everyone. A group count ("Number of groups") and "Let one or more groups take an extra student" are untouched, so
+is the 002 saved bytes for them. Devon's P13-5 ("never over the size, and the fix").
+*What the build found:* the engine's `floor` rule had never been used and was wrong in two places, which no check had
+seen because 30 by 4 hides both. (a) `plan()` took the group size from `n / count`, so 11 at 4 was two groups of **5**
+and a floater, over the size P13-5 says never to exceed; with floaters or an own group `floor` now means every group is
+exactly `size` and the rest are left over (`spread` keeps "never under", sizes 6 and 5). (b) `formGroups()` popped every group
+down to the smallest *dealt* group, not to the size `plan()` gave, so the page would still have shown groups of 5 and 6; it
+now pops to `plan()`'s size, and a group a deal left short (heterogeneous deals tiers unevenly) is filled from the leftovers,
+so nobody is lost. Other rules are unchanged (the parity suite's 122,352 checks pass as they were).
+*Proof:* `test:grouping` has two new named checks (`plan`: every n 0..60 by size 1..7 is exact, never over, the rest is
+`n mod size`, 11 by 4 is `[4,4]` + 3, 5 by 4 is `[4]` + 1, `spread` unchanged; `formGroups`: every strategy places everyone once
+in groups of exactly size), each seen failing with its rule broken on purpose (90 passed, 30 checks, 30 broken). The
+`together: 'units'` check was equal to its own mutant once short groups are topped up, so it now also asserts that the
+deal needs no repair and that a block is never parted into the floaters, and its mutant is the blocks dealt all into
+the first group. `test:grouping-adopters` (246): 002's size-with-floaters cases are held to the new rule by shape (every
+student once, groups of the size, the rest left over, a group locked) and still to the old page's memory and keys
+exactly; the old path (a count, size with "extra") is still compared draw for draw, with a new size-with-extra case.
+**The cases had to be changed to mean anything:** the old ones used 13 names with one absent, 12 students, which divide
+by 3 and 4, so the old and new rules agreed and a deliberately removed fix passed them; they now use 13, 11 and 13 by 5.
+`smoke-year-memory.mjs`'s golden file (`golden-old-groupings.json`): exactly two of its twelve scenarios moved,
+`random-27-floaters` and `random-27-own-group` (the other ten, and the saved bytes less `groupHistory`, held), and only those two
+were re-recorded, from the page at this version, with an `amended` note in the file saying so. Those two now show six groups of 4 and 3 floaters
+(or a seventh group of 3) where the old page showed seven groups of 3 and 6 floaters (or a group of 6).
+*Not verified:* nothing on a phone or paper; no teacher has seen the new wording. The page's explanation still reads as
+before ("N students left as floaters today").
+
+**2. 002 keeps the strategy over last time's partners (v348).** *Before:* under Balanced, Heterogeneous and Homogeneous the
+no-repeat search swapped students for recency and had no term for the strategy, so the first press was balanced and every
+reshuffle after it was not. Measured on the page (the seeded golden class, 26 students, five presses): Balanced's gap between
+the best and worst group average was 0.33, 1.6, 1.2, 1.8, 1.2; Homogeneous's widest skill range inside a group 1, 4, 4, 3, 4.
+*Now:* the page passes `search: { keepStrategy: true }` for those three strategies (Random and "Everyone pairs with everyone"
+have no measure and are untouched), so a swap that would worsen the strategy is undone even if it would avoid a repeat: the gap is
+0.33, 0.2, 0.2, 0.2, 0.2 and the range 1, 1, 1, 1, 1. Devon's P13-7 ("the strategy the teacher picked wins, and the result says
+which repeats it kept"): the "Why this grouping" list already named the repeated pairs; it now adds "Your grouping strategy came first,
+so these were kept rather than undo it" when a repeat remains under one of the three. A keep-apart or keep-together rule still
+comes before the strategy (the score is `[hard, strategy, repeats, cost]`). The first press of a class with no pair rule is the
+old page's draw for draw (the golden's first step is byte-identical); with a pair rule even the first press can differ, because
+the repair now also keeps the strategy where it used to swap it away.
+*Not changed:* long memory's own refine (`gtg-memory.js`) runs after the engine and spreads pairings with no knowledge of the
+strategy; a teacher with long memory on and Balanced picked can still see it move students. That is a separate change, not made.
+*Proof:* `smoke-year-memory.mjs`: exactly three of the twelve golden scenarios moved (`balanced-26`, `hetero-26`, `homo-26`; the
+first step of each is unchanged, the rest of the nine and the saved bytes held) and only those were re-recorded, with an `amended`
+note; with the page's `keepStrategy` turned off the same suite reproduces the old golden to the byte, so the port is intact. A new
+section 1b holds the gap under 0.5 and the range at 1 in all five rounds (it fails with the option off: 0.33, 1.60, 1.20, 1.80,
+1.20 and 1, 4, 4, 3, 4). `test:grouping-adopters` compares the first press of a skill-strategy class with no pair rule draw for
+draw and the later presses by shape (group count, nobody lost or twice, keep-apart held); random and coverage cases are
+compared in full as before. The engine's own check (`keepStrategy` holds the balanced gap after four generations) was
+already in `test:grouping` from P1.
+
+**3. 002's keep-together pairs are blocks (v349).** *Before:* a keep-together pair was one more broken pair for the repair
+to try to fix, with the same weight as a keep-apart; two chains of three (A with B and B with C; D with E and E with F) in 28
+students by 7 groups were left parted in 4.5% of shuffles (measured in P1, item 4). *Now:* when the class has any keep-together
+pair the page passes `search.together: 'units'`: the pairs are joined into sets (a chain is one set), each set is dealt as one block
+into the smallest group, blocks first and largest first, then the strategy orders everyone else and each goes to the smallest
+group. Devon's P13-8 ("a block once switched on"). With no keep-together pair the page keeps the old deal, because `units` with
+no set still takes a different path and would have moved every golden class. A set bigger than a group, which no deal can keep,
+is now said in the "Why this grouping" list ("...are more than a group holds, so they cannot all be kept together") instead
+of only showing up as a broken pair; a keep-apart pair inside a chain is still the one case where the two rules cannot both
+hold, and the apart repair is what breaks it.
+*Proof:* `smoke-year-memory.mjs` section 1c: two chains of three in 28 by 7, 100 unseeded presses on the page, none parted and
+nobody missing (with `units` taken out it fails at press 25 and the golden fails; the old rule passed all 100 about 1% of the time).
+Exactly one of the twelve golden scenarios moved (`apart-together-24`, the only one with keep-together pairs), none of the
+other eleven; it was re-recorded alone with an `amended` note. `test:grouping`'s engine checks for `units` were
+already in from P1, and `test:grouping-adopters` is unchanged at 246 (its keep-together case is a skill strategy, held by
+shape since v348).
+
+**4. 002 and 022 deal again when a keep-apart or keep-together pair ends up broken (v350).** *Before:* one deal and one repair
+of 800 swaps, and whatever was left was shown as a broken pair. *Now:* both pages pass `search.restarts`: a try that ends with
+a pair broken is dealt again, up to ten times, and the best try is kept; a clean first deal never deals again, so no golden
+class moved and the cost is nothing when it was not needed. 002 passes it always (`RESTARTS = 10`, with keep-together it
+covers a set that cannot fit too: the best try is kept); 022 when there is a keep-apart pair. There is no setting a teacher
+sees, and none of Devon's ten answers touches it (it was an opt-in of P1's design).
+*Measured, so the number is not a guess* (engine, 6,000 seeds of one class: 30 students in 3 groups with 22 keep-apart pairs):
+no restarts leaves a pair together in 1,852 (31%), 5 restarts in 3, 8 and 12 in none; ten was chosen, at about 0.7 ms a shuffle more
+only in the shuffles that failed. Over random classes of the shapes P1 measured, 30 in 3 with 20 pairs went from 1.0% to 0.0%
+at five restarts (300 classes), and 28 in 7, 24 in 4 and 30 in 5 never failed either way.
+*Proof:* `test:grouping-adopters` (250): 30 unseeded presses of that class on each page. 022 passes only if no press leaves a pair
+together; 002 has a class of its own (28 pairs: its pairing memory gives its repair more to do and it fails less often, 35%
+a press on the engine with ten presses of memory, 71 of 200; with ten restarts 0 of 200). Each is seen failing with the restarts
+turned off (002 left a pair together 8 times in 30, 022 10 times in 30), and the old pass-all chance is under one in a million.
+`test:grouping`'s `restarts never return a worse score than no restarts` is from P1. All twelve golden classes and the
+saved bytes held, and the parity suite is unchanged (its 022 keep-apart claim is by failure rate, which restarts only lower).
+*A mistake found on the way:* the first 022 check read `members` as names, but they are `{ name, role }`, so it counted
+no pair together and passed with the fix switched off; it was found because the break-on-purpose run did not fail.
+
+**5. 022 and 027 hand roles out by the cheapest whole assignment (v351).** *Before:* each member in shuffled order took the open
+role they held longest ago (the page's own picker, ported as `method: 'greedy'`), so a student could be handed the role
+they held last time while another assignment had given everyone a different one: 1.0% of hand-outs for 4 students and 4 roles, 4.0%
+for 4 students and 3 roles, 2.7% for 5 and 4 (measured on the engine, 300 classes, 12 meetings each). *Now:* both pages call
+`rotateRoles(..., { method: 'best' })`: every ordering of the roles is tried for a group of up to 8 and the cheapest is kept,
+ties broken by the random draw, so nobody is handed last meeting's role when a way round it exists. A team with more roles than students
+(022's five default roles, 027's six) hardly ever repeated before either, and sees no difference there; the change shows in a group
+that has fewer roles than students or about as many. Nothing else moves: the same memory, the same `history` map written
+from it, the same roles list, "Team Member" / "Group Member" for the ones left over; the split into groups is untouched.
+*What the build found:* `method: 'best'` had never been run on a page, and it took **1.5 seconds** for a group of 8 with 12 roles
+(it tried every ordering of 12 role slots, 12!/4! of them), which would freeze the page. The exhaustive search now runs only up to
+400,000 orderings (8 students and 8 or 9 roles: 12 and 31 ms) and above that the greedy pick is improved by swaps, including
+a swap for a role nobody has yet, which takes a group of 8 with 12 roles, 6 with 15 or 12 with 12 to 1 ms with no repeat.
+*Proof:* `test:grouping` (93, 31 broken on purpose): a new check that those four shapes finish within 400 ms, repeat nothing
+and give no role twice (fails with the cap taken out). `test:grouping-adopters` (256): on each page, 500 meetings of a group of 4
+with 3 roles (roles removed through the page's own buttons) never hand a student the role they held last time; with the page set
+back to greedy it did 90 times on 022 and 76 on 027. The earlier hand-out checks, which compared roles with the old picker draw for
+draw, are now held to what a hand-out must be (roles from the list, none twice in a group, the memory exactly the old map plus what was
+handed out, the first press's split the old page's) because the old picker's draws are no longer the page's;
+the picker itself is still proved by `test:grouping-parity`. A first draft of the 500-meeting check used the default roles and
+passed with the page set back to greedy, because a team with spare roles hardly ever repeats: the roles were cut to three so the
+check can fail. Seen only as a risk, not run: no teacher has watched a role hand-out on a phone.
 
 ## Path 13 P2 increment 4: 002, 022 and 027 keyed by roster id (2026-10-26, AI-21, `CACHE_VERSION` v344–v346)
 

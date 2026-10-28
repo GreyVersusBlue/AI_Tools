@@ -17,7 +17,7 @@
 
 import {
   SEATING_KEY,
-  parseSeatingState, loosely, sameClass, pickSeatingSection, layoutSeats,
+  parseSeatingState, loosely, sameClass, pickSeatingSection, layoutSeats, roomMarks,
 } from '../seating-layout.js';
 
 let passed = 0, failed = 0;
@@ -195,6 +195,26 @@ const doubleAssign = section({
 });
 L = layoutSeats(doubleAssign, roster);
 eq(L.seats.filter(s => s.name === 'Aiden Whitfield').length, 1, 'only the first matching desk claims the name — no duplicate card');
+
+/* ---- the room's marks (Path 14 P4 increment 2): only for a caller that passes them ---- */
+{
+  const MARKS = [{ id: 'm1', kind: 'door', x: -100, y: 0, w: 60, h: 110, rot: 0, label: 'Hall door' }];
+  const base = layoutSeats(section(), roster);
+  const same = layoutSeats(section(), roster, { marks: [] });
+  eq(same, base, 'an empty marks list changes nothing — box, seats and all');
+  eq('marks' in base, false, 'a caller that asks for none gets no marks field');
+  const withM = layoutSeats(section(), roster, { marks: MARKS });
+  eq(withM.seats.length, base.seats.length, 'asking for marks keeps every seat');
+  eq(withM.marks.length, 1, 'and returns the mark');
+  ok(withM.box.w > base.box.w, 'the room widens to hold a door left of the desks (' + base.box.w + ' -> ' + withM.box.w + ')');
+  ok(withM.marks[0].leftPct >= 0 && withM.marks[0].leftPct + withM.marks[0].wPct <= 100.0001, 'and the mark lies inside the box');
+  const mirroredM = layoutSeats(section(), roster, { marks: MARKS, mirror: true });
+  ok(mirroredM.marks[0].leftPct > withM.marks[0].leftPct, 'mirrored, the door goes to the other side');
+  const rooms = { rooms: [{ id: 'r1', marks: [...MARKS, { kind: 5 }] }] };
+  eq(roomMarks(rooms, { room: 'r1' }).length, 1, 'roomMarks reads a room\'s marks and drops a malformed one');
+  eq(roomMarks(rooms, { room: 'gone' }), [], 'a missing room has none');
+  eq(roomMarks({ sections: [] }, { room: 'r1' }), [], 'a chart without rooms has none');
+}
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) { fails.forEach(f => console.log('  - ' + f)); process.exit(1); }

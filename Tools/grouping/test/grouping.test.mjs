@@ -65,6 +65,42 @@ const CHECKS = {
     if (d.ownGroup || d.floaters !== 1 || d.note !== 'one-left') return 'one left ' + J(d);
     return true;
   },
+  'plan: floor with floaters or an own group is groups of exactly size, never over it (11 by 4 is 4, 4 and 3 left)'(G) {
+    for (let n = 0; n <= 60; n++) {
+      for (const size of [1, 2, 3, 4, 5, 7]) {
+        for (const remainder of ['floaters', 'own-group']) {
+          const p = G.plan(n, { size, sizeRule: 'floor', remainder });
+          if (p.sizes.some(x => x > size)) return `over: n ${n} size ${size} ${remainder} ${J(p.sizes)}`;
+          if (n >= size && (p.count !== Math.floor(n / size) || p.sizes.some(x => x !== size))) return `not exact: n ${n} size ${size} ${remainder} ${J(p)}`;
+          if (n >= size && p.floaters + p.ownGroup !== n % size) return `left over: n ${n} size ${size} ${remainder} ${J(p)}`;
+        }
+      }
+    }
+    const a = G.plan(11, { size: 4, sizeRule: 'floor', remainder: 'floaters' });
+    if (J(a.sizes) !== J([4, 4]) || a.floaters !== 3) return '11 by 4 ' + J(a);
+    const b = G.plan(5, { size: 4, sizeRule: 'floor', remainder: 'floaters' });
+    if (J(b.sizes) !== J([4]) || b.floaters !== 1) return '5 by 4 ' + J(b);
+    if (J(G.plan(11, { size: 4, sizeRule: 'floor', remainder: 'spread' }).sizes) !== J([6, 5])) return 'spread changed';
+    return true;
+  },
+  'formGroups: sizeRule floor with floaters or an own group deals groups of exactly size, for every strategy'(G) {
+    for (let n = 1; n <= 40; n += 3) {
+      for (const size of [2, 3, 4, 5]) {
+        for (const remainder of ['floaters', 'own-group']) {
+          for (const strategy of ['random', 'balanced', 'heterogeneous', 'homogeneous', 'coverage']) {
+            const ms = names(n).map((k, i) => ({ key: k, attrs: { skill: 1 + (i * 7) % 5 } }));
+            const r = G.formGroups(ms, { size, sizeRule: 'floor', remainder, strategy, seed: n * 31 + size });
+            const full = Math.floor(n / size), rem = n % size;
+            const want = n < size ? [n] : Array(full).fill(size).concat(remainder === 'own-group' && rem >= 2 ? [rem] : []);
+            const left = n < size ? 0 : (remainder === 'own-group' ? (rem === 1 ? 1 : 0) : rem);
+            if (J(r.groups.map(g => g.length)) !== J(want) || r.floaters.length !== left) return `n ${n} size ${size} ${remainder} ${strategy}: ${J(r.groups.map(g => g.length))} + ${r.floaters.length}`;
+            if (new Set(flat(r.groups).concat(r.floaters)).size !== n) return `n ${n}: someone lost or twice`;
+          }
+        }
+      }
+    }
+    return true;
+  },
   'plan: a count is clamped to the class unless allowEmpty, and min holds'(G) {
     if (G.plan(3, { count: 8 }).count !== 3) return 'not clamped';
     if (G.plan(3, { count: 8, allowEmpty: true }).count !== 8) return 'allowEmpty clamped';
@@ -173,7 +209,14 @@ const CHECKS = {
     for (let s = 0; s < 300; s++) {
       const out = G.formGroups(ms, { size: 4, sizeRule: 'floor', remainder: 'floaters', together, seed: s, search: { together: 'units' } });
       if (J(out.stats.sizes) !== J([4, 4, 4, 4, 4, 4, 4]) || out.floaters.length !== 2) return `seed ${s}: ${J(out.stats.sizes)} + ${out.floaters.length}`;
+      // The floor rule tops a short group up from the leftovers, so sizes alone would hide a bad deal: units must need no repair.
+      if (out.stats.attempts) return `seed ${s}: the deal broke a block and the repair ran (${out.stats.attempts})`;
       if (out.violations.together.length) return `seed ${s}: a block was popped`;
+      // A block popped to the floaters is not a violation the engine counts: held here, a block is one place.
+      const placeOf = {};
+      out.groups.forEach((g, i) => g.forEach(k => { placeOf[k] = i; }));
+      out.floaters.forEach(k => { placeOf[k] = 'f'; });
+      for (const [x, y] of together) if (placeOf[x] !== placeOf[y]) return `seed ${s}: ${x} and ${y} were parted (${placeOf[x]} / ${placeOf[y]})`;
     }
     return true;
   },
@@ -273,6 +316,19 @@ const CHECKS = {
         if (avoidable && out.repeats.length) return `class ${c} meeting ${m}: ${out.repeats.length} repeats`;
         h = G.history.record(h, out.byGroup.map(x => x.map(y => y.key)), { roles: out.byGroup, pairs: false });
       }
+    }
+    return true;
+  },
+  'rotateRoles: best with many roles stays quick and still never repeats when it need not'(G) {
+    const keys = n => Array.from({ length: n }, (_, i) => 'k' + i);
+    for (const [m, r] of [[8, 10], [8, 12], [6, 15], [12, 12]]) {
+      const roles = Array.from({ length: r }, (_, i) => 'R' + i), hist = {};
+      keys(m).forEach((x, i) => { hist[x] = [roles[i % r]]; });
+      const t = Date.now();
+      const out = G.rotateRoles([keys(m)], roles, hist, { method: 'best', seed: 1 });
+      if (Date.now() - t > 400) return `${m} members, ${r} roles took ${Date.now() - t} ms`;
+      if (out.repeats.length) return `${m} members, ${r} roles: ${out.repeats.length} repeats`;
+      if (new Set(out.byGroup[0].map(x => x.role)).size !== m) return `${m} members, ${r} roles: a role handed out twice`;
     }
     return true;
   },
@@ -443,6 +499,38 @@ const CHECKS = {
     if (cv.counts.a.b !== 2 || cv.counts.b.a !== 2 || cv.counts.a.d !== 0) return 'counts';
     return true;
   },
+  'formGroups: a cost brings the groups near each other, and a broken rule still comes first'(G) {
+    // Twelve students on a line, student i at desk i; the cost of a pair is how far apart they sit.
+    const ms = names(12), at = {};
+    ms.forEach((k, i) => { at[k] = i; });
+    const cost = (a, b) => Math.abs(at[a] - at[b]);
+    const total = r => r.groups.reduce((t, g) => { for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) t += cost(g[i], g[j]); return t; }, 0);
+    let plain = 0, near = 0, worst = 0;
+    for (let seed = 1; seed <= 40; seed++) {
+      const base = { count: 3, strategy: 'random', seed, search: { attempts: 3000 } };
+      plain += total(G.formGroups(ms.map(k => ({ key: k })), base));
+      const r = G.formGroups(ms.map(k => ({ key: k })), Object.assign({ cost }, base));
+      near += total(r);
+      worst = Math.max(worst, total(r));
+      if (flat(r.groups).length !== 12 || new Set(flat(r.groups)).size !== 12) return 'seed ' + seed + ' lost a student';
+      if (r.groups.some(g => g.length !== 4)) return 'seed ' + seed + ' changed a group size';
+    }
+    // Neighbours in fours cost 10 a group (1+2+3+1+2+1), 30 in all; a random deal costs far more.
+    if (!(near / 40 < plain / 40 / 2)) return 'with a cost the groups were not half as spread: ' + (near / 40) + ' against ' + (plain / 40);
+    if (worst > 60) return 'a seed ended at ' + worst + ', past 60';
+    // A keep-apart pair on neighbouring desks is kept apart even though the cost wants them together.
+    for (let seed = 1; seed <= 40; seed++) {
+      const r = G.formGroups(ms.map(k => ({ key: k })), { count: 3, strategy: 'random', seed, cost, apart: [[ms[0], ms[1]]], together: [[ms[0], ms[11]]], search: { attempts: 3000 } });
+      if (r.violations.apart.length || r.violations.together.length) return 'seed ' + seed + ' broke a rule for the cost';
+    }
+    // Locked groups stay as they were.
+    const prev = [ms.slice(0, 4), ms.slice(4, 8).reverse(), ms.slice(8)];
+    const lk = G.formGroups(ms.map(k => ({ key: k })), { count: 3, seed: 5, cost, previous: prev, lock: [false, true, false], search: { attempts: 3000 } });
+    if (J(lk.groups[1]) !== J(prev[1])) return 'a locked group moved';
+    // No cost: the same result as before (the repair has nothing to swap).
+    const a = G.formGroups(ms.map(k => ({ key: k })), { count: 3, seed: 9 }), b = G.formGroups(ms.map(k => ({ key: k })), { count: 3, seed: 9, cost: null });
+    return J(a.groups) === J(b.groups) ? true : 'a null cost changed the groups';
+  },
   'golden: twelve fixed-seed results'(G) {
     const now = goldenResults(G);
     const want = JSON.parse(fs.readFileSync(GOLDEN, 'utf8'));
@@ -490,8 +578,11 @@ function goldenResults(G) {
 
 /* Each check, broken on purpose: [check, text to find in grouping.js, replacement]. */
 const MUTANTS = [
+  ['formGroups: a cost brings the groups near each other, and a broken rule still comes first', "if (cmp(cs, best) < 0) best = cs; else { ga[ia] = ma; gb[ib] = mb; }", "best = cs;"],
   ['plan: sizes add up, spread differs by one, ceil never over, floor never under', "} else count = Math.ceil(n / size);", "} else count = Math.floor(n / size) || 1;"],
   ['plan: 30 by 4 is six 4s and two 3s; floor with floaters is seven 4s and 2 floaters', "if (floaters >= 2) { ownGroup = floaters; floaters = 0; }", "if (floaters >= 3) { ownGroup = floaters; floaters = 0; }"],
+  ['plan: floor with floaters or an own group is groups of exactly size, never over it (11 by 4 is 4, 4 and 3 left)', "count && count * size <= n) base = size;", "count && count * size <= n) base = base;"],
+  ['formGroups: sizeRule floor with floaters or an own group deals groups of exactly size, for every strategy', "if (floorExact) minSize = p.sizes[0];", ""],
   ['plan: a count is clamped to the class unless allowEmpty, and min holds', "if (!opts.allowEmpty) count = Math.max(1, Math.min(count, n));", ""],
   ['formGroups: every strategy places each present member exactly once', "for (var j = 0; j < size; j++) { groups[target[i]].push(sorted[idx]); idx++; }", "for (var j = 0; j < size && i; j++) { groups[target[i]].push(sorted[idx]); idx++; }"],
   ['formGroups: the same seed twice gives the same result, and a chosen seed reproduces', "return { next: rng(s), seed: s };", "return { next: rng(s), seed: s + 1 };"],
@@ -499,7 +590,7 @@ const MUTANTS = [
   ['formGroups: impossible names the three shapes', "if (count && best.length > count)", "if (count && best.length > count + 1)"],
   ['formGroups: nothing impossible is reported on 2,000 satisfiable classes', "if (s.length > largest) out.push", "if (s.length >= largest - 1) out.push"],
   ['formGroups: together units leaves no chain broken where pairs leaves some', "var units = search.together === 'units';", "var units = false;"],
-  ['formGroups: together units still makes groups of the planned sizes, floaters too', "order.forEach(function (m) { groups[smallest()[0]].push(m); });", "order.forEach(function (m, i) { groups[target[i % target.length]].push(m); });"],
+  ['formGroups: together units still makes groups of the planned sizes, floaters too', "var c = shuffle(smallest(), next)[0];", "var c = target[0];"],
   ['formGroups: keepStrategy holds the balanced gap after four generations of memory', "return [hard, keepStrategy ? strategyMeasure(groups, tierOf) : 0, rep, cost];", "return [hard, 0, rep, cost];"],
   ['formGroups: restarts never return a worse score than no restarts', "if (!bestTry || cmp(rep.score, bestTry.rep.score) < 0) bestTry = { d: d, rep: rep };", "bestTry = { d: d, rep: rep };"],
   ['formGroups: the repair is skipped with nothing to repair, and reports how it stopped', "if (isZero(best)) stoppedBy = 'clean';", ""],
@@ -507,6 +598,7 @@ const MUTANTS = [
   ['formGroups: spread deals a category evenly', "var x = cat(a), y = cat(b); return x < y ? -1 : (x > y ? 1 : 0);", "return 0;"],
   ['formGroups: the memory steers away from last time and is never written', "return penalties[Math.max(nowGen - lg, 1) - 1] || 0;", "return 0;"],
   ['rotateRoles: best never repeats when an assignment without a repeat exists', "if (c < bestCost) { bestCost = c; pickBest = pk.slice(); }", "if (!pickBest) { bestCost = c; pickBest = pk.slice(); }"],
+  ['rotateRoles: best with many roles stays quick and still never repeats when it need not', "if (ms.length <= 8 && orderings <= 400000) {", "if (ms.length <= 8) {"],
   ['rotateRoles: greedy repeats inside a band round the measured 1.1%', "score: recencyScore(held(k), role) + next() * 0.5", "score: recencyScore(held(k), role) + next() * 2000"],
   ['rotateRoles: a member past the last role gets null, and a map history is read', "var v = history && own(history, k) ? history[k] : null;", "var v = null;"],
   ['coverRoles: an absent member’s role goes round the present ones', "var ti = presentIdx[cursor % presentIdx.length];\n          cursor++;", "var ti = presentIdx[0];"],

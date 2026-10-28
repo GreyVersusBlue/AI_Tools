@@ -176,6 +176,24 @@ export function layoutSeats(section, names, opts) {
   var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys) + DESK_H;
   var mirror = opts.mirror === true;
 
+  /* The room's marks (Path 14 P4), only for a caller that passes them: the box widens to
+     hold them, and they reflect about the seats' own extent when mirrored. */
+  var axisMinX = minX, axisMaxX = maxX;
+  var marks = (Array.isArray(opts.marks) ? opts.marks : []).map(function (m) {
+    var w = Number(m.w) || 0, h = Number(m.h) || 0, x = Number(m.x) || 0, rot = Number(m.rot) || 0;
+    if (mirror) { x = (axisMinX + axisMaxX) - x - w; rot = -rot; }
+    return { kind: m.kind, label: typeof m.label === 'string' ? m.label : '', x: x, y: Number(m.y) || 0, w: w, h: h, rot: rot };
+  });
+  marks.forEach(function (m) {
+    var quarter = Math.abs(m.rot) % 180 === 90;
+    var cx = m.x + m.w / 2, cy = m.y + m.h / 2;
+    var hw = (quarter ? m.h : m.w) / 2, hh = (quarter ? m.w : m.h) / 2;
+    if (cx - hw < minX) minX = cx - hw;
+    if (cx + hw > maxX) maxX = cx + hw;
+    if (cy - hh < minY) minY = cy - hh;
+    if (cy + hh > maxY) maxY = cy + hh;
+  });
+
   var vx = minX - ROOM_PAD, vy = minY - ROOM_PAD;
   var vw = (maxX - minX) + 2 * ROOM_PAD, vh = (maxY - minY) + 2 * ROOM_PAD;
 
@@ -191,8 +209,27 @@ export function layoutSeats(section, names, opts) {
       hPct: (DESK_H / vh) * 100,
     };
   });
+  if (marks.length) {
+    result.marks = marks.map(function (m) {
+      return {
+        kind: m.kind, label: m.label, rot: m.rot,
+        leftPct: ((m.x - vx) / vw) * 100,
+        topPct: ((m.y - vy) / vh) * 100,
+        wPct: (m.w / vw) * 100,
+        hPct: (m.h / vh) * 100
+      };
+    });
+  }
   result.unseated = names.filter(function (n) { return !claimed[n]; });
   return result;
 }
 
-export default { SEATING_KEY, DESK_W, DESK_H, ROOM_PAD, parseSeatingState, loosely, sameClass, pickSeatingSection, layoutSeats };
+/** The raw marks of the room a section sits in, or []. Read-only; a chart with no rooms has none. */
+export function roomMarks(parsed, section) {
+  var rooms = parsed && Array.isArray(parsed.rooms) ? parsed.rooms : [];
+  var room = null;
+  for (var i = 0; i < rooms.length; i++) { if (rooms[i] && section && rooms[i].id === section.room) { room = rooms[i]; break; } }
+  return room && Array.isArray(room.marks) ? room.marks.filter(function (m) { return m && typeof m.kind === 'string'; }) : [];
+}
+
+export default { roomMarks, SEATING_KEY, DESK_W, DESK_H, ROOM_PAD, parseSeatingState, loosely, sameClass, pickSeatingSection, layoutSeats };
