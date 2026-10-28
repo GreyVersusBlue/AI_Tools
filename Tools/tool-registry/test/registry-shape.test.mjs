@@ -403,7 +403,7 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
   eq(R.rolloverRule('np_history'), 'delete', '10: an unmarked student key is deleted');
 
   /* The namespaces in the tree: MediaDB.store/images({ ns: '…' }), or a
-     file's `NS = '…'` when it passes { ns: NS }. */
+     file's `NS = '…'` when it passes { ns: NS }, or EscapeRoomImage.forNamespace('…', tool). */
   const found = new Set();
   const walk = dir => {
     for (const d of fs.readdirSync(path.join(SITE, dir), { withFileTypes: true })) {
@@ -412,6 +412,7 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
       if (!/\.(js|mjs|html)$/.test(d.name)) continue;
       const src = fs.readFileSync(path.join(SITE, rel), 'utf8');
       for (const m of src.matchAll(/MediaDB\.(?:store|images)\(\{\s*ns:\s*'([a-z0-9-]+)'/g)) found.add(m[1]);
+      for (const m of src.matchAll(/\.forNamespace\(\s*'([a-z0-9-]+)'/g)) found.add(m[1]);   // er-image.js's per-tool store (018's pictures)
       if (/MediaDB\.(?:store|images)\(\{\s*ns:\s*NS\b/.test(src)) for (const m of src.matchAll(/\bNS\s*=\s*'([a-z0-9-]+)'/g)) found.add(m[1]);
     }
   };

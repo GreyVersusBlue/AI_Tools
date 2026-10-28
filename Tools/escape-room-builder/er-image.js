@@ -34,7 +34,6 @@
 
   var MAX_DIMENSION = 320;   // px, long edge — what the inline downscaler used
   var JPEG_QUALITY = 0.6;
-  var NS = 'escape-room';
   var PREFIX = 'idb:';
   var REF_RE = /^idb:[A-Za-z0-9_-]{1,40}$/;
   /* gc() leaves anything newer than this alone: an image another open tab has
@@ -42,19 +41,24 @@
      orphan for the moment in between. */
   var GC_GRACE_MS = 10 * 60 * 1000;
 
+  /* The module is built once per media namespace: 019 uses the default ('escape-room'),
+     and a tool that keeps clue pictures of its own takes forNamespace(ns, tool) (Path 18 P3:
+     018 does, 'scavenger-hunt'), so each has its own cache and its own store, and one tool's
+     gc() can never reach the other's pictures. */
+  function isRef(v) { return typeof v === 'string' && REF_RE.test(v); }
+  function isInline(v) { return typeof v === 'string' && v.slice(0, 11) === 'data:image/'; }
+
+  function newId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function create(NS, TOOL) {
   var cache = {};            // 'idb:<id>' -> data URL
   var handle = null;
 
   function store() {
     if (!handle && global.MediaDB) handle = global.MediaDB.store({ ns: NS });
     return handle;
-  }
-
-  function isRef(v) { return typeof v === 'string' && REF_RE.test(v); }
-  function isInline(v) { return typeof v === 'string' && v.slice(0, 11) === 'data:image/'; }
-
-  function newId() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
 
   /** What an <img src>, a link or a file gets: the image as a data URL, or ''
@@ -73,7 +77,7 @@
     var s = store();
     if (!s) return Promise.reject(new Error('The image store is not available on this page.'));
     var id = newId();
-    return s.put(id, blob, { tool: 'escape-room-builder' }).then(function () {
+    return s.put(id, blob, { tool: TOOL }).then(function () {
       var ref = PREFIX + id;
       cache[ref] = dataUrl;
       return ref;
@@ -182,7 +186,7 @@
     });
   }
 
-  global.EscapeRoomImage = {
+  return {
     MAX_DIMENSION: MAX_DIMENSION,
     JPEG_QUALITY: JPEG_QUALITY,
     NS: NS,
@@ -196,4 +200,8 @@
     migrate: migrate,
     gc: gc
   };
+  }
+
+  global.EscapeRoomImage = create('escape-room', 'escape-room-builder');
+  global.EscapeRoomImage.forNamespace = create;
 })(window);

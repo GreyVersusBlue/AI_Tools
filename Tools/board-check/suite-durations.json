@@ -319,6 +319,7 @@
     "Tools/stations/test/stations.test.mjs": 1,
     "Tools/stations/test/smoke-ids.mjs": 12,
     "Tools/stations/test/smoke-legacy-codes.mjs": 25,
+    "Tools/qr-scavenger-hunt-builder/test/smoke-images.mjs": 15,
     "Tools/export/test/smoke-export.mjs": 2,
     "Tools/export/test/smoke-csv-adopters.mjs": 11,
     "Tools/export/test/smoke-sheet-adopters.mjs": 16,

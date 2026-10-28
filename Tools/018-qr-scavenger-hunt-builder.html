@@ -26,6 +26,8 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/media-db.js"></script>
+<script src="escape-room-builder/er-image.js"></script>
 <script src="../_shared/stations.js"></script>
 <script src="../_shared/print-kit.js"></script>
 <script src="../_shared/export.js"></script>
@@ -204,6 +206,13 @@
     display: flex; flex-direction: column; align-items: center; text-align: center;
   }
   .print-station-grid .p-card canvas { width: 100%; height: auto; max-width: 320px; }
+  /* A station's picture (Path 18 P3): above the code, on the card, never clipped. */
+  .print-station-grid .p-card .p-img { max-width: 100%; max-height: 1.6in; object-fit: contain; margin: 0 0 8px; background: #fff; }
+  .preview-card .pv-img { width: 52px; height: 52px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line-strong); background: #fff; flex-shrink: 0; }
+  .station-image-row { display: flex; align-items: center; gap: .6rem; }
+  .station-image-thumb { display: flex; align-items: center; gap: .5rem; }
+  .station-image-thumb img { width: 2.6rem; height: 2.6rem; object-fit: cover; border-radius: 6px; border: 1px solid var(--line-strong); background: #fff; }
+  .station-image-missing { font-size: .78rem; color: var(--err); border: 1px dashed var(--err); border-radius: 6px; padding: .35rem .5rem; }
   .print-station-grid .p-card .p-num { font-size: 0.75rem; letter-spacing: 0.08em; color: #555; text-transform: uppercase; }
   .print-station-grid .p-card .p-label { font-size: 1.25rem; font-weight: 700; margin: 4px 0 8px; }
   .print-station-grid .p-card .p-extra { font-size: 0.82rem; color: #333; margin: -2px 0 8px; }
@@ -530,6 +539,8 @@
   // (transient UI state, not persisted — keyed by station object identity so
   // reordering/moving rows doesn't lose track of which one was open).
   var hintEditorsOpen = new WeakSet();
+  var HI = EscapeRoomImage.forNamespace('scavenger-hunt', 'qr-scavenger-hunt-builder');   // station pictures: their own media namespace, so 019's clean-up never reaches them
+  var imagesSettled = false;   // false until boot has read this browser's pictures, so a reference is not called missing early
 
   // ── Persisted hunts, keyed by name (this can include external links, same
   // trust level as any other locally-saved tool state in this toolkit) ─────
@@ -661,11 +672,11 @@
         '<td class="actions-cell"><div class="row-actions">' +
           '<button type="button" class="move-row-btn" data-move="-1" title="Move up"' + (i === 0 ? ' disabled' : '') + '>&#8593;</button>' +
           '<button type="button" class="move-row-btn" data-move="1" title="Move down"' + (i === state.stations.length - 1 ? ' disabled' : '') + '>&#8595;</button>' +
-          '<button type="button" class="move-row-btn" data-hint-toggle="' + i + '" title="Add/edit a hint (optional, has a time penalty)">&#128161;</button>' +
+          '<button type="button" class="move-row-btn" data-hint-toggle="' + i + '" title="Add/edit a hint or a picture (both optional)" aria-label="Hint or picture for station ' + (i + 1) + '">&#128161;</button>' +
           '<button type="button" class="remove-row-btn" data-remove="' + i + '" title="Remove station">&#10005;</button>' +
         '</div></td>' +
         '</tr>';
-      var showDetail = s.qType === 'choice' || s.qType === 'numeric' || hintEditorsOpen.has(s) || !!(s.hint && s.hint.trim());
+      var showDetail = s.qType === 'choice' || s.qType === 'numeric' || hintEditorsOpen.has(s) || !!(s.hint && s.hint.trim()) || !!s.image;
       if (showDetail) row += renderDetailRow(s, i);
       return row;
     }).join('');
@@ -698,6 +709,16 @@
         '</div>';
     }
     body += '<div style="' + (body ? 'margin-top:0.6rem;' : '') + '">' +
+      '<label>Picture on the card (optional — printed above the code)</label>' +
+      '<div class="station-image-row">' + (s.image
+        ? '<div class="station-image-thumb">' +
+            (imagesSettled && HI.isMissing(s.image)
+              ? '<span class="station-image-missing">Picture missing from this browser</span>'
+              : '<img src="' + escapeAttr(HI.src(s.image)) + '" alt="">') +
+            '<button type="button" class="btn-link" data-remove-image="' + i + '" aria-label="Remove the picture for station ' + (i + 1) + '">Remove</button></div>'
+        : '<input type="file" class="f-image" accept="image/*" data-idx="' + i + '" aria-label="Picture for station ' + (i + 1) + '">') +
+      '</div></div>' +
+      '<div style="margin-top:0.6rem;">' +
       '<label>Hint (optional — a team can request this during check-in, for a time penalty)</label>' +
       '<textarea class="f-hint" data-idx="' + i + '" style="min-height:50px;" placeholder="e.g. Look near the flagpole">' + escapeHtml(s.hint) + '</textarea>' +
       '<div class="control-row" style="margin-top:0.5rem;">' +
@@ -741,6 +762,17 @@
 
   els.stationsBody.addEventListener('change', function (e) {
     var t = e.target;
+    if (t.classList.contains('f-image')) {
+      var file = t.files && t.files[0];
+      var si = parseInt(t.dataset.idx, 10);
+      if (!file || !state.stations[si]) return;
+      HI.fromFile(file).then(function (image) {
+        if (!state.stations[si]) return;
+        state.stations[si].image = image;
+        renderRows(); save(); scheduleRender();
+      }, function (err) { showMsg((err && err.message) || 'Could not load that picture.'); });
+      return;
+    }
     if (t.classList.contains('f-qtype')) {
       var tr = t.closest('tr');
       var i = parseInt(tr.dataset.idx, 10);
@@ -763,6 +795,12 @@
     var removeChoiceBtn = e.target.closest('.btn-choice-remove');
     var hintToggleBtn = e.target.closest('[data-hint-toggle]');
     var recodeStationBtn = e.target.closest('[data-recode-station]');
+    var removeImageBtn = e.target.closest('[data-remove-image]');
+    if (removeImageBtn) {
+      var ri = parseInt(removeImageBtn.dataset.removeImage, 10);
+      if (state.stations[ri]) { delete state.stations[ri].image; renderRows(); save(); scheduleRender(); }
+      return;
+    }
     if (recodeStationBtn) {
       var rsi = parseInt(recodeStationBtn.dataset.recodeStation, 10);
       // The station's own current word stays in the exclusion list on purpose:
@@ -914,6 +952,7 @@
           hint: (s.hint || '').trim(),
           hintPenalty: parseFloat(s.hintPenalty) || 0,
           codeWord: s.codeWord,
+          image: s.image ? HI.src(s.image) : '',
         };
       })
       .filter(function (s) { return s.content.length > 0; });
@@ -960,7 +999,7 @@
         var qr = buildQR(s.content, ecLevel);
         var card = document.createElement('div');
         card.className = 'preview-card paper-sheet';
-        card.innerHTML = '<canvas></canvas><div class="meta"><div class="badge">STATION ' + (n + 1) + (s.qType !== 'text' ? ' · ' + Q_TYPE_LABELS[s.qType] : '') + '</div>' +
+        card.innerHTML = '<canvas></canvas>' + (s.image ? '<img class="pv-img" alt="" src="' + escapeAttr(s.image) + '">' : '') + '<div class="meta"><div class="badge">STATION ' + (n + 1) + (s.qType !== 'text' ? ' · ' + Q_TYPE_LABELS[s.qType] : '') + '</div>' +
           '<div class="label">' + escapeHtml(s.label) + '</div>' +
           '<div class="content">' + escapeHtml(s.content) + '</div></div>';
         els.cardsPreview.appendChild(card);
@@ -1014,6 +1053,8 @@
       var card = pEl('div', 'p-card');
       if (showNum) card.appendChild(pEl('div', 'p-num', 'Station ' + (n + 1)));
       card.appendChild(pEl('div', 'p-label', s.label));
+      var pic = printStationImage(s);
+      if (pic) card.appendChild(pic);
       var extra = printStationExtra(s);
       if (extra) card.appendChild(extra);
       var canvas = card.appendChild(document.createElement('canvas'));
@@ -1022,6 +1063,17 @@
       } catch (e) { /* already reported in the live preview */ }
       return card;
     });
+  }
+
+  /** The station's picture for a card: an <img> of the stored data URL, or nothing (a reference with no
+      picture behind it in this browser prints no frame). */
+  function printStationImage(s) {
+    if (!s.image) return null;
+    var img = document.createElement('img');
+    img.className = 'p-img';
+    img.alt = '';
+    img.src = s.image;
+    return img;
   }
 
   function printStationExtra(s) {
@@ -1050,6 +1102,8 @@
       var card = pEl('div', 'p-card');
       if (showNum) card.appendChild(pEl('div', 'p-num', 'Station ' + (n + 1)));
       card.appendChild(pEl('div', 'p-label', s.label));
+      var cpic = printStationImage(s);
+      if (cpic) card.appendChild(cpic);
       if (s.content) card.appendChild(pEl('div', 'p-clue-text', s.content));
       var extra = printStationExtra(s);
       if (extra) card.appendChild(extra);
@@ -2006,6 +2060,29 @@
       newHunt('My Hunt');
     }
   }
+
+  /* Station pictures (Path 18 P3), settled once at boot as 019 does with its clue images: read the ones
+     the saved hunts point at into memory, move any inline picture into the store, then delete stored
+     pictures no hunt points at. A reference with nothing behind it is said on its station, not shown
+     as an empty frame. __huntImagesSettled is for the suite. */
+  function settleImages() {
+    var latest = null;
+    function allHunts() {
+      latest = loadStore();
+      if (state) latest.sets[state.name] = state;
+      return Object.keys(latest.sets).map(function (k) { return latest.sets[k]; });
+    }
+    return HI.hydrate(HI.imagesIn(allHunts()))
+      .then(function () { return HI.migrate(allHunts); })
+      .then(function (moved) {
+        if (moved) saveStore(latest);
+        imagesSettled = true;
+        if (state) { renderRows(); scheduleRender(); }
+        return HI.gc(HI.imagesIn(allHunts()).filter(HI.isRef));
+      })
+      ['catch'](function () { imagesSettled = true; });
+  }
+  settleImages().then(function () { window.__huntImagesSettled = true; });
 
 })();
 </script>
