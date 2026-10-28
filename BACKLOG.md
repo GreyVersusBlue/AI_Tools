@@ -6704,6 +6704,28 @@ grades by policy — keep that.
   containing the delimiter, a "rows I couldn't read" report rather than guesses),
   extracted from the three implementations the site requests already list
   (`bmg-choropleth.js`, 038, 036's `splitRow`). 036, 037, 038, 006 and 075 adopt it.
+  **Design (AI-24, 2026-10-28).** *What exists.* Eight readers of pasted text, found by grep: 046's `parseDataRows` /
+  `parseDataTable` (`bmg-choropleth.js`: the richest rules, name + value, several value columns, the comma-thousands
+  ambiguity reported rather than guessed), 038's `splitLine`/`parseTable` (quote-aware, tab-or-comma by the first line,
+  rows padded), 036's `splitRow` (tabs keep empty cells; no tab means fixed-width, split on runs of spaces), 037's
+  `extractScore` (last tab cell, else after the last `:` or `,`, else the last word), 075's bulk add (`split('\t')` or
+  `split(',')`, no quotes) and `parseCsvLine`, `Roster.parseDelimited` (006's paste and file import, in `_shared/roster.js`),
+  `qr-code-generator/bulk-rows.js`'s `delimOf`. *Surface.* `_shared/paste-table.js`, a classic script publishing
+  `PasteTable` (and loadable by an ES module as a side-effect import, which is how `bmg-choropleth.js` and
+  `grade-math.mjs` reach it): `splitLine`, `splitFixed`, `pickDelimiter`, `toNumber`, `isHeaderShape`, `parse`
+  (`{ delimiter, header, rows, width, lines, ragged, blank }`), `columnReport` (the cells that stopped a column reading as
+  numbers, by row), and bmg's two named-value parsers moved over unchanged. A short row is padded (every tool expected
+  that) *and* named in `ragged`; a line a tool cannot read is returned with its line number, never dropped or guessed.
+  *Steps.* (1) the module and its pure-Node suite of named cases with break-on-purpose mutants (`test:paste-table`);
+  (2) adopters, one tool per commit, each held by a parity suite against a frozen copy of the tool's old parser over a
+  corpus of every shape it accepted, plus the unreadable-rows report where the tool showed nothing: 046 (bmg),
+  038, 036, 037, 075, 006. A tool whose own number test differs from `toNumber` (038 accepts `1e3`; bmg does not) keeps
+  its test and passes it to `columnReport`; the parity suite is what says the result did not move. 036 keeps persisting
+  no grades. *Does not join:* `scv-ics.js`'s `readTable` (Path 9 P4, v318; a free-text date reader: the cells are
+  words and dates found by pattern, there is no delimiter to detect), `question-bank.js`'s `parseCsv` (a whole CSV *file*
+  with newlines inside quoted cells, not a paste), `vfg-layout.js` (a tab splits a term from its definition), and
+  `qr-code-generator/bulk-rows.js` (named here as the next candidate; its columns are positional). *Default taken:* the
+  decimal comma ("1,5") is not read as a number, as before. None of Devon's open questions.
 - **P3 — Item analysis in 037.** Per-question scores in, a "which questions did the
   class miss" chart, a printed reteach priority list; section-vs-section comparison
   (3rd vs 6th period); trend across a quarter as small multiples; a plain-language
