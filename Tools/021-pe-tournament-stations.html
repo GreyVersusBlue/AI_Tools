@@ -28,6 +28,7 @@
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/grouping.js"></script>
 <script src="../_shared/rotation.js"></script>
+<script src="../_shared/undo.js"></script>
 <script src="../_shared/stage.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -541,11 +542,11 @@
   var state = null;
   var idCounter = 0;
 
-  // Single-level undo for the two destructive actions (Reset, New unit). Kept
-  // module-level and out of `state`/localStorage on purpose — undo is a
-  // same-session convenience, not part of a unit's saved data (mirrors the
-  // undoSnapshot pattern in 022-lab-group-role-randomizer.html).
-  var undoSnapshot = null;
+  // Undo for the two destructive actions (Reset, New unit), one snapshot each,
+  // newest last (_shared/undo.js). Kept module-level and out of `state`/
+  // localStorage on purpose — undo is a same-session convenience, not part of
+  // a unit's saved data.
+  var undoStack = UndoStack.create({ limit: 30, onChange: function (u) { if (els.undoBtn) els.undoBtn.disabled = !u.canUndo(); } });
 
   function uid(prefix) { idCounter++; return prefix + '_' + Date.now().toString(36) + idCounter; }
 
@@ -1789,19 +1790,16 @@
   /* ---------- undo (Reset / New unit) ---------- */
   function captureUndoSnapshot() {
     if (!state) return;
-    undoSnapshot = deepClone(state);
-    if (els.undoBtn) els.undoBtn.disabled = false;
+    undoStack.push(state);
   }
   function clearUndoSnapshot() {
-    undoSnapshot = null;
-    if (els.undoBtn) els.undoBtn.disabled = true;
+    undoStack.clear();
   }
 
   els.undoBtn.addEventListener('click', function () {
+    var undoSnapshot = undoStack.undo();
     if (!undoSnapshot) return;
     state = normalizeState(undoSnapshot);
-    undoSnapshot = null;
-    els.undoBtn.disabled = true;
     applyStateToForm();
     refreshSwitcher();
     save();

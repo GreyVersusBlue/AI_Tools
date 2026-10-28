@@ -17,6 +17,7 @@
     "Tools/schedule-visualizer/test/smoke-recovery.mjs": 8,
     "Tools/pe-tournament-stations/test/smoke-pe-stations.mjs": 3,
     "Tools/pe-tournament-stations/test/smoke-pe-remote.mjs": 4,
+    "Tools/pe-tournament-stations/test/smoke-undo.mjs": 9,
     "Tools/pe-warmup-circuit-generator/test/smoke-circuit-core.mjs": 1,
     "Tools/pe-warmup-circuit-generator/test/smoke-circuit-run.mjs": 15,
     "Tools/certificate-award-maker/test/smoke-stock-inset.mjs": 5,

@@ -11,7 +11,7 @@
     "test:seating": "node Tools/seating-chart/test/solver.test.mjs && node Tools/seating-chart/test/migration.test.mjs && node Tools/seating-chart/test/explain.test.mjs && node Tools/seating-chart/test/rules.test.mjs && node Tools/seating-chart/test/room.test.mjs && node Tools/seating-chart/test/smoke-room.mjs && node Tools/seating-chart/test/smoke-room-marks.mjs && node Tools/seating-chart/test/smoke-seating.mjs && node Tools/seating-chart/test/smoke-sub-packet.mjs && node Tools/seating-chart/test/smoke-zoom-pan.mjs && node Tools/seating-chart/test/drive-seating.mjs && node Tools/seating-chart/test/smoke-share.mjs && node Tools/seating-chart/test/smoke-photos.mjs",
     "test:schedule": "node Tools/schedule-visualizer/test/smoke.mjs",
     "test:schedule-visualizer": "node Tools/schedule-visualizer/test/smoke-recovery.mjs && node Tools/schedule-visualizer/test/smoke-evacuation.mjs",
-    "test:pe-stations": "node Tools/pe-tournament-stations/test/smoke-pe-stations.mjs && node Tools/pe-tournament-stations/test/smoke-pe-remote.mjs",
+    "test:pe-stations": "node Tools/pe-tournament-stations/test/smoke-pe-stations.mjs && node Tools/pe-tournament-stations/test/smoke-pe-remote.mjs && node Tools/pe-tournament-stations/test/smoke-undo.mjs",
     "test:circuit-core": "node Tools/pe-warmup-circuit-generator/test/smoke-circuit-core.mjs",
     "test:circuit-run": "node Tools/pe-warmup-circuit-generator/test/smoke-circuit-run.mjs",
     "test:certificate": "node Tools/certificate-award-maker/test/smoke-stock-inset.mjs",
