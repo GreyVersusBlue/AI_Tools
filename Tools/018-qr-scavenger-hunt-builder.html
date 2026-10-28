@@ -96,6 +96,10 @@
   .row-actions { display: flex; gap: 0.25rem; justify-content: center; }
   .detail-row td { padding: 0 0.3rem 0.6rem; }
   .detail-inner { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; }
+  [hidden] { display: none !important; }
+  .choice-editor .branch-label { display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; white-space: nowrap; margin: 0; }
+  .choice-editor .branch-label select { width: auto; max-width: 12rem; }
+  #branch-info { color: var(--danger); font-weight: 600; }
   .choice-editor .choice-line { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
   .choice-editor .choice-line:last-of-type { margin-bottom: 0.6rem; }
   .choice-editor input[type="text"] { flex: 1; }
@@ -298,6 +302,8 @@
       </div>
       <div class="hint">A QR content value that looks like a bare web address (like "example.com/clue") gets "https://" added automatically. Anything that doesn't look like a link is encoded as plain text as-is.</div>
       <div class="hint" id="required-info">Every station counts toward finishing. Press the star on a row to make it required: a team then finishes when it has reached every starred station, and the others are bonus stops.</div>
+      <div class="hint">On a multiple-choice station, "Then go to" sends a team to a particular station when you pick that choice at check-in: the choice counts as an accepted answer and Live Run shows where that team goes next. Choices without a branch work as before.</div>
+      <div class="hint" id="branch-info" role="status" hidden></div>
     </div>
 
     <div class="card">
@@ -465,7 +471,7 @@
    'cards-preview', 'print-station-area', 'print-station-grid', 'print-answer-area', 'answer-key-body', 'msg',
    'tab-build', 'tab-run', 'build-view', 'run-view', 'run-hunt-info', 'teams-body', 'add-team-btn',
    'print-teams-btn', 'print-teams-area', 'print-teams-grid',
-   'print-routes-btn', 'print-routes-area', 'print-routes-grid', 'stagger-starts', 'stagger-info',
+   'branch-info', 'print-routes-btn', 'print-routes-area', 'print-routes-grid', 'stagger-starts', 'stagger-info',
    'print-answersheets-btn', 'print-answersheets-area', 'print-answersheets-grid',
    'checkin-station', 'checkin-station-info', 'checkin-code', 'checkin-submit-btn', 'checkin-hint-btn', 'checkin-hint-panel',
    'checkin-answer-panel', 'checkin-feedback',
@@ -683,6 +689,7 @@
       if (showDetail) row += renderDetailRow(s, i);
       return row;
     }).join('');
+    renderBranchInfo();
   }
 
   // Path 18 P3: the free-order required set. state.required lists station ids; empty means every
@@ -695,6 +702,45 @@
     }).join('') + '</select>';
   }
 
+  // Path 18 P3: per-answer branching. A choice station keeps `branches: { byAnswer: { <choice text>: <station id> } }`
+  // (the schema's shape, read by Stations.branchOf and checked by Stations.branchProblems); a choice with a branch is an
+  // accepted answer that sends the team to that station, a choice without one works as it always did.
+  function branchTarget(s, text) {
+    var by = s.branches && s.branches.byAnswer, t = null;
+    if (!by || !text) return null;
+    Object.keys(by).forEach(function (k) { if (k === text) t = by[k]; });
+    return t;
+  }
+  function setBranch(s, text, targetId) {
+    if (!s.branches || !s.branches.byAnswer) s.branches = { byAnswer: {} };
+    if (targetId) s.branches.byAnswer[text] = targetId; else delete s.branches.byAnswer[text];
+    if (!Object.keys(s.branches.byAnswer).length) delete s.branches;
+  }
+  function renderBranchSelect(s, i, ci) {
+    var valid = validStations(), cur = branchTarget(s, s.choices[ci]);
+    var opts = '<option value="">No branch</option>' + valid.filter(function (v) { return v.id !== s.id; }).map(function (v) {
+      var n = valid.indexOf(v) + 1;
+      return '<option value="' + escapeAttr(v.id) + '"' + (cur === v.id ? ' selected' : '') + '>Station ' + n + (v.label !== 'Station ' + (v.idx + 1) ? ' \u2014 ' + escapeHtml(v.label) : '') + '</option>';
+    }).join('');
+    return '<label class="branch-label">Then go to <select class="f-branch" data-idx="' + i + '" data-ci="' + ci + '" aria-label="Then go to, after choice ' + String.fromCharCode(65 + ci) + ' at station ' + (i + 1) + '">' + opts + '</select></label>';
+  }
+  /** Sentences for whatever is wrong with this hunt's branches (Stations.branchProblems), [] when nothing. */
+  function branchProblems(candidate) { return Stations.branchProblems(Stations.read(candidate || state)); }
+  function renderBranchInfo() {
+    var p = branchProblems();
+    els.branchInfo.hidden = !p.length;
+    els.branchInfo.textContent = p.length ? 'A branch needs fixing: ' + p.join(' ') : '';
+  }
+  /** Tries a change to station `s` against Stations.branchProblems; on a refusal puts it back and says why. */
+  function tryBranchEdit(s, edit, undo) {
+    var before = branchProblems().length;
+    edit();
+    var after = branchProblems();
+    if (after.length > before) { undo(); showMsg(after[after.length - 1]); return false; }
+    clearMsg();
+    return true;
+  }
+
   function renderDetailRow(s, i) {
     var body = '';
     if (s.qType === 'choice') {
@@ -704,6 +750,7 @@
           return '<div class="choice-line">' +
             '<input type="radio" class="f-choice-correct" aria-label="Choice ' + String.fromCharCode(65 + ci) + ' is the correct answer for station ' + (i + 1) + '" name="correct-' + i + '" data-idx="' + i + '" data-ci="' + ci + '"' + (s.correctChoice === ci ? ' checked' : '') + '>' +
             '<input type="text" class="f-choice-text" data-idx="' + i + '" data-ci="' + ci + '" value="' + escapeAttr(c) + '" placeholder="Choice ' + String.fromCharCode(65 + ci) + '">' +
+            renderBranchSelect(s, i, ci) +
             (s.choices.length > 2 ? '<button type="button" class="btn-choice-remove" data-idx="' + i + '" data-ci="' + ci + '" title="Remove choice">&#10005;</button>' : '') +
             '</div>';
         }).join('') +
@@ -747,8 +794,12 @@
       save();
       scheduleRender();
     } else if (t.classList.contains('f-choice-text')) {
-      state.stations[parseInt(t.dataset.idx, 10)].choices[parseInt(t.dataset.ci, 10)] = t.value;
+      var cs = state.stations[parseInt(t.dataset.idx, 10)], cci = parseInt(t.dataset.ci, 10);
+      var oldText = cs.choices[cci], oldTarget = branchTarget(cs, oldText);
+      cs.choices[cci] = t.value;
+      if (oldTarget) { setBranch(cs, oldText, null); if (t.value) setBranch(cs, t.value, oldTarget); }   // a branch follows its choice's wording
       save();
+      renderBranchInfo();
       scheduleRender();
     } else if (t.classList.contains('f-numeric-answer')) {
       state.stations[parseInt(t.dataset.idx, 10)].numericAnswer = t.value;
@@ -784,14 +835,25 @@
       var tr = t.closest('tr');
       var i = parseInt(tr.dataset.idx, 10);
       state.stations[i].qType = t.value;
+      if (t.value !== 'choice') delete state.stations[i].branches;   // only a choice station branches
       if (t.value === 'choice' && !state.stations[i].choices.length) state.stations[i].choices = ['', ''];
       renderRows();
       save();
       scheduleRender();
     } else if (t.classList.contains('f-choice-correct')) {
-      state.stations[parseInt(t.dataset.idx, 10)].correctChoice = parseInt(t.dataset.ci, 10);
+      var cst = state.stations[parseInt(t.dataset.idx, 10)], prevCorrect = cst.correctChoice;
+      if (!tryBranchEdit(cst, function () { cst.correctChoice = parseInt(t.dataset.ci, 10); }, function () { cst.correctChoice = prevCorrect; renderRows(); })) return;
       save();
+      renderBranchInfo();
       scheduleRender();
+    } else if (t.classList.contains('f-branch')) {
+      var bst = state.stations[parseInt(t.dataset.idx, 10)], bci = parseInt(t.dataset.ci, 10);
+      var btext = bst.choices[bci], prevTarget = branchTarget(bst, btext);
+      if (!btext.trim()) { t.value = ''; showMsg('Give choice ' + String.fromCharCode(65 + bci) + ' some text before sending it somewhere.'); return; }
+      if (!tryBranchEdit(bst, function () { setBranch(bst, btext, t.value); }, function () { setBranch(bst, btext, prevTarget); renderRows(); })) return;
+      save();
+      renderBranchInfo();
+      refreshRunView();
     }
   });
 
@@ -850,7 +912,11 @@
       save();
       scheduleRender();
     } else if (removeBtn) {
-      state.stations.splice(parseInt(removeBtn.dataset.remove, 10), 1);
+      var gone = state.stations.splice(parseInt(removeBtn.dataset.remove, 10), 1)[0];
+      state.stations.forEach(function (o) {
+        if (!o.branches || !o.branches.byAnswer) return;
+        Object.keys(o.branches.byAnswer).forEach(function (k) { if (gone && o.branches.byAnswer[k] === gone.id) setBranch(o, k, null); });
+      });
       ensureAtLeastOneRow();
       renderRows();
       save();
@@ -864,6 +930,7 @@
       var ri = parseInt(removeChoiceBtn.dataset.idx, 10), rci = parseInt(removeChoiceBtn.dataset.ci, 10);
       var st = state.stations[ri];
       if (st.choices.length > 2) {
+        setBranch(st, st.choices[rci], null);
         st.choices.splice(rci, 1);
         if (st.correctChoice === rci) st.correctChoice = 0;
         else if (st.correctChoice > rci) st.correctChoice -= 1;
@@ -1646,7 +1713,8 @@
     if (s.qType === 'choice') {
       var letters = 'ABCDEF';
       html += '<div class="checkin-choices">' + s.choices.map(function (c, ci) {
-        return '<button type="button" class="btn-secondary checkin-choice-btn" data-choice="' + ci + '">' + letters[ci] + '. ' + escapeHtml((c || '').trim() || '(blank)') + '</button>';
+        var bt = branchTarget(state.stations[s.idx], c), bn = bt ? valid.map(function (v) { return v.id; }).indexOf(bt) : -1;
+        return '<button type="button" class="btn-secondary checkin-choice-btn" data-choice="' + ci + '">' + letters[ci] + '. ' + escapeHtml((c || '').trim() || '(blank)') + (bn !== -1 ? ' \u2192 Station ' + (bn + 1) : '') + '</button>';
       }).join('') + '</div>';
     } else if (s.qType === 'numeric') {
       html += '<div class="checkin-numeric"><input type="number" step="any" id="checkin-numeric-input" placeholder="Their answer">' +
@@ -1677,7 +1745,11 @@
     }
     var s = validStations()[pendingCheckin.stationIdx];
     if (choiceBtn) {
-      evaluateCheckin(parseInt(choiceBtn.dataset.choice, 10) === s.correctChoice);
+      var picked = parseInt(choiceBtn.dataset.choice, 10), canon = Stations.read(state);
+      var cstn = canon.stations.filter(function (c) { return c.id === s.id; })[0];
+      var target = cstn ? Stations.branchOf(canon, cstn, s.choices[picked]) : null;
+      if (target) evaluateCheckin(true, target);   // a branched choice is an accepted answer that sends the team on
+      else evaluateCheckin(picked === s.correctChoice);
     } else if (numSubmit) {
       var val = parseFloat(document.getElementById('checkin-numeric-input').value);
       var target = parseFloat(s.numericAnswer);
@@ -1686,19 +1758,21 @@
     }
   });
 
-  function evaluateCheckin(correct) {
+  function evaluateCheckin(correct, branchTo) {
     var team = state.run.teams[pendingCheckin.teamIdx];
     var stationIdx = pendingCheckin.stationIdx;
     var sid = validStations()[stationIdx].id;
     if (correct) {
       var attemptsSoFar = team.attempts[sid] || 0;
       team.marks[sid] = { at: Date.now(), correct: true, attempts: attemptsSoFar };
+      if (branchTo) team.marks[sid].branch = branchTo;   // the route a team was sent on; clearing the mark clears it
       pendingCheckin = null;
       save();
       renderCheckinAnswerPanel();
       renderTeamProgress();
       renderLeaderboard();
-      setCheckinFeedback((team.name || 'Team') + ' checked in at Station ' + (stationIdx + 1) + ' — correct!', false);
+      var sentTo = branchTo ? validStations().map(function (v) { return v.id; }).indexOf(branchTo) : -1;
+      setCheckinFeedback((team.name || 'Team') + ' checked in at Station ' + (stationIdx + 1) + (sentTo !== -1 ? ' — correct! Send them to Station ' + (sentTo + 1) + '.' : ' — correct!'), false);
       focusCheckinCode();
     } else {
       team.attempts[sid] = (team.attempts[sid] || 0) + 1;
@@ -1713,6 +1787,17 @@
     els.checkinFeedback.style.color = isError ? 'var(--danger)' : 'var(--success)';
   }
   function focusCheckinCode() { els.checkinCode.focus(); }
+
+  /** The station a team's latest branched check-in sent it to, if that station is still playable and the team has not reached it; else null. */
+  function branchNext(team, valid) {
+    var best = null;
+    Object.keys(team.marks).forEach(function (sid) {
+      var m = team.marks[sid];
+      if (m && m.branch && (!best || m.at >= best.at)) best = m;
+    });
+    if (!best || Object.prototype.hasOwnProperty.call(team.marks, best.branch)) return null;
+    return valid.some(function (v) { return v.id === best.branch; }) ? best.branch : null;
+  }
 
   function renderTeamProgress() {
     var valid = validStations();
@@ -1737,9 +1822,9 @@
         var title = 'Station ' + (j + 1) + (bonus ? ' (bonus)' : '') + (solved ? ' — reached' : attempts > 0 ? ' — ' + attempts + ' attempt' + (attempts === 1 ? '' : 's') + ' so far' : '');
         btns += '<button type="button" class="' + cls + '" data-team="' + ti + '" data-station="' + j + '" title="' + escapeAttr(title) + '">' + (j + 1) + '</button>';
       }
-      var nextIdx = -1;
-      valid.forEach(function (v, vi) { if (v.id === pr.nextId) nextIdx = vi; });
-      var statusLine = pr.finished ? (pr.explicit ? 'All required stations complete!' : 'All stations complete!') : 'Next up: Station ' + (nextIdx + 1) + ' — ' + escapeHtml(valid[nextIdx].label);
+      var nextIdx = -1, sentBy = branchNext(t, valid);
+      valid.forEach(function (v, vi) { if (v.id === (sentBy || pr.nextId)) nextIdx = vi; });
+      var statusLine = pr.finished ? (pr.explicit ? 'All required stations complete!' : 'All stations complete!') : 'Next up: Station ' + (nextIdx + 1) + ' — ' + escapeHtml(valid[nextIdx].label) + (sentBy ? ' (sent there by a branch)' : '');
       if (pr.explicit && pr.bonus) statusLine += ' · ' + pr.bonus + ' bonus';
       var hintCount = t.hintsUsed ? Object.keys(t.hintsUsed).length : 0;
       if (hintCount) statusLine += ' · ' + hintCount + ' hint' + (hintCount === 1 ? '' : 's') + ' used (−' + formatPenaltyMinutes(t.penaltyMs || 0) + ' min)';

@@ -329,6 +329,7 @@
     "Tools/stations/test/smoke-legacy-codes.mjs",
     "Tools/qr-scavenger-hunt-builder/test/smoke-images.mjs",
     "Tools/qr-scavenger-hunt-builder/test/smoke-required.mjs",
+    "Tools/qr-scavenger-hunt-builder/test/smoke-branches.mjs",
     "Tools/export/test/smoke-export.mjs",
     "Tools/export/test/smoke-csv-adopters.mjs",
     "Tools/export/test/smoke-sheet-adopters.mjs",

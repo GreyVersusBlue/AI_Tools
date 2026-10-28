@@ -392,6 +392,17 @@
      arrival as a set this device can hold, every field defaulted. opts.kind ('room' or 'hunt'), opts.uniqueName(name) files it under a
      free name, opts.roomId() draws a room's new id, opts.isInline(src) says an image may be kept
      (never another browser's `idb:` reference). The sender's station ids ride along, a set's own does not. */
+  /** The { answer: stationId } map of a station, with every target `has` accepts, or null. */
+  function branchesIn(st, has) {
+    var by = isObj(st) && isObj(st.branches) && isObj(st.branches.byAnswer) ? st.branches.byAnswer : null;
+    if (!by) return null;
+    var out = {}, n = 0;
+    Object.keys(by).forEach(function (k) {
+      if (typeof by[k] === 'string' && k && has(by[k])) { out[k] = by[k]; n++; }
+    });
+    return n ? out : null;
+  }
+
   function shareState(obj, opts) {
     if (!isObj(obj) || !Array.isArray(obj.stations)) return null;
     var state = obj, imageSrc = (opts && opts.imageSrc) || function (v) { return v; };
@@ -418,12 +429,16 @@
       name: state.name,
       cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,
       stations: state.stations.map(function (s) {
-        return {
+        var o = {
           id: s.id, label: s.label, content: s.content, note: s.note,
           qType: s.qType, choices: (s.choices || []).slice(), correctChoice: s.correctChoice,
           numericAnswer: s.numericAnswer, tolerance: s.tolerance,
           hint: s.hint || '', hintPenalty: s.hintPenalty || '0', codeWord: s.codeWord || ''
         };
+        // v391: a choice's per-answer branch rides along, only to a station that is in this link
+        var by = branchesIn(s, function (id) { return state.stations.some(function (t) { return t.id === id; }); });
+        if (by) o.branches = { byAnswer: by };
+        return o;
       })
     };
     // v390: the free-order required set rides along (ids of this link's own stations), only once one is starred
@@ -491,9 +506,22 @@
         st.hint = String(s.hint || '');
         st.hintPenalty = String(s.hintPenalty == null ? '0' : s.hintPenalty);
         st.codeWord = String(s.codeWord || '');
+        st._by = s.branches;
         return st;
       })
     };
+    hunt.stations.forEach(function (st) {
+      // v391: a branch is kept only for a choice this station has, aimed at a station in the link
+      var by = branchesIn({ branches: st._by }, function (id) { return hunt.stations.some(function (t) { return t.id === id; }); });
+      delete st._by;
+      if (by && st.qType === 'choice') {
+        var kept = {};
+        Object.keys(by).forEach(function (k) {
+          if (st.choices.some(function (c) { return normalizeTextAnswer(c) === normalizeTextAnswer(k); }) && by[k] !== st.id) kept[k] = by[k];
+        });
+        if (Object.keys(kept).length) st.branches = { byAnswer: kept };
+      }
+    });
     if (Array.isArray(obj.required)) {
       var reqs = obj.required.filter(function (r, i, a) {
         return typeof r === 'string' && a.indexOf(r) === i && hunt.stations.some(function (st) { return st.id === r; });
@@ -847,6 +875,22 @@
       return false;
     }
     // P3: a per-answer branch, when the caller says what was typed and it matches one
+    var branch = branchOf(set, station, given);
+    if (branch !== null) return branch;
+    var n = station.next;
+    if (n === 'end') return 'end';
+    if (typeof n === 'string' && playableId(n)) return n;
+    return pos + 1 < pl.length ? pl[pos + 1].id : null;
+  }
+  /** The station a per-answer branch sends `given` to: an id, 'end', or null when the
+      answer has no branch (blank, unmatched, or aimed at a station that is not playable).
+      The answer is matched as a text answer is, so case, spacing and quotes do not matter. */
+  function branchOf(set, station, given) {
+    var pl = playable(set);
+    function playableId(id) {
+      for (var i = 0; i < pl.length; i++) if (pl[i].id === id) return true;
+      return false;
+    }
     if (given !== undefined && station.branches && station.branches.byAnswer) {
       var want = normalizeTextAnswer(given), by = station.branches.byAnswer;
       if (want) {
@@ -856,10 +900,62 @@
         }
       }
     }
-    var n = station.next;
-    if (n === 'end') return 'end';
-    if (typeof n === 'string' && playableId(n)) return n;
-    return pos + 1 < pl.length ? pl[pos + 1].id : null;
+    return null;
+  }
+  function numbers(ns) {
+    var w = ns.map(function (n) { return String(n + 1); });
+    if (w.length === 1) return 'Station ' + w[0];
+    return 'Stations ' + w.slice(0, -1).join(', ') + ' and ' + w[w.length - 1];
+  }
+  /** What is wrong with a set's per-answer branches on choice stations, as sentences for the editor
+      (empty when nothing is). A branch makes that choice an accepted answer, so a team that picks it
+      is sent on. Refused: a choice sent back to its own station, one sent to a station with no
+      content, two choices that read the same when one has a branch (they cannot be told apart), and
+      a way round that never lets a team finish (stations whose accepted answers all branch, and only
+      ever to each other). Station numbers are positions among the playable stations. */
+  function branchProblems(set) {
+    var pl = playable(set), out = [], num = {};
+    pl.forEach(function (s, n) { num[s.id] = n; });
+    var exit = {}, edges = {}, branching = [];
+    pl.forEach(function (st, n) {
+      var by = st.branches && st.branches.byAnswer;
+      var isChoice = st.answer && st.answer.type === 'choice';
+      exit[st.id] = true; edges[st.id] = [];
+      if (!by || !isChoice) return;
+      var choices = st.answer.choices || [], norm = choices.map(normalizeTextAnswer);
+      var keys = Object.keys(by).filter(function (k) { return norm.indexOf(normalizeTextAnswer(k)) !== -1; });
+      if (!keys.length) return;
+      keys.forEach(function (k) {
+        var t = by[k], nk = normalizeTextAnswer(k);
+        if (norm.filter(function (c) { return c === nk; }).length > 1) {
+          out.push('Station ' + (n + 1) + ': two choices read \u201c' + k + '\u201d, so a branch on one cannot be told from the other. Reword one.');
+        }
+        if (t === st.id) out.push('Station ' + (n + 1) + ': choice \u201c' + k + '\u201d sends a team back to Station ' + (n + 1) + ' itself.');
+        else if (t !== 'end' && num[t] === undefined) out.push('Station ' + (n + 1) + ': choice \u201c' + k + '\u201d goes to a station with nothing on its card.');
+        else if (t !== 'end') edges[st.id].push(t);
+        else edges[st.id].push('end');
+      });
+      var correct = normalizeTextAnswer(choices[st.answer.correct] || '');
+      var correctBranched = keys.some(function (k) { return normalizeTextAnswer(k) === correct; });
+      if (correctBranched) { exit[st.id] = false; branching.push(st.id); }
+    });
+    // finishing: a station with an exit finishes; a station without one finishes through a branch to one that does
+    var fin = {};
+    pl.forEach(function (st) { if (exit[st.id]) fin[st.id] = true; });
+    var grew = true;
+    while (grew) {
+      grew = false;
+      branching.forEach(function (id) {
+        if (fin[id]) return;
+        if (edges[id].some(function (t) { return t === 'end' || fin[t]; })) { fin[id] = true; grew = true; }
+      });
+    }
+    var stuck = branching.filter(function (id) { return !fin[id]; }).map(function (id) { return num[id]; }).sort(function (a, b) { return a - b; });
+    if (stuck.length) {
+      out.push(numbers(stuck) + (stuck.length === 1 ? ' sends' : ' send') + ' its right answer only to ' + (stuck.length === 1 ? 'itself' : 'each other') +
+        ', so a team that goes that way could never finish. Leave the right answer of one of them without a branch.');
+    }
+    return out;
   }
   /** The stations a team can get to. A 'chain' set walks from the first
       station along `next` and every branch; a 'free' set is all of them. */
@@ -996,7 +1092,7 @@
     KINDS: KINDS, ANSWER_TYPES: ANSWER_TYPES, ID_LENGTH: ID_LENGTH, CODE_WORDS: CODE_WORDS,
     detect: detect, read: read, write: write, ensureIds: ensureIds, newId: newId, newSetId: newSetId,
     playable: playable, playPayload: playPayload, playUrl: playUrl, playRead: playRead,
-    codeText: codeText, teamCodeText: teamCodeText, check: check, toDisk: toDisk, shareState: shareState, fromShare: fromShare, nextOf: nextOf, reachable: reachable, progress: progress,
+    codeText: codeText, teamCodeText: teamCodeText, check: check, toDisk: toDisk, shareState: shareState, fromShare: fromShare, nextOf: nextOf, branchOf: branchOf, branchProblems: branchProblems, reachable: reachable, progress: progress,
     remapRun: remapRun, upgradeProgress: upgradeProgress, budget: budget
   };
   global.EscapeRoomMatch = {

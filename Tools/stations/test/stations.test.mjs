@@ -434,6 +434,68 @@ function suite(src) {
     }
   }
 
+  { // v391: per-answer branching on a hunt's choice stations
+    const h0 = F.H2(), h = { ...h0, stations: h0.stations.map((x, i) => ({ ...x, id: 'b' + i + 'xx' })) };
+    h.stations[2].choices = ['Limestone', 'Shale', 'Granite'];
+    const id = (n) => 'b' + n + 'xx';
+    const withBranch = (by) => { const c = jc(h); c.stations[2].branches = { byAnswer: by }; return S.read(c); };
+    let set = withBranch({ Shale: id(0) });
+    eq(S.branchOf(set, set.stations[2], 'shale '), id(0), 'B: an accepted answer is matched as text (case and spacing)');
+    eq(S.branchOf(set, set.stations[2], 'Granite'), null, 'B: an answer with no branch has none');
+    eq(S.branchOf(set, set.stations[2], ''), null, 'B: a blank answer has none');
+    eq(S.branchOf(set, set.stations[2]), null, 'B: no answer given has none');
+    eq(S.nextOf(set, set.stations[2], 'Shale'), id(0), 'B: nextOf takes the branch');
+    eq(S.nextOf(set, set.stations[2], 'Granite'), null, 'B: nextOf without a branch goes where it always went (the last station ends)');
+    eq(S.branchProblems(set), [], 'B: a plain branch is fine');
+    eq(S.branchProblems(S.read(h)), [], 'B: a hunt with no branches has no problems');
+    set = withBranch({ Shale: id(2) });
+    eq(S.branchProblems(set).length, 1, 'B: a choice sent back to its own station is refused');
+    ok(/Station 3: choice \u201cShale\u201d sends a team back to Station 3 itself/.test(S.branchProblems(set)[0]), 'B: and said with the station and the choice');
+    set = withBranch({ Shale: id(0), Limestone: id(1) });
+    eq(S.branchProblems(set), [], 'B: the right answer branched is fine while the target can finish');
+    { // a closed loop: station 2 (choice) -> right answer to 3 -> right answer back to 2
+      const c = jc(h);
+      c.stations[1] = { ...c.stations[1], qType: 'choice', choices: ['A', 'B'], correctChoice: 0, numericAnswer: '' };
+      c.stations[1].branches = { byAnswer: { A: id(2) } };
+      c.stations[2].branches = { byAnswer: { Limestone: id(1) } };
+      const p = S.branchProblems(S.read(c));
+      eq(p.length, 1, 'B: two stations whose right answers only lead to each other are refused');
+      ok(/Stations 2 and 3 send its right answer only to each other/.test(p[0]), 'B: and named together');
+      c.stations[1].branches = { byAnswer: { A: id(2), B: id(0) } };
+      eq(S.branchProblems(S.read(c)), [], 'B: another branched choice out of the loop is an accepted answer, so it is a way out');
+      c.stations[2].branches = { byAnswer: { Limestone: id(1), Shale: id(0) } };
+      c.stations[1].branches = { byAnswer: { A: id(2) } };
+      eq(S.branchProblems(S.read(c)), [], 'B: station 3 with a second branched choice to a finishing station opens the loop');
+      c.stations[1].branches = { byAnswer: { A: id(2) } };
+      c.stations[2].branches = { byAnswer: { Limestone: id(1) } };
+      eq(S.branchProblems(S.read(c)).length, 1, 'B: back to the closed loop');
+      c.stations[2].branches = { byAnswer: { Shale: id(0) } };
+      eq(S.branchProblems(S.read(c)), [], 'B: leaving one right answer unbranched opens the way');
+    }
+    { // two choices that read alike
+      const c = jc(h); c.stations[2].choices = ['Shale', ' shale', 'Granite']; c.stations[2].branches = { byAnswer: { Shale: id(0) } };
+      ok(S.branchProblems(S.read(c)).some(m => /read \u201cShale\u201d/.test(m)), 'B: twin choices with a branch are refused');
+    }
+    { // a branch to a station with nothing on its card
+      const c = jc(h); c.stations[0].content = '   '; c.stations[2].branches = { byAnswer: { Shale: id(0) } };
+      ok(S.branchProblems(S.read(c)).some(m => /nothing on its card/.test(m)), 'B: a branch to an empty station is refused');
+    }
+    const rt = jc(S.write(S.read(Object.assign(jc(h), { stations: jc(h).stations.map((x, i) => i === 2 ? { ...x, branches: { byAnswer: { Shale: id(0) } } } : x) }))));
+    eq(rt.stations[2].branches, { byAnswer: { Shale: id(0) } }, 'B: branches survive read and write');
+    ok(!('branches' in rt.stations[0]), 'B: a station without one gets none');
+    // the link
+    const hb = jc(h); hb.stations[2].branches = { byAnswer: { Shale: id(0), Granite: 'zzzz' } };
+    const link = S.shareState(hb, { kind: 'hunt' });
+    eq(link.stations[2].branches, { byAnswer: { Shale: id(0) } }, 'B: shareState carries a branch, only to a station in the link');
+    ok(!('branches' in S.shareState(h, { kind: 'hunt' }).stations[2]), 'B: a hunt without branches carries none (old links unchanged)');
+    eq(S.fromShare(link, { kind: 'hunt' }).stations[2].branches, { byAnswer: { Shale: id(0) } }, 'B: fromShare restores it');
+    const bad = jc(link); bad.stations[2].branches = { byAnswer: { Nope: id(0), Granite: id(2), Shale: id(0) } };
+    eq(S.fromShare(bad, { kind: 'hunt' }).stations[2].branches, { byAnswer: { Shale: id(0) } }, 'B: fromShare drops a choice the station lacks and a branch to itself');
+    const bad2 = jc(link); bad2.stations[1].branches = { byAnswer: { x: id(0) } };
+    ok(!('branches' in S.fromShare(bad2, { kind: 'hunt' }).stations[1]), 'B: and a branch on a station that is not a choice');
+    ok(!JSON.stringify(S.fromShare(link, { kind: 'hunt' })).includes('_by'), 'B: no scratch field is left on an arrival');
+  }
+
   return { passed, fails };
 }
 
@@ -454,11 +516,15 @@ const MUTANTS = [
   ['a go-to id is ignored on read', "out.next = n;   // stored as an id on disk (v385)", "out.next = null;"],
   ['toDisk keeps the position', "st.next = out.stations[st.next].id;", "st.next = st.next;"],
   ['fromShare keeps an unknown room type', "type: ROOM_TYPES.indexOf(st.type) !== -1 ? st.type : 'text',", "type: st.type,"],
-  ['shareState carries the run', "      name: state.name,\n      cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,\n      stations: state.stations.map(function (s) {\n        return {\n          id: s.id,", "      name: state.name, run: state.run,\n      cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,\n      stations: state.stations.map(function (s) {\n        return {\n          id: s.id,"],
+  ['shareState carries the run', "      name: state.name,\n      cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,\n      stations: state.stations.map(function (s) {\n        var o = {\n          id: s.id,", "      name: state.name, run: state.run,\n      cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,\n      stations: state.stations.map(function (s) {\n        var o = {\n          id: s.id,"],
   ['shareState drops the required set', "if (reqIds.length) out.required = reqIds;", ""],
   ['fromShare keeps an unknown required id', "a.indexOf(r) === i && hunt.stations.some(function (st) { return st.id === r; })", "a.indexOf(r) === i"],
   ['progress counts a bonus mark as required', "if (marked && isReq) done++;", "if (marked) done++;"],
   ['progress ignores the required set', "var explicit = req.length > 0;", "var explicit = false; req = [];"],
+  ['a branch to a station outside the link rides along', "has(by[k])", "true"],
+  ['a self branch is not refused', "if (t === st.id) out.push(", "if (false) out.push("],
+  ['a closed loop of right answers is not refused', "if (stuck.length) {", "if (false) {"],
+  ['an unmatched answer takes the branch', "normalizeTextAnswer(keys[k]) === want && (by[keys[k]]", "(by[keys[k]]"],
   ['an orphan mark is kept', "if (id === undefined || String(parseInt(k, 10)) !== k) { dropped++; return; }", "if (id === undefined) id = k;"]
 ];
 let mutantFail = 0;
