@@ -119,7 +119,7 @@ await page.evaluate(([room]) => {
   localStorage.setItem('escape-room-builder:rooms', JSON.stringify({ v: 1, data: store }));
 }, [ROOM]);
 await page.goto(BASE + '/Tools/019-escape-room-builder.html', { waitUntil: 'load' }); await settle(page, 600);
-const rd = () => page.evaluate(() => { const v = JSON.parse(localStorage.getItem('escape-room-builder:rooms')); const d = v.data || v; const r = d.sets['Legacy room']; return r.stations.map(s => ({ clue: s.clue, next: s.next })); });
+const rd = () => page.evaluate(() => { const v = JSON.parse(localStorage.getItem('escape-room-builder:rooms')); const d = v.data || v; const r = d.sets['Legacy room']; return r.stations.map(s => ({ clue: s.clue, next: (typeof s.next === 'string' && s.next !== 'end') ? r.stations.findIndex(t => t.id === s.next) : s.next })); });   // v385: a go-to is stored as an id; read it back as a position
 eq((await rd()).map(s => s.next), [2, null, null], '019: before the move, station 1 goes to station 3');
 await page.click('#stationsList .station-card[data-idx="1"] [data-move="-1"]'); await settle(page, 500);
 const after = await rd();

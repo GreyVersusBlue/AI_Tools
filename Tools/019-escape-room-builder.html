@@ -553,7 +553,7 @@
     if (!state) return;
     Stations.ensureIds(state);   // Path 18 P1: every station carries a stable id on disk
     var store = loadStore();
-    store.sets[state.name] = state;
+    store.sets[state.name] = Stations.toDisk(state);   // each go-to is stored as the target's id (v385)
     store.current = state.name;
     saveStore(store);
   }
@@ -631,7 +631,7 @@
     state = set ? Stations.write(set) : loaded;
     ensureAtLeastOneStation();
     Stations.ensureIds(state);
-    if (JSON.stringify(state) !== before) save();   // ids drawn on first read are saved then, so a reload prints the same ones
+    if (JSON.stringify(Stations.toDisk(state)) !== before) save();   // ids drawn on first read are saved then, so a reload prints the same ones
     applyStateToForm();
     refreshSwitcher();
     scheduleRender();
@@ -1465,7 +1465,7 @@
       var store = loadStore();
       delete store.sets[oldName];
       state.name = newName;
-      store.sets[newName] = state;
+      store.sets[newName] = Stations.toDisk(state);
       store.current = newName;
       saveStore(store);
       refreshSwitcher();
@@ -1630,7 +1630,7 @@
           room.stations.push({ clue: '', answers: '', hint: '', next: null, image: '', type: 'text', hintCost: 0, awardLetter: '', cipherPlain: '', cipherShift: 0, maxAttempts: 0, numericTolerance: null });
         }
         var store = loadStore();
-        store.sets[room.name] = room;
+        store.sets[room.name] = Stations.toDisk(room);
         store.current = room.name;
         saveStore(store);
         setShareNote('Loaded a shared room as \u201c' + room.name + '\u201d, ' + room.stations.length +

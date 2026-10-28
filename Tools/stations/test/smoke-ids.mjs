@@ -53,7 +53,9 @@ for (const P of PAGES) {
   const strip = (o) => { const c = JSON.parse(JSON.stringify(o)); delete c.id; (c.stations || []).forEach(s => delete s.id); return c; };
   const canon = (o) => Array.isArray(o) ? o.map(canon) : (o && typeof o === 'object') ? Object.fromEntries(Object.keys(o).sort().map(k => [k, canon(o[k])])) : o;   // write() may order keys differently from the seed
   const want = strip(P.seed);
-  if (P.n === '019') eq(canon(strip(set)), canon(want), `${P.n}: nothing else in the saved room changed`);
+  const posn = (o) => { const c = JSON.parse(JSON.stringify(o)); const ix = c.stations.map(s => s.id); c.stations.forEach(s => { if (typeof s.next === 'string' && s.next !== 'end') s.next = ix.indexOf(s.next); }); return c; };   // v385: a go-to is stored as an id
+  if (P.n === '019') ok(set.stations.some(s => typeof s.next === 'string' && ID.test(s.next)) && set.stations.every(s => s.next === null || s.next === 'end' || ID.test(s.next)), '019: a go-to is stored as the target station\'s id, not a position');
+  if (P.n === '019') eq(canon(strip(posn(set))), canon(want), `${P.n}: nothing else in the saved room changed`);
   else { eq(strip(set).stations, want.stations, `${P.n}: the stations are otherwise as seeded`); eq(set.run.teams.map(t => t.marks), P.seed.run.teams.map(t => Object.fromEntries(Object.entries(t.marks).map(([k, m]) => [ids1[+k], typeof m === 'number' ? { at: m, correct: true } : m]))), `${P.n}: the live run is keyed by station id now (Path 18 P2): each index-keyed mark sits on the id at its position, an old numeric mark upgraded as before`); }
   if (P.n === '018') ok(typeof set.id === 'string' && set.id.length >= 8, '018: the hunt itself gets a set id');
 

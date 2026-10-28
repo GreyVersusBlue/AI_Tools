@@ -353,6 +353,24 @@ function suite(src) {
     eq([hw.stations[0].image, hw.stations[0].encode, S.write(hset0).stations[0].image], ['idb:abc', 'player', undefined], 'P3: and writes them only when set');
   }
 
+  { // v385: a go-to stored as the target's id
+    const room = jc(F.R2());
+    room.stations[0].next = 2; room.stations[1].next = 'end'; room.stations[2].next = 0;
+    const d = S.toDisk(room);
+    const ids = d.stations.map(x => x.id);
+    eq([d.stations[0].next, d.stations[1].next, d.stations[2].next], [ids[2], 'end', ids[0]], 'D: toDisk stores a position as the target id and keeps end');
+    eq(room.stations[0].next, 2, 'D: toDisk leaves its argument alone');
+    const mem = S.write(S.read(d));
+    eq(mem.stations.map(x => x.next), [2, 'end', 0, null], 'D: read/write of the disk form gives the positions back');
+    d.stations.unshift(jc(d.stations[2])); d.stations[0].id = 'zzzz'; d.stations[0].next = null;
+    eq(S.write(S.read(d)).stations.map(x => x.next), [null, 3, 'end', 1, null], 'D: a station inserted above keeps every go-to on its target');
+    const old = jc(room);
+    eq(S.write(S.read(old)).stations.map(x => x.next), [2, 'end', 0, null], 'D: an old numeric go-to still reads');
+    d.stations[1].next = 'nope';
+    eq(S.write(S.read(d)).stations[1].next, null, 'D: an id no station has reads as auto');
+    eq(S.toDisk(F.H2()).stations.length, F.H2().stations.length, 'D: toDisk of a hunt is a copy');
+  }
+
   return { passed, fails };
 }
 
@@ -370,6 +388,8 @@ const MUTANTS = [
   ['budget ignores the readable floor', "ok: plan.ok, reason: '' }", "ok: true, reason: '' }"],
   ['a branch to a gone station is kept on write', "if (ids.indexOf(st.branches.byAnswer[k]) !== -1) by[k]", "if (true) by[k]"],
   ['nextOf ignores the answer', "if (given !== undefined && station.branches", "if (false && station.branches"],
+  ['a go-to id is ignored on read', "out.next = n;   // stored as an id on disk (v385)", "out.next = null;"],
+  ['toDisk keeps the position', "st.next = out.stations[st.next].id;", "st.next = st.next;"],
   ['an orphan mark is kept', "if (id === undefined || String(parseInt(k, 10)) !== k) { dropped++; return; }", "if (id === undefined) id = k;"]
 ];
 let mutantFail = 0;

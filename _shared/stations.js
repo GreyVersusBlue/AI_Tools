@@ -285,6 +285,7 @@
         var n = isObj(st) ? st.next : null, out = stations[i];
         if (n === 'end') out.next = 'end';
         else if (typeof n === 'number' && n >= 0 && n < ids.length) out.next = ids[n];
+        else if (typeof n === 'string' && ids.indexOf(n) !== -1) out.next = n;   // stored as an id on disk (v385)
         else out.next = null;
         if (isObj(st) && isObj(st.x) && st.x.answer && st.x.next !== undefined && out.next === null) out.next = st.x.next;
       });
@@ -367,6 +368,20 @@
     out.checkinStation = run.checkinStation === undefined ? null : run.checkinStation;
     if (run.stagger !== undefined) out.stagger = run.stagger;
     if (run.extra) Object.keys(run.extra).forEach(function (k) { out[k] = clone(run.extra[k]); });
+    return out;
+  }
+
+  /* A copy of a room in the form it is stored: each station's go-to as the target's id, not its
+     position, so a move or a delete in a page that forgot to capture links cannot re-aim it. A
+     hunt has no go-to and comes back as a copy. read() takes either form. */
+  function toDisk(obj) {
+    var out = clone(obj);
+    if (!isObj(out) || !Array.isArray(out.stations) || detect(out) !== 'room') return out;
+    ensureIds(out);
+    out.stations.forEach(function (st) {
+      if (isObj(st) && typeof st.next === 'number' && st.next >= 0 && st.next < out.stations.length) st.next = out.stations[st.next].id;
+      else if (isObj(st) && typeof st.next === 'number') st.next = null;
+    });
     return out;
   }
 
@@ -840,7 +855,7 @@
     KINDS: KINDS, ANSWER_TYPES: ANSWER_TYPES, ID_LENGTH: ID_LENGTH, CODE_WORDS: CODE_WORDS,
     detect: detect, read: read, write: write, ensureIds: ensureIds, newId: newId, newSetId: newSetId,
     playable: playable, playPayload: playPayload, playUrl: playUrl, playRead: playRead,
-    codeText: codeText, teamCodeText: teamCodeText, check: check, nextOf: nextOf, reachable: reachable,
+    codeText: codeText, teamCodeText: teamCodeText, check: check, toDisk: toDisk, nextOf: nextOf, reachable: reachable,
     remapRun: remapRun, upgradeProgress: upgradeProgress, budget: budget
   };
   global.EscapeRoomMatch = {
