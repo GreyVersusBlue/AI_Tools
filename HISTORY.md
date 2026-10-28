@@ -9,6 +9,26 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-22: Path 14 P4 increment 3, marks edited in place and zone rules that follow a mark (2026-10-28, v369-v370)
+
+Audit entry AI-22, rank 36 (now ¼, only Devon's items left). Two steps, each its own commit and `CACHE_VERSION`.
+
+- **Step 5 (v369), 005.** `editMark(state, roomId, markId, patch)` (w, h, rot, label, kind only; the same repair a stored mark gets
+  clamps it) and `footprint(m)`, the box a turned mark covers (a quarter turn swaps width and height about the centre; `desksNear` reads it).
+  On the page: a corner grip (pointer, snapped, undoable, measured along the mark's own axes), Shift+arrows to resize, R to turn, and per mark in
+  the Room card a label box, width and height boxes and a Turn button, each named for a screen reader. `test:seating-room` 45 (+11),
+  `test:seating-room-edit` (port 8561); disabling the Shift branch was seen failing it. The grip is a corner triangle: aim inside it.
+- **Step 6 (v370), zone rules.** A zone rule over desks may carry `mark` (a room mark id), written by the Rules block's new "Desks near a mark in the
+  room" zone. `syncMarkRules(state)` recomputes `desks` from `desksNear` at the top of every `renderAll()`, so the solver, checker, Why? panel
+  and share/sub paths still see a desk list and were not touched. Defaults taken (not Devon's open questions): a mark with no desk near it leaves
+  the rule's desks as they were (never an empty rule); a removed mark, or a period that leaves the room, drops `mark` and keeps the desks; a share link
+  carries no `mark` (`forShare`). `repairRule` adds the key only when set, so old rules are byte-identical. `test:seating-room-zone` (25, pure
+  Node, on `saved-v357.json`), and the page flow in `smoke-room-edit.mjs` (33 total); skipping `syncMarkRules` was seen failing two assertions.
+- **Not done / not verified.** Marks in 007's and 045's pictures (Devon's call, left listed on rank 36); rank 37 (P5). No real classroom, no
+  paper, no touch screen: the grip and Shift+arrows were driven with Playwright's mouse and keyboard only. A rule's mark cannot be changed in place
+  (remove and re-add), like the rules themselves. 005's a11y sweep passes; the desks' own colour-contrast findings are the allowlisted ones, so the
+  new test scans the mark list and marks only.
+
 ## AI-22: drive-seating's "refused with a sentence" flake (2026-10-27, test only, no CACHE_VERSION)
 
 The check at "placing a student on it is refused with a sentence" (`Tools/seating-chart/test/drive-seating.mjs`, from v362) failed about 1 run in 3

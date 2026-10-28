@@ -111,6 +111,49 @@ await settle(page, 300);
 ok((await saved()).w + (await saved()).x <= ROOM.width, 'a huge width is kept on the floor');
 ok(await page.locator('#markList input[aria-label^="Label of"]').count() === 1 && await page.locator('#markList input[aria-label^="Width of"]').count() === 1, 'the row\'s boxes each have a name for a screen reader');
 
+// a zone rule tied to a mark follows the mark (step 6)
+await page.fill('#nameInput', 'Ada Lovelace\nMarco Polo');
+await page.click('button[onclick="addNames()"]');
+await settle(page, 300);
+await page.fill('#markLabel', '');
+await page.selectOption('#markKind', 'window');
+await page.click('button[onclick="addMark()"]');
+await settle(page, 300);
+const winW = page.locator('#markList .mark-row').last().locator('input[type=number]').first();
+await winW.fill('400');           // wide enough to reach the first column of desks
+await winW.press('Tab');
+await settle(page, 300);
+await page.selectOption('#ruleKind', 'zone');
+ok(await page.locator('#ruleZone option[value="mark"]').evaluate(o => !o.hidden), 'with marks in the room, "desks near a mark" is a choice');
+await page.selectOption('#ruleZone', 'mark');
+ok(await page.locator('#ruleMarkWrap').isVisible(), 'and a list of the marks shows');
+await page.selectOption('#ruleMark', { label: 'window' });
+await page.selectOption('#ruleStudents', { index: 0 });
+await page.selectOption('#ruleStrength', '2');
+await page.click('button[onclick="addRuleFromForm()"]');
+await settle(page, 300);
+const rules = async () => (((await page.evaluate(() => JSON.parse(localStorage.getItem('seating-chart-v1')))).sections.find(s => s.rules && s.rules.some(r => r.mark)) || { rules: [] }).rules).filter(r => r.mark);
+await settle(page, 1300);
+let r0 = (await rules())[0];
+ok(r0 && r0.desks.length > 0, `the rule is saved with the mark and ${r0 && r0.desks.length} desks`);
+ok(/desks near window/.test(await page.locator('#rulesList .pair .pp').last().textContent()), 'and the list says which mark it follows');
+const winId = r0.mark;
+// move the window beside the last desk with the keyboard-free route: its Move buttons
+const before = r0.desks.join();
+await page.evaluate(id => { const n = document.querySelector(`.room-mark[data-mark-id="${id}"]`); n.focus(); }, winId);
+for (let i = 0; i < 30; i++) await page.keyboard.press('ArrowRight');
+await settle(page, 1500);
+const r1 = (await rules())[0];
+ok(r1 && r1.mark === winId && r1.desks.join() !== before, `moving the mark moves the rule's desks (${before} -> ${r1 && r1.desks.join()})`);
+await page.evaluate(() => { for (let i = 0; i < 30; i++) window.undo(); });   // one undo step per arrow press
+await settle(page, 1500);
+eq((await rules())[0].desks.join(), before, 'undo puts the rule\'s desks back with the mark');
+// removing the mark leaves a plain desk-list rule
+await page.click('#markList button[aria-label^="Remove window"]');
+await settle(page, 1500);
+ok((await rules()).length === 0, 'removing the mark forgets it on the rule');
+ok(/desk /.test(await page.locator('#rulesList .pair .pp').last().textContent()), 'and the list shows the desks instead');
+
 // mirrored: no pulling
 await page.click('#mirrorBtn');
 await settle(page, 200);

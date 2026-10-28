@@ -629,7 +629,13 @@
             <option value="edge">An end-of-row desk</option>
             <option value="notEdge">A desk that is not at an end</option>
             <option value="desks">Desks I choose on the floor</option>
+            <option value="mark" id="ruleZoneMarkOpt" hidden>Desks near a mark in the room</option>
           </select>
+          <div id="ruleMarkWrap" hidden>
+            <label class="field" for="ruleMark">Near which mark</label>
+            <select id="ruleMark"></select>
+            <p class="hint">The rule follows the mark: move or resize it and the desks change with it.</p>
+          </div>
           <div id="ruleDesksWrap" hidden class="row tight" style="margin-top:6px;">
             <button class="btn sm ghost" type="button" id="ruleTapBtn" aria-pressed="false" onclick="toggleTapDesks()">Choose desks on the floor</button>
             <span class="status" id="ruleTapInfo" role="status" aria-live="polite"></span>
@@ -851,7 +857,7 @@ import {
 } from './seating-chart/seating.mjs';
 import { solve, normalizeRules } from './seating-chart/seating-solve.mjs';
 import { explain } from './seating-chart/seating-explain.mjs';
-import { MARK_KINDS, createRoom, attachSection, detachSection, setRoomDesks, setMark, editMark, removeMark, deleteRoom, desksNear, sectionsIn } from './seating-chart/seating-room.mjs';
+import { MARK_KINDS, createRoom, attachSection, detachSection, setRoomDesks, setMark, editMark, removeMark, deleteRoom, desksNear, sectionsIn, syncMarkRules } from './seating-chart/seating-room.mjs';
 import { forShare, subRules, buildRule, addRule, removeRule, pruneRules, describeRule } from './seating-chart/seating-rules.mjs';
 import { mountSaveBar, defaultStorage } from '../_shared/gvb-save.js';
 const { getParam, decodeState, clearParam } = window.StateLink;
@@ -1597,6 +1603,15 @@ function syncRuleForm(){
   el('ruleAnyWrap').hidden = kind !== 'partner';
   el('ruleZoneWrap').hidden = kind !== 'zone';
   el('ruleDesksWrap').hidden = !(kind === 'zone' && el('ruleZone').value === 'desks');
+  const rm = roomOfActive();
+  el('ruleZoneMarkOpt').hidden = !(rm && rm.marks.length);
+  if (el('ruleZoneMarkOpt').hidden && el('ruleZone').value === 'mark') el('ruleZone').value = 'front';
+  el('ruleMarkWrap').hidden = !(kind === 'zone' && el('ruleZone').value === 'mark');
+  if (!el('ruleMarkWrap').hidden && rm){
+    const cur = el('ruleMark').value; el('ruleMark').textContent = '';
+    rm.marks.forEach(m => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.kind + (m.label ? ': ' + m.label : ''); el('ruleMark').appendChild(o); });
+    if (cur) el('ruleMark').value = cur;
+  }
   el('ruleStudentsLbl').textContent = kind === 'partner' ? 'The student who needs a partner' : 'Students (Ctrl or Shift to pick several)';
   if (el('ruleDesksWrap').hidden) setTapMode(false);
 }
@@ -1610,13 +1625,19 @@ function setTapMode(on){
   renderFloor();
 }
 function toggleTapDesks(){ setTapMode(!tapDesks); }
+function markDesksFor(id){
+  const r = roomOfActive(); if (!r || !id) return [];
+  const have = new Set(sec().desks.map(d => d.id));
+  return desksNear(r, id).filter(x => have.has(x));
+}
+function markName(id){ const r = roomOfActive(), m = r && r.marks.find(x => x.id === id); return m ? (m.label || m.kind) : ''; }
 function addRuleFromForm(){
   const s = sec();
   const picked = id => [...el(id).selectedOptions].map(o => o.value);
   const st = el('ruleStrength').value;
   const r = buildRule({
     kind: el('ruleKind').value, students: picked('ruleStudents'), anyOf: picked('ruleAnyOf'),
-    zone: el('ruleZone').value, desks: [...tapPicked], hard: st === 'must', weight: st === 'must' ? 3 : Number(st),
+    zone: el('ruleZone').value, desks: [...tapPicked], mark: el('ruleMark').value, markDesks: markDesksFor(el('ruleMark').value), hard: st === 'must', weight: st === 'must' ? 3 : Number(st),
     why: el('ruleWhy').value,
   }, s, uid);
   if (r.error){ say(r.error, 'bad'); return; }
@@ -1651,7 +1672,7 @@ function renderRules(){
   const shown = list.filter(r => r.kind !== 'seat' && r.kind !== 'empty');
   el('rulesCount').textContent = shown.length;
   shown.forEach(r => {
-    const d = describeRule(r, nameOf, deskNo);
+    const d = describeRule(r, nameOf, deskNo, markName);
     const row = document.createElement('div'); row.className = 'pair ' + (r.kind === 'apart' || r.kind === 'together' ? r.kind : 'other');
     const pp = document.createElement('span'); pp.className = 'pp';
     pp.textContent = `${d.text} \u00B7 ${d.strength}${d.why ? ' \u00B7 ' + d.why : ''}`;
@@ -2511,11 +2532,13 @@ function printSubExportAll(){
 function esc(s){ return (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 function renderAll(){
+  state = syncMarkRules(state);   // a zone rule tied to a mark follows the mark
   renderSections();
   renderRoster();
   renderLayouts();
   renderRoom();
   renderRules();
+  syncRuleForm();
   renderPrefs();
   renderHistory();
   renderFloor();

@@ -336,6 +336,7 @@
     "Tools/seating-chart/test/room.test.mjs",
     "Tools/seating-chart/test/smoke-room.mjs",
     "Tools/seating-chart/test/smoke-room-marks.mjs",
+    "Tools/seating-chart/test/room-zone.test.mjs",
     "Tools/seating-chart/test/smoke-room-edit.mjs",
     "Tools/a11y-sweep/test/smoke-a11y-sweep.mjs",
     "Tools/board-check/test/select-suites.test.mjs",

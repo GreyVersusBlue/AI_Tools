@@ -238,6 +238,8 @@ export function repairRule(raw, index, studentSet, deskSet, dropped) {
   else ok = desks.length >= 1;                                   // empty
   if (!ok) { dropped.push({ id, code: 'too-few' }); return null; }
   const w = Math.round(Number(raw.weight));
+  // a zone rule over desks may be tied to a room's mark (Path 14 P4): it keeps the mark's id beside its desks
+  const mark = kind === 'zone' && !zone && desks.length && str(raw.mark) ? str(raw.mark) : '';
   return {
     id, kind,
     hard: raw.hard === true,
@@ -247,6 +249,7 @@ export function repairRule(raw, index, studentSet, deskSet, dropped) {
     zone: kind === 'zone' && !desks.length ? zone : '',
     anyOf: kind === 'together' ? anyOf : [],
     why: str(raw.why).trim().slice(0, 200),
+    ...(mark ? { mark } : {}),
   };
 }
 

@@ -191,8 +191,8 @@ export function desksNear(room, markId, radius = 150) {
 export function syncMarkRules(state) {
   let changed = false;
   const sections = state.sections.map(s => {
-    if (!s.room || !Array.isArray(s.rules) || !s.rules.some(r => r && r.mark)) return s;
-    const room = roomOf(state, s.room);
+    if (!Array.isArray(s.rules) || !s.rules.some(r => r && r.mark)) return s;
+    const room = s.room ? roomOf(state, s.room) : null;
     const have = new Set(s.desks.map(d => d.id));
     const rules = s.rules.map(r => {
       if (!r || !r.mark) return r;
