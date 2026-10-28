@@ -244,6 +244,7 @@
     "Tools/paste-table/test/paste-table-038-parity.test.mjs": 1,
     "Tools/paste-table/test/paste-table-036-parity.test.mjs": 1,
     "Tools/paste-table/test/paste-table-037-parity.test.mjs": 1,
+    "Tools/paste-table/test/paste-table-075-parity.test.mjs": 1,
     "Tools/timeline-builder/test/label-packing.test.mjs": 1,
     "Tools/civics-role-card-generator/test/smoke-file-transfer.mjs": 3,
     "Tools/current-events-discussion-guide-generator/test/readability.test.mjs": 1,
