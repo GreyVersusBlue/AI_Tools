@@ -9,6 +9,16 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-26: Path 18 P1 built, `_shared/stations.js` and ids on disk in 018 and 019 (2026-10-28, v378-v379)
+
+The design was written 2026-10-06 (`BACKLOG.md`, Path 18, P1 bullet); this is its build, in two commits. **v378:** the module (`window.Stations`, pure, no storage or DOM) and `test:stations`: 346 assertions, with `playable()` held to 019's and 018's own `validStations()` and `playPayload()` to 019's `buildRoomPayload` + `stationPayloadFor`, those functions cut out of the HTML by name at run time (so a drift in a page shows here), `check()` to `er-match.js` loaded from its file and to 018's `parseFloat` rule, and five broken copies of the module (a null shift read as 0, a duplicate id kept, the ids string dropped, a tolerance ignored, an orphan mark kept) that the suite must go red on. **v379:** 018 and 019 load the module and call `ensureIds()` in `save()` and after a load; `test:stations-smoke` (port 8568) seeds each page with its pre-P1 shape and checks the id on every station, that a reload, a move and a remove keep them, and that nothing else in the saved blob moved. `test:escape-room` (3 suites), 018's three suites and the a11y sweep on both pages stay green.
+
+**Decided, cheap to reverse:** the share link does not carry ids yet (adding `id` to either `getState` changes the link's bytes; P2 does it with `read()`/`write()`). `write()` to the other kind carries the whole canonical station in `x` so a trip through the other tool's shape loses nothing. Devon's recorded answers (2026-10-05, 10-07, 10-21) are written into the P1 bullet as settled.
+
+**Found:** adding `id` to a 019 station is safe because every payload builder lists fields; 018's `ensureRun()` already upgrades a bare numeric mark, so the smoke compares against that. **Not verified:** nothing printed or scanned; `lock.html` and `monitor.html` untouched and not re-run beyond `test:escape-room-station-qr`.
+
+Checks: `lint`, `check:tests`, `check:precache --base origin/main`, `check:registry` (`br_rollover_v1` STALE, pre-existing), `check:inline-sinks`, `check:entities`, `check:hidden-flex`, `check:dedupe`, `check:docs-commands`, `check:adoption --check`, `test:select-suites`, `test:shard-suites`.
+
 ## AI-22: Path 14 P5 increment 3, live mode on 005; 018 and 043 decided out (2026-10-28, v377)
 
 The design is in the P5 bullet in `BACKLOG.md`. **Live mode** is opt-in: a "Live mode" button beside Actual size mounts `Stage` (`_shared/stage.js`) on `#floorWrap` (`fullscreenKey: false`; `hud: #liveBtn`, because a button outside the stage is under the overlay and could not be pressed to leave, which `smoke-live` found the first time it ran). While live, a tap on a seat toggles *absent today* through `_shared/student-flags.js` (`crh_flags_v1`, by the id `Roster.idIndex()/idFor()` finds from the name, the section's name as the hint); a student on no saved roster is absent for the live session only and writes nothing; no tap touches the chart, desk controls hide and seats do not drag. 005 is now a second writer of `crh_flags_v1` (006 was the only one); the key is spelled out in the `setItem` so `check:registry` can read it. `smoke-live.mjs` (`npm run test:seating-live`, port 8567, 21 assertions), seen failing five ways with the write broken.
