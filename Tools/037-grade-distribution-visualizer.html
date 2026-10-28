@@ -258,6 +258,7 @@
 </div>
 
 <script src="../_shared/chart-svg.js"></script>
+<script src="../_shared/paste-table.js"></script>
 <script>
 (function () {
   'use strict';
@@ -331,7 +332,7 @@
     if (!t) return null;
 
     if (t.indexOf('\t') !== -1) {
-      var tabParts = t.split('\t').map(function (p) { return p.trim(); }).filter(function (p) { return p !== ''; });
+      var tabParts = PasteTable.splitLine(t, '\t', { quotes: false }).filter(function (p) { return p !== ''; });
       var vTab = tabParts.length ? tryNumber(tabParts[tabParts.length - 1]) : null;
       if (vTab !== null) return vTab;
     }
@@ -359,15 +360,15 @@
   function parseScores(raw) {
     var lines = String(raw || '').split(/\r?\n/);
     var scores = [];
-    var seen = 0, skipped = 0;
-    lines.forEach(function (line) {
+    var seen = 0, skipped = 0, unreadable = [];
+    lines.forEach(function (line, i) {
       if (!line.trim()) return;
       seen++;
       var v = extractScore(line);
       if (v !== null) scores.push(v);
-      else skipped++;
+      else { skipped++; unreadable.push({ line: i + 1, text: line.trim() }); }
     });
-    return { scores: scores, seen: seen, skipped: skipped };
+    return { scores: scores, seen: seen, skipped: skipped, unreadable: unreadable };
   }
 
   /* ---------- stats ---------- */
@@ -509,6 +510,14 @@
     };
   }
 
+  /* Which lines were skipped, so a teacher can fix the cell: the first three, each cut short. */
+  function describeUnreadable(list) {
+    var shown = list.slice(0, 3).map(function (u) {
+      return 'line ' + u.line + ' \u201c' + (u.text.length > 24 ? u.text.slice(0, 23) + '\u2026' : u.text) + '\u201d';
+    });
+    return shown.join(', ') + (list.length > 3 ? ' and ' + (list.length - 3) + ' more' : '');
+  }
+
   function renderOutput() {
     var parsed = parseScores(state.text);
     var scores = parsed.scores;
@@ -517,7 +526,7 @@
       els.parseNote.textContent = '';
       els.parseNote.className = 'parse-note';
     } else if (parsed.skipped > 0) {
-      els.parseNote.textContent = scores.length + ' score(s) read, ' + parsed.skipped + ' line(s) skipped (headers, blanks, or non-numeric).';
+      els.parseNote.textContent = scores.length + ' score(s) read, ' + parsed.skipped + ' line(s) skipped (headers, blanks, or non-numeric): ' + describeUnreadable(parsed.unreadable) + '.';
       els.parseNote.className = 'parse-note';
     } else {
       els.parseNote.textContent = scores.length + ' score(s) read.';
