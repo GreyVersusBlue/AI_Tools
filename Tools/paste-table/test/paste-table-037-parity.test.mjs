@@ -18,7 +18,8 @@ import { loadPasteTable } from './_load-paste-table.mjs';
 const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const html = fs.readFileSync(path.join(site, 'Tools', '037-grade-distribution-visualizer.html'), 'utf8');
 const a = html.indexOf('function tryNumber(raw)'), b = html.indexOf('/* ---------- stats', a);
-const c = html.indexOf('function describeUnreadable'), d = html.indexOf('function renderOutput', c);
+// ends at the next section comment: describeUnreadable is the last reader function before the item-analysis page code
+const c = html.indexOf('function describeUnreadable'), d = html.indexOf('/* ---------- per-question item analysis', c);
 if (a < 0 || b < 0 || c < 0 || d < 0) throw new Error('cannot find the reader in 037');
 
 function page(PasteTable) {

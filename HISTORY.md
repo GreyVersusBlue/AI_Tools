@@ -9,6 +9,10 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-24: `test:paste-table-037-parity` cut the wrong slice of 037 (2026-10-28, test fix, no version bump)
+
+The suite cut 037's reader out of the page by text, the second piece from `function describeUnreadable` to `function renderOutput`. P3 (v411 to v415) put the item-analysis page code between those two anchors, so the slice dragged in DOM code and the suite died with `ReferenceError: els is not defined`. It now ends at the `/* ---------- per-question item analysis` comment, right after `describeUnreadable`; every comparison and expectation is unchanged (5025 comparisons pass). Proved the other way: a changed line in 037's `tryNumber` makes it exit 1 with 1059 differences. The sweep of other suites that slice a page by `indexOf('function ...')` (`smoke-bulk-core`, the 006, 036, 038 and 075 parity suites, `stations.test`) found none broken; they all pass. **What not to repeat:** an end anchor of "the next function I know of" breaks the day someone adds code before it; anchor on a section comment, or move the reader into a module the test can import.
+
 ## AI-24: Path 16 P5, 038 for science: fits, log axes, more series, annotations (2026-10-28, v419-v423)
 
 **What shipped.** v419 first repaired two rows of AI-26's (not this path's): `escape-room-builder:monitor-record` (a student key
