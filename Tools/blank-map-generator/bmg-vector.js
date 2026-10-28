@@ -75,7 +75,7 @@ export const BASE_MAP_STYLES = Object.freeze([
   { key: 'land', label: 'Light land fill' },
 ]);
 
-const STYLE_PAINT = {
+export const STYLE_PAINT = {
   outline: { ocean: '#ffffff', land: '#ffffff', stroke: '#2f2e2b' },
   land: { ocean: '#e4eef5', land: '#f6f1e4', stroke: '#5c5a52' },
 };
@@ -206,7 +206,7 @@ export function hasRelief(preset) {
  * raster. Its zoom ceiling is its own 2048 px width; that is accepted, not
  * chased (BACKLOG.md, Path 21).
  */
-function loadReliefImage(preset) {
+export function loadReliefImage(preset) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
@@ -233,6 +233,10 @@ export async function listRegionNames(preset) {
  * bmg-hittest.js can project it for picking. Shares the in-memory cache, so
  * entering shade mode on a map that is already drawn costs no second read.
  */
+export async function loadWholeGeoJson(preset) {
+  return layerFor(preset, 'whole');
+}
+
 export async function loadDividedGeoJson(preset) {
   if (preset && preset.custom) return layerFor(preset, 'divided');
   const files = DATASETS[preset && preset.dataset];
