@@ -172,6 +172,9 @@
   .items-table .tier-reteach { font-weight: 700; }
   .items-table .tier-watch { font-style: italic; }
   .items-table .tier-secure { color: var(--muted); }
+  label.item-sub { font-weight: 500; margin-top: .2rem; }
+  .item-section { border-top: 1px solid var(--line); padding-top: .6rem; margin-top: .4rem; }
+  .items-gap { font-weight: 700; }
   .items-line { display: grid; grid-template-columns: 1fr 5.5rem; gap: .6rem; align-items: end; }
   /* The reteach list: a sheet of its own (Path 16 P3), drawn through the print kit. It is never on screen;
      body.printing-reteach (set for the length of one print or preview) swaps it in for the page. */
@@ -267,8 +270,12 @@
 
       <div class="card">
         <label for="itemInput">Per-question scores (optional)</label>
+        <label for="itemLabel" class="item-sub">Section name (for comparing class periods)</label>
+        <input type="text" id="itemLabel" placeholder="e.g. 3rd period">
         <p class="hint">One row per student, one column per question, pasted from a spreadsheet. A first column of names and a header row are found for you and no name is ever shown. A row starting &ldquo;Points possible&rdquo; gives each question&rsquo;s maximum; without it a question is out of the highest score in its column, so a 1/0 right-or-wrong export needs no marking. A blank cell means not attempted.</p>
         <textarea id="itemInput" placeholder="Name&#9;Q1&#9;Q2&#9;Q3&#10;Points possible&#9;4&#9;2&#9;1&#10;Alvarez&#9;4&#9;1&#9;1&#10;Baker&#9;2&#9;0&#9;1"></textarea>
+        <div id="itemExtra"></div>
+        <button type="button" class="secondary small" id="addSectionBtn" style="margin-bottom:.6rem">Add another section (class period)</button>
         <p class="parse-note" id="itemNote"></p>
         <div class="items-line">
           <div><label for="itemLine">Reteach questions below this percent correct</label></div>
@@ -344,7 +351,7 @@
   var els = {};
   ['toolbar', 'listSwitch', 'newListBtn', 'deleteListBtn', 'undoDeleteBtn', 'listName', 'scoreInput', 'parseNote',
    'cutoffPreset', 'cutA', 'cutB', 'cutC', 'cutD', 'bucketWidth', 'printBtn', 'printTitle', 'outputBody',
-   'compareChecks', 'compareWrap', 'itemInput', 'itemNote', 'itemLine', 'itemsAnnounce'
+   'compareChecks', 'compareWrap', 'itemInput', 'itemLabel', 'itemExtra', 'addSectionBtn', 'itemNote', 'itemLine', 'itemsAnnounce'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   // Presets a teacher can pick instead of typing four cutoffs from scratch.
@@ -357,7 +364,8 @@
   };
 
   var state = null; // { name, text, cutA, cutB, cutC, cutD, bucketWidth, compareNames }
-  var lastItems = null;     // the analysis behind the section on screen, for the reteach list
+  var lastItems = null;     // [{ label, res }]: the analysis behind the sections on screen, for the reteach list
+  var lastSectSvg = '';     // the section-comparison chart as drawn
   var lastItemsSvg = '';    // the missed-questions chart as drawn, for its downloads and its announcement
   var lastChartData = null; // snapshot of what's currently rendered, for the PNG/SVG downloads below
 
@@ -535,7 +543,7 @@
 
   els.outputBody.addEventListener('click', function (e) {
     var btn = e.target.closest('[data-dl]');
-    if (!btn || (!lastChartData && btn.dataset.dl.indexOf('items-') !== 0) || (btn.dataset.dl.indexOf('items-') === 0 && !lastItemsSvg)) return;
+    if (!btn || (!lastChartData && !/^(items|sect)-/.test(btn.dataset.dl)) || (btn.dataset.dl.indexOf('items-') === 0 && !lastItemsSvg) || (btn.dataset.dl.indexOf('sect-') === 0 && !lastSectSvg)) return;
     var base = ((lastChartData ? lastChartData.name : state && state.name) || 'assignment').trim().replace(/[\\/:*?"<>|]+/g, '-') || 'assignment';
     var row = btn.closest('.chart-dl-row');
     if (btn.dataset.dl === 'letter-svg') ChartSvg.downloadSvg(ChartSvg.stackedBar(lastChartData), base + '-letter-grades');
@@ -546,6 +554,9 @@
     else if (btn.dataset.dl === 'items-svg') ChartSvg.downloadSvg(lastItemsSvg, base + '-missed-questions');
     else if (btn.dataset.dl === 'items-png') ChartSvg.downloadPng(lastItemsSvg, base + '-missed-questions', 640, 360);
     else if (btn.dataset.dl === 'items-copy') ChartSvg.copyImage(lastItemsSvg, base + '-missed-questions', 640, 360, row);
+    else if (btn.dataset.dl === 'sect-svg') ChartSvg.downloadSvg(lastSectSvg, base + '-sections');
+    else if (btn.dataset.dl === 'sect-png') ChartSvg.downloadPng(lastSectSvg, base + '-sections', 640, 360);
+    else if (btn.dataset.dl === 'sect-copy') ChartSvg.copyImage(lastSectSvg, base + '-sections', 640, 360, row);
     else if (btn.dataset.dl === 'hist-copy') ChartSvg.copyImage(ChartSvg.histogram(lastChartData), base + '-histogram', 640, 330, row);
   });
 
@@ -570,6 +581,22 @@
   }
 
   /* ---------- per-question item analysis (Path 16 P3) ---------- */
+  var sectionSeq = 0;
+  function addSectionBox(label, text) {
+    var n = ++sectionSeq;
+    var box = document.createElement('div');
+    box.className = 'item-section';
+    var l1 = document.createElement('label'); l1.className = 'item-sub'; l1.htmlFor = 'itemLabel' + n; l1.textContent = 'Section name';
+    var i1 = document.createElement('input'); i1.type = 'text'; i1.id = 'itemLabel' + n; i1.className = 'item-label'; i1.placeholder = 'e.g. 6th period'; i1.value = label || '';
+    var l2 = document.createElement('label'); l2.className = 'item-sub'; l2.htmlFor = 'itemText' + n; l2.textContent = 'Per-question scores for this section';
+    var t = document.createElement('textarea'); t.id = 'itemText' + n; t.className = 'item-text'; t.value = text || '';
+    var rm = document.createElement('button'); rm.type = 'button'; rm.className = 'secondary small item-remove'; rm.textContent = 'Remove this section';
+    rm.style.marginBottom = '.6rem';
+    [l1, i1, l2, t, rm].forEach(function (el) { box.appendChild(el); });
+    els.itemExtra.appendChild(box);
+    return box;
+  }
+
   function itemLine() {
     var v = parseFloat(els.itemLine.value);
     return isNaN(v) ? GradeItems.DEFAULT_LINE : Math.min(100, Math.max(0, v));
@@ -583,51 +610,84 @@
     return shown.join('; ') + (list.length > 3 ? ' and ' + (list.length - 3) + ' more' : '');
   }
 
-  /* Returns the section's markup ('' when nothing is pasted) and writes the note under the box. */
+  var MAX_SECTIONS = 4;
+  var SECTION_HEX = ['#08306b', '#4292c6', '#9ecae1', '#2171b5'];
+  function sectionLabel(it, i) { return String(it.label || '').trim() || ('Section ' + (i + 1)); }
+
+  function sectionNote(res, label, many) {
+    var pre = many ? label + ': ' : '';
+    if (!res.order.length) return { text: pre + 'No question columns with scores were found. Put one question per column, with a number in each cell.', ok: false };
+    var t = pre + res.order.length + ' question(s), ' + res.students + ' student(s) read' + (res.maxGiven ? ', points possible taken from your row' : ', each question out of its highest score') + '.';
+    if (res.problems.length) t += ' ' + res.problems.length + ' cell(s) left out: ' + describeProblems(res.problems) + '.';
+    if (res.ragged.length) t += ' ' + res.ragged.length + ' line(s) had fewer cells than the widest, e.g. line ' + res.ragged[0].line + '.';
+    return { text: t, ok: !res.problems.length && !res.ragged.length };
+  }
+
+  function tierWord(t) { return t === 'reteach' ? 'Reteach' : t === 'watch' ? 'Watch' : 'Secure'; }
+
+  /* Returns the sections' markup ('' when nothing is pasted) and writes the note under the boxes. */
   function renderItems() {
-    var text = state.items && state.items[0] ? state.items[0].text : '';
-    var res = GradeItems.analyze(text, { line: itemLine() });
-    var note = '', noteOk = false;
-    if (!String(text).trim()) {
-      lastItemsSvg = ''; lastItems = null;
-    } else if (!res.order.length) {
-      note = 'No question columns with scores were found. Put one question per column, with a number in each cell.';
-      lastItemsSvg = ''; lastItems = null;
-    } else {
-      note = res.order.length + ' question(s), ' + res.students + ' student(s) read' + (res.maxGiven ? ', points possible taken from your row' : ', each question out of its highest score') + '.';
-      if (res.problems.length) note += ' ' + res.problems.length + ' cell(s) left out: ' + describeProblems(res.problems) + '.';
-      if (res.ragged.length) note += ' ' + res.ragged.length + ' line(s) had fewer cells than the widest, e.g. line ' + res.ragged[0].line + '.';
-      noteOk = !res.problems.length && !res.ragged.length;
+    var items = (state.items || []).map(function (it, i) { return { label: sectionLabel(it, i), text: it.text }; })
+      .filter(function (it) { return String(it.text).trim(); });
+    var many = items.length > 1;
+    var secs = items.map(function (it) { return { label: it.label, res: GradeItems.analyze(it.text, { line: itemLine() }) }; });
+    var notes = secs.map(function (sec) { return sectionNote(sec.res, sec.label, many); });
+    els.itemNote.textContent = notes.map(function (n) { return n.text; }).join(' ');
+    els.itemNote.className = 'parse-note' + (notes.length && notes.every(function (n) { return n.ok; }) ? ' ok' : '');
+    var valid = secs.filter(function (sec) { return sec.res.order.length; });
+    lastItems = valid.length ? valid : null;
+    lastItemsSvg = ''; lastSectSvg = '';
+    if (!valid.length) return '';
+
+    var out = '';
+    valid.forEach(function (sec, si) {
+      var res = sec.res;
+      var title = (state.name || 'Assignment') + (many ? ' (' + sec.label + ')' : '') + ': percent of students who missed each question';
+      var svg = ChartSvg.bar(GradeItems.chart(res), { W: 640, H: 360, title: title, yLabel: 'Percent missed', showValues: true, yMax: 100, idPrefix: 'gdi' + (si ? si : ''), pad: { top: 40, right: 24, bottom: 64, left: 56 } });
+      if (si === 0) lastItemsSvg = svg;
+      var rows = res.order.map(function (qi, rank) {
+        var q = res.questions[qi], t = GradeItems.tier(q.pct, res.line);
+        return '<tr><td>' + (rank + 1) + '</td><td>' + escapeHtml(q.label) + '</td><td>' + fmt(q.pct * 100, 1) + '%</td><td>' +
+          q.missed + ' of ' + q.n + '</td><td class="tier-' + t + '">' + tierWord(t) + '</td></tr>';
+      }).join('');
+      var counts = { reteach: 0, watch: 0, secure: 0 };
+      res.order.forEach(function (qi) { counts[GradeItems.tier(res.questions[qi].pct, res.line)]++; });
+      out += '<h3>Questions the class missed' + (many ? ' — ' + escapeHtml(sec.label) : '') + '</h3>' +
+        '<p class="chart-note">' + counts.reteach + ' of ' + res.order.length + ' question(s) are below ' + fmt(res.line, 0) + '% correct (reteach); ' +
+          counts.watch + ' within ' + GradeItems.WATCH_BAND + ' points above it (watch). Lowest percent correct first.</p>' +
+        '<div class="items-chart">' + svg + '</div>' +
+        (si === 0 ?
+          '<div class="chart-dl-row">' +
+            '<button type="button" class="secondary small" data-dl="items-copy">📋 Copy image</button>' +
+            '<button type="button" class="secondary small" data-dl="items-svg">Download SVG</button>' +
+            '<button type="button" class="secondary small" data-dl="items-png">Download PNG</button>' +
+            '<button type="button" class="secondary small" data-act="reteach-preview">Preview reteach list</button>' +
+            '<button type="button" class="secondary small" data-act="reteach-print">Print reteach list</button>' +
+          '</div>' : '') +
+        '<table class="items-table"><thead><tr><th>Rank</th><th>Question</th><th>Correct</th><th>Missed</th><th>Tier</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    });
+
+    if (many) {
+      var cmp = GradeItems.compare(valid);
+      var built = { categories: cmp.rows.map(function (r) { return r.label; }),
+        series: valid.map(function (sec, i) { return { label: sec.label, color: SECTION_HEX[i % SECTION_HEX.length], values: cmp.rows.map(function (r) { return r.pcts[i] == null ? 0 : r.pcts[i]; }) }; }) };
+      lastSectSvg = ChartSvg.bar(built, { W: 640, H: 360, title: (state.name || 'Assignment') + ': percent correct by section', yLabel: 'Percent correct', yMax: 100, grayscale: true, idPrefix: 'gds' });
+      var head = '<tr><th>Question</th>' + cmp.labels.map(function (l) { return '<th>' + escapeHtml(l) + '</th>'; }).join('') + '<th>Gap (points)</th></tr>';
+      var body = cmp.rows.map(function (r) {
+        return '<tr><td>' + escapeHtml(r.label) + '</td>' + r.pcts.map(function (v) { return '<td>' + (v == null ? '—' : fmt(v, 1) + '%') + '</td>'; }).join('') +
+          '<td' + (r.flagged ? ' class="items-gap"' : '') + '>' + (r.gap == null ? '—' : fmt(r.gap, 1) + (r.flagged ? ' (large gap)' : '')) + '</td></tr>';
+      }).join('');
+      out += '<h3>Section against section</h3>' +
+        '<p class="chart-note">' + cmp.flagged + ' question(s) differ by ' + GradeItems.GAP_FLAG + ' points or more between the best and worst section. A dash means that section has no scores for the question.</p>' +
+        '<div class="items-chart">' + lastSectSvg + '</div>' +
+        '<div class="chart-dl-row">' +
+          '<button type="button" class="secondary small" data-dl="sect-copy">📋 Copy image</button>' +
+          '<button type="button" class="secondary small" data-dl="sect-svg">Download SVG</button>' +
+          '<button type="button" class="secondary small" data-dl="sect-png">Download PNG</button>' +
+        '</div>' +
+        '<table class="items-table"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
     }
-    els.itemNote.textContent = note;
-    els.itemNote.className = 'parse-note' + (noteOk ? ' ok' : '');
-    if (!res.order.length) return '';
-
-    var title = (state.name || 'Assignment') + ': percent of students who missed each question';
-    var svg = ChartSvg.bar(GradeItems.chart(res), { W: 640, H: 360, title: title, yLabel: 'Percent missed', showValues: true, yMax: 100, idPrefix: 'gdi', pad: { top: 40, right: 24, bottom: 64, left: 56 } });
-    lastItemsSvg = svg;
-    lastItems = res;
-
-    var rows = res.order.map(function (qi, rank) {
-      var q = res.questions[qi], t = GradeItems.tier(q.pct, res.line);
-      return '<tr><td>' + (rank + 1) + '</td><td>' + escapeHtml(q.label) + '</td><td>' + fmt(q.pct * 100, 1) + '%</td><td>' +
-        q.missed + ' of ' + q.n + '</td><td class="tier-' + t + '">' + (t === 'reteach' ? 'Reteach' : t === 'watch' ? 'Watch' : 'Secure') + '</td></tr>';
-    }).join('');
-    var counts = { reteach: 0, watch: 0, secure: 0 };
-    res.order.forEach(function (qi) { counts[GradeItems.tier(res.questions[qi].pct, res.line)]++; });
-
-    return '<h3>Questions the class missed</h3>' +
-      '<p class="chart-note">' + counts.reteach + ' of ' + res.order.length + ' question(s) are below ' + fmt(res.line, 0) + '% correct (reteach); ' +
-        counts.watch + ' within ' + GradeItems.WATCH_BAND + ' points above it (watch). Lowest percent correct first.</p>' +
-      '<div class="items-chart">' + svg + '</div>' +
-      '<div class="chart-dl-row">' +
-        '<button type="button" class="secondary small" data-dl="items-copy">📋 Copy image</button>' +
-        '<button type="button" class="secondary small" data-dl="items-svg">Download SVG</button>' +
-        '<button type="button" class="secondary small" data-dl="items-png">Download PNG</button>' +
-        '<button type="button" class="secondary small" data-act="reteach-preview">Preview reteach list</button>' +
-        '<button type="button" class="secondary small" data-act="reteach-print">Print reteach list</button>' +
-      '</div>' +
-      '<table class="items-table"><thead><tr><th>Rank</th><th>Question</th><th>Correct</th><th>Missed</th><th>Tier</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    return out;
   }
 
   /* The reteach priority list, built into #reteachSheet with textContent only. */
@@ -638,28 +698,35 @@
     return el;
   }
   function buildReteachSheet() {
-    var res = lastItems, sheet = document.getElementById('reteachSheet');
+    var secs = lastItems, sheet = document.getElementById('reteachSheet');
     sheet.textContent = '';
-    if (!res) return false;
+    if (!secs) return false;
+    var many = secs.length > 1;
     sheet.appendChild(node('h1', '', 'Reteach priority list'));
-    sheet.appendChild(node('p', 'rt-sub', (state.name || 'Assignment') + ' \u2014 ' + res.students + ' student(s), ' + res.order.length +
-      ' question(s). Lowest percent correct first; reteach is below ' + fmt(res.line, 0) + '%, watch is within ' + GradeItems.WATCH_BAND + ' points above it.'));
-    var table = node('table', 'rt-table');
-    var head = node('tr');
-    ['Priority', 'Question', 'Correct', 'Missed', 'Tier', 'Reteach plan'].forEach(function (h) { head.appendChild(node('th', '', h)); });
-    table.appendChild(node('thead')).appendChild(head);
-    var body = node('tbody');
-    res.order.forEach(function (qi, rank) {
-      var q = res.questions[qi], t = GradeItems.tier(q.pct, res.line);
-      var tr = node('tr', 'rt-' + t);
-      [rank + 1, q.label, fmt(q.pct * 100, 1) + '%', q.missed + ' of ' + q.n, t === 'reteach' ? 'Reteach' : t === 'watch' ? 'Watch' : 'Secure'].forEach(function (v) { tr.appendChild(node('td', '', v)); });
-      tr.appendChild(node('td', 'rt-plan'));
-      body.appendChild(tr);
+    secs.forEach(function (sec, si) {
+      var res = sec.res;
+      var wrap = node('section', 'rt-section');
+      if (si) wrap.style.breakBefore = 'page';
+      wrap.appendChild(node('p', 'rt-sub', (state.name || 'Assignment') + (many ? ' — ' + sec.label : '') + ' — ' + res.students + ' student(s), ' + res.order.length +
+        ' question(s). Lowest percent correct first; reteach is below ' + fmt(res.line, 0) + '%, watch is within ' + GradeItems.WATCH_BAND + ' points above it.'));
+      var table = node('table', 'rt-table');
+      var head = node('tr');
+      ['Priority', 'Question', 'Correct', 'Missed', 'Tier', 'Reteach plan'].forEach(function (h) { head.appendChild(node('th', '', h)); });
+      table.appendChild(node('thead')).appendChild(head);
+      var body = node('tbody');
+      res.order.forEach(function (qi, rank) {
+        var q = res.questions[qi], t = GradeItems.tier(q.pct, res.line);
+        var tr = node('tr', 'rt-' + t);
+        [rank + 1, q.label, fmt(q.pct * 100, 1) + '%', q.missed + ' of ' + q.n, tierWord(t)].forEach(function (v) { tr.appendChild(node('td', '', v)); });
+        tr.appendChild(node('td', 'rt-plan'));
+        body.appendChild(tr);
+      });
+      table.appendChild(body);
+      wrap.appendChild(table);
+      wrap.appendChild(node('p', 'rt-foot', 'Percent correct is the question’s mean score over its points possible' + (res.maxGiven ? '' : ' (the highest score in its column, as no points row was pasted)') +
+        '. A blank cell is not attempted. ' + (res.problems.length ? res.problems.length + ' cell(s) could not be read and were left out.' : '')));
+      sheet.appendChild(wrap);
     });
-    table.appendChild(body);
-    sheet.appendChild(table);
-    sheet.appendChild(node('p', 'rt-foot', 'Percent correct is the question\u2019s mean score over its points possible' + (res.maxGiven ? '' : ' (the highest score in its column, as no points row was pasted)') +
-      '. A blank cell is not attempted. ' + (res.problems.length ? res.problems.length + ' cell(s) could not be read and were left out.' : '')));
     return true;
   }
 
@@ -693,7 +760,8 @@
   var lastAnnounced = '';
   function announceItems() {
     var d = lastItemsSvg ? /<desc[^>]*>([^<]*)<\/desc>/.exec(lastItemsSvg) : null;
-    var msg = d ? 'Missed-questions chart updated. ' + d[1] : '';
+    var d2 = lastSectSvg ? /<desc[^>]*>([^<]*)<\/desc>/.exec(lastSectSvg) : null;
+    var msg = d ? 'Missed-questions chart updated. ' + d[1] + (d2 ? ' Section comparison updated. ' + d2[1] : '') : '';
     if (msg === lastAnnounced) return;
     lastAnnounced = msg;
     els.itemsAnnounce.textContent = msg;
@@ -973,7 +1041,10 @@
 
   function readFormIntoState() {
     state.text = els.scoreInput.value;
-    state.items = [{ label: '', text: els.itemInput.value }];
+    state.items = [{ label: els.itemLabel.value, text: els.itemInput.value }];
+    Array.prototype.forEach.call(els.itemExtra.querySelectorAll('.item-section'), function (sec) {
+      state.items.push({ label: sec.querySelector('.item-label').value, text: sec.querySelector('.item-text').value });
+    });
     state.itemLine = itemLine();
     var c = readCutoffs();
     state.cutA = c.A; state.cutB = c.B; state.cutC = c.C; state.cutD = c.D;
@@ -1011,6 +1082,10 @@
     els.listName.value = state.name;
     els.scoreInput.value = state.text;
     els.itemInput.value = state.items && state.items[0] ? state.items[0].text : '';
+    els.itemLabel.value = state.items && state.items[0] && state.items[0].label ? state.items[0].label : '';
+    els.itemExtra.textContent = '';
+    (state.items || []).slice(1).forEach(function (it) { addSectionBox(it.label, it.text); });
+    els.addSectionBtn.hidden = (state.items || []).length >= MAX_SECTIONS;
     els.itemLine.value = state.itemLine != null ? state.itemLine : GradeItems.DEFAULT_LINE;
     els.cutA.value = state.cutA;
     els.cutB.value = state.cutB;
@@ -1060,6 +1135,22 @@
 
   els.scoreInput.addEventListener('input', refresh);
   els.itemInput.addEventListener('input', refresh);
+  els.itemLabel.addEventListener('input', refresh);
+  els.itemExtra.addEventListener('input', refresh);
+  els.itemExtra.addEventListener('click', function (e) {
+    var b = e.target.closest('.item-remove');
+    if (!b) return;
+    b.closest('.item-section').remove();
+    els.addSectionBtn.hidden = false;
+    els.addSectionBtn.focus();
+    refresh();
+  });
+  els.addSectionBtn.addEventListener('click', function () {
+    var box = addSectionBox('', '');
+    if (els.itemExtra.children.length + 1 >= MAX_SECTIONS) els.addSectionBtn.hidden = true;
+    box.querySelector('.item-label').focus();
+    refresh();
+  });
   els.itemLine.addEventListener('input', refresh);
   ['cutA', 'cutB', 'cutC', 'cutD'].forEach(function (id) {
     els[id].addEventListener('input', function () {

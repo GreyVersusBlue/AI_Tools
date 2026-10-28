@@ -15,6 +15,11 @@
         ragged:    [{ line, cells }] lines shorter than the widest,
         line:      the reteach line in percent used for the tiers }
      GradeItems.tier(pct, line)             'reteach' below the line, 'watch' within WATCH_BAND above it, else 'secure'
+     GradeItems.compare(sections)           [{ label, res }] -> { labels, rows: [{ label, pcts, gap }], flagged }:
+                                            the same question (matched by its label) in each section, percent
+                                            correct per section (null where a section lacks it or nobody
+                                            attempted it), and the gap in points between the best and worst
+                                            section; a gap of GAP_FLAG points or more is `flagged`
      GradeItems.chart(res)                  { categories, series } for ChartSvg.bar: percent MISSED in question order
 
    Percent correct is the question's mean over its points possible. Without a "points possible"
@@ -130,5 +135,25 @@
     };
   }
 
-  root.GradeItems = { analyze: analyze, tier: tier, chart: chart, DEFAULT_LINE: DEFAULT_LINE, WATCH_BAND: WATCH_BAND };
+  var GAP_FLAG = 15;
+
+  function compare(sections) {
+    var order = [], seen = {};
+    sections.forEach(function (sec) {
+      sec.res.questions.forEach(function (q) { if (!seen[q.label]) { seen[q.label] = true; order.push(q.label); } });
+    });
+    var rows = order.map(function (label) {
+      var pcts = sections.map(function (sec) {
+        var q = null;
+        sec.res.questions.forEach(function (x) { if (!q && x.label === label && x.n > 0) q = x; });
+        return q ? Math.round(q.pct * 1000) / 10 : null;
+      });
+      var have = pcts.filter(function (v) { return v !== null; });
+      var gap = have.length > 1 ? Math.round((Math.max.apply(null, have) - Math.min.apply(null, have)) * 10) / 10 : null;
+      return { label: label, pcts: pcts, gap: gap, flagged: gap !== null && gap >= GAP_FLAG };
+    });
+    return { labels: sections.map(function (s) { return s.label; }), rows: rows, flagged: rows.filter(function (r) { return r.flagged; }).length };
+  }
+
+  root.GradeItems = { analyze: analyze, tier: tier, chart: chart, compare: compare, DEFAULT_LINE: DEFAULT_LINE, WATCH_BAND: WATCH_BAND, GAP_FLAG: GAP_FLAG };
 })(typeof window !== 'undefined' ? window : globalThis);

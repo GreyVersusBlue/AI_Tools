@@ -93,6 +93,21 @@ function check(G) {
 
   // 12. no student name reaches the result
   ok(!JSON.stringify(G.analyze('Name,Q1\nZelda Quimby,1\nBo,0')).includes('Zelda'), 'no name in the result');
+
+  // 13. section against section: matched by question label, gap in points, flag at 15
+  const A = G.analyze('Name,Q1,Q2,Q3\nAda,1,1,1\nBo,1,1,0\nCy,1,0,1\nDi,1,1,1');
+  const B = G.analyze('Name,Q1,Q2,Q4\nEd,1,0,1\nFi,0,0,1\nGu,1,0,0\nHa,1,1,1');
+  const cmp = G.compare([{ label: '3rd', res: A }, { label: '6th', res: B }]);
+  ok(cmp.labels.join() === '3rd,6th', 'section labels kept in order');
+  ok(cmp.rows.map(r => r.label).join() === 'Q1,Q2,Q3,Q4', 'questions in order of first appearance, union of both');
+  ok(cmp.rows[0].pcts.join() === '100,75' && cmp.rows[0].gap === 25 && cmp.rows[0].flagged, 'Q1: 100 vs 75 is a 25-point gap, flagged');
+  ok(cmp.rows[1].pcts.join() === '75,25' && cmp.rows[1].gap === 50, 'Q2: 75 vs 25');
+  ok(cmp.rows[2].pcts.join() === '75,' && cmp.rows[2].pcts[1] === null && cmp.rows[2].gap === null && !cmp.rows[2].flagged, 'Q3 only in one section: no gap');
+  ok(cmp.rows[3].pcts[0] === null && cmp.rows[3].pcts[1] === 75, 'Q4 only in the second');
+  const C = G.analyze('Name,Q1\nAda,0.86\nBo,1');
+  const D = G.analyze('Name,Q1\nAda,0.7\nBo,1');
+  ok(G.compare([{ label: 'a', res: C }, { label: 'b', res: D }]).rows[0].gap === 8 && !G.compare([{ label: 'a', res: C }, { label: 'b', res: D }]).flagged, 'an 8-point gap is not flagged');
+  ok(G.compare([{ label: 'a', res: A }, { label: 'b', res: A }]).rows.every(r => r.gap === 0), 'the same section twice: no gap');
   return bad;
 }
 
@@ -107,6 +122,9 @@ const MUTANTS = [
   ['points row is a student', s => s.replace('MAX_ROW.test(r.cells[0]) &&', 'false &&')],
   ['chart shows percent correct', s => s.replace('(1 - q.pct) * 1000', 'q.pct * 1000')],
   ['name column not detected', s => s.replace('var first = hasNames ? 1 : 0;', 'var first = 0;')],
+  ['gap not flagged', s => s.replace('gap >= GAP_FLAG', 'gap > 100')],
+  ['gap in the wrong unit', s => s.replace('Math.round((Math.max.apply(null, have) - Math.min.apply(null, have)) * 10) / 10', '0')],
+  ['questions matched by position', s => s.replace('x.label === label &&', 'true &&')],
   ['negative accepted', s => s.replace('v === null || v < 0', 'v === null')]
 ];
 
