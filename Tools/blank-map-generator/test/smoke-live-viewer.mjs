@@ -117,14 +117,18 @@ await page.click('#btnChoroClear');
 await page.waitForFunction(() => !document.getElementById('baseCanvas').hidden, null, { timeout: 30000 });
 eq((await state()).canvasHidden, false, 'clearing the shading brings the live canvas back');
 
-/* exports still read the raster: the PNG's map pixels equal the raster's at this view */
-const same = await page.evaluate(async () => {
-  const img = document.getElementById('mapImg');
-  const c = document.createElement('canvas'); c.width = 300; c.height = 200;
-  const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, 300, 200);
-  return ctx.getImageData(150, 100, 1, 1).data.length === 4;
-});
-ok(same, 'the raster <img> is still drawable (exports use it)');
+/* exports still read the raster: Download PNG's bytes do not depend on the canvas being there */
+const png = async () => {
+  const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 30000 }), page.click('#btnDownloadPng')]);
+  const fs = await import('node:fs');
+  const f = await dl.path();
+  const buf = fs.readFileSync(f);
+  return buf.toString('base64');
+};
+const liveOn = await png();
+await page.evaluate(() => { document.getElementById('baseCanvas').hidden = true; document.getElementById('mapImg').style.visibility = ''; });
+const liveOff = await png();
+ok(liveOn.length > 1000 && liveOn === liveOff, 'Download PNG is byte-identical with the live canvas shown or not (' + liveOn.length + ' base64 chars)');
 
 const a11y = await a11yScan(page, { impact: 'serious' });
 ok(!a11y || a11y.length === 0, 'axe: no serious or critical violations with the canvas showing' + (a11y && a11y.length ? ' ' + JSON.stringify(a11y.map(v => v.id)) : ''));

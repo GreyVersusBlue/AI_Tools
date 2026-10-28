@@ -252,6 +252,7 @@
     "Tools/blank-map-generator/test/live-base.test.mjs": 3,
     "Tools/blank-map-generator/test/smoke-live-parity.mjs": 15,
     "Tools/blank-map-generator/test/smoke-live-viewer.mjs": 25,
+    "Tools/blank-map-generator/test/smoke-live-keys.mjs": 25,
     "Tools/geography-bee-quiz-generator/test/geo-bee-parity.test.mjs": 1,
     "Tools/grade-distribution-visualizer/test/chart-svg.test.mjs": 1,
     "Tools/grade-distribution-visualizer/test/chart-svg-parity.test.mjs": 1,

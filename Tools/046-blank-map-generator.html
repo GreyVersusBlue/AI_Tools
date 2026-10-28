@@ -154,6 +154,8 @@
   }
   #viewport.dragging { cursor: grabbing; }
   #viewport.adding { cursor: crosshair; }
+  #viewport:focus-visible { outline: 3px solid var(--accent, #1f3550); outline-offset: 2px; }
+  #viewerStatus { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   #baseCanvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   #stage { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
   #stage img { display: block; max-width: none; user-select: none; -webkit-user-drag: none; }
@@ -793,8 +795,9 @@
       </div>
     </div>
     <div id="tiledPrintPages" aria-hidden="true"></div>
-    <div id="viewport" class="paper-sheet">
+    <div id="viewport" class="paper-sheet" tabindex="0" role="group" aria-roledescription="map" aria-label="Map. Arrow keys pan, plus and minus zoom, 0 fits the map.">
       <canvas id="baseCanvas" aria-hidden="true" hidden></canvas>
+      <div id="viewerStatus" role="status" aria-live="polite"></div>
       <div id="stage">
         <img id="mapImg" alt="" hidden>
         <div id="gridLayer"></div>
@@ -860,7 +863,7 @@ import { createStore } from './blank-map-generator/bmg-store.js';
 import { searchMaps, searchByRegion, fetchMapImage } from './blank-map-generator/bmg-commons.js';
 import { CONTINENTS } from './blank-map-generator/bmg-geography.js';
 import { createViewer } from './blank-map-generator/bmg-viewer.js';
-import { loadSource as loadLiveSource, drawBaseMap, parseBaseMapId } from './blank-map-generator/bmg-live.js';
+import { loadSource as loadLiveSource, drawBaseMap, drawExtent, parseBaseMapId } from './blank-map-generator/bmg-live.js';
 import { createLabelLayer, labelColorHex, labelFontSizePx, labelSwatchSvg, LABEL_COLORS } from './blank-map-generator/bmg-labels.js';
 import {
   createMarkerLayer, markerIconSvg, markerAnchor, markerSizePx, markerColorHex, numberedOrder,
@@ -952,7 +955,9 @@ const liveBase = (() => {
     mapImg.style.visibility = 'hidden';
   }
   new ResizeObserver(schedule).observe(viewport);
-  return { show, hide, schedule, draw, get active() { return !!source; }, toCanvas() { return canvas; } };
+  /** The lat/long window on screen, or null when the picture is not drawn from the vectors. */
+  function extent() { return source ? drawExtent(source, viewer.getView(), viewport.clientWidth, viewport.clientHeight) : null; }
+  return { show, hide, schedule, draw, extent, get active() { return !!source; }, toCanvas() { return canvas; } };
 })();
 
 const viewer = createViewer(viewport, stage, {
@@ -2333,6 +2338,37 @@ viewport.addEventListener('dblclick', e => {
   active.layer.popLastDraftPoint();
   finishShape();
 });
+
+// Keyboard pan and zoom with the map itself focused (Path 20 P3). A selected label or marker keeps the
+// arrows for nudging (the document handler below), so those are left alone here. The view is announced
+// 500 ms after the last change; a map with no extent to report says the zoom only.
+const fmtDeg = (v, pos, neg) => Math.abs(Math.round(v)) + '\u00b0' + (v >= 0 ? pos : neg);
+let statusTimer = 0;
+function announceView() {
+  clearTimeout(statusTimer);
+  statusTimer = setTimeout(() => {
+    const v = viewer.getView(), ex = liveBase.extent();
+    el('viewerStatus').textContent = 'Zoom ' + Math.round(v.scale * 100) + '%' + (ex
+      ? ', showing ' + fmtDeg(ex.west, 'E', 'W') + ' to ' + fmtDeg(ex.east, 'E', 'W') + ' and ' + fmtDeg(ex.south, 'N', 'S') + ' to ' + fmtDeg(ex.north, 'N', 'S')
+      : '');
+  }, 500);
+}
+viewport.addEventListener('keydown', e => {
+  if (e.target !== viewport || e.ctrlKey || e.metaKey || e.altKey || !currentSize.width) return;
+  const view = viewer.getView(), rect = viewport.getBoundingClientRect();
+  const arrow = { ArrowLeft: [1, 0], ArrowRight: [-1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[e.key];
+  if (arrow) {
+    if (labelLayer.getSelectedId() || markerLayer.getSelectedId()) return;
+    const f = e.shiftKey ? 0.5 : 0.1;
+    viewer.setView({ x: view.x + arrow[0] * rect.width * f, y: view.y + arrow[1] * rect.height * f, scale: view.scale });
+  } else if (e.key === '+' || e.key === '=') viewer.zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1.25);
+  else if (e.key === '-' || e.key === '_') viewer.zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1 / 1.25);
+  else if (e.key === '0' || e.key === 'Home') viewer.fit(currentSize.width, currentSize.height);
+  else return;
+  e.preventDefault();
+  announceView();
+});
+viewport.addEventListener('wheel', announceView, { passive: true });
 
 const NUDGE_KEYS = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
 
