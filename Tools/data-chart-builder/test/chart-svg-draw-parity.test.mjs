@@ -102,7 +102,7 @@ const MUTANTS = {
   'pie large-arc flag': s => s.replace('var largeArc = frac > 0.5 ? 1 : 0;', 'var largeArc = frac > 0.4 ? 1 : 0;'),
   'pie negative slices counted': s => s.replace('var val = Math.max(s.values[i], 0);\n      var frac', 'var val = s.values[i];\n      var frac'),
   'scatter origin ignores negative x': s => s.replace('var xOrigin = Math.min(minX, 0);', 'var xOrigin = 0;'),
-  'trend line drawn without the switch': s => s.replace('var trend = c.trend ? linearRegression(sc.points) : null;', 'var trend = linearRegression(sc.points);'),
+  'trend line drawn without the switch': s => s.replace('var trend = c.trend ? linearRegression(pts) : null;', 'var trend = linearRegression(pts);'),
   'box median thinner': s => s.replace('stroke-width="2.5"/>\');\n      if (c.showValues) {', 'stroke-width="2"/>\');\n      if (c.showValues) {'),
   'category labels not escaped': s => s.replace("escapeXml(label) + '</text>');\n        }\n      });", "label + '</text>');\n        }\n      });"),
   'niceMax rounds down': s => s.replace('var step = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;', 'var step = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 4 ? 5 : 10;'),

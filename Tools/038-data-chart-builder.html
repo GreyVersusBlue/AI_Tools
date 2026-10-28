@@ -234,6 +234,15 @@
           <input type="checkbox" id="show-trendline">
           <label class="option-label" for="show-trendline">Show trendline (best fit)</label>
         </div>
+        <div class="option-row">
+          <input type="checkbox" id="x-log">
+          <label class="option-label" for="x-log">Logarithmic X axis (powers of ten)</label>
+        </div>
+        <div class="option-row">
+          <input type="checkbox" id="y-log">
+          <label class="option-label" for="y-log">Logarithmic Y axis (powers of ten)</label>
+        </div>
+        <p class="hint" id="log-note" role="status"></p>
         <div class="control-group" id="trend-model-group" style="display:none;">
           <label for="trend-model">Fit</label>
           <select id="trend-model">
@@ -345,7 +354,7 @@
 
   var els = {};
   ['data-input', 'has-headers', 'preview-table-wrap', 'preview-table', 'columns-card', 'category-col',
-   'value-cols-list', 'value-cols-note', 'scatter-cols-group', 'scatter-x-col', 'scatter-y-col', 'show-trendline', 'trend-model-group', 'trend-model', 'fit-note', 'options-card', 'chart-title',
+   'value-cols-list', 'value-cols-note', 'scatter-cols-group', 'scatter-x-col', 'scatter-y-col', 'show-trendline', 'trend-model-group', 'trend-model', 'fit-note', 'x-log', 'y-log', 'log-note', 'options-card', 'chart-title',
    'y-axis-label-group', 'y-axis-label', 'show-values', 'sort-row', 'sort-values', 'chart-stage', 'stats-grid', 'filename', 'btn-png', 'btn-svg', 'msg',
    'btn-choose-file', 'file-input', 'dataset-name', 'btn-save-dataset', 'saved-datasets-select',
    'btn-load-dataset', 'btn-delete-dataset', 'btn-undo-delete-dataset', 'grayscale-mode', 'show-error-bars', 'error-bars-config',
@@ -736,6 +745,8 @@
   els.scatterYCol.addEventListener('change', scheduleRender);
   els.showTrendline.addEventListener('change', scheduleRender);
   els.trendModel.addEventListener('change', scheduleRender);
+  els.xLog.addEventListener('change', scheduleRender);
+  els.yLog.addEventListener('change', scheduleRender);
   els.chartTitle.addEventListener('input', scheduleRender);
   els.yAxisLabel.addEventListener('input', scheduleRender);
   els.showValues.addEventListener('change', function () { saveSettings(); scheduleRender(); });
@@ -784,6 +795,7 @@
   function render() {
     if (!table) return;
     var type = getChartType();
+    els.fitNote.textContent = ''; els.logNote.textContent = '';
     try {
       var svg, statsSourceValues, statsLabel;
       if (type === 'bar' || type === 'line') {
@@ -809,7 +821,13 @@
         if (!sc) { renderEmpty('Need at least one numeric column for each axis.'); disableDownloads(); return; }
         var model = els.trendModel.value, fitObj = null;
         if (els.showTrendline.checked) fitObj = ChartFit.fit(model, sc.points);
-        svg = ChartSvg.scatter(sc, chartOpts(fitObj && model !== 'linear' ? { fit: fitObj } : {}));
+        var xLog = els.xLog.checked, yLog = els.yLog.checked;
+        var scOpts = fitObj && model !== 'linear' ? { fit: fitObj } : {};
+        if (xLog) scOpts.xScale = 'log';
+        if (yLog) scOpts.yScale = 'log';
+        svg = ChartSvg.scatter(sc, chartOpts(scOpts));
+        var offLog = (xLog || yLog) ? sc.points.filter(function (p) { return (xLog && !(p.x > 0)) || (yLog && !(p.y > 0)); }).length : 0;
+        els.logNote.textContent = offLog ? offLog + ' point' + (offLog === 1 ? ' has' : 's have') + ' a zero or negative value and ' + (offLog === 1 ? 'is' : 'are') + ' not plotted on a logarithmic axis.' : '';
         els.trendModelGroup.style.display = els.showTrendline.checked ? 'block' : 'none';
         els.fitNote.textContent = !els.showTrendline.checked ? '' : fitObj ? fitObj.label + '. ' + fitObj.note : 'Not enough usable points for a ' + model + ' fit.';
         statsSourceValues = sc.points.map(function (p) { return p.y; });
@@ -1037,6 +1055,8 @@
         scatterY: parseInt(els.scatterYCol.value, 10) || 0,
         trendline: els.showTrendline.checked,
         trendModel: els.trendModel.value === 'linear' ? undefined : els.trendModel.value,
+        xLog: els.xLog.checked || undefined,
+        yLog: els.yLog.checked || undefined,
         errorBars: els.showErrorBars.checked,
         errorCols: errorCols,
         title: els.chartTitle.value,
@@ -1075,6 +1095,8 @@
         els.sortValues.checked = !!c.sortValues;
         els.grayscaleMode.checked = !!c.grayscale;
         els.showTrendline.checked = !!c.trendline;
+        els.xLog.checked = c.xLog === true;
+        els.yLog.checked = c.yLog === true;
         els.trendModel.value = ChartFit.MODELS.some(function (m) { return m.id === c.trendModel; }) ? c.trendModel : 'linear';
         els.showErrorBars.checked = !!c.errorBars;
         els.chartTitle.value = String(c.title == null ? '' : c.title).slice(0, 80);

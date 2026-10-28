@@ -120,6 +120,7 @@
     "test:chart-builder-a11y": "node Tools/data-chart-builder/test/smoke-chart-a11y.mjs",
     "test:chart-svg-draw-parity": "node Tools/data-chart-builder/test/chart-svg-draw-parity.test.mjs",
     "test:chart-builder-science": "node Tools/data-chart-builder/test/smoke-science.mjs",
+    "test:chart-scatter-log": "node Tools/data-chart-builder/test/chart-scatter-log.test.mjs",
     "test:chart-fit": "node Tools/data-chart-builder/test/dcb-fit.test.mjs",
     "test:chart-svg-a11y": "node Tools/data-chart-builder/test/chart-svg-a11y.test.mjs",
     "test:final-grade-scenario-core": "node Tools/final-grade-checker/scenario-math.test.mjs",

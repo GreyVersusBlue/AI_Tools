@@ -164,7 +164,8 @@
      Every chart takes the data the page already builds and an options object `o`:
        { W, H, pad, title, yLabel, showValues, palette (hex list, pie), pointColor,
          trendColor, trend (scatter: draw the fit), fit (scatter: a curve to draw instead of the straight
-         line, { predict(x), label, desc } from dcb-fit.js; nothing changes without it), grayscale (hatch per series),
+         line, { predict(x), label, desc } from dcb-fit.js; nothing changes without it), xScale / yScale ('log': base-10 axis on
+         the scatter; points at or below 0 are left out and counted in the <desc>), grayscale (hatch per series),
          idPrefix (ids for the <title>, <desc> and patterns: unique per SVG on a page) }
      and returns a standalone SVG string. Each SVG is role="img" with a <title> and a
      <desc> that says what the picture says (type, categories, values), so a screen
@@ -213,7 +214,8 @@
       yMax: o.yMax > 0 ? o.yMax : 0,
       idPrefix: o.idPrefix || 'cs',
       kind: o.kind || '',
-      fit: o.fit || null
+      fit: o.fit || null,
+      xScale: o.xScale === 'log' ? 'log' : 'linear', yScale: o.yScale === 'log' ? 'log' : 'linear'
     };
   }
 
@@ -441,28 +443,102 @@
     return parts.join('');
   }
 
+  /* ---------- Step 2: logarithmic axes (the scatter's xScale / yScale: 'log', base 10) ---------- */
+
+  function logLabel(v) {
+    if (v >= 1000) return formatNum(v);
+    if (v >= 0.01) return String(v);
+    return '1e' + Math.round(Math.log10(v));
+  }
+
+  /* [lowest, highest] power of ten that holds the values; one decade wide at least */
+  function logDomain(vals) {
+    vals = vals.filter(function (v) { return v > 0 && isFinite(v); });
+    if (!vals.length) return [0, 1];
+    var lo = Math.floor(Math.log10(Math.min.apply(null, vals))), hi = Math.ceil(Math.log10(Math.max.apply(null, vals)));
+    return [lo, hi === lo ? lo + 1 : hi];
+  }
+
+  /* gridlines at every decade (labelled) and at 2 and 5 of each (faint, unlabelled) */
+  function logTicks(d) {
+    var out = [];
+    for (var e = d[0]; e <= d[1]; e++) {
+      out.push({ e: e, v: Math.pow(10, e), major: true });
+      if (e < d[1]) { out.push({ e: e + Math.log10(2), v: 2 * Math.pow(10, e), major: false }); out.push({ e: e + Math.log10(5), v: 5 * Math.pow(10, e), major: false }); }
+    }
+    return out;
+  }
+
+  function logYAxis(c, d) {
+    var PAD = c.pad, plotH = c.H - PAD.top - PAD.bottom, parts = [];
+    logTicks(d).forEach(function (t) {
+      var y = PAD.top + plotH - ((t.e - d[0]) / (d[1] - d[0])) * plotH;
+      parts.push('<line x1="' + PAD.left + '" y1="' + y.toFixed(1) + '" x2="' + (c.W - PAD.right) + '" y2="' + y.toFixed(1) + '" stroke="' + (t.major ? '#e1e5ea' : '#f0f2f5') + '" stroke-width="1"/>');
+      if (t.major) parts.push('<text x="' + (PAD.left - 8) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end" font-size="10" fill="#5b6b78">' + logLabel(t.v) + '</text>');
+    });
+    parts.push('<line x1="' + PAD.left + '" y1="' + PAD.top + '" x2="' + PAD.left + '" y2="' + (PAD.top + plotH) + '" stroke="#c7cfd6" stroke-width="1.5"/>');
+    parts.push('<line x1="' + PAD.left + '" y1="' + (PAD.top + plotH) + '" x2="' + (c.W - PAD.right) + '" y2="' + (PAD.top + plotH) + '" stroke="#c7cfd6" stroke-width="1.5"/>');
+    return parts.join('');
+  }
+
+  function logXAxis(c, d) {
+    var PAD = c.pad, plotW = c.W - PAD.left - PAD.right, plotH = c.H - PAD.top - PAD.bottom, parts = [];
+    logTicks(d).forEach(function (t) {
+      var x = PAD.left + ((t.e - d[0]) / (d[1] - d[0])) * plotW;
+      parts.push('<line x1="' + x.toFixed(1) + '" y1="' + PAD.top + '" x2="' + x.toFixed(1) + '" y2="' + (PAD.top + plotH) + '" stroke="' + (t.major ? '#e1e5ea' : '#f0f2f5') + '" stroke-width="1"/>');
+      if (t.major) parts.push('<text x="' + x.toFixed(1) + '" y="' + (PAD.top + plotH + 16) + '" text-anchor="middle" font-size="10" fill="#5b6b78">' + logLabel(t.v) + '</text>');
+    });
+    return parts.join('');
+  }
+
   function scatter(sc, o) {
     var c = chartOpts(o), W = c.W, H = c.H, PAD = c.pad;
     var plotW = W - PAD.left - PAD.right, plotH = H - PAD.top - PAD.bottom;
-    var xs = sc.points.map(function (p) { return p.x; }), ys = sc.points.map(function (p) { return p.y; });
+    var xLog = c.xScale === 'log', yLog = c.yScale === 'log';
+    var pts = sc.points, dropped = 0;
+    if (xLog || yLog) {
+      pts = sc.points.filter(function (p) { return (!xLog || p.x > 0) && (!yLog || p.y > 0); });
+      dropped = sc.points.length - pts.length;
+    }
+    var xs = pts.map(function (p) { return p.x; }), ys = pts.map(function (p) { return p.y; });
     var maxX = niceMax(Math.max.apply(null, xs.concat([0])) * 1.1);
     var maxY = niceMax(Math.max.apply(null, ys.concat([0])) * 1.15);
     var minX = Math.min.apply(null, xs.concat([0]));
     var xRange = maxX - Math.min(minX, 0) || 1;
     var xOrigin = Math.min(minX, 0);
+    var xd = xLog ? logDomain(xs) : null, yd = yLog ? logDomain(ys) : null;
+    var xLo = xLog ? Math.pow(10, xd[0]) : xOrigin, xHi = xLog ? Math.pow(10, xd[1]) : maxX;
+    var yLo = yLog ? Math.pow(10, yd[0]) : 0, yHi = yLog ? Math.pow(10, yd[1]) : maxY;
 
-    function toX(v) { return PAD.left + ((v - xOrigin) / xRange) * plotW; }
-    function toY(v) { return PAD.top + plotH - (v / maxY) * plotH; }
+    function toX(v) {
+      if (xLog) return PAD.left + ((Math.log10(v) - xd[0]) / (xd[1] - xd[0])) * plotW;
+      return PAD.left + ((v - xOrigin) / xRange) * plotW;
+    }
+    function toY(v) {
+      if (yLog) return PAD.top + plotH - ((Math.log10(v) - yd[0]) / (yd[1] - yd[0])) * plotH;
+      return PAD.top + plotH - (v / maxY) * plotH;
+    }
 
-    var trend = c.trend ? linearRegression(sc.points) : null;
-    var desc = 'Scatter plot of ' + sc.yLabel + ' against ' + sc.xLabel + ', ' + sc.points.length + ' point' + (sc.points.length === 1 ? '' : 's') + '.';
-    if (sc.points.length) desc += ' ' + sc.xLabel + ' runs from ' + formatNum(Math.min.apply(null, xs)) + ' to ' + formatNum(Math.max.apply(null, xs)) + '; ' + sc.yLabel + ' from ' + formatNum(Math.min.apply(null, ys)) + ' to ' + formatNum(Math.max.apply(null, ys)) + '.';
+    var trend = c.trend ? linearRegression(pts) : null;
+    var desc = 'Scatter plot of ' + sc.yLabel + ' against ' + sc.xLabel + ', ' + pts.length + ' point' + (pts.length === 1 ? '' : 's') + '.';
+    if (pts.length) desc += ' ' + sc.xLabel + ' runs from ' + formatNum(Math.min.apply(null, xs)) + ' to ' + formatNum(Math.max.apply(null, xs)) + '; ' + sc.yLabel + ' from ' + formatNum(Math.min.apply(null, ys)) + ' to ' + formatNum(Math.max.apply(null, ys)) + '.';
+    if (xLog || yLog) {
+      desc += ' ' + (xLog && yLog ? 'Both axes are logarithmic' : xLog ? 'The horizontal axis is logarithmic' : 'The vertical axis is logarithmic') + ', in powers of ten.';
+      if (dropped) desc += ' ' + dropped + ' point' + (dropped === 1 ? ' with a zero or negative value is' : 's with a zero or negative value are') + ' not plotted.';
+    }
     var fit = c.trend && c.fit && typeof c.fit.predict === 'function' ? c.fit : null;
     if (fit) trend = null;
+    if (!fit && trend && (xLog || yLog)) {
+      /* a straight line is not straight on a log axis: draw it as the curve it is */
+      var tr = trend, teq = 'y = ' + round2(tr.slope) + 'x ' + (tr.intercept >= 0 ? '+ ' : '- ') + round2(Math.abs(tr.intercept));
+      fit = { predict: function (x) { return tr.slope * x + tr.intercept; }, label: teq + '  (R² = ' + round2(tr.r2) + ')', desc: 'Trend line ' + teq + ', R squared ' + round2(tr.r2) + '.' };
+      trend = null;
+    }
     if (fit) desc += ' ' + fit.desc;
     if (trend) desc += ' Trend line y = ' + round2(trend.slope) + 'x ' + (trend.intercept >= 0 ? '+ ' : '- ') + round2(Math.abs(trend.intercept)) + ', R squared ' + round2(trend.r2) + '.';
 
-    var parts = [open(c, 'Scatter plot', desc), titleEl(c), axes(c, maxY, null), yAxisLabel(c, sc.yLabel)];
+    var parts = [open(c, 'Scatter plot', desc), titleEl(c), yLog ? logYAxis(c, yd) : axes(c, maxY, null), yAxisLabel(c, sc.yLabel)];
+    if (xLog) parts.push(logXAxis(c, xd));
     parts.push('<text x="' + (W / 2) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10.5" fill="#5b6b78">' + escapeXml(sc.xLabel) + '</text>');
 
     if (trend) {
@@ -475,11 +551,11 @@
     }
 
     if (fit) {
-      /* a curve: sampled across the plot, broken wherever it leaves it or is not a number */
+      /* a curve: sampled across the plot (evenly in the axis's own scale), broken wherever it leaves it or is not a number */
       var segs = [], cur = [], steps = 120;
       for (var si = 0; si <= steps; si++) {
-        var fx = xOrigin + (maxX - xOrigin) * si / steps, fy = fit.predict(fx);
-        if (isFinite(fy) && fy >= 0 && fy <= maxY) cur.push(toX(fx).toFixed(1) + ',' + toY(fy).toFixed(1));
+        var fx = xLog ? Math.pow(10, xd[0] + (xd[1] - xd[0]) * si / steps) : xLo + (xHi - xLo) * si / steps, fy = fit.predict(fx);
+        if (isFinite(fy) && fy >= yLo && fy <= yHi) cur.push(toX(fx).toFixed(1) + ',' + toY(fy).toFixed(1));
         else if (cur.length) { segs.push(cur); cur = []; }
       }
       if (cur.length) segs.push(cur);
@@ -489,7 +565,7 @@
       parts.push('<text x="' + (W - PAD.right) + '" y="' + (PAD.top - 6) + '" text-anchor="end" font-size="10" fill="' + c.trendColor + '">' + escapeXml(fit.label) + '</text>');
     }
 
-    sc.points.forEach(function (p) {
+    pts.forEach(function (p) {
       parts.push('<circle cx="' + toX(p.x).toFixed(1) + '" cy="' + toY(p.y).toFixed(1) + '" r="4" fill="' + c.pointColor + '" opacity="0.75"/>');
     });
     parts.push('</svg>');
