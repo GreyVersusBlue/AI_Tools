@@ -87,6 +87,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-24 (v419-v423), rank 44 rewritten (Path 16 P5, steps 1 to 4 of 6); 038 for science.** Curve fits with R² on the original values (`dcb-fit.js`: linear, power, exponential, logarithmic, quadratic), base-10 log axes, multi-series scatter with a marker shape each, and an annotation layer (shaded regions, arrows, callouts in data coordinates, in the share link only); v419 repaired AI-26's registry rows (a `BrRollover` delete rule for 019's `monitor-record`, `test:registry` 51/51). Suites `test:chart-fit`, `-scatter-log`, `-scatter-series`, `-scatter-notes` (pure Node, mutants), `test:chart-builder-science` (8582); **next free suite port: 8583.** Left: the chart sheet (step 5) and the 065/073 handoffs, which have no route. Inline-sink baseline for 038 is 13.
 - **AI-24 (v416-v418), rank 43 rewritten (Path 16 P4 built except the triage handoff); 036 modelling.** Term count 2/3/4 (semesters, trimesters, quarters; default four, the page byte-for-byte as before at the default: `terms` in `grade-math.mjs`/`scenario-math.mjs` opts, one `termCount()` on the page, a stored `terms` only when it is not 4); the Scenarios card draws the class's final letters and percentage averages before and after through `ChartSvg` (`distributions()`); a roster check (`roster-join.mjs`, read-only from Class Roster Hub or typed, nothing stored; `np_rosters` added to 036's `reads`); the need tab's grading window follows the count. Suites `test:final-grade-terms-core`, `-terms` (8579), `-scenario-chart` (8580), `-roster-core`, `-roster` (8581); **next free suite port: 8582.** Found: typing in the need tab called `updateManual(NaN)` (fixed); the calendar suite's 036 break named a line this renamed (updated). Left: the triage handoff (rank 43) and Devon's persistence question.
 - **AI-24 (v411-v415), rank 43 and rank 80 deleted (Path 16 P3 whole, and 037's per-tool copy of it), the ranks after them moved up one and two; 037 item analysis.** Per-question scores through `PasteTable` into `GradeItems` (`gd-items.js`): a missed-questions chart, a ranked reteach table, a printed reteach list and "What this says" page through the print kit, section against section, small multiples of the compared assignments. Fields `items`/`itemLine` on the existing record, no new key, no name shown. Found: blank last print page, switcher hidden after reload, unlabelled compare bars (all fixed). Left on Path 16: rank 43 (P4, 036) and 44 (P5, 038). Next free suite port: 8579.
 - **AI-24 (v404-v410), rank 43 deleted again (Path 16 P2 whole), the ranks after it moved up one; `_shared/paste-table.js`.** One classic script, `window.PasteTable` (`splitLine`, `splitFixed`, `pickDelimiter`, `toNumber`, `isHeaderShape`, `parse`, `columnReport`, 046's two named-value parsers); 046, 038, 036, 037, 075 and 006 read through it, each held to a frozen copy of its old reader by a parity suite (`test:paste-table*`, no port). New notes: 038's value-column note, 037's skipped lines, 075's nameless rows, 006's short rows. Left: `Roster.splitCells` and `bulk-rows.js` keep the last two copies. Next is Path 16 P4. Next free suite port: 8579.
@@ -798,7 +799,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 41 | Path 15 P4 — question-attached picks | 007 | ½ | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
 | 42 | Path 15 P5 — artifacts and remotes: hand off to grouping and the bracket; theme packs as JSON | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
 | 43 | Path 16 P4, what is left — 036's triage lists to 085/068 (neither accepts a share link yet: a `Share.receive` + registry `share` row on each, then a `_shared/handoffs.js` entry), and Devon's persistence question | 036, 068, 085 | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
-| 44 | Path 16 P5 — 038 for science: regression, log axes, annotation layer, handoffs to 065 and 073 | 038 | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
+| 44 | Path 16 P5, what is left — 038's chart sheet (several charts to a printed page through the print kit with Preview); the 065/073 handoffs have no route to use (listed in the bullet) | 038, 065, 073 | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
 | 45 | Path 17 P1 — thumbnail-grid reordering, crop/straighten, real-photo validation of the retry presets | 011 | 1 | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 46 | Path 17 P2 — scanner mode: quadrilateral detection, perspective warp, adaptive threshold. **Designed, not built (AI-25, 2026-10-06): the design is under the P2 bullet; P1 is not built and the design says what P2 needs from it** | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 47 | Path 17 P3 — PDF in: vendor `pdf.js`, merge/insert/extract/rotate existing PDFs | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
@@ -6854,6 +6855,26 @@ grades by policy — keep that.
   no route exists and none is built from this side. What it would need is listed in the bullet when the step is reached.
   *Defaults taken, none of them Devon's open questions:* base-10 logs only; R² on the original scale; no weighted fits; no
   confidence bands; annotations are in memory and the share link, never stored.
+  **As built (AI-24, 2026-10-28, v420-v423): steps 1 to 4 whole; 5 and 6 left.** Step 1 (v420): `dcb-fit.js` (`ChartFit`), five
+  models, a Fit select under the trendline checkbox, `ChartSvg.scatter` takes an optional `fit`; `test:chart-fit` (9 mutants).
+  Step 2 (v421): `xScale`/`yScale: 'log'`, two checkboxes, decade labels with faint 2 and 5 lines, non-positive points left out and
+  counted on the page and in the `<desc>`, a trendline on a log axis drawn as the curve it is; `test:chart-scatter-log`. Step 3
+  (v422): more Y columns, `sc.series`, a marker shape and colour each, legend with R² and a fit per series; `test:chart-scatter-series`.
+  Step 4 (v423): `notes` (`region`, `arrow`, `callout`) in data coordinates, `ChartSvg.cleanNotes` the only way a list gets in
+  (12 at most, 60 characters, finite numbers), an Annotations card built with DOM calls (no new markup sink), notes in the share link
+  and not on the device; `test:chart-scatter-notes`. Browser suite `test:chart-builder-science` (port 8582, **next free 8583**) holds
+  the page side of all four, including old links opening unchanged. The default scatter stays byte-identical
+  (`test:chart-svg-draw-parity`, 553 drawings); the data preview became keyboard-scrollable (axe found it with a longer table).
+  Share state gained `trendModel`, `xLog`, `yLog`, `scatterYs`, `notes`, each written only when used.
+  **Left.** *Step 5, many charts on a printed page,* not started: 038 prints with its own `@media print` block keyed on
+  `body.printing` and `#print-area` (not `print-area.css`), so the sheet means either moving that block onto the kit or following
+  032's precedent (a sheet area that is a direct child of `<body>`, `setPage()` while it is picked, `preview({ area })`), plus an
+  entry in `smoke-preview-adopters.mjs` and a `print-audit` pass; the design above (up to 6 snapshots, 1/2/4/6 to a page) stands.
+  *Step 6, handoffs to 065 and 073, not built and cannot be from this side:* 073's `milestones` link takes a schedule and 065's
+  `template` link takes a report template; neither takes a chart or a data table, so `_shared/handoffs.js` has no route to add. A
+  route would need a receiving field first (065: a "data table / figure" block in its template; 073: a figure on a project), which
+  is a change to those tools, listed here for whoever takes it. Not checked on paper or with a screen reader; the curve fits are
+  checked against constructed datasets and arithmetic, not against a spreadsheet's trendline.
 
 **Model.** Opus.
 

@@ -9,6 +9,36 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-24: Path 16 P5, 038 for science: fits, log axes, more series, annotations (2026-10-28, v419-v423)
+
+**What shipped.** v419 first repaired two rows of AI-26's (not this path's): `escape-room-builder:monitor-record` (a student key
+since v396) had no year-rollover rule, so `rollover.test.mjs` failed; it now has a `delete` rule in `br-rollover.js`, and
+`registry-shape.test.mjs` excuses the key as one added since the migration and sees `er-image.js`'s default `escape-room`
+namespace (`EscapeRoomImage = create('escape-room', ...)`), which the scanner could not. Then 038: **v420** `dcb-fit.js`, five
+fits by least squares (power, exponential and logarithmic on the transformed data, as a spreadsheet does), **R² always on the
+original y** so models compare on one number, points a model cannot take left out and counted; a Fit select under the trendline;
+`ChartSvg.scatter` takes an optional `fit`. **v421** log axes (`xScale`/`yScale`), decade labels with faint 2 and 5 lines,
+non-positive points left out and counted, trendlines drawn as the curves they are. **v422** more Y columns as series, a marker
+shape and colour each, a legend with R², a fit per series. **v423** the annotation layer: `region` (hatched, clipped), `arrow`,
+`callout`, in data coordinates; `ChartSvg.cleanNotes` is the only way a list gets in (12, 60 characters, finite numbers, control
+characters flattened); the card builds its list with DOM calls; notes travel in the share link and are never stored.
+
+**Held.** The default scatter is byte-identical (`test:chart-svg-draw-parity`, 553 drawings; one of its mutants had to be re-pointed
+at the renamed line, the check itself untouched). Each new pure suite has mutants that must be caught, and writing them found two
+real gaps in the tests (a log-scale mutant that kept even spacing, a curve sampled linearly that was still collinear); a mutant
+removing the dropped-point filter also hung the module (`-Infinity` as the lowest decade), so `logDomain` now ignores non-positive
+values. `test:chart-builder-science` (port 8582) drives the page: each model, each log case, series, notes, share links written
+before these fields existed, and a link whose note text is markup (drawn as text). axe found the data preview scrollable without
+keyboard access once a table was longer than the box; it now has `tabindex="0"`, a role and a label.
+
+**Not built, and why.** Step 5 (several charts to a printed page): 038 prints with its own `@media print` block, so a sheet means
+moving that onto the print kit or following 032's precedent, with a preview-adopters entry and a print audit; a session of its own.
+Step 6 (handoffs to 065 and 073): 073's link takes milestones and 065's a template, neither a chart, so no `handoffs.js` route
+exists and none was invented; what a receiver would need is written in the Path 16 P5 bullet. **Decisions taken (reversible):**
+base-10 logs only; R² on the original scale; no weights or confidence bands; notes not stored on the device; inline-sink baseline for
+038 raised 12 to 13 (the extra-column list: an escaped header and a numeric index). **Not verified:** on paper, with a screen reader,
+or against a spreadsheet's trendline (the fits are held to constructed datasets and independent arithmetic).
+
 ## AI-24: Path 16 P4, 036 modelling: term count, before/after charts, roster check (2026-10-28, v416-v418)
 
 **What shipped.** The Final Grade Checker can grade a year of two semesters, three trimesters or four quarters. The count is
