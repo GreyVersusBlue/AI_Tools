@@ -6548,7 +6548,41 @@ un-extracted.
   10 s), the window stays; the stack only replaces what sits behind it. *Questions with a default
   built:* whether Redo buttons appear at all (default: no button, only the keys, until a teacher
   asks); whether 018 and 043 are adopters at all given their timed windows (default: decide when
-  reached; each is recorded in `HISTORY.md`).
+  reached; each is recorded in `HISTORY.md`). **018 and 043 decided out (AI-22, 2026-10-28):**
+  each keeps one deleted/cleared thing for a timed window and a second step *replaces* the
+  first (018 clears its timer and buffer, 043 says so in a comment), so a stack would never
+  hold two; 003 has no undo today and stays a listed new feature, not an adoption.
+  *Live mode design (AI-22, 2026-10-28).* **Shown:** the site's own helper, `Stage.mount()`
+  from `_shared/stage.js` (020's `?display=1` is a second window that a bracket needs because
+  its teacher view and class view differ; the chart is one picture, so one window, fullscreen
+  or the helper's fixed-overlay fallback, projected as it is). A "Live mode" button in the
+  toolbar beside Actual size; `fullscreenKey: false` (005's own keys stay its own); 005's
+  normal page is unchanged until the button is pressed. While on stage the floor is
+  `#floorWrap.is-fullscreen`, drawn by the same `renderFloor()` (no second renderer), with
+  `live` on `<body>` hiding the per-desk controls and turning drag off. **A tap** on a seat
+  toggles *absent today* for that student, and nothing else (no menu until a second action
+  exists). The seat dims and says "Absent". **How it reaches the flag:** the site already has
+  it: `_shared/student-flags.js` (`crh_flags_v1`, by the id `_shared/roster.js` mints; 005 finds
+  the id with `Roster.idIndex()` / `idFor()` by the student's name, the section's name as the
+  roster hint, as 002 does). A student on no saved roster has no id, so their absence is kept
+  in memory for the live session only and the tap says so. 005 becomes a second writer of that
+  key (006 was the only one): it writes through `StudentFlags.set()` and `parse()`, never
+  touches `noCall`, and `ToolRegistry` gets the key on 005's row. Absent seats keep their
+  desks (the chart is not re-solved; `solve({ keep: 'all', absent })` is built and is a later
+  button). Undo: each tap goes through 005's `pushUndo()`-less path: the flag is a roster
+  fact, not a chart edit, so Ctrl+Z does not touch it; the tap toggles back. **A point in 008
+  and a pass in 001 are NOT built: neither tool takes anything in.** 008 has no `?` parameter
+  and no entry in `_shared/handoffs.js` to receive; 001 the same. The honest ways in are
+  (a) a `Handoffs` entry plus a receiver in each (a link carries a student's name into
+  history: the rule in `handoffs.js`'s header says a field travels in one only if it was
+  written to be published, and a behaviour point is not), or (b) 005 writing straight into
+  008's and 001's localStorage (the 003 -> 037 precedent, same device, no URL), which is a
+  cross-tool change to each receiver's schema and its backup registry row. Both are Devon's
+  to choose; listed on rank 37, neither forced. Nothing goes to a network service and no
+  student name leaves the browser. *Questions with a default built:* whether a tap may
+  later open a menu (default: no, absent only); whether an absent seat should leave the
+  chart (default: no, it stays and dims); whether 005 may write 008's and 001's storage
+  (default: not built).
 
 **Status.** P1 shipped 2026-09-03. P2 shipped 2026-09-04 (#182, `CACHE_VERSION` v148) with
 010 as its single adopter; 008, 045 and 007 still carry their own readers, for reasons
