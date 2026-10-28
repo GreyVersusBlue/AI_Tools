@@ -334,6 +334,7 @@
     "Tools/seating-chart/test/room.test.mjs": 1,
     "Tools/seating-chart/test/smoke-room.mjs": 6,
     "Tools/seating-chart/test/smoke-room-marks.mjs": 8,
+    "Tools/seating-chart/test/smoke-live.mjs": 6,
     "Tools/seating-chart/test/room-zone.test.mjs": 1,
     "Tools/seating-chart/test/smoke-room-edit.mjs": 10,
     "Tools/a11y-sweep/test/smoke-a11y-sweep.mjs": 112,

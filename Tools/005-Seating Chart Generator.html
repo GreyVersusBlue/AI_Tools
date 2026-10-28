@@ -27,6 +27,8 @@
 <script src="../_shared/store.js"></script>
 <script src="../_shared/undo.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/student-flags.js"></script>
+<script src="../_shared/stage.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
@@ -305,6 +307,12 @@
     background:var(--gold); color:#fff; font-size:9px; font-weight:700; padding:1px 6px; border-radius:0; display:none;}
   .desk.selected .selnote{display:block;}
   .desk.selected{box-shadow:0 0 0 3px var(--gold);}
+  /* Live mode (Path 14 P5): the chart on stage; a tap marks a seat absent today. */
+  #floorWrap.is-fullscreen{background:var(--bg,#fff); overflow:auto; padding:12px;}
+  body.live .desk-ctrls, body.live .selnote{display:none !important;}
+  body.live .desk .seat{cursor:pointer;}
+  .desk.absent .seat{opacity:.4; text-decoration:line-through;}
+  .desk.absent::after{content:"Absent"; position:absolute; left:0; right:0; bottom:-14px; text-align:center; font-size:.7rem; font-weight:700; color:var(--err,#a33);}
 
   /* Seat numbers: a sibling of .seat, not inside it, so a screen reader (and
      anything that reads a seat's textContent) still sees just the name. */
@@ -750,6 +758,7 @@
       </div>
       <div class="sep"></div>
       <div class="grp">
+        <button class="btn sm ghost" id="liveBtn" type="button" title="Put the chart on the projector; tap a seat to mark that student absent today">Live mode</button>
         <button class="btn sm ghost" id="zoomBtn" onclick="toggleZoom()" title="Fit the room to the window, or show it full size">Actual size</button>
         <button class="btn sm ghost" id="mirrorBtn" onclick="toggleMirror()"
                 title="Flip the floor left/right to see it the way students facing the front do">Mirror view</button>
@@ -1917,13 +1926,15 @@ function renderFloor(){
     node.style.left = d.x + 'px'; node.style.top = d.y + 'px';
     node.style.transform = (d.rot ? 'rotate(' + d.rot + 'deg)' : '');
     node.dataset.id = d.id;
+    const gone = !!(st && liveOn && isAbsentLive(st));
+    if (gone) node.classList.add('absent');
 
     const label = st
-      ? `Seat ${i + 1} of ${total}, ${st.name}${st.flag ? ', flagged' : ''}${d.locked ? ', pinned' : ''}`
+      ? `Seat ${i + 1} of ${total}, ${st.name}${gone ? ', absent today' : ''}${st.flag ? ', flagged' : ''}${d.locked ? ', pinned' : ''}`
       : `Seat ${i + 1} of ${total}, ${d.empty ? 'left empty' : 'empty'}`;
     const label2 = label + (tapPicked.has(d.id) ? ', chosen for the rule' : '');
     node.innerHTML =
-        `<button class="seat" data-id="${d.id}" aria-label="${esc(label2)}"${st ? ' draggable="true"' : ''}>`
+        `<button class="seat" data-id="${d.id}" aria-label="${esc(label2)}"${st && !liveOn ? ' draggable="true"' : ''}>`
       +   (st && photoSrc(st.photo) ? `<img class="photo" src="${esc(photoSrc(st.photo))}" alt="">` : '')
       +   `<span>${st ? esc(st.name) : 'empty'}</span>`
       + `</button>`
@@ -1974,6 +1985,7 @@ function renderFloor(){
 
 /* ----- keyboard: one tab stop per desk, every action on a key ----- */
 function deskKey(ev, id){
+  if (liveOn) return;   // Enter / Space reach liveTap through the seat button's own click
   const k = ev.key;
   const step = ev.shiftKey ? ROOM.grid * 3 : ROOM.grid;
   const d = sec().desks.find(x => x.id === id);
@@ -2005,6 +2017,7 @@ function focusDesk(id){
 /* ----- moving desks with pointer ----- */
 let moving = null;
 function deskPointerDown(ev, id, node){
+  if (liveOn) return;
   if (ev.target.closest('.desk-ctrl')) return;
   if (ev.target.closest('.seat') && sec().assign[id]) return;   // that's a student drag
   if (ev.button !== 0) return;
@@ -2050,7 +2063,57 @@ document.addEventListener('pointerup', () => {
 });
 
 /* ----- tap-to-place ----- */
+/* ============================================================
+   Live mode (Path 14 P5): the chart on stage, a tap marks absent today.
+   The flag is Class Roster Hub's (_shared/student-flags.js, crh_flags_v1, by roster id):
+   found by name through Roster.idIndex(). A student on no saved roster has no id, so
+   that absence lives in memory for this live session only, and the tap says so.
+============================================================ */
+let liveOn = false;
+const liveLocal = new Set();   // 005 student ids with no roster id, absent this session
+function liveRosterId(st){
+  try { return Roster.idFor(Roster.idIndex(), st.name, sec().name); } catch(e){ return null; }
+}
+function readFlags(){
+  try { return StudentFlags.read(window.localStorage); } catch(e){ return StudentFlags.empty(); }
+}
+function isAbsentLive(st){
+  const id = liveRosterId(st);
+  if (!id) return liveLocal.has(st.id);
+  return !!StudentFlags.get(readFlags(), id, StudentFlags.dayKey()).absent;
+}
+function liveTap(deskId){
+  const st = studentById(sec().assign[deskId]);
+  if (!st) return;
+  const id = liveRosterId(st), now = !isAbsentLive(st);
+  if (id){
+    const doc = StudentFlags.set(readFlags(), id, 'absent', now, StudentFlags.dayKey());
+    try { window.localStorage.setItem('crh_flags_v1', JSON.stringify(doc))   /* StudentFlags.KEY, spelled out so check:registry can read it */; }
+    catch(e){ say('Could not save that: the browser refused to store it.', 'bad'); return; }
+  } else {
+    if (now) liveLocal.add(st.id); else liveLocal.delete(st.id);
+  }
+  renderFloor();
+  say(st.name + (now ? ' marked absent today' : ' marked present') + (id ? '.' : ' for this live session only (not on a saved roster).'), 'good');
+  const again = [...document.querySelectorAll('.desk')].find(e => e.dataset.id === deskId);
+  if (again) { const b = again.querySelector('.seat'); if (b) b.focus(); }
+}
+function setLive(on){
+  liveOn = !!on;
+  document.body.classList.toggle('live', liveOn);
+  if (!liveOn) liveLocal.clear();
+  renderFloor();
+}
+if (window.Stage) Stage.mount(document.getElementById('floorWrap'), {
+  button: document.getElementById('liveBtn'),
+  labels: { enter: 'Live mode', exit: 'Exit live mode' },
+  hud: document.getElementById('liveBtn'),   // the exit button rides inside the stage, or it would vanish
+  fullscreenKey: false,
+  onChange: function(active){ setLive(active); }
+});
+
 function deskClick(ev, deskId){
+  if (liveOn){ liveTap(deskId); return; }
   if (moving && moving.moved) return; // was a drag
   if (tapDesks){            // choosing desks for a zone rule: a tap picks or drops the desk, nothing else
     if (tapPicked.has(deskId)) tapPicked.delete(deskId); else tapPicked.add(deskId);
