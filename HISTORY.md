@@ -9,6 +9,38 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-24: Path 16 P4, 036 modelling: term count, before/after charts, roster check (2026-10-28, v416-v418)
+
+**What shipped.** The Final Grade Checker can grade a year of two semesters, three trimesters or four quarters. The count is
+`opts.terms` (`termsOf()`; 2 to 4, anything else is four) in `grade-math.mjs` and `scenario-math.mjs`, and `termCount()` on the
+page; cards, weights, the scenario form, the need tab, Excel and PDF exports, slips, triage wording and the paste reading all follow
+it. At four the page is what it was: the golden suite (`smoke-scenarios`) pins every card and the stored settings string byte for
+byte, so `terms` is written only when it is not 4. The Scenarios card now draws the class's final letters and percentage averages
+before and after (`distributions()` counts `compareClass()`'s own rows, so the pictures cannot disagree with the table), through
+`ChartSvg.bar`, grayscale-hatched, no names, with SVG/PNG download. A roster check (`roster-join.mjs`): roster students with no row,
+rows not on the roster, a pasted name twice, a row that fits two roster names; names compare with order, case, accents and
+punctuation ignored; a near spelling is shown as "close to ...?" and never matched; the roster is read (not written) from Class
+Roster Hub or typed, held in memory only. The need tab's grading window needed only `periods.length === termCount()`.
+
+**Decisions taken (all reversible).** Terms are 2, 3 or 4 (not 5 or 6); a semester exam is a further term column with its own
+weight, said in the help text; changing the count re-reads the paste if it is still in the box, else trims or pads; changing it
+resets custom weights to equal shares; the scenario chart is a class distribution, not one line per student; 036 gained
+`np_rosters` in its registry `reads`. **Not built, and why:** the triage handoff to 085/068, because neither has a share row or a
+`Share.receive`; **persistence of any grade or roster stays off** (policy), and the opt-in question is left for Devon with default no.
+
+**What the checks found.** (1) Typing in the need tab called `updateManual(NaN)` and threw: `attachManualListeners` bound every
+`.grade-input`, including the need tab's, which carry no student; now guarded. (2) `smoke-consumers-trips-grades.mjs` mutates the
+page's source text (`periods.length === QUARTERS`), so renaming that line made the break pass silently ("9/10 caught"); updated.
+(3) Two failures in `registry-shape.test.mjs` (`escape-room-builder:monitor-record` classification, namespace `escape-room`) were
+red before this work and are not 036's. (4) The first term-count smoke asserted the wrong thing about an unmarked 4-period paste read
+as quarters (the bare average column is taken as Q4); the default is unchanged and the test now says so.
+
+**Not verified.** No semester or trimester export has been opened in a spreadsheet or a PDF viewer: a throwaway run clicked Export
+Excel and Export PDF at 2, 3 and 4 terms and each produced a file with no page error, and the sheet-adopter suite covers four terms only. The charts were not checked in dark
+mode by eye. Suites: `test:final-grade-terms-core` / `-terms` (8579), `-scenario-chart` (8580), `-roster-core` / `-roster` (8581).
+
+---
+
 ## AI-24: Path 16 P3, per-question item analysis in 037, whole (2026-10-28, v411-v415)
 
 **What shipped.** Five commits after the design (written into the P3 bullet first), each its own `CACHE_VERSION`.
