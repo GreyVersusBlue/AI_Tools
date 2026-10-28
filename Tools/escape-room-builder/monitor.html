@@ -199,6 +199,7 @@
         var msg;
         try { msg = JSON.parse(e.data); } catch (err) { return; }
         device.station = msg.station || 0;
+        device.stationId = typeof msg.id === 'string' ? msg.id : null;
         device.total = msg.total || 0;
         device.done = !!msg.done;
         device.score = (typeof msg.score === 'number') ? msg.score : null;
