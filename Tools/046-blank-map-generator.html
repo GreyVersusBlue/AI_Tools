@@ -154,6 +154,7 @@
   }
   #viewport.dragging { cursor: grabbing; }
   #viewport.adding { cursor: crosshair; }
+  #baseCanvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   #stage { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
   #stage img { display: block; max-width: none; user-select: none; -webkit-user-drag: none; }
   #viewerEmpty:not([hidden]) {
@@ -793,6 +794,7 @@
     </div>
     <div id="tiledPrintPages" aria-hidden="true"></div>
     <div id="viewport" class="paper-sheet">
+      <canvas id="baseCanvas" aria-hidden="true" hidden></canvas>
       <div id="stage">
         <img id="mapImg" alt="" hidden>
         <div id="gridLayer"></div>
@@ -858,6 +860,7 @@ import { createStore } from './blank-map-generator/bmg-store.js';
 import { searchMaps, searchByRegion, fetchMapImage } from './blank-map-generator/bmg-commons.js';
 import { CONTINENTS } from './blank-map-generator/bmg-geography.js';
 import { createViewer } from './blank-map-generator/bmg-viewer.js';
+import { loadSource as loadLiveSource, drawBaseMap, parseBaseMapId } from './blank-map-generator/bmg-live.js';
 import { createLabelLayer, labelColorHex, labelFontSizePx, labelSwatchSvg, LABEL_COLORS } from './blank-map-generator/bmg-labels.js';
 import {
   createMarkerLayer, markerIconSvg, markerAnchor, markerSizePx, markerColorHex, numberedOrder,
@@ -909,9 +912,53 @@ function save() {
   recordHistoryPoint();
 }
 
+// The base map on screen, drawn from the vectors at the view's own scale (Path 20 P3), so a zoomed
+// border stays a hairline instead of an upsampled smear. Only plain built-in maps: a shaded map, a
+// Wikimedia map and an upload stay the raster in #mapImg (which is also still what every export
+// draws, and what the stage is sized by). The canvas sits under #stage, so the grid, regions and
+// lines drawn in stage units line up as they did over the image.
+const liveBase = (() => {
+  const canvas = el('baseCanvas');
+  let source = null, queued = false, token = 0;
+  function draw() {
+    queued = false;
+    if (!source) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const cssW = viewport.clientWidth, cssH = viewport.clientHeight;
+    const w = Math.max(1, Math.round(cssW * dpr)), h = Math.max(1, Math.round(cssH * dpr));
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
+    drawBaseMap(canvas.getContext('2d'), source, viewer.getView(), cssW, cssH, { dpr, strokePx: 1 });
+  }
+  function schedule() {
+    if (source && !queued) { queued = true; requestAnimationFrame(draw); }
+  }
+  function hide() {
+    token++; source = null;
+    canvas.hidden = true;
+    mapImg.style.visibility = '';
+  }
+  /** Shows the id's map live when it is one this can draw; otherwise leaves (or puts back) the picture. */
+  async function show(id, record) {
+    const mine = ++token;
+    const p = parseBaseMapId(id);
+    if (!p || !p.preset || p.choroKey) { hide(); return; }
+    let src;
+    try { src = await loadLiveSource({ preset: p.preset, style: p.style, borders: p.borders, relief: p.relief }); } catch (e) { hide(); return; }
+    if (mine !== token || src.width !== record.width || src.height !== record.height) { if (mine === token) hide(); return; }
+    source = src;
+    canvas.hidden = false;
+    draw();
+    mapImg.style.visibility = 'hidden';
+  }
+  new ResizeObserver(schedule).observe(viewport);
+  return { show, hide, schedule, draw, get active() { return !!source; }, toCanvas() { return canvas; } };
+})();
+
 const viewer = createViewer(viewport, stage, {
   onChange(v) {
     project.view = v;
+    liveBase.schedule();
     save();
     updateZoomReadout(v.scale);
     labelLayer.reposition();
@@ -3142,6 +3189,7 @@ function displayMap(record, opts = {}) {
   mapImg.src = currentObjectUrl;
   mapImg.hidden = false;
   currentRecord = record;
+  liveBase.show(record.id, record);
   el('viewerEmpty').hidden = true;
   locator.setImage(currentObjectUrl, record.width, record.height);
 
@@ -4596,6 +4644,7 @@ function showEmptyMapState(mapMissing) {
   currentSize = { width: 0, height: 0 };
   mapImg.hidden = true;
   mapImg.removeAttribute('src');
+  liveBase.hide();
   el('viewerEmpty').hidden = false;
   el('viewerEmpty').textContent = mapMissing
     ? "This project's map isn't cached in this browser anymore — search above and re-download it to keep annotating."

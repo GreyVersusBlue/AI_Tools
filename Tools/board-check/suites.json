@@ -272,6 +272,7 @@
     "Tools/blank-map-generator/test/smoke-dropped.mjs",
     "Tools/blank-map-generator/test/live-base.test.mjs",
     "Tools/blank-map-generator/test/smoke-live-parity.mjs",
+    "Tools/blank-map-generator/test/smoke-live-viewer.mjs",
     "Tools/geography-bee-quiz-generator/test/geo-bee-parity.test.mjs",
     "Tools/grade-distribution-visualizer/test/chart-svg.test.mjs",
     "Tools/grade-distribution-visualizer/test/chart-svg-parity.test.mjs",
