@@ -134,12 +134,12 @@
 
   // ── read ──────────────────────────────────────────────────────────────────
   var ROOM_SET_KEYS = ['name', 'roomId', 'id', 'storyIntro', 'cardsPerPage', 'ecLevel', 'showNumber', 'randomizeStart',
-    'countdownEnabled', 'countdownMinutes', 'packetCardsPerPage', 'stations', 'kind', 'x'];
-  var HUNT_SET_KEYS = ['name', 'id', 'cardsPerPage', 'ecLevel', 'showNumber', 'stations', 'run', 'kind', 'x'];
+    'countdownEnabled', 'countdownMinutes', 'packetCardsPerPage', 'stations', 'kind', 'flow', 'required', 'run', 'x'];
+  var HUNT_SET_KEYS = ['name', 'id', 'cardsPerPage', 'ecLevel', 'showNumber', 'stations', 'run', 'kind', 'flow', 'required', 'x'];
   var ROOM_ST_KEYS = ['id', 'clue', 'answers', 'hint', 'next', 'image', 'type', 'hintCost', 'awardLetter', 'cipherPlain',
-    'cipherShift', 'maxAttempts', 'numericTolerance', 'codeWord', 'x'];
+    'cipherShift', 'maxAttempts', 'numericTolerance', 'codeWord', 'branches', 'bankId', 'encode', 'x'];
   var HUNT_ST_KEYS = ['id', 'label', 'content', 'note', 'qType', 'choices', 'correctChoice', 'numericAnswer', 'tolerance',
-    'hint', 'hintPenalty', 'codeWord', 'x'];
+    'hint', 'hintPenalty', 'codeWord', 'branches', 'bankId', 'image', 'encode', 'x'];
 
   function extraOf(o, known) {
     var out = null;
@@ -151,6 +151,40 @@
   function blankAnswer() {
     return { type: 'none', accepted: [], choices: [], correct: 0, tolerance: null,
       cipher: { plain: '', shift: null }, maxAttempts: 0 };
+  }
+
+  /* P3 fields, additive: present on the canonical station only when the saved
+     one has them, so a set that never used them reads, and writes, as before.
+     branches.byAnswer is { accepted answer: stationId }; bankId names a
+     Path 12 question; encode and image are the hunt's (a room always encodes
+     the player link). */
+  function readP3(out, st, kind) {
+    if (isObj(st.branches) && isObj(st.branches.byAnswer)) {
+      var by = {};
+      Object.keys(st.branches.byAnswer).forEach(function (k) {
+        if (typeof st.branches.byAnswer[k] === 'string') by[k] = st.branches.byAnswer[k];
+      });
+      if (Object.keys(by).length) out.branches = { byAnswer: by };
+    }
+    if (typeof st.bankId === 'string' && st.bankId) out.bankId = st.bankId;
+    if (kind === 'hunt') {
+      if (typeof st.image === 'string' && st.image) out.image = st.image;
+      if (st.encode === 'player') out.encode = 'player';
+    }
+  }
+  function writeP3(out, st, ids, kind) {
+    if (st.branches && st.branches.byAnswer) {
+      var by = {};
+      Object.keys(st.branches.byAnswer).forEach(function (k) {
+        if (ids.indexOf(st.branches.byAnswer[k]) !== -1) by[k] = st.branches.byAnswer[k];   // a deleted target drops
+      });
+      if (Object.keys(by).length) out.branches = { byAnswer: by };
+    }
+    if (st.bankId) out.bankId = st.bankId;
+    if (kind === 'hunt') {
+      if (st.image) out.image = st.image;
+      if (st.encode === 'player') out.encode = 'player';
+    }
   }
 
   function readRoomStation(st, id) {
@@ -169,6 +203,7 @@
       hint: { text: str(st.hint), minutes: 0, points: st.hintCost === undefined ? 0 : st.hintCost },
       next: null
     };
+    readP3(out, st, 'room');
     var ex = extraOf(st, ROOM_ST_KEYS);
     if (ex) out.extra = ex;
     if (isObj(st.x) && st.x.answer) foldForeign(out, st.x, 'room');
@@ -194,6 +229,7 @@
         minutes: parseFloat(pen) || 0, minutesText: pen, points: 0 },
       next: null
     };
+    readP3(out, st, 'hunt');
     var ex = extraOf(st, HUNT_ST_KEYS);
     if (ex) out.extra = ex;
     if (isObj(st.x) && st.x.answer) foldForeign(out, st.x, 'hunt');
@@ -267,6 +303,11 @@
       if (kind === 'hunt' && typeof obj.x.intro === 'string') set.intro = obj.x.intro;
       if (kind === 'hunt' && isObj(obj.x.print) && obj.x.print.packetCardsPerPage !== undefined) set.print.packetCardsPerPage = obj.x.print.packetCardsPerPage;
     }
+    if ((obj.flow === 'chain' || obj.flow === 'free') && !(isObj(obj.x) && obj.x.kind && obj.x.kind !== kind)) set.flow = obj.flow;
+    if (Array.isArray(obj.required)) {
+      var req = obj.required.filter(function (r) { return typeof r === 'string' && ids.indexOf(r) !== -1; });
+      if (req.length) set.required = req;
+    }
     set.stations = stations;
     var known = kind === 'room' ? ROOM_SET_KEYS : HUNT_SET_KEYS;
     var ex = extraOf(obj, known);
@@ -279,6 +320,7 @@
       set._dropped = byId ? 0 : set.run._dropped;
       delete set.run._dropped;
     }
+    if (kind === 'room' && isObj(obj.run)) set.run = clone(obj.run);   // a room's run: kept whole until P3 gives it a shape
     set._drew = drew;
     return set;
   }
@@ -298,10 +340,11 @@
     out.maxAttempts = a.maxAttempts || 0;
     out.numericTolerance = a.tolerance === undefined ? null : a.tolerance;
     if (st.codeWord) out.codeWord = st.codeWord;
+    writeP3(out, st, ids, 'room');
     if (st.extra) Object.keys(st.extra).forEach(function (k) { out[k] = clone(st.extra[k]); });
     return out;
   }
-  function writeHuntStation(st) {
+  function writeHuntStation(st, ids) {
     var a = st.answer || blankAnswer();
     var out = { id: st.id, label: st.label || '', content: st.prompt, note: st.note || '',
       qType: HUNT_TYPES_BACK[a.type] || 'text', choices: (a.choices || []).slice(), correctChoice: a.correct || 0,
@@ -310,6 +353,7 @@
       hint: st.hint ? st.hint.text : '',
       hintPenalty: st.hint && st.hint.minutesText !== undefined ? st.hint.minutesText : String(st.hint ? st.hint.minutes : 0),
       codeWord: st.codeWord || '' };
+    writeP3(out, st, ids || [], 'hunt');
     if (st.extra) Object.keys(st.extra).forEach(function (k) { out[k] = clone(st.extra[k]); });
     return out;
   }
@@ -341,17 +385,20 @@
         cardsPerPage: set.print.cardsPerPage, ecLevel: set.print.ecLevel, showNumber: set.print.showNumber,
         randomizeStart: set.entry === 'any', countdownEnabled: !!set.countdown.enabled, countdownMinutes: set.countdown.minutes,
         storyIntro: set.intro || '', packetCardsPerPage: set.print.packetCardsPerPage };
+      if (set.run && !cross) out.run = clone(set.run);
       delete out.id;      // a room's set id is roomId, kept as it is
     } else {
       out = { name: set.title, id: set.id,
         stations: set.stations.map(function (s) {
-          var o = writeHuntStation(s);
+          var o = writeHuntStation(s, ids);
           if (cross) o.x = clone(s);
           return o;
         }),
         cardsPerPage: set.print.cardsPerPage, ecLevel: set.print.ecLevel, showNumber: set.print.showNumber };
       if (set.run && !cross) out.run = writeRun(set.run);
     }
+    if (!cross && set.flow && set.flow !== (kind === 'room' ? 'chain' : 'free')) out.flow = set.flow;   // only when it differs from the kind's own
+    if (!cross && set.required && set.required.length) out.required = set.required.filter(function (r) { return ids.indexOf(r) !== -1; });
     if (cross) out.x = { kind: set.kind, id: set.id, title: set.title, intro: set.intro, entry: set.entry,
       countdown: clone(set.countdown), print: clone(set.print), flow: set.flow };
     if (set.extra) Object.keys(set.extra).forEach(function (k) { out[k] = clone(set.extra[k]); });
@@ -657,26 +704,47 @@
   /** The station a team goes to after `station`: an id, 'end' (the teacher
       chose "End here"), or null (the last station). A jump to a station that
       is not playable is "auto", which is what the payload made of it. */
-  function nextOf(set, station) {
+  function nextOf(set, station, given) {
     var pl = playable(set), pos = -1;
     pl.forEach(function (s, n) { if (s.id === station.id) pos = n; });
     if (pos === -1) return null;
+    function playableId(id) {
+      for (var i = 0; i < pl.length; i++) if (pl[i].id === id) return true;
+      return false;
+    }
+    // P3: a per-answer branch, when the caller says what was typed and it matches one
+    if (given !== undefined && station.branches && station.branches.byAnswer) {
+      var want = normalizeTextAnswer(given), by = station.branches.byAnswer;
+      if (want) {
+        var keys = Object.keys(by);
+        for (var k = 0; k < keys.length; k++) {
+          if (normalizeTextAnswer(keys[k]) === want && (by[keys[k]] === 'end' || playableId(by[keys[k]]))) return by[keys[k]];
+        }
+      }
+    }
     var n = station.next;
     if (n === 'end') return 'end';
-    if (typeof n === 'string') {
-      for (var i = 0; i < pl.length; i++) if (pl[i].id === n) return n;
-    }
+    if (typeof n === 'string' && playableId(n)) return n;
     return pos + 1 < pl.length ? pl[pos + 1].id : null;
   }
+  /** The stations a team can get to. A 'chain' set walks from the first
+      station along `next` and every branch; a 'free' set is all of them. */
   function reachable(set) {
-    var pl = playable(set), byId = {}, seen = [], cur = pl.length ? pl[0].id : null;
+    var pl = playable(set), byId = {}, seen = [];
     pl.forEach(function (s) { byId[s.id] = s; });
-    while (cur && cur !== 'end' && seen.indexOf(cur) === -1) {
+    if (set.flow === 'free') return pl.map(function (s) { return s.id; });
+    var queue = pl.length ? [pl[0].id] : [];
+    while (queue.length) {
+      var cur = queue.shift();
+      if (!cur || cur === 'end' || !byId[cur] || seen.indexOf(cur) !== -1) continue;
       seen.push(cur);
-      cur = nextOf(set, byId[cur]);
+      queue.push(nextOf(set, byId[cur]));
+      var st = byId[cur];
+      if (st.branches && st.branches.byAnswer) Object.keys(st.branches.byAnswer).forEach(function (k) { queue.push(st.branches.byAnswer[k]); });
     }
     return seen;
   }
+
 
   // ── runs and progress ─────────────────────────────────────────────────────
   /** 018's index-keyed run to an id-keyed one (or, with `alreadyById`, the
@@ -745,6 +813,7 @@
       phone can read it) or the text is past what any code holds; `reason` then says which
       station, how big it is and what to shorten. Needs qr-draw.js (and the vendored encoder)
       loaded first. */
+
   function budget(set, opts) {
     opts = opts || {};
     var QD = global.QrDraw;

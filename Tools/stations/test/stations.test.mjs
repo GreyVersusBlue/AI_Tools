@@ -316,6 +316,43 @@ function suite(src) {
     ok(S.budget(room, { ecLevel: 'L', base: BASE })[0].bytes === rows[0].bytes && S.budget(room, { ecLevel: 'Q', px: 100, base: BASE }).some(r => !r.ok), 'budget(): the printed size matters (a 100 px canvas refuses what 600 px takes)');
   }
 
+  {   // P3 schema fields (AI-26, v384): additive, absent until used, round-tripped, and read by nextOf()/reachable()
+    const plain = S.read(jc(F.R2()));
+    ok(plain.stations.every(st => st.branches === undefined && st.bankId === undefined) && plain.required === undefined && plain.flow === 'chain', 'P3: a room that never used the fields reads without them');
+    const w0 = S.write(plain);
+    ok(w0.flow === undefined && w0.required === undefined && w0.stations.every(st => st.branches === undefined && st.bankId === undefined), 'P3: and writes without them (the bytes of a saved room do not move)');
+    const raw = jc(F.R2());
+    const ids = S.read(raw).stations.map(st => st.id);
+    raw.stations.forEach((st, i) => { st.id = ids[i]; });
+    raw.stations[0].branches = { byAnswer: { 'the sphinx': ids[2], 'bogus': 'zzzz' } };
+    raw.stations[0].bankId = 'q-17';
+    raw.flow = 'free'; raw.required = [ids[1], ids[2], 'nope'];
+    raw.run = { teams: [{ name: 'Red' }] };
+    const set = S.read(raw);
+    eq(set.stations[0].branches, { byAnswer: { 'the sphinx': ids[2], 'bogus': 'zzzz' } }, 'P3: branches read as saved');
+    eq([set.stations[0].bankId, set.flow, set.required, set.run], ['q-17', 'free', [ids[1], ids[2]], { teams: [{ name: 'Red' }] }], 'P3: bankId, flow, required (a stranger dropped) and a room\u2019s run read');
+    const back = S.write(set);
+    eq(back.stations[0].branches, { byAnswer: { 'the sphinx': ids[2] } }, 'P3: write drops a branch to a station that is gone');
+    eq([back.stations[0].bankId, back.flow, back.required, back.run], ['q-17', 'free', [ids[1], ids[2]], { teams: [{ name: 'Red' }] }], 'P3: and carries bankId, flow, required and run');
+    const chain = S.read(jc(back));
+    const first = chain.stations[0];
+    const pl = S.playable(chain);
+    eq(S.nextOf(chain, first, 'The Sphinx!'), ids[2], 'P3: nextOf(given) takes the branch an answer names, forgiving case and punctuation');
+    eq(S.nextOf(chain, first, 'a riddle'), S.nextOf(chain, first), 'P3: an answer with no branch goes where it always went');
+    eq(S.nextOf(chain, first, ''), S.nextOf(chain, first), 'P3: a blank answer is no branch');
+    ok(pl.length > 2, 'P3: the fixture has the stations the tests above name');
+    const c2 = S.read(jc(back)); c2.flow = 'chain';
+    ok(S.reachable(c2).indexOf(ids[2]) !== -1, 'P3: a chain set reaches a station only a branch leads to');
+    eq(S.reachable(set).length, S.playable(set).length, 'P3: a free set reaches every playable station');
+    const hunt = jc(F.H2());
+    const hset0 = S.read(hunt);
+    hunt.stations[0].image = 'idb:abc'; hunt.stations[0].encode = 'player';
+    const hset = S.read(hunt);
+    eq([hset.stations[0].image, hset.stations[0].encode, hset0.stations[0].image, hset0.stations[0].encode], ['idb:abc', 'player', '', 'prompt'], 'P3: a hunt station reads an image and encode:player, and defaults without them');
+    const hw = S.write(hset);
+    eq([hw.stations[0].image, hw.stations[0].encode, S.write(hset0).stations[0].image], ['idb:abc', 'player', undefined], 'P3: and writes them only when set');
+  }
+
   return { passed, fails };
 }
 
@@ -331,6 +368,8 @@ const MUTANTS = [
   ['the ids string is dropped from the payload', "out.ids = valid.map(function (s) { return s.id; }).join('');", "out.ids = '';"],
   ['a numeric tolerance is ignored', "Math.abs(val - target) <= tol", "Math.abs(val - target) <= 0"],
   ['budget ignores the readable floor', "ok: plan.ok, reason: '' }", "ok: true, reason: '' }"],
+  ['a branch to a gone station is kept on write', "if (ids.indexOf(st.branches.byAnswer[k]) !== -1) by[k]", "if (true) by[k]"],
+  ['nextOf ignores the answer', "if (given !== undefined && station.branches", "if (false && station.branches"],
   ['an orphan mark is kept', "if (id === undefined || String(parseInt(k, 10)) !== k) { dropped++; return; }", "if (id === undefined) id = k;"]
 ];
 let mutantFail = 0;
