@@ -69,7 +69,7 @@ function suite(src) {
   vm.createContext(pageCtx);
   vm.runInContext([cut(html019, 'splitAnswers'), cut(html019, 'clampShift'), cut(html019, 'validStations'),
     cut(html019, 'buildRoomPayload'), cut(html019, 'stationPayloadFor'), cut(html019, 'trStationNext'), cut(html019, 'unreachableStations')].join('\n'), pageCtx);
-  const huntCtx = { state: null, Stations: { ensureIds: () => false }, ensureStationDefaults: (s) => s, ensureStationCodeWords: () => {}, parseFloat, JSON, String, Object };
+  const huntCtx = { state: null, Stations: { ensureIds: () => false }, HI: { src: (v) => v }, ensureStationDefaults: (s) => s, ensureStationCodeWords: () => {}, parseFloat, JSON, String, Object };
   vm.createContext(huntCtx);
   vm.runInContext([cut(html018, 'looksLikeUrl'), cut(html018, 'normalizeContent'), cut(html018, 'validStations')].join('\n'), huntCtx);
 
@@ -196,6 +196,10 @@ function suite(src) {
     const got = S.playable(S.read(f)).map(s => s._norm);
     got.forEach(g => delete g.codeWord); want.forEach(w => delete w.codeWord);   // the page's ensureStationCodeWords() is stubbed here
     eq(got, jc(want), `${n}: playable() is 018's validStations()`);
+    f.stations[0].image = 'data:image/png;base64,AA'; huntCtx.state = f;
+    const want2 = vm.runInContext('validStations()', huntCtx), got2 = S.playable(S.read(f), { imageSrc: (v) => v }).map(s => s._norm);
+    got2.forEach(g => delete g.codeWord); want2.forEach(w => delete w.codeWord);
+    eq(got2, jc(want2), `${n}: and with a station picture`);
   }
 
   // playPayload: today's buildRoomPayload then stationPayloadFor, plus v, ids, 'end'

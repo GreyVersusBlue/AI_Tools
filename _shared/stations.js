@@ -540,7 +540,7 @@
       numericTolerance: tol
     };
   }
-  function huntNorm(st, i) {             // 018 validStations(), to the letter
+  function huntNorm(st, i, imageSrc) {             // 018 validStations(), to the letter
     var a = st.answer;
     return {
       idx: i, label: (st.label || '').trim() || ('Station ' + (i + 1)),
@@ -548,7 +548,8 @@
       qType: HUNT_TYPES_BACK[a.type] || 'text', choices: (a.choices || []).slice(), correctChoice: a.correct,
       numericAnswer: a.accepted.length ? a.accepted[0] : '', tolerance: a.toleranceText !== undefined ? a.toleranceText : String(a.tolerance || 0),
       hint: ((st.hint && st.hint.text) || '').trim(), hintPenalty: parseFloat(st.hint && st.hint.minutesText !== undefined ? st.hint.minutesText : st.hint && st.hint.minutes) || 0,
-      codeWord: st.codeWord
+      codeWord: st.codeWord,
+      image: st.image ? (imageSrc ? imageSrc(st.image) : st.image) : ''   // v387: the picture on the card
     };
   }
 
@@ -566,7 +567,7 @@
         delete c._rawNext;
         if (!(c._norm.clue.length > 0 && c._norm.answers.length > 0)) return;
       } else {
-        c._norm = huntNorm(st, i);
+        c._norm = huntNorm(st, i, imageSrc);
         if (!(c._norm.content.length > 0)) return;
       }
       out.push(c);
