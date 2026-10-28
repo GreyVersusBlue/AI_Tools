@@ -1,0 +1,107 @@
+// The share-link functions 019 and 018 had at v385 (e8ca2a4), frozen as text. Path 18 P2 moved them into
+// Stations.shareState / Stations.fromShare; stations.test.mjs runs both on the same inputs, to the letter.
+// Read by the suite; not served, not precached.
+//@@019 getState
+    getState: function () {
+      if (!state) return null;
+      return {
+        name: state.name, storyIntro: state.storyIntro || '',
+        cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel,
+        showNumber: state.showNumber !== false, randomizeStart: !!state.randomizeStart,
+        countdownEnabled: !!state.countdownEnabled, countdownMinutes: state.countdownMinutes,
+        packetCardsPerPage: state.packetCardsPerPage || '2',
+        stations: state.stations.map(function (st) {
+          return {
+            id: st.id, clue: st.clue, answers: st.answers, hint: st.hint || '', next: st.next,
+            image: ER.src(st.image), type: st.type || 'text',
+            hintCost: st.hintCost || 0, awardLetter: st.awardLetter || '',
+            cipherPlain: st.cipherPlain || '', cipherShift: st.cipherShift || 0,
+            maxAttempts: st.maxAttempts || 0,
+            numericTolerance: st.numericTolerance === undefined ? null : st.numericTolerance
+          };
+        })
+      };
+    },
+//@@019 normalizeRoom
+  function normalizeRoom(obj) {
+    var minutes = parseInt(obj.countdownMinutes, 10);
+    return {
+      name: uniqueRoomName(String(obj.name || '').trim() || 'Shared Escape Room'),
+      roomId: makeRoomId(),
+      storyIntro: typeof obj.storyIntro === 'string' ? obj.storyIntro : '',
+      cardsPerPage: String(obj.cardsPerPage || '4'),
+      ecLevel: String(obj.ecLevel || 'Q'),
+      showNumber: obj.showNumber !== false,
+      randomizeStart: !!obj.randomizeStart,
+      countdownEnabled: !!obj.countdownEnabled,
+      countdownMinutes: (isFinite(minutes) && minutes > 0) ? minutes : 20,
+      packetCardsPerPage: String(obj.packetCardsPerPage || '2'),
+      stations: obj.stations.map(function (st) {
+        st = (st && typeof st === 'object') ? st : {};
+        var next = null;
+        if (st.next === 'end') next = 'end';
+        else if (typeof st.next === 'number') next = st.next;
+        /* A puzzle type this build does not have would render a station with
+           no answer field at all, so an unknown one falls back to plain text —
+           the same shape 074 gave an unknown hazard symbol. */
+        var tol = Number(st.numericTolerance);
+        return {
+          id: typeof st.id === 'string' ? st.id : undefined,   // the sender's station ids ride the link; the room's own id is new here
+          clue: String(st.clue || ''), answers: String(st.answers || ''), hint: String(st.hint || ''),
+          next: next, image: ER.isInline(st.image) ? st.image : '',   // never another browser's idb: reference
+          type: STATION_TYPES.indexOf(st.type) !== -1 ? st.type : 'text',
+          hintCost: parseInt(st.hintCost, 10) || 0,
+          awardLetter: String(st.awardLetter || ''),
+          cipherPlain: String(st.cipherPlain || ''),
+          cipherShift: parseInt(st.cipherShift, 10) || 0,
+          maxAttempts: parseInt(st.maxAttempts, 10) || 0,
+          numericTolerance: (st.numericTolerance === null || st.numericTolerance === undefined ||
+            !isFinite(tol)) ? null : tol
+        };
+      })
+    };
+  }
+
+//@@018 getState
+    getState: function () {
+      if (!state) return null;
+      return {
+        name: state.name,
+        cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,
+        stations: state.stations.map(function (s) {
+          return {
+            id: s.id, label: s.label, content: s.content, note: s.note,
+            qType: s.qType, choices: (s.choices || []).slice(), correctChoice: s.correctChoice,
+            numericAnswer: s.numericAnswer, tolerance: s.tolerance,
+            hint: s.hint || '', hintPenalty: s.hintPenalty || '0', codeWord: s.codeWord || ''
+          };
+        })
+      };
+    },
+//@@018 normalizeHunt
+  function normalizeHunt(obj) {
+    return {
+      name: uniqueHuntName(String(obj.name || '').trim() || 'Shared Hunt'),
+      cardsPerPage: String(obj.cardsPerPage || '4'),
+      ecLevel: String(obj.ecLevel || 'Q'),
+      showNumber: obj.showNumber !== false,
+      stations: obj.stations.map(function (s) {
+        var st = blankStation();
+        if (!s || typeof s !== 'object') return st;
+        if (typeof s.id === 'string') st.id = s.id;   // the sender's station ids ride the link; the hunt's own id is new here
+        st.label = String(s.label || '');
+        st.content = String(s.content || '');
+        st.note = String(s.note || '');
+        st.qType = Q_TYPES.indexOf(s.qType) !== -1 ? s.qType : 'text';
+        st.choices = Array.isArray(s.choices) ? s.choices.map(function (c) { return String(c == null ? '' : c); }) : [];
+        st.correctChoice = parseInt(s.correctChoice, 10) || 0;
+        st.numericAnswer = String(s.numericAnswer == null ? '' : s.numericAnswer);
+        st.tolerance = String(s.tolerance == null ? '0' : s.tolerance);
+        st.hint = String(s.hint || '');
+        st.hintPenalty = String(s.hintPenalty == null ? '0' : s.hintPenalty);
+        st.codeWord = String(s.codeWord || '');
+        return st;
+      })
+    };
+  }
+

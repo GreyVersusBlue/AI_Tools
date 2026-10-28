@@ -1940,21 +1940,7 @@
   }
 
   Share.mount(els.shareBtn, {
-    getState: function () {
-      if (!state) return null;
-      return {
-        name: state.name,
-        cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,
-        stations: state.stations.map(function (s) {
-          return {
-            id: s.id, label: s.label, content: s.content, note: s.note,
-            qType: s.qType, choices: (s.choices || []).slice(), correctChoice: s.correctChoice,
-            numericAnswer: s.numericAnswer, tolerance: s.tolerance,
-            hint: s.hint || '', hintPenalty: s.hintPenalty || '0', codeWord: s.codeWord || ''
-          };
-        })
-      };
-    },
+    getState: function () { return Stations.shareState(state, { kind: 'hunt' }); },
     param: SHARE_PARAM,
     tool: 'qr-scavenger-hunt-builder',
     title: 'Share this hunt',
@@ -1974,29 +1960,7 @@
       the way ensureStationDefaults() would, and no run — the receiving device
       builds its own through ensureRun(). */
   function normalizeHunt(obj) {
-    return {
-      name: uniqueHuntName(String(obj.name || '').trim() || 'Shared Hunt'),
-      cardsPerPage: String(obj.cardsPerPage || '4'),
-      ecLevel: String(obj.ecLevel || 'Q'),
-      showNumber: obj.showNumber !== false,
-      stations: obj.stations.map(function (s) {
-        var st = blankStation();
-        if (!s || typeof s !== 'object') return st;
-        if (typeof s.id === 'string') st.id = s.id;   // the sender's station ids ride the link; the hunt's own id is new here
-        st.label = String(s.label || '');
-        st.content = String(s.content || '');
-        st.note = String(s.note || '');
-        st.qType = Q_TYPES.indexOf(s.qType) !== -1 ? s.qType : 'text';
-        st.choices = Array.isArray(s.choices) ? s.choices.map(function (c) { return String(c == null ? '' : c); }) : [];
-        st.correctChoice = parseInt(s.correctChoice, 10) || 0;
-        st.numericAnswer = String(s.numericAnswer == null ? '' : s.numericAnswer);
-        st.tolerance = String(s.tolerance == null ? '0' : s.tolerance);
-        st.hint = String(s.hint || '');
-        st.hintPenalty = String(s.hintPenalty == null ? '0' : s.hintPenalty);
-        st.codeWord = String(s.codeWord || '');
-        return st;
-      })
-    };
+    return Stations.fromShare(obj, { kind: 'hunt', uniqueName: uniqueHuntName });
   }
 
   /** Files an arriving hunt into the store and points `current` at it, so the

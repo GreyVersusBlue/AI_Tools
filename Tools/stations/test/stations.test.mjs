@@ -371,6 +371,34 @@ function suite(src) {
     eq(S.toDisk(F.H2()).stations.length, F.H2().stations.length, 'D: toDisk of a hunt is a copy');
   }
 
+  { // v386: shareState / fromShare are the pages' getState / normalize functions, to the letter
+    const txt = fs.readFileSync(path.join(here, '_old-share-functions.txt'), 'utf8');
+    const part = (name) => txt.split('//@@' + name + '\n')[1].split('//@@')[0];
+    const STATION_TYPES = ['text', 'digits', 'cipher'], Q_TYPES = ['text', 'choice', 'numeric', 'photo'];
+    const ER = { src: (v) => v, isInline: (v) => typeof v === 'string' && v.slice(0, 11) === 'data:image/' };
+    const uniq = (n) => n + ' (2)', rid = () => 'newroom001';
+    const blankStation = () => ({ label: '', content: '', note: '', qType: 'text', choices: [], correctChoice: 0, numericAnswer: '', tolerance: '0', hint: '', hintPenalty: '0', codeWord: '' });
+    const mk = (body, names) => new Function('STATION_TYPES', 'Q_TYPES', 'ER', 'uniqueRoomName', 'uniqueHuntName', 'makeRoomId', 'blankStation', 'state', body + '\nreturn ' + names + ';');
+    const oldRoomNorm = mk(part('019 normalizeRoom'), 'normalizeRoom')(STATION_TYPES, Q_TYPES, ER, uniq, uniq, rid, blankStation, null);
+    const oldHuntNorm = mk(part('018 normalizeHunt'), 'normalizeHunt')(STATION_TYPES, Q_TYPES, ER, uniq, uniq, rid, blankStation, null);
+    const oldShare = (body, state) => { let got; const Share = { mount: (el, o) => { got = o; } }; new Function('Share', 'els', 'state', 'ER', 'SHARE_PARAM', 'var x = {' + body.replace(/^\s*getState:/, 'getState:') + ' param: 1 }; Share.mount(null, x);')(Share, {}, state, ER, 'p'); return got.getState(); };
+    const rooms = [F.R2(), F.R3(), { name: 'Odd', roomId: 'x', stations: [{ clue: 'c', answers: 'a', next: 'end', type: 'cipher', cipherShift: 0, numericTolerance: 0.5, image: 'data:image/png;base64,AA', id: 'abcd' }, {}, null, { type: 'weird', next: 7, image: 'idb:zz', numericTolerance: 'x', hintCost: '4', maxAttempts: 'q' }] }];
+    const hunts = [F.H2(), F.H3(), { name: 'Odd', stations: [{ label: 7, qType: 'zz', choices: [1, null, 'c'], correctChoice: '2', tolerance: null, hintPenalty: undefined, id: 'wxyz' }, null, [], {}] }];
+    rooms.forEach((r, i) => {
+      const rs = { ...r, stations: r.stations.filter(x => x && typeof x === 'object') };   // a saved set holds no null row
+      eq(jc(S.shareState(rs, { kind: 'room' })), jc(oldShare(part('019 getState'), rs)), 'S: shareState of room ' + i + ' is 019\'s getState');
+      const a = { name: i % 2 ? '  ' : 'Zed', cardsPerPage: 8, showNumber: false, countdownMinutes: '0', stations: r.stations };
+      eq(jc(S.fromShare(a, { kind: 'room', uniqueName: uniq, roomId: rid, isInline: ER.isInline })), jc(oldRoomNorm(a)), 'S: fromShare of room ' + i + ' is 019\'s normalizeRoom');
+    });
+    hunts.forEach((h, i) => {
+      const hs = { ...h, stations: h.stations.filter(x => x && typeof x === 'object' && !Array.isArray(x)) };
+      eq(jc(S.shareState(hs, { kind: 'hunt' })), jc(oldShare(part('018 getState'), hs)), 'S: shareState of hunt ' + i + ' is 018\'s getState');
+      const a = { name: i % 2 ? '' : 'Hunt', cardsPerPage: 9, stations: h.stations };
+      eq(jc(S.fromShare(a, { kind: 'hunt', uniqueName: uniq })), jc(oldHuntNorm(a)), 'S: fromShare of hunt ' + i + ' is 018\'s normalizeHunt');
+    });
+    eq(S.shareState(null, { kind: 'room' }), null, 'S: no state, no link');
+  }
+
   return { passed, fails };
 }
 
@@ -390,6 +418,8 @@ const MUTANTS = [
   ['nextOf ignores the answer', "if (given !== undefined && station.branches", "if (false && station.branches"],
   ['a go-to id is ignored on read', "out.next = n;   // stored as an id on disk (v385)", "out.next = null;"],
   ['toDisk keeps the position', "st.next = out.stations[st.next].id;", "st.next = st.next;"],
+  ['fromShare keeps an unknown room type', "type: ROOM_TYPES.indexOf(st.type) !== -1 ? st.type : 'text',", "type: st.type,"],
+  ['shareState carries the run', "      name: state.name,\n      cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,\n      stations: state.stations.map(function (s) {\n        return {\n          id: s.id,", "      name: state.name, run: state.run,\n      cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,\n      stations: state.stations.map(function (s) {\n        return {\n          id: s.id,"],
   ['an orphan mark is kept', "if (id === undefined || String(parseInt(k, 10)) !== k) { dropped++; return; }", "if (id === undefined) id = k;"]
 ];
 let mutantFail = 0;

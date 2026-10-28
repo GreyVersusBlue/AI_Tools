@@ -1541,26 +1541,7 @@
   }
 
   Share.mount(els.shareBtn, {
-    getState: function () {
-      if (!state) return null;
-      return {
-        name: state.name, storyIntro: state.storyIntro || '',
-        cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel,
-        showNumber: state.showNumber !== false, randomizeStart: !!state.randomizeStart,
-        countdownEnabled: !!state.countdownEnabled, countdownMinutes: state.countdownMinutes,
-        packetCardsPerPage: state.packetCardsPerPage || '2',
-        stations: state.stations.map(function (st) {
-          return {
-            id: st.id, clue: st.clue, answers: st.answers, hint: st.hint || '', next: st.next,
-            image: ER.src(st.image), type: st.type || 'text',
-            hintCost: st.hintCost || 0, awardLetter: st.awardLetter || '',
-            cipherPlain: st.cipherPlain || '', cipherShift: st.cipherShift || 0,
-            maxAttempts: st.maxAttempts || 0,
-            numericTolerance: st.numericTolerance === undefined ? null : st.numericTolerance
-          };
-        })
-      };
-    },
+    getState: function () { return Stations.shareState(state, { kind: 'room', imageSrc: ER.src }); },
     param: SHARE_PARAM,
     tool: 'escape-room-builder',
     title: 'Share this room',
@@ -1579,42 +1560,7 @@
   /** An arrival as a room this device can hold, with a new roomId and every
       station field defaulted the way newSet() would leave it. */
   function normalizeRoom(obj) {
-    var minutes = parseInt(obj.countdownMinutes, 10);
-    return {
-      name: uniqueRoomName(String(obj.name || '').trim() || 'Shared Escape Room'),
-      roomId: makeRoomId(),
-      storyIntro: typeof obj.storyIntro === 'string' ? obj.storyIntro : '',
-      cardsPerPage: String(obj.cardsPerPage || '4'),
-      ecLevel: String(obj.ecLevel || 'Q'),
-      showNumber: obj.showNumber !== false,
-      randomizeStart: !!obj.randomizeStart,
-      countdownEnabled: !!obj.countdownEnabled,
-      countdownMinutes: (isFinite(minutes) && minutes > 0) ? minutes : 20,
-      packetCardsPerPage: String(obj.packetCardsPerPage || '2'),
-      stations: obj.stations.map(function (st) {
-        st = (st && typeof st === 'object') ? st : {};
-        var next = null;
-        if (st.next === 'end') next = 'end';
-        else if (typeof st.next === 'number') next = st.next;
-        /* A puzzle type this build does not have would render a station with
-           no answer field at all, so an unknown one falls back to plain text —
-           the same shape 074 gave an unknown hazard symbol. */
-        var tol = Number(st.numericTolerance);
-        return {
-          id: typeof st.id === 'string' ? st.id : undefined,   // the sender's station ids ride the link; the room's own id is new here
-          clue: String(st.clue || ''), answers: String(st.answers || ''), hint: String(st.hint || ''),
-          next: next, image: ER.isInline(st.image) ? st.image : '',   // never another browser's idb: reference
-          type: STATION_TYPES.indexOf(st.type) !== -1 ? st.type : 'text',
-          hintCost: parseInt(st.hintCost, 10) || 0,
-          awardLetter: String(st.awardLetter || ''),
-          cipherPlain: String(st.cipherPlain || ''),
-          cipherShift: parseInt(st.cipherShift, 10) || 0,
-          maxAttempts: parseInt(st.maxAttempts, 10) || 0,
-          numericTolerance: (st.numericTolerance === null || st.numericTolerance === undefined ||
-            !isFinite(tol)) ? null : tol
-        };
-      })
-    };
+    return Stations.fromShare(obj, { kind: 'room', uniqueName: uniqueRoomName, roomId: makeRoomId, isInline: ER.isInline });
   }
 
   /** Files an arriving room into the store and points `current` at it, so the

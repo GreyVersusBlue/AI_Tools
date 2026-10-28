@@ -385,6 +385,111 @@
     return out;
   }
 
+  // ── share links (v386): what travels, and an arrival made safe ───────────────
+  /* shareState(obj, opts) is the authored fields of a saved room or hunt and nothing else (no run, no
+     roomId): 019's and 018's getState, moved here to the letter. opts.imageSrc turns an `idb:` image
+     into the data URL a link can carry. fromShare(obj, opts) is normalizeRoom / normalizeHunt: an
+     arrival as a set this device can hold, every field defaulted. opts.kind ('room' or 'hunt'), opts.uniqueName(name) files it under a
+     free name, opts.roomId() draws a room's new id, opts.isInline(src) says an image may be kept
+     (never another browser's `idb:` reference). The sender's station ids ride along, a set's own does not. */
+  function shareState(obj, opts) {
+    if (!isObj(obj) || !Array.isArray(obj.stations)) return null;
+    var state = obj, imageSrc = (opts && opts.imageSrc) || function (v) { return v; };
+    if (((opts && opts.kind) || detect(state)) === 'room') {
+      return {
+        name: state.name, storyIntro: state.storyIntro || '',
+        cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel,
+        showNumber: state.showNumber !== false, randomizeStart: !!state.randomizeStart,
+        countdownEnabled: !!state.countdownEnabled, countdownMinutes: state.countdownMinutes,
+        packetCardsPerPage: state.packetCardsPerPage || '2',
+        stations: state.stations.map(function (st) {
+          return {
+            id: st.id, clue: st.clue, answers: st.answers, hint: st.hint || '', next: st.next,
+            image: imageSrc(st.image), type: st.type || 'text',
+            hintCost: st.hintCost || 0, awardLetter: st.awardLetter || '',
+            cipherPlain: st.cipherPlain || '', cipherShift: st.cipherShift || 0,
+            maxAttempts: st.maxAttempts || 0,
+            numericTolerance: st.numericTolerance === undefined ? null : st.numericTolerance
+          };
+        })
+      };
+    }
+    return {
+      name: state.name,
+      cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,
+      stations: state.stations.map(function (s) {
+        return {
+          id: s.id, label: s.label, content: s.content, note: s.note,
+          qType: s.qType, choices: (s.choices || []).slice(), correctChoice: s.correctChoice,
+          numericAnswer: s.numericAnswer, tolerance: s.tolerance,
+          hint: s.hint || '', hintPenalty: s.hintPenalty || '0', codeWord: s.codeWord || ''
+        };
+      })
+    };
+  }
+
+  function fromShare(obj, opts) {
+    var kind = opts.kind, uniqueName = opts.uniqueName || function (n) { return n; };
+    if (kind === 'room') {
+      var minutes = parseInt(obj.countdownMinutes, 10);
+      return {
+        name: uniqueName(String(obj.name || '').trim() || 'Shared Escape Room'),
+        roomId: opts.roomId(),
+        storyIntro: typeof obj.storyIntro === 'string' ? obj.storyIntro : '',
+        cardsPerPage: String(obj.cardsPerPage || '4'),
+        ecLevel: String(obj.ecLevel || 'Q'),
+        showNumber: obj.showNumber !== false,
+        randomizeStart: !!obj.randomizeStart,
+        countdownEnabled: !!obj.countdownEnabled,
+        countdownMinutes: (isFinite(minutes) && minutes > 0) ? minutes : 20,
+        packetCardsPerPage: String(obj.packetCardsPerPage || '2'),
+        stations: obj.stations.map(function (st) {
+          st = isObj(st) ? st : {};
+          var next = null;
+          if (st.next === 'end') next = 'end';
+          else if (typeof st.next === 'number') next = st.next;
+          var tol = Number(st.numericTolerance);
+          return {
+            id: typeof st.id === 'string' ? st.id : undefined,
+            clue: String(st.clue || ''), answers: String(st.answers || ''), hint: String(st.hint || ''),
+            next: next, image: opts.isInline(st.image) ? st.image : '',
+            type: ROOM_TYPES.indexOf(st.type) !== -1 ? st.type : 'text',
+            hintCost: parseInt(st.hintCost, 10) || 0,
+            awardLetter: String(st.awardLetter || ''),
+            cipherPlain: String(st.cipherPlain || ''),
+            cipherShift: parseInt(st.cipherShift, 10) || 0,
+            maxAttempts: parseInt(st.maxAttempts, 10) || 0,
+            numericTolerance: (st.numericTolerance === null || st.numericTolerance === undefined ||
+              !isFinite(tol)) ? null : tol
+          };
+        })
+      };
+    }
+    return {
+      name: uniqueName(String(obj.name || '').trim() || 'Shared Hunt'),
+      cardsPerPage: String(obj.cardsPerPage || '4'),
+      ecLevel: String(obj.ecLevel || 'Q'),
+      showNumber: obj.showNumber !== false,
+      stations: obj.stations.map(function (s) {
+        var st = { label: '', content: '', note: '', qType: 'text', choices: [], correctChoice: 0, numericAnswer: '', tolerance: '0', hint: '', hintPenalty: '0', codeWord: '' };
+        if (!isObj(s)) return st;
+        if (typeof s.id === 'string') st.id = s.id;
+        st.label = String(s.label || '');
+        st.content = String(s.content || '');
+        st.note = String(s.note || '');
+        st.qType = ['text', 'choice', 'numeric', 'photo'].indexOf(s.qType) !== -1 ? s.qType : 'text';
+        st.choices = Array.isArray(s.choices) ? s.choices.map(function (c) { return String(c == null ? '' : c); }) : [];
+        st.correctChoice = parseInt(s.correctChoice, 10) || 0;
+        st.numericAnswer = String(s.numericAnswer == null ? '' : s.numericAnswer);
+        st.tolerance = String(s.tolerance == null ? '0' : s.tolerance);
+        st.hint = String(s.hint || '');
+        st.hintPenalty = String(s.hintPenalty == null ? '0' : s.hintPenalty);
+        st.codeWord = String(s.codeWord || '');
+        return st;
+      })
+    };
+  }
+
   function write(set, kind) {
     kind = kind || set.kind;
     var cross = kind !== set.kind;
@@ -855,7 +960,7 @@
     KINDS: KINDS, ANSWER_TYPES: ANSWER_TYPES, ID_LENGTH: ID_LENGTH, CODE_WORDS: CODE_WORDS,
     detect: detect, read: read, write: write, ensureIds: ensureIds, newId: newId, newSetId: newSetId,
     playable: playable, playPayload: playPayload, playUrl: playUrl, playRead: playRead,
-    codeText: codeText, teamCodeText: teamCodeText, check: check, toDisk: toDisk, nextOf: nextOf, reachable: reachable,
+    codeText: codeText, teamCodeText: teamCodeText, check: check, toDisk: toDisk, shareState: shareState, fromShare: fromShare, nextOf: nextOf, reachable: reachable,
     remapRun: remapRun, upgradeProgress: upgradeProgress, budget: budget
   };
   global.EscapeRoomMatch = {
