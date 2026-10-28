@@ -125,7 +125,21 @@ const got = await saved();
 eq(got.stations[1].branches, sent.stations[1].branches, 'the arrival holds the same branches');
 eq(got.stations[1].branches.byAnswer.Forest, got.stations[2].id, 'aimed at the arrival\'s own station ids');
 
+console.log('018 — the answer key and route card show the branch');
+await tab('build');
+await page.locator('#print-answers-btn').click(); await settle(page, 200);
+const keyRows = await page.locator('#answer-key-body tr').allTextContents();
+ok(/Choice A .Forest. sends the team to Station 3/.test(keyRows[1]), 'the key says where Forest sends a team: ' + keyRows[1]);
+ok(!/sends the team/.test(keyRows[0] + keyRows[3]), 'a station with no branch says nothing');
+await tab('run');
+if (!(await page.locator('#teams-body input').count())) { await page.locator('#add-team-btn').click(); await settle(page, 200); }
+await page.locator('#print-routes-btn').click(); await settle(page, 200);
+const note = await page.locator('#print-routes-grid .p-card').first().locator('.p-route-note').textContent();
+ok(/answer decides where you go next/.test(note), 'the route card warns that some stops branch');
+ok(!/Forest/.test(note), 'the route card does not give the branch away');
+
 console.log('018 — removing the target drops the branch');
+await tab('build');
 await page.locator('tr[data-idx="2"] [data-remove]').click(); await settle(page, 250);
 d = await saved();
 ok(!JSON.stringify(d.stations[1].branches || {}).includes('c3xx'), 'a branch to the removed station is gone');

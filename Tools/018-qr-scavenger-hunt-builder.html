@@ -1037,6 +1037,7 @@
           hint: (s.hint || '').trim(),
           hintPenalty: parseFloat(s.hintPenalty) || 0,
           codeWord: s.codeWord,
+          branches: s.branches,
           image: s.image ? HI.src(s.image) : '',
         };
       })
@@ -1200,6 +1201,30 @@
     });
   }
 
+  // The teacher's answer key says where each branched choice sends a team ("Choice B ... goes to Station 4").
+  function branchLines(s) {
+    var by = s.branches && s.branches.byAnswer, out = [];
+    if (!by || s.qType !== 'choice') return out;
+    var valid = validStations();
+    (s.choices || []).forEach(function (text, ci) {
+      var t = branchTarget(s, text);
+      if (!t) return;
+      var dest = 'the end';
+      if (t !== 'end') {
+        var n = -1;
+        valid.forEach(function (v, vi) { if (v.id === t) n = vi; });
+        if (n < 0) return;
+        dest = 'Station ' + (n + 1) + (valid[n].label !== 'Station ' + (valid[n].idx + 1) ? ' (' + valid[n].label + ')' : '');
+      }
+      out.push('Choice ' + String.fromCharCode(65 + ci) + (text ? ' \u201c' + text + '\u201d' : '') + ' sends the team to ' + dest + '.');
+    });
+    return out;
+  }
+  // True when any station has a branch that still points at a station on the cards.
+  function hasBranches() {
+    return validStations().some(function (s) { return branchLines(s).length > 0; });
+  }
+
   function buildAnswerKey() {
     var body = els.answerKeyBody;
     while (body.firstChild) body.removeChild(body.firstChild);
@@ -1211,6 +1236,10 @@
         answer.appendChild(document.createElement('br'));
         answer.appendChild(pEl('span', 'p-key-hint', 'Hint (−' + s.hintPenalty + ' min if used): ' + s.hint));
       }
+      branchLines(s).forEach(function (line) {
+        answer.appendChild(document.createElement('br'));
+        answer.appendChild(pEl('span', 'p-key-hint p-key-branch', line));
+      });
       tr.appendChild(answer);
       tr.appendChild(pEl('td', '', s.codeWord || '—'));
       body.appendChild(tr);
@@ -1409,6 +1438,7 @@
     var teams = state.run.teams;
     var stations = validStations();
     var pr = Stations.progress(Stations.read(state), {});
+    var branched = hasBranches();
     PrintKit.renderCards(els.printRoutesGrid, teams, cardGrid('2'), function (t, i) {
       var card = pEl('div', 'p-card');
       card.appendChild(pEl('div', 'p-num', 'Route card'));
@@ -1420,7 +1450,8 @@
       });
       card.appendChild(list);
       card.appendChild(pEl('div', 'p-route-note', 'Start at the first station on this list and work down it. ' +
-        'Your list is in a different order from the other teams’.'));
+        'Your list is in a different order from the other teams’.' +
+        (branched ? ' At some stops your answer decides where you go next: follow what your teacher tells you.' : '')));
       return card;
     });
   }
