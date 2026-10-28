@@ -6526,6 +6526,27 @@ un-extracted.
   absent, award a point (008), or start a pass (001). Extract the undo stack into
   `_shared/undo.js` and adopt it in the tools whose undo is a single in-memory
   snapshot (002, 003, 018, 020, 021, 022, 024, 027, 043).
+  *Undo design (AI-22, 2026-10-28; live mode is a later increment with its own design).*
+  `_shared/undo.js` publishes `UndoStack`: `create({ limit, maxBytes, serialize, parse, onChange })`
+  returns `push(state)` (the state as it is *before* a change; clears redo), `pushRaw(str)` (a
+  snapshot taken earlier, as 005's drag takes one at pointerdown), `undo(current?)` / `redo(current?)`
+  (parsed state or `null`; passing `current` is what feeds the other side, so a tool that has no Redo
+  button passes nothing and keeps today's behaviour), `canUndo/canRedo/depth/redoDepth/clear`, and
+  `keyHandler(stack, { undo, redo })` (Ctrl/Cmd+Z, Ctrl+Y, Ctrl/Cmd+Shift+Z; leaves text fields to
+  their own undo; no `redo` action means Ctrl+Y is left alone). Snapshots are strings, so a later
+  edit cannot reach into history. **Limits:** 60 steps (005's number), `maxBytes` optional (0 = none;
+  a tool holding photos sets it; the newest step is always kept), redo capped the same. **Kept per
+  tool:** whatever the tool's single snapshot kept today (005 the whole state; 022 five fields; 024
+  the strategies and counter), serialised by the tool; nothing is saved, the stack goes with the page.
+  **Buttons:** `onChange` enables/disables Undo (and Redo, where a tool adds one); an adopter's
+  existing button keeps its label and its one-step behaviour. **Adoption order:** 005 as a port alone
+  (behaviour byte-for-byte; no Redo, its own Ctrl+Z handler kept because Ctrl+Shift+Z undoes there
+  today), then one tool per commit, each gaining multi-step undo where it had one snapshot.
+  Where a tool's "undo" is a timed one-shot (018's Undo clear for 15 s, 043's deleted-trip bar for
+  10 s), the window stays; the stack only replaces what sits behind it. *Questions with a default
+  built:* whether Redo buttons appear at all (default: no button, only the keys, until a teacher
+  asks); whether 018 and 043 are adopters at all given their timed windows (default: decide when
+  reached; each is recorded in `HISTORY.md`).
 
 **Status.** P1 shipped 2026-09-03. P2 shipped 2026-09-04 (#182, `CACHE_VERSION` v148) with
 010 as its single adopter; 008, 045 and 007 still carry their own readers, for reasons
