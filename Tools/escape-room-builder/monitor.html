@@ -18,9 +18,14 @@
 <script src="../../_shared/qr-draw.js"></script>
 <script src="../../_shared/store.js"></script>
 <script src="../../_shared/stations.js"></script>
+<script src="../../_shared/print-kit.js"></script>
+<script src="../../_shared/stations-debrief.js"></script>
 <script src="er-board.js"></script>
 <script src="../../_shared/vendor/jsqr/jsqr.js"></script>
 <link rel="stylesheet" href="../../_shared/ink-paper.css">
+<link rel="stylesheet" href="../../_shared/print-area.css">
+<link rel="stylesheet" href="../../_shared/print-kit.css">
+<link rel="stylesheet" href="../../_shared/stations-debrief.css">
 <link rel="stylesheet" href="../../_shared/a11y.css">
 <style>
   /* Tool-local semantic tints, with 001's values — the shared file owns the 11
@@ -112,8 +117,15 @@
     <div class="card-title">Record of the Room</div>
     <p class="status-line" id="recordLine" style="margin-top:0;"></p>
     <div class="btn-row">
+      <label for="debriefRoom" class="status-line" style="margin:0;align-self:center;">Room</label>
+      <select id="debriefRoom" aria-describedby="recordLine"></select>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="secondary" id="previewDebriefBtn">Preview Debrief</button>
+      <button class="secondary" id="printDebriefBtn" type="button">🖨️ Print Debrief</button>
       <button class="danger" id="clearRecordBtn" type="button">Clear the record</button>
     </div>
+    <p class="status-line" id="debriefNote" role="status"></p>
   </div>
 
   <div class="card">
@@ -149,13 +161,17 @@
   </footer>
 </div>
 
+<div id="printArea" class="pk-paper">
+  <div class="sd-grid" id="printDebriefGrid"></div>
+</div>
+
 <script>
 (function () {
   "use strict";
 
   var els = {};
   ['rosterTable', 'rosterBody', 'rosterEmpty', 'addDeviceBtn', 'pairingBox', 'offerQr', 'offerText',
-   'clockBtn', 'clockReadout', 'recordLine', 'clearRecordBtn', 'boardTable', 'boardBody', 'boardEmpty', 'copyOfferBtn', 'scanAnswerBtn', 'scanVideo', 'answerInput', 'connectDeviceBtn', 'cancelPairingBtn', 'pairingStatus'
+   'clockBtn', 'clockReadout', 'recordLine', 'clearRecordBtn', 'debriefRoom', 'previewDebriefBtn', 'printDebriefBtn', 'debriefNote', 'printDebriefGrid', 'boardTable', 'boardBody', 'boardEmpty', 'copyOfferBtn', 'scanAnswerBtn', 'scanVideo', 'answerInput', 'connectDeviceBtn', 'cancelPairingBtn', 'pairingStatus'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var devices = []; // { id, pc, channel, station, total, done, connected }
@@ -182,13 +198,57 @@
     renderRecord();
   }
   function renderRecord() {
-    if (!kept || !kept.teams.length) { els.recordLine.textContent = 'Nothing kept yet. Once a team moves on from a station, the monitor keeps when it did, on this device.'; els.clearRecordBtn.disabled = true; return; }
+    if (!kept || !kept.teams.length) { els.recordLine.textContent = 'Nothing kept yet. Once a team moves on from a station, the monitor keeps when it did, on this device.'; els.clearRecordBtn.disabled = true; drawRoomChoices(); return; }
     var stops = kept.teams.reduce(function (n, t) { return n + Object.keys(t.marks).length; }, 0);
     els.recordLine.textContent = 'Kept on this device' + (kept.at ? ' (last updated ' + new Date(kept.at).toLocaleString() + ')' : '') + ': ' + kept.teams.length +
       ' team' + (kept.teams.length === 1 ? '' : 's') + ', ' + stops + ' station' + (stops === 1 ? '' : 's') + ' passed' +
       (kept.raceStartAt === null ? ', no clock started' : '') + '. It holds when each team reached each station; wrong tries and hints are not reported to the monitor.';
     els.clearRecordBtn.disabled = false;
+    drawRoomChoices();
   }
+
+  // The debrief print (Path 18 P4): the kept record, laid out by _shared/stations-debrief.js through the print
+  // kit, against the saved room it belongs to. The room is read from 019's own store (read only); the record
+  // names stations by id, so the room chosen decides the labels and the order of the sheet's stops.
+  PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.5in' });
+  var ROOMS_KEY = 'escape-room-builder:rooms';
+  function savedRooms() {
+    var store = Store.get(ROOMS_KEY, { version: 1, migrate: function (v, d) { return d; }, 'default': null });
+    return store && store.sets && typeof store.sets === 'object' ? store.sets : {};
+  }
+  function drawRoomChoices() {
+    var sets = savedRooms(), names = Object.keys(sets), pick = kept ? window.ErBoard.roomFor(sets, kept) : null;
+    var before = els.debriefRoom.value;
+    els.debriefRoom.textContent = '';
+    names.forEach(function (n) { var o = document.createElement('option'); o.value = n; o.textContent = n; els.debriefRoom.appendChild(o); });
+    if (!names.length) { var none = document.createElement('option'); none.value = ''; none.textContent = 'No saved rooms'; els.debriefRoom.appendChild(none); }
+    els.debriefRoom.value = names.indexOf(before) >= 0 ? before : (pick || names[0] || '');
+    var can = !!(kept && kept.teams.length && names.length);
+    els.printDebriefBtn.disabled = !can; els.previewDebriefBtn.disabled = !can;
+    els.debriefNote.textContent = !kept || !kept.teams.length ? '' : !names.length ? 'Save the room in the Escape Room Builder on this device to print its debrief.'
+      : pick ? '' : 'No saved room holds the stations in this record: pick the room it was played in.';
+  }
+  function buildDebrief() {
+    var room = savedRooms()[els.debriefRoom.value], set = room ? Stations.read(room) : null;
+    if (!set || !kept) return false;
+    var teams = Stations.debrief(set, kept);
+    StationsDebrief.render(els.printDebriefGrid, teams, {
+      grid: { cols: 1, perPage: 1 }, title: 'Room debrief', formatElapsed: window.ErBoard.formatElapsed, without: ['misses', 'hints'],
+      prompts: ['Which puzzle took your team longest, and why?', 'What did your team try that did not work, and what did you change after that?',
+        'What did you learn today that you did not know before the room?', 'If you ran the room again, what would your team do differently?']
+    });
+    return true;
+  }
+  var previewing = false;
+  els.printDebriefBtn.addEventListener('click', function () {
+    if (!buildDebrief()) return;
+    if (!previewing) { window.print(); return; }
+    PrintKit.preview({ trigger: els.previewDebriefBtn, onPrint: function () { els.printDebriefBtn.click(); } });
+  });
+  els.previewDebriefBtn.addEventListener('click', function () {
+    previewing = true;
+    try { els.printDebriefBtn.click(); } finally { previewing = false; }
+  });
   els.clearRecordBtn.addEventListener('click', function () {
     if (!window.confirm('Clear the kept record of this room? This cannot be undone.')) return;
     Store.remove(RECORD_KEY); kept = null; renderRecord();
