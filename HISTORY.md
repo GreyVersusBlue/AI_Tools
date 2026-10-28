@@ -9,6 +9,16 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-22: Path 14 P5 increment 1, `_shared/undo.js` and three adopters (2026-10-28, v371-v373)
+
+P5 had no written design; it is now in the P5 bullet in `BACKLOG.md` (surface, limits, what is kept per tool, buttons and keys, adoption order). `_shared/undo.js` publishes `UndoStack`: `create({ limit, maxBytes, serialize, parse, onChange })`, `push`, `pushRaw`, `undo(current?)`, `redo(current?)`, `canUndo/canRedo/depth/redoDepth/clear` and `keyHandler`. Snapshots are strings; 60 steps by default; redo only fills when a tool passes `current`.
+
+- **v371, 005 as a port alone.** `undoStack` is now an `UndoStack` (limit 60); `pushUndo`, the drag's `pushRaw(snap0)`, `undo()` and the `setState` clear use it. No Redo, and 005 keeps its own Ctrl+Z handler because Ctrl+Shift+Z undoes there today and `keyHandler` would treat it as redo. All 15 `seating-chart` suites unchanged and green. `npm run test:undo` (pure Node, 8 deliberate breaks each seen caught; the first draft let "clear leaves redo" survive because the test cleared an already-empty redo side).
+- **v372, 022.** "Undo last shuffle" walks back up to 30 shuffles (it kept one). The snapshot is the same five fields. A new roster or switch clears the stack. `smoke-undo.mjs` (port 8562): one shuffle then one undo, three shuffles undone in reverse, a new roster clears; seen failing with `limit: 1`.
+- **v373, 020.** "Undo last pick" walks back up to 40 picks (8 MB cap). The 20 `captureUndoSnapshot()` call sites are unchanged, which `smoke-redecide` needs because it rewrites that text. `smoke-undo.mjs` (port 8563); seen failing with `limit: 1`. The old comment said single-level was "per the ask"; I took that as the first version's scope, not a rule.
+
+**Not done.** 002, 003, 018, 021, 024, 027, 043, and live mode (cross-tool, needs its own design). 003 has no undo today (its only "undo" hits are confirm text), so it would gain a new feature, not a port. 018's "Undo clear" is a 15-second window and 043's deleted-trip bar a 10-second one, both kept as they are; the P5 bullet records the default, decide when reached. No Redo button was added anywhere (default: keys only, none wired yet). No decision numbers; next free port 8564.
+
 ## AI-22: Path 14 P4 increment 3, marks edited in place and zone rules that follow a mark (2026-10-28, v369-v370)
 
 Audit entry AI-22, rank 36 (now ¼, only Devon's items left). Two steps, each its own commit and `CACHE_VERSION`.
