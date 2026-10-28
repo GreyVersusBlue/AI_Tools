@@ -1874,14 +1874,7 @@
         nextLabel: nextIdx === -1 ? null : (nextIdx + 1) + '. ' + valid[nextIdx].label,
       };
     });
-    rows.sort(function (a, b) {
-      if (b.done !== a.done) return b.done - a.done;
-      if (b.count !== a.count) return b.count - a.count;
-      if (a.effectiveMark == null && b.effectiveMark == null) return 0;
-      if (a.effectiveMark == null) return 1;
-      if (b.effectiveMark == null) return -1;
-      return a.effectiveMark - b.effectiveMark;
-    });
+    rows = Stations.rank(rows);   // the order is stations.js's, shared with 019's monitor
     if (!rows.length) {
       els.leaderboardBody.innerHTML = '<tr><td colspan="6" class="empty-hint">No teams yet.</td></tr>';
       return;

@@ -998,6 +998,25 @@
       finished: req.length > 0 && done >= req.length, nextId: nextId };
   }
 
+  /** Teams in finishing order, best first, as 018's leaderboard has always put them: more required
+      stations done, then more reached in all, then the earlier effective time (a mark time plus any
+      penalty); a team with no time goes last. Each row needs `done`, `count` and `effectiveMark`
+      (a number or null). Returns a new array; equal rows keep their order. */
+  function rank(rows) {
+    return rows.map(function (r, i) { return { r: r, i: i }; }).sort(function (x, y) {
+      var a = x.r, b = y.r;
+      if (b.done !== a.done) return b.done - a.done;
+      if (b.count !== a.count) return b.count - a.count;
+      var an = a.effectiveMark == null, bn = b.effectiveMark == null;
+      if (!(an && bn)) {
+        if (an) return 1;
+        if (bn) return -1;
+        if (a.effectiveMark !== b.effectiveMark) return a.effectiveMark - b.effectiveMark;
+      }
+      return x.i - y.i;
+    }).map(function (x) { return x.r; });
+  }
+
   // ── runs and progress ─────────────────────────────────────────────────────
   /** 018's index-keyed run to an id-keyed one (or, with `alreadyById`, the
       id-keyed form write() emits back to the canonical one). `idsByIndex` is the playable
@@ -1092,7 +1111,7 @@
     KINDS: KINDS, ANSWER_TYPES: ANSWER_TYPES, ID_LENGTH: ID_LENGTH, CODE_WORDS: CODE_WORDS,
     detect: detect, read: read, write: write, ensureIds: ensureIds, newId: newId, newSetId: newSetId,
     playable: playable, playPayload: playPayload, playUrl: playUrl, playRead: playRead,
-    codeText: codeText, teamCodeText: teamCodeText, check: check, toDisk: toDisk, shareState: shareState, fromShare: fromShare, nextOf: nextOf, branchOf: branchOf, branchProblems: branchProblems, reachable: reachable, progress: progress,
+    codeText: codeText, teamCodeText: teamCodeText, check: check, toDisk: toDisk, shareState: shareState, fromShare: fromShare, nextOf: nextOf, branchOf: branchOf, branchProblems: branchProblems, reachable: reachable, progress: progress, rank: rank,
     remapRun: remapRun, upgradeProgress: upgradeProgress, budget: budget
   };
   global.EscapeRoomMatch = {

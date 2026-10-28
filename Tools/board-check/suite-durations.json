@@ -322,6 +322,8 @@
     "Tools/qr-scavenger-hunt-builder/test/smoke-images.mjs": 15,
     "Tools/qr-scavenger-hunt-builder/test/smoke-required.mjs": 12,
     "Tools/qr-scavenger-hunt-builder/test/smoke-branches.mjs": 14,
+    "Tools/escape-room-builder/test/er-board.test.mjs": 1,
+    "Tools/escape-room-builder/test/smoke-monitor-board.mjs": 8,
     "Tools/export/test/smoke-export.mjs": 2,
     "Tools/export/test/smoke-csv-adopters.mjs": 11,
     "Tools/export/test/smoke-sheet-adopters.mjs": 16,
