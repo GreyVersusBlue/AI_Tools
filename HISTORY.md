@@ -9,6 +9,18 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-26: Path 18 P4, the debrief for a 019 room (2026-10-28, v395-v397)
+
+**v395, one sheet for both tools.** 018's debrief layout (path table, summary line, reflection page) moved out of the page into `_shared/stations-debrief.js` (`StationsDebrief.render(host, teams, opts)`, one `PrintKit.renderCards` call) with `_shared/stations-debrief.css`; 018 calls it and its inline rules went. `smoke-print` now counts five `renderCards` calls in the page, one `StationsDebrief.render`, and the one in the module (it said six in the page before).
+
+**v396, the record.** 019's play is on student devices, so the monitor keeps only what it hears: `ErBoard.applyMessage` marks a station solved when a device moves off it (or finishes while on it), at the monitor's clock; the first solve is kept, a room sent back to an earlier station overwrites nothing, a room restarted after it finished starts again, a code with no station ids records nothing. `ErBoard.toRecord` writes it in the run shape `Stations.debrief` already reads (so there is one rule, not two), `cleanRecord` reads it back, `roomFor` picks the saved room that holds most of its station ids. Kept in `escape-room-builder:monitor-record` (Store envelope, registry row `student: true` since it holds the team names the teacher typed), on the teacher's device only; saved only once a team has moved on, so opening the monitor never overwrites the last record. `lock.html` is unchanged. `er-board.test` now 46 assertions and 11 mutants (5 new); `smoke-monitor-record` (port 8575), three page mutants by hand.
+
+**v397, the print.** The monitor's Record card has a room choice (the matching room preselected), Preview Debrief and Print Debrief, through the kit; `smoke-monitor-debrief` (port 8576, 27 assertions, four page mutants by hand) and a `019` entry in `smoke-preview-adopters` (the preview's page count is Chromium's PDF count in three states, light and dark).
+
+**Decided, reversible (no number; none are Devon's open questions).** (a) The sheet for a room has **no wrong-tries or hint columns** and says so, rather than print a 0: a phone's message carries only station, total, done and score, and adding counts to it is a `lock.html` change, held by "nothing is student-facing right now". The `without` option puts them back for a sheet that has the data. (b) A room's stations have no names, so the sheet says "Station n". (c) The record is replaced only by a new session that has moved a team; a Clear button asks first. (d) Monitor times are the teacher's clock (as for v392's board), so a device that reconnects after the clock is reset reads from the new start.
+
+**Not verified.** Paper; a phone; a real WebRTC pairing feeding the record (devices were fed through `ErBoard.applyMessage`, as v392's suite does); `audit-print` and `test:print-tail` for the monitor's sheet (neither opens that page).
+
 ## AI-26: Path 18 P3's last printed pieces and P4, 018's debrief print (2026-10-28, v393-v394)
 
 **v393, branches on paper.** 018's teacher answer key lists under a multiple-choice station where each branched choice sends a team ("Choice A "Forest" sends the team to Station 3"); a route card, which a team holds, says only that at some stops the answer decides where to go next and never names a choice, so the card does not give an answer away. `validStations()` had been dropping `branches` from its copy of each station, which is why the key could not see them; it now carries them.
