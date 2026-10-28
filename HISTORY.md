@@ -9,6 +9,36 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-28: Path 20 P3 increment 2, step 4: the exports draw from the vectors (2026-10-28, v429)
+
+**What shipped.** One step. `drawMapContent()`, which Download PNG, Print Map, Save PDF, the worksheet's map panel and the tiled poster
+all go through, now calls `liveBase.drawInto()` in place of `drawImage(mapImg, ...)` whenever the screen is showing a plain built-in map
+from the vectors. It draws the same function the screen does at the export's own scale (the context's transform is the dpr), so a
+border is a hairline on paper at every zoom. Every other map (a data-shaded one, a Wikimedia one, an upload) is still the raster.
+
+**What a printed page now looks like.** A zoomed single page or a worksheet panel: a 1 px border at the export's resolution (2 device px
+at dpr 2) where the old raster path printed the same border as a blur 38 px wide at 12x. The tiled poster: a 2 px border at poster
+resolution (a 1200 px tile fills a letter page, about 141 dpi, so about 0.36 mm), set by `opts.strokePx` at the one call site; the
+screen and the other exports use 1. The ocean, land and shading colours, the relief, and the view are the same pixels as before at the
+identity view (the step-1 parity suite); only the line work and the sharpness of a zoomed view change. Annotations, grid, legend,
+compass, scale bar and credit are drawn over it exactly as before.
+
+**Decided here.** No new question: Devon's 2026-10-21 defaults (thin constant borders) are what the poster's 2 px and the screen's 1 px
+implement. The locator inset was left on the raster: it is a 150 px downscale of a 3000 px picture, which is sharp already, so drawing it
+from the vectors buys nothing until the raster write itself is dropped (step (d)). No stored data changes, no `__v` bump.
+
+**Verified.** `test:blank-map-live-export` (port 8587; lower-48 at 3x: the PNG's middle equals the live canvas, 0 of 79,968 pixels
+differ; at 12x the PNG and all four poster tiles have no pixel inside a 7 px block of ink, where the raster border was 38 px; the overlap
+strip of two neighbouring tiles is byte-equal; no off-site request, no console error). Break-on-purpose: with the vector branch disabled
+6 of its 12 checks fail (4,744 pixels differ, 7,199 to 68,828 fat-ink pixels). `--only blank-map-generator` (15 suites, green),
+the a11y sweep for 046, all tracked `*.test.mjs` with node, lint, `offline:build` + `offline:verify`, check:tests, check:precache
+(`--base origin/main`), check:registry, check:dedupe, check:inline-sinks, check:entities, check:hidden-flex, check:print-clip, check:art,
+check:docs-commands and `check:adoption -- --check`. No function was renamed or removed; `drawMapContent` is read by no suite's text cuts.
+
+**Not verified.** Anything on paper, a device pixel ratio of 2, the worksheet panel and Save PDF by their own buttons (they call the same
+function; the suite exercises Download PNG and the poster), a shaded or Wikimedia map's export (unchanged by construction: `liveBase.active`
+is false for them). **Obliges others.** `suite-durations.json` has a 30 s estimate for the new suite.
+
 ## AI-28: Path 20 P3 increment 1, the base map drawn from the vectors on screen (2026-10-28, v426-v428)
 
 **What shipped.** Three steps, each its own commit and `CACHE_VERSION`. v426: `Tools/blank-map-generator/bmg-live.js`, the one draw
