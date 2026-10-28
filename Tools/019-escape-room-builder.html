@@ -32,6 +32,7 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/stations.js"></script>
 <script src="escape-room-builder/er-match.js"></script>
 <script src="../_shared/media-db.js"></script>
 <script src="escape-room-builder/er-image.js"></script>
@@ -551,6 +552,7 @@
   }
   function save() {
     if (!state) return;
+    Stations.ensureIds(state);   // Path 18 P1: every station carries a stable id on disk
     var store = loadStore();
     store.sets[state.name] = state;
     store.current = state.name;
@@ -605,6 +607,7 @@
     if (typeof loaded.packetCardsPerPage !== 'string') loaded.packetCardsPerPage = '2';
     state = loaded;
     ensureAtLeastOneStation();
+    if (Stations.ensureIds(state)) save();   // ids drawn on first read are saved then, so a reload prints the same ones
     applyStateToForm();
     refreshSwitcher();
     scheduleRender();
