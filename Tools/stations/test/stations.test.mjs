@@ -6,7 +6,7 @@
 // context with no document, the way export.test.mjs loads export.js. Parity is held against
 // the pages' OWN functions, cut out of the HTML by name at run time (018's validStations and
 // 019's validStations / buildRoomPayload / stationPayloadFor / trStationNext), and against
-// er-match.js loaded from its file, so a drift in either shows here instead of being retyped
+// the frozen v382 er-match (_old-er-match.txt), so a drift in either shows here instead of being retyped
 // here. P2 deletes those page functions; this suite then reads `Stations` alone (its header
 // says so where it matters).
 //
@@ -31,13 +31,17 @@ function loadModule(src) {
   const win = {};
   const ctx = { window: win, btoa, unescape, encodeURIComponent, URL, Math, Date, JSON, Object, Array, String, parseInt, parseFloat, isNaN, isFinite, RegExp, Error };
   vm.createContext(ctx);
-  vm.runInContext(read('Tools/escape-room-builder/er-match.js'), ctx);
   vm.runInContext(read('_shared/vendor/qrcode/qrcode.js'), ctx);
   win.qrcode = ctx.qrcode;   // a vm top-level var lands on the context; qr-draw.js reads it off window
   ctx.TextEncoder = TextEncoder;
   vm.runInContext(read('_shared/qr-draw.js'), ctx);
   vm.runInContext(src, ctx);
-  return { S: win.Stations, M: win.EscapeRoomMatch, ctx };
+  // the matcher as it stood before it was folded into the module (v382's er-match.js, frozen), in its own
+  // context, so the module's copy is held to it and cannot drift unseen
+  const old = { window: {} };
+  vm.createContext(old);
+  vm.runInContext(read('Tools/stations/test/_old-er-match.txt'), old);
+  return { S: win.Stations, M: old.window.EscapeRoomMatch, ctx };
 }
 
 /* A function cut out of a page by name (brace matching; none of these hold a brace in a string). */

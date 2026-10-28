@@ -15,7 +15,6 @@
 <script src="../../_shared/webrtc-pair.js"></script>
 <script src="../../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../../_shared/qr-draw.js"></script>
-<script src="er-match.js"></script>
 <script src="../../_shared/stations.js"></script>
 <link rel="stylesheet" href="../../_shared/ink-paper.css">
 <link rel="stylesheet" href="../../_shared/a11y.css">
@@ -171,7 +170,7 @@
     return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
   }
 
-  // Answer matching lives in er-match.js, shared with the builder's teacher
+  // Answer matching lives in _shared/stations.js, shared with the builder's teacher
   // test-run mode. Both pages have to agree exactly on whether a typed answer
   // is right, and a test run that used a second implementation would be
   // testing the wrong thing.

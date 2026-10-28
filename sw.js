@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v382';
+const CACHE_VERSION = 'v383';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -310,7 +310,6 @@ const PRECACHE_URLS = [
   "Tools/058-duty-roster-builder.html",
   "Tools/019-escape-room-builder.html",
   "Tools/escape-room-builder/er-image.js",
-  "Tools/escape-room-builder/er-match.js",
   "Tools/escape-room-builder/lock.html",
   "Tools/escape-room-builder/monitor.html",
   "Tools/023-exit-ticket-generator.html",

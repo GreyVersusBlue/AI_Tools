@@ -33,7 +33,6 @@
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
 <script src="../_shared/stations.js"></script>
-<script src="escape-room-builder/er-match.js"></script>
 <script src="../_shared/media-db.js"></script>
 <script src="escape-room-builder/er-image.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
@@ -1099,7 +1098,7 @@
      also writes progress into localStorage for that room.
 
      This walks the SAME payload students get (`buildRoomPayload`) through the
-     SAME matcher they hit (`er-match.js`, shared with lock.html), and writes
+     SAME matcher they hit (`_shared/stations.js`, shared with lock.html), and writes
      nothing anywhere: it is a dry run, not a game.
   ---------------------------------------------------------------------- */
   var testRun = null; // { room, idx, visited: [], misses, revealed }
