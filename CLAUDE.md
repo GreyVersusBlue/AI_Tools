@@ -631,6 +631,12 @@ files must be added there too.
   older backup working. The module's header has the migration, the ids and the file formats. Its suites are
   `npm run test:question-bank` (pure Node) and `smoke-bank-file.mjs` in `npm run test:review-board`; no file it
   writes has been opened in a spreadsheet.
+- **A pasted spreadsheet region is read by `_shared/paste-table.js`** (`PasteTable`, Path 16 P2, v404): `splitLine`,
+  `pickDelimiter`, `parse` (rows padded, short rows named in `ragged`), `columnReport` (the cells that stopped a column reading
+  as numbers), and 046's name-and-value parsers. 046, 038, 036, 037, 075 and 006 use it; do not write another `split('\t')`. A line a
+  tool cannot read is reported with its line number, never dropped or guessed. An ES module reaches it by `import
+  '../../_shared/paste-table.js'` and reads `globalThis.PasteTable`. A new adopter gets a `paste-table-<tool>-parity` suite in
+  `Tools/paste-table/test/` (a frozen copy of the old reader, the page's own function cut out of its HTML). `npm run test:paste-table`.
 - **A WebRTC pairing code is drawn with `QrDraw.fit(canvas, text)`** (`_shared/qr-draw.js`,
   AI-10, v223), which takes the size from the room the canvas's parent has, draws whole px per
   module and never under 4, and puts a note on the page when there is not room. Do not write

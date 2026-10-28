@@ -9,6 +9,37 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-24: Path 16 P2, `_shared/paste-table.js` built; 046, 038, 036, 037, 075 and 006 read through it (2026-10-28, v404-v410)
+
+**What shipped.** `PasteTable`, one classic script that an ES module also reaches as a side-effect import
+(`bmg-choropleth.js` and `grade-math.mjs` import it and read the global; `check:precache` follows the import). Seven commits, one
+per unit: the design in the BACKLOG bullet (the eight readers grep found), the module (`test:paste-table`, 47 named cases and 17
+break-on-purpose mutants), then six adopters, each its own `CACHE_VERSION` (v405 046, v406 038, v407 036, v408 037, v409 075,
+v410 006). Each adopter has a `paste-table-<tool>-parity` suite: a frozen copy of the old reader in `_legacy-*.mjs`, the page's
+own function cut out of its HTML and run in a `vm` (so the suite cannot pass against a copy that is not the page's), a hand corpus
+plus 4,000 to 6,000 seeded random pastes, and mutants of the module that the corpus must catch.
+**Reports where the tool showed nothing:** 038 names the column that one stray cell kept out of the value columns; 037's note names
+the skipped lines (it only counted them); 075's Add pasted rows says a row had no name (it used to vanish); 006's mapping dialog says
+which rows had fewer cells than the widest. 046 and 036 already reported what they could not read.
+
+**Decisions taken (none Devon's open questions).** Parity means the same result for every input the tool accepted before, so
+075 and 036 still read no quotes (a quoted name with a comma was never kept whole in 075; turning quotes on would change what it
+read) and 038 keeps its own `isNumeric` (it accepts `1e3`; `toNumber` does not) and passes it to `columnReport`. `Roster.parseDelimited`
+was deleted (006 was its only caller). `scv-ics.js`'s `readTable` (Path 9 P4) does not join: it finds dates by pattern in free text and has
+no delimiter to detect; `question-bank.js`'s `parseCsv` reads whole files with newlines inside cells; `vfg-layout.js` splits a term from its
+definition on one tab.
+
+**What went wrong and what is not verified.** (1) Deleting `parseDelimited` broke `qr-code-generator/test/smoke-bulk-core.mjs`, which cuts
+`Roster.splitCells` out of `roster.js` by text up to the next doc comment; it now cuts up to `function looksLikeHeader`. `--only
+qr-code-generator` found it, the parity suites did not: a function other suites slice out of a file by its neighbours is a hidden
+coupling. (2) The first 037 and 036 mutants were equivalent mutants (cell trimming cannot be seen where the line is trimmed first); the
+suite says so rather than keeping a mutant that proves nothing. (3) `check:registry` prints `STALE br_rollover_v1` ("written by nothing in
+the tree") and still exits 0; it was there before this work and is not touched. (4) The browser behaviour of 037's and 075's new notes is
+held by the Node `vm` suites on the page's own functions, not by a browser run; 038's and 006's notes have a browser check
+(`smoke-chart-a11y.mjs`, `smoke-bulk-import.mjs`). (5) No spreadsheet was opened; a real Excel/Sheets paste with a quoted multi-line cell was
+not tried (a quoted newline splits the paste into lines before any parser sees it, as it always did).
+**Left.** `Roster.splitCells` (016's batch codes) and `qr-code-generator/bulk-rows.js`'s `delimOf` keep the last two copies of the split.
+
 ## AI-24: Path 16 P1, `_shared/chart-svg.js` built; 037 and 038 adopt it (2026-10-28, v402-v403)
 
 **Step 1 (v402), a port.** 037's contrast rule, hatch patterns, `n =` caption, both SVG builders (stacked bar, histogram), the
