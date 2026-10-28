@@ -30,6 +30,7 @@
 <script src="escape-room-builder/er-image.js"></script>
 <script src="../_shared/stations.js"></script>
 <script src="../_shared/print-kit.js"></script>
+<script src="../_shared/stations-debrief.js"></script>
 <script src="../_shared/export.js"></script>
 
 <link rel="stylesheet" href="../_shared/ink-paper.css">
@@ -38,6 +39,7 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <link rel="stylesheet" href="../_shared/print-kit.css">
+<link rel="stylesheet" href="../_shared/stations-debrief.css">
 <style>
   /* On _shared/ink-paper.css's tokens since AI-35, so the page follows the
      teacher's theme like the rest of the site; it used to be dark-only, on
@@ -231,15 +233,6 @@
   .print-station-grid .p-card .p-clue-text { font-size: 0.98rem; color: #111; margin: 2px 0 8px; line-height: 1.45; }
   .print-station-grid .p-card .p-code-word { font-family: monospace; font-weight: 700; font-size: 1.05rem; letter-spacing: 0.08em; border: 1.5px dashed #999; border-radius: 6px; padding: 6px 12px; margin-top: 8px; }
   .print-station-grid .p-card .p-code-word span { text-transform: uppercase; }
-  /* The kit lets a long word wrap anywhere on a card, which also lets a table
-     squeeze its columns; the sheet's columns keep the widths their words ask for. */
-  table.p-debrief { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 8px; text-align: left; overflow-wrap: break-word; }
-  table.p-debrief th, table.p-debrief td { border: 1px solid #999; padding: 4px 6px; vertical-align: top; }
-  table.p-debrief th { background: #eee; }
-  .p-debrief-sum { font-size: 0.85rem; margin: 6px 0 0; text-align: left; width: 100%; }
-  .p-debrief-open { font-size: 0.8rem; margin-top: 6px; text-align: left; width: 100%; }
-  .p-reflect-q { text-align: left; width: 100%; margin-top: 10px; font-size: 0.9rem; font-weight: 600; }
-  .p-reflect-lines { width: 100%; height: 3.2rem; border-bottom: 1px solid #777; margin-top: 4px; }
   table.p-answersheet { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 8px; text-align: left; overflow-wrap: break-word; }
   table.p-answersheet th, table.p-answersheet td { border: 1px solid #999; padding: 5px 7px; vertical-align: top; }
   table.p-answersheet th { background: #eee; }
@@ -461,7 +454,7 @@
     <div class="print-station-grid" id="print-clues-grid"></div>
   </div>
   <div class="print-only" id="print-debrief-area">
-    <div class="print-station-grid" id="print-debrief-grid"></div>
+    <div class="sd-grid" id="print-debrief-grid"></div>
   </div>
   <div class="print-only" id="print-answersheets-area">
     <div class="print-station-grid" id="print-answersheets-grid"></div>
@@ -1470,57 +1463,10 @@
   }
 
   // Path 18 P4: the debrief. One page set per team, from what the run already holds
-  // (Stations.debrief): the path in the order the team reached the stations, the time of each
-  // leg, the wrong tries and hints, then a reflection page with room to write.
-  var REFLECT_PROMPTS = [
-    'Which station took your team longest, and why?',
-    'Where did your team lose the most tries, and what did you change after that?',
-    'What did you learn today that you did not know before the hunt?',
-    'If you ran the hunt again, what would your team do differently?'
-  ];
-  function clockText(ms) { return ms === null || ms === undefined ? '—' : formatElapsed(ms); }
+  // (Stations.debrief); the sheet itself is _shared/stations-debrief.js, which 019's monitor draws too.
   function buildPrintDebrief() {
-    var teams = Stations.debrief(Stations.read(state), state.run);
-    var items = [];
-    teams.forEach(function (d, i) { items.push({ d: d, i: i, page: 'path' }); items.push({ d: d, i: i, page: 'reflect' }); });
-    PrintKit.renderCards(els.printDebriefGrid, items, cardGrid('1'), function (it) {
-      var d = it.d, card = pEl('div', 'p-card');
-      card.appendChild(pEl('div', 'p-num', it.page === 'path' ? 'Hunt debrief' : 'Hunt debrief — reflection'));
-      card.appendChild(pEl('div', 'p-label', d.name || ('Team ' + (it.i + 1))));
-      if (it.page === 'reflect') {
-        REFLECT_PROMPTS.forEach(function (q) {
-          card.appendChild(pEl('div', 'p-reflect-q', q));
-          card.appendChild(pEl('div', 'p-reflect-lines'));
-          card.appendChild(pEl('div', 'p-reflect-lines'));
-        });
-        return card;
-      }
-      card.appendChild(pEl('div', 'p-debrief-sum',
-        d.reached + ' of ' + d.total + ' stations reached' + (d.requiredTotal !== d.total ? ' (' + d.requiredDone + ' of ' + d.requiredTotal + ' required)' : '') +
-        ' · finish time ' + clockText(d.totalMs) +
-        ' · ' + d.misses + ' wrong ' + (d.misses === 1 ? 'try' : 'tries') +
-        ' · ' + d.hints + ' hint' + (d.hints === 1 ? '' : 's') + (d.penaltyMs ? ' (+' + formatPenaltyMinutes(d.penaltyMs) + ' min penalty)' : '')));
-      var table = pEl('table', 'p-debrief');
-      var head = table.appendChild(document.createElement('thead')).appendChild(document.createElement('tr'));
-      ['#', 'Station', 'Reached at', 'Time on leg', 'Wrong tries', 'Hint', 'Sent on to'].forEach(function (h) { head.appendChild(pEl('th', '', h)); });
-      var body = table.appendChild(document.createElement('tbody'));
-      d.path.forEach(function (p) {
-        var tr = body.appendChild(document.createElement('tr'));
-        [p.order, 'Station ' + (p.n + 1) + (p.label !== 'Station ' + (p.n + 1) ? ' — ' + p.label : ''), clockText(p.sinceStartMs), clockText(p.legMs), p.misses,
-          p.hint ? 'Used (−' + p.hint.penaltyMin + ' min)' : '—', p.sentTo ? (p.sentTo.end ? 'The end' : 'Station ' + (p.sentTo.n + 1)) : '—'
-        ].forEach(function (v) { tr.appendChild(pEl('td', '', v)); });
-      });
-      if (!d.path.length) {
-        var none = body.appendChild(document.createElement('tr')).appendChild(pEl('td', '', 'No stations reached yet.'));
-        none.colSpan = 7;
-      }
-      card.appendChild(table);
-      if (d.unreached.length) {
-        card.appendChild(pEl('div', 'p-debrief-open', 'Still open: ' + d.unreached.map(function (u) {
-          return 'Station ' + (u.n + 1) + (u.misses ? ' (' + u.misses + ' wrong ' + (u.misses === 1 ? 'try' : 'tries') + ')' : '');
-        }).join(', ') + '.'));
-      }
-      return card;
+    StationsDebrief.render(els.printDebriefGrid, Stations.debrief(Stations.read(state), state.run), {
+      grid: cardGrid('1'), title: 'Hunt debrief', formatElapsed: formatElapsed, formatPenaltyMinutes: formatPenaltyMinutes
     });
   }
 
