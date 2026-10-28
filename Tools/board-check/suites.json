@@ -67,6 +67,8 @@
     "Tools/final-grade-checker/test/smoke-whatif.mjs",
     "Tools/final-grade-checker/scenario-math.test.mjs",
     "Tools/final-grade-checker/test/smoke-scenarios.mjs",
+    "Tools/final-grade-checker/terms.test.mjs",
+    "Tools/final-grade-checker/test/smoke-terms.mjs",
     "Tools/data-chart-builder/test/smoke-xlsx.mjs",
     "Tools/data-chart-builder/test/smoke-chart-a11y.mjs",
     "Tools/data-chart-builder/test/chart-svg-draw-parity.test.mjs",
