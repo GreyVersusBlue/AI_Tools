@@ -14,7 +14,6 @@ import { loadChartSvg } from './_load-chart-svg.mjs';
 
 const SC = { points: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(x => ({ x, y: x * 10 })), xLabel: 'Time', yLabel: 'Temp' };
 const desc = svg => (svg.match(/<desc id="cs-desc">([^<]*)</) || [])[1] || '';
-const attr = (el, a) => +(el.match(new RegExp(' ' + a + '="([\\d.-]+)"')) || [])[1];
 
 function check(C) {
   const bad = [];

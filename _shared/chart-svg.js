@@ -531,7 +531,7 @@
 
   /* env: { c, toX, toY, xLo, xHi, yLo, yHi, xLog, yLog } -> { defs, under, over, desc } */
   function noteLayer(notes, env) {
-    var c = env.c, PAD = c.pad, left = PAD.left, right = c.W - PAD.right, top = PAD.top, bottom = c.H - PAD.bottom;
+    var c = env.c, PAD = c.pad, left = PAD.left, right = c.W - PAD.right, top = PAD.top;
     var under = [], over = [], sentences = [], skipped = 0, hasRegion = false, ink = '#16222e';
     function fits(x, y) {   // on a log axis xLo and yLo are above 0, so a note at or below 0 is outside
       return x >= env.xLo && x <= env.xHi && y >= env.yLo && y <= env.yHi;
