@@ -92,6 +92,22 @@ await star(0); await star(2);
 d2 = await saved();
 ok(!('required' in d2), 'required is gone once none is starred');
 
+console.log('018 — the star travels in a share link (v390)');
+await buildTab();
+await star(0); await star(1);
+const sent = await saved();
+const url = await page.evaluate((h) => {
+  const state = { name: h.name, cardsPerPage: h.cardsPerPage, ecLevel: h.ecLevel, stations: h.stations, required: h.required };
+  return window.StateLink.buildShareUrl('hunt', window.Stations.shareState(state, { kind: 'hunt' }), {});
+}, sent);
+ok(sent.required && sent.required.length === 2, 'the sender has two stars');
+await page.evaluate(() => localStorage.clear());
+await page.goto(url, { waitUntil: 'load' });
+await settle(page, 400);
+const got = await saved();
+eq((got.required || []).slice().sort(), sent.required.slice().sort(), 'the arrival holds the same starred ids');
+eq(await page.locator('[data-required-toggle][aria-pressed="true"]').count(), 2, 'and shows two rows starred');
+
 ok(page.__errs.length === 0, 'no console errors' + (page.__errs.length ? ': ' + page.__errs.join(' | ') : ''));
 await browser.close(); server.close();
 console.log(`scavenger hunt required set: ${passed} passed, ${failed} failed`);

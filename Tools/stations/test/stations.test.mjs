@@ -420,6 +420,18 @@ function suite(src) {
       eq(jc(S.fromShare(a, { kind: 'hunt', uniqueName: uniq })), jc(oldHuntNorm(a)), 'S: fromShare of hunt ' + i + ' is 018\'s normalizeHunt');
     });
     eq(S.shareState(null, { kind: 'room' }), null, 'S: no state, no link');
+    { // v390: a hunt's required set rides in the link (ids of its own stations), and only then
+      const h0 = F.H3(), h = { ...h0, stations: h0.stations.map((x, i) => ({ ...x, id: 'req' + i + 'abc' })) }, ids = h.stations.map(x => x.id);
+      const none = S.shareState(h, { kind: 'hunt' });
+      ok(!('required' in none), 'S: a hunt with no star carries no required field (old links unchanged)');
+      const withReq = S.shareState({ ...h, required: [ids[1], 'gone'] }, { kind: 'hunt' });
+      eq(withReq.required, [ids[1]], 'S: shareState carries the starred ids that exist');
+      const back = S.fromShare({ ...withReq, stations: withReq.stations }, { kind: 'hunt' });
+      eq(back.required, [ids[1]], 'S: fromShare restores the required set');
+      eq(S.fromShare({ ...withReq, required: [ids[1], ids[1], 7, 'nope'] }, { kind: 'hunt' }).required, [ids[1]], 'S: fromShare drops repeats, non-ids and unknown ids');
+      ok(!('required' in S.fromShare({ ...withReq, required: ['nope'] }, { kind: 'hunt' })), 'S: an arrival whose required ids are all unknown has none');
+      ok(!('required' in S.shareState({ ...F.R3(), required: ['x'] }, { kind: 'room' })), 'S: a room link carries no required field');
+    }
   }
 
   return { passed, fails };
@@ -443,6 +455,8 @@ const MUTANTS = [
   ['toDisk keeps the position', "st.next = out.stations[st.next].id;", "st.next = st.next;"],
   ['fromShare keeps an unknown room type', "type: ROOM_TYPES.indexOf(st.type) !== -1 ? st.type : 'text',", "type: st.type,"],
   ['shareState carries the run', "      name: state.name,\n      cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,\n      stations: state.stations.map(function (s) {\n        return {\n          id: s.id,", "      name: state.name, run: state.run,\n      cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,\n      stations: state.stations.map(function (s) {\n        return {\n          id: s.id,"],
+  ['shareState drops the required set', "if (reqIds.length) out.required = reqIds;", ""],
+  ['fromShare keeps an unknown required id', "a.indexOf(r) === i && hunt.stations.some(function (st) { return st.id === r; })", "a.indexOf(r) === i"],
   ['progress counts a bonus mark as required', "if (marked && isReq) done++;", "if (marked) done++;"],
   ['progress ignores the required set', "var explicit = req.length > 0;", "var explicit = false; req = [];"],
   ['an orphan mark is kept', "if (id === undefined || String(parseInt(k, 10)) !== k) { dropped++; return; }", "if (id === undefined) id = k;"]

@@ -414,7 +414,7 @@
         })
       };
     }
-    return {
+    var out = {
       name: state.name,
       cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,
       stations: state.stations.map(function (s) {
@@ -426,6 +426,12 @@
         };
       })
     };
+    // v390: the free-order required set rides along (ids of this link's own stations), only once one is starred
+    var reqIds = Array.isArray(state.required) ? state.required.filter(function (r) {
+      return state.stations.some(function (s) { return s.id === r; });
+    }) : [];
+    if (reqIds.length) out.required = reqIds;
+    return out;
   }
 
   function fromShare(obj, opts) {
@@ -465,7 +471,7 @@
         })
       };
     }
-    return {
+    var hunt = {
       name: uniqueName(String(obj.name || '').trim() || 'Shared Hunt'),
       cardsPerPage: String(obj.cardsPerPage || '4'),
       ecLevel: String(obj.ecLevel || 'Q'),
@@ -488,6 +494,13 @@
         return st;
       })
     };
+    if (Array.isArray(obj.required)) {
+      var reqs = obj.required.filter(function (r, i, a) {
+        return typeof r === 'string' && a.indexOf(r) === i && hunt.stations.some(function (st) { return st.id === r; });
+      });
+      if (reqs.length) hunt.required = reqs;
+    }
+    return hunt;
   }
 
   function write(set, kind) {
