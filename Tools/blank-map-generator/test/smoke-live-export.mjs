@@ -6,8 +6,8 @@
 // pixel for pixel (same projection, same state, one function). At the 12x ceiling a border in the
 // PNG is a hairline (the raster path it replaces was 38 px wide there). The tiled poster's pages, read
 // from the images the page builds before it calls print() (stubbed), carry a border at most 6 px wide
-// at 12x and join: the overlap strip of two neighbours is the same pixels. A data-shaded map is still
-// the raster (its export is not the vector path). Nothing leaves the browser.
+// at 12x and join: the overlap strip of two neighbours is the same pixels. A data-shaded map exports from the
+// vectors too (since v430). Nothing leaves the browser.
 
 import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
 import fs from 'node:fs';
@@ -116,6 +116,29 @@ const strip = await page.evaluate(async (srcs) => {
   return { diff, n: da.length };
 }, tiles);
 ok(strip.diff === 0 && strip.n > 1000, 'neighbouring poster tiles agree on their overlap strip (' + strip.diff + ' bytes differ)');
+
+/* a data-shaded map exports from the vectors too: band colours in the PNG, still no fat border at 12x */
+await page.click('#btnChoroToggle');
+await page.click('#btnChoroExample');
+await settle(page, 600);
+await page.click('#btnChoroApply');
+await page.waitForFunction(() => /:choro:/.test(Object.keys(localStorage).map(k => localStorage.getItem(k).slice(0, 4000)).join(' ')), null, { timeout: 30000 });
+await settle(page, 1200);
+await zoomBy(10);
+await settle(page, 500);
+const shadedB64 = await pngBase64();
+const shadedStats = await page.evaluate(async (b64) => {
+  const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+  const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+  const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+  const d = x.getImageData(0, 0, c.width, c.height).data;
+  const seen = new Set();
+  for (let i = 0; i < d.length; i += 28) if (Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]) > 40) seen.add((d[i] >> 5) + ',' + (d[i + 1] >> 5) + ',' + (d[i + 2] >> 5));
+  return seen.size;
+}, shadedB64);
+ok(shadedStats >= 3, 'the shaded PNG carries band colours: ' + shadedStats + ' tints');
+const shadedFat = await fatInk('data:image/png;base64,' + shadedB64, true);
+ok(shadedFat.fat === 0, 'the shaded PNG has no fat border ink: ' + shadedFat.fat);
 
 ok(page.__blocked.length === offsiteAtStart, 'nothing requested off-site by these steps: ' + JSON.stringify(page.__blocked));
 ok(errors.length === 0, 'no console errors: ' + JSON.stringify(errors));

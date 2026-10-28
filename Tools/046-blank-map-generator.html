@@ -916,8 +916,8 @@ function save() {
 }
 
 // The base map on screen, drawn from the vectors at the view's own scale (Path 20 P3), so a zoomed
-// border stays a hairline instead of an upsampled smear. Only plain built-in maps: a shaded map, a
-// Wikimedia map and an upload stay the raster in #mapImg (which is also still what every export
+// border stays a hairline instead of an upsampled smear. Built-in maps, shaded or not: a Wikimedia map
+// and an upload stay the raster in #mapImg (which is also still what every export
 // draws, and what the stage is sized by). The canvas sits under #stage, so the grid, regions and
 // lines drawn in stage units line up as they did over the image.
 const liveBase = (() => {
@@ -942,12 +942,21 @@ const liveBase = (() => {
     mapImg.style.visibility = '';
   }
   /** Shows the id's map live when it is one this can draw; otherwise leaves (or puts back) the picture. */
-  async function show(id, record) {
+  async function show(id, record, fills) {
     const mine = ++token;
     const p = parseBaseMapId(id);
-    if (!p || !p.preset || p.choroKey) { hide(); return; }
+    if (!p || !p.preset) { hide(); return; }
     let src;
-    try { src = await loadLiveSource({ preset: p.preset, style: p.style, borders: p.borders, relief: p.relief }); } catch (e) { hide(); return; }
+    try {
+      // A shaded map needs its colours: the caller that just built them passes them; a project opened from
+      // storage works them out again from the pasted rows, and only counts if they are the shading the id names.
+      if (p.choroKey && !fills) {
+        const again = await buildActiveChoropleth(p.preset);
+        fills = again && again.ok && again.key === p.choroKey ? again.fills : null;
+        if (!fills) { if (mine === token) hide(); return; }
+      }
+      src = await loadLiveSource({ preset: p.preset, style: p.style, borders: p.borders, relief: p.relief, fills: p.choroKey ? fills : null });
+    } catch (e) { if (mine === token) hide(); return; }
     if (mine !== token || src.width !== record.width || src.height !== record.height) { if (mine === token) hide(); return; }
     source = src;
     canvas.hidden = false;
@@ -2668,6 +2677,29 @@ function syncReliefControl() {
 el('baseMapSelect').addEventListener('change', renderBaseMapHint);
 renderBaseMapHint();
 
+/**
+ * A project that names a built-in map this browser has never drawn (a shared link, a file from another
+ * device, a cleared cache) gets the map back from the vectors: the id says which one, and a shaded id is
+ * worked out again from the project's own pasted rows. Null when the id is not a built-in map, the data
+ * no longer gives the shading the id names, or the record would carry a different id.
+ */
+async function rebuildBuiltInRecord(id) {
+  try {
+    const p = parseBaseMapId(id);
+    if (!p || !p.preset) return null;
+    let fills = null;
+    if (p.choroKey) {
+      const again = await buildActiveChoropleth(p.preset);
+      if (!(again && again.ok && again.key === p.choroKey)) return null;
+      fills = again.fills;
+    }
+    const record = await buildBaseMapRecord(p.preset, { style: p.style, borders: p.borders, fills, choroKey: p.choroKey, relief: p.relief });
+    if (record.id !== id) return null;
+    await cache.putCachedMap(record).catch(() => {});
+    return record;
+  } catch (e) { return null; }
+}
+
 async function useBuiltInBaseMap() {
   if (!(await ensureDroppedLoaded(el('baseMapSelect').value))) {
     setStatus('That file is not stored in this browser any more. Choose “Your own file…” and drop it again.', true);
@@ -2710,7 +2742,7 @@ async function useBuiltInBaseMap() {
     project.choropleth.legendRows = shaded
       ? choro.legendRows.map(r => ({ key: r.key, label: r.label, hex: r.hex }))
       : [];
-    displayMap(record, { keepAnnotations, choroApplied: shaded });
+    displayMap(record, { keepAnnotations, choroApplied: shaded, liveFills: shaded ? choro.fills : null });
     setStatus('');
   } catch (err) {
     setStatus(`Couldn't draw that base map (${escapeHtml(err.message)}).`, true);
@@ -3229,7 +3261,7 @@ function displayMap(record, opts = {}) {
   mapImg.src = currentObjectUrl;
   mapImg.hidden = false;
   currentRecord = record;
-  liveBase.show(record.id, record);
+  liveBase.show(record.id, record, opts.liveFills);
   el('viewerEmpty').hidden = true;
   locator.setImage(currentObjectUrl, record.width, record.height);
 
@@ -4739,7 +4771,7 @@ async function loadActiveProjectIntoUI(opts) {
       const preset = await restoreDropped(droppedKey[1]).catch(() => null);
       if (preset) addDroppedOption(preset);
     }
-    const cached = await cache.getCachedMap(project.mapId).catch(() => null);
+    const cached = (await cache.getCachedMap(project.mapId).catch(() => null)) || (await rebuildBuiltInRecord(project.mapId));
     if (cached) { displayMap(cached); return; }
     showEmptyMapState(true);
     return;
@@ -4858,6 +4890,7 @@ function arrivalSentence(filed, how) {
   let tail = '';
   if (mapId.startsWith('upload:')) tail = ' Its map was an uploaded picture, which does not travel: upload the same image here and the labels stay where they are.';
   else if (/^vector:custom-/.test(mapId)) tail = ' Its map was drawn from a boundary file dropped on another device, which does not travel: drop the same file here with “Your own file…” and the labels stay where they are.';
+  else if (/^vector:/.test(mapId) && currentRecord && currentRecord.id === mapId) tail = '';
   else if (mapId) tail = ' If the map itself does not appear, pick the same base map or search result again; the labels stay where they are.';
   return `${how} and saved it here as “${filed}”. Nothing you already had was replaced.${tail}`;
 }
@@ -4894,7 +4927,7 @@ Share.mount(el('shareBtn'), {
     const current = store.listProjects().find(p => p.id === store.getActiveId());
     return `${current ? current.name : 'map'} map project`;
   },
-  note: 'Opening the link or code anywhere saves this project there as a new project; it never replaces one already on that device. The labels, markers, regions, lines and settings travel. The map picture does not: a built-in or Wikimedia map is picked again there, and a map you uploaded has to be uploaded again.',
+  note: 'Opening the link or code anywhere saves this project there as a new project; it never replaces one already on that device. The labels, markers, regions, lines and settings travel. The map picture does not travel: a built-in map is drawn again there from the same boundaries, a Wikimedia map is picked again, and a map you uploaded has to be uploaded again.',
   successMessage: 'Link copied. Opening it anywhere saves this map project there as a new project.',
   sendState: () => timelinePlaces(),
   onMessage: (text, isError) => setShareNote(text, isError),

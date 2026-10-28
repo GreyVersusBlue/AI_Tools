@@ -120,7 +120,9 @@ ok((await idbKeys('gvb-media', 'blobs')).includes('bmg-geo/' + want.key), 'and l
 
 await page.reload({ waitUntil: 'networkidle' });
 await settle(page, 900);
-eq(await page.isVisible('#emptyMapState').catch(() => true) || await page.evaluate(() => document.getElementById('mapImg').hidden), true, 'with the picture cache cleared the project has no picture yet');
+/* since v430 a built-in or stored-file map is drawn again from its vectors, not left blank, when the picture cache is empty */
+await page.waitForFunction(() => !document.getElementById('mapImg').hidden && document.getElementById('mapImg').naturalWidth > 0, null, { timeout: 15000 });
+ok((await idbKeys('bmg-maps', 'images')).some(k => k.includes(want.key)), 'with the picture cache cleared the map is drawn again from the stored file and cached');
 await page.focus('#baseMapSelect');
 await settle(page, 400);
 eq(await page.locator('#baseMapSelect optgroup[data-yours] option').allTextContents().then(a => a.join()), 'Kansas districts', 'the stored file is listed once the list is opened');

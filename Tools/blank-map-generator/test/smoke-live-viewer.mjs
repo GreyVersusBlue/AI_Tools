@@ -6,8 +6,8 @@
 // must be hidden but still the stage's size. At 12x a state border is a hairline on the canvas. A
 // burst of 20 wheel events in one task is drawn once. Annotations keep their stage positions across
 // the change (a label placed before a zoom is where it was). A reload reopens the saved project on the
-// live canvas at the saved view. A shaded map stays on the raster (the canvas is hidden), and un-shading
-// brings the canvas back. Download PNG does not depend on the canvas element being shown (exports draw from the vectors:
+// live canvas at the saved view. A data-shaded map is drawn live too (band colours on the canvas, again after a reload),
+// and un-shading leaves the plain map. Download PNG does not depend on the canvas element being shown (exports draw from the vectors:
 // smoke-live-export). Nothing leaves the browser.
 
 import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
@@ -103,19 +103,34 @@ const viewAfter = await page.evaluate(() => { const k = Object.keys(localStorage
 ok(viewBefore && viewAfter && Math.abs(viewBefore.scale - viewAfter.scale) < 1e-6 && Math.abs(viewBefore.x - viewAfter.x) < 1e-3, 'the saved view is the view after a reload');
 eq((await state()).imgVis, 'hidden', 'after the reload the picture is behind the canvas');
 
-/* a shaded map stays the raster; clearing the shading brings the canvas back */
+/* a data-shaded map is drawn live too: the canvas shows, carries the band colours, and survives a reload; clearing brings the plain map back */
 await page.click('#btnChoroToggle');
 await page.click('#btnChoroExample');
 await settle(page, 600);
 await page.click('#btnChoroApply');
-await page.waitForFunction(() => /:choro:/.test(document.getElementById('attribution').textContent) || document.getElementById('baseCanvas').hidden, null, { timeout: 30000 });
-await settle(page, 900);
+await page.waitForFunction(() => /:choro:/.test(JSON.stringify(Object.keys(localStorage).map(k => localStorage.getItem(k).slice(0, 4000)))), null, { timeout: 30000 });
+await settle(page, 1200);
 st = await state();
-eq(st.canvasHidden, true, 'a data-shaded map stays on the raster (canvas hidden)');
-ok(st.imgVis !== 'hidden', 'and its picture shows');
+eq(st.canvasHidden, false, 'a data-shaded map is drawn on the live canvas');
+eq(st.imgVis, 'hidden', 'and its raster picture stays behind it');
+const tint = () => page.evaluate(() => {
+  const c = document.getElementById('baseCanvas'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+  const seen = new Set();
+  for (let i = 0; i < d.length; i += 4 * 7) { const r = d[i], g = d[i + 1], b = d[i + 2]; if (Math.max(r, g, b) - Math.min(r, g, b) > 40) seen.add((r >> 5) + ',' + (g >> 5) + ',' + (b >> 5)); }
+  return seen.size;
+});
+ok((await tint()) >= 3, 'the canvas carries band colours: ' + await tint() + ' tints');
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForFunction(() => !document.getElementById('baseCanvas').hidden, null, { timeout: 30000 });
+await settle(page, 600);
+eq((await state()).canvasHidden, false, 'after a reload the shaded map is drawn live again');
+ok((await tint()) >= 3, 'with its band colours after the reload');
+if (await page.locator('#btnChoroClear').isHidden()) await page.click('#btnChoroToggle');
 await page.click('#btnChoroClear');
 await page.waitForFunction(() => !document.getElementById('baseCanvas').hidden, null, { timeout: 30000 });
-eq((await state()).canvasHidden, false, 'clearing the shading brings the live canvas back');
+await settle(page, 600);
+eq((await state()).canvasHidden, false, 'clearing the shading leaves the live canvas');
+eq(await tint(), 0, 'and the plain map has no band colours');
 
 /* an export draws from the vectors, not from the canvas element: hiding the element changes nothing in the file (smoke-live-export holds what it does draw) */
 const png = async () => {

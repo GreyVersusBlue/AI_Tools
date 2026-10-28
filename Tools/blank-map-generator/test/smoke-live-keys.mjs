@@ -6,8 +6,8 @@
 // viewport and Shift-arrows by half, in the direction the key points; + - 0 zoom and fit; with a
 // label selected the arrows nudge it and do not pan; the status line, 500 ms after the last change,
 // says the zoom and (for a map drawn from the vectors) the longitude and latitude on screen, which
-// is computed here independently from the saved view and the preset's bounds; a Wikimedia-style
-// map with no extent says the zoom only (the live canvas is hidden by shading).
+// is computed here independently from the saved view and the preset's bounds; a data-shaded map
+// is drawn live too (since v430) and names its window like a plain one.
 
 import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
 
@@ -100,17 +100,17 @@ if (lbl) {
   ok(va.x === vb.x && va.y === vb.y, 'with a label selected the arrow does not pan the map');
 } else ok(false, 'a label was placed to select');
 
-/* a data-shaded map has no live canvas; the status then says the zoom only */
+/* a data-shaded map is drawn live, so the status names the window too */
 await page.click('#btnChoroToggle');
 await page.click('#btnChoroExample');
 await settle(page, 600);
 await page.click('#btnChoroApply');
-await page.waitForFunction(() => document.getElementById('baseCanvas').hidden, null, { timeout: 30000 });
-await settle(page, 600);
+await page.waitForFunction(() => /:choro:/.test(Object.keys(localStorage).map(k => localStorage.getItem(k).slice(0, 4000)).join(' ')), null, { timeout: 30000 });
+await settle(page, 1200);
 await page.focus('#viewport');
 await page.keyboard.press('-');
 const t2 = await status();
-ok(/^Zoom \d+%$/.test(t2), 'on the raster the status is the zoom alone: ' + t2);
+ok(/^Zoom \d+%, showing /.test(t2), 'on a shaded map drawn live the status names the window: ' + t2);
 
 const a11y = await a11yScan(page, { impact: 'serious' });
 ok(!a11y || a11y.length === 0, 'axe: no serious or critical violations with the map focused' + (a11y && a11y.length ? ' ' + JSON.stringify(a11y.map(v => v.id)) : ''));

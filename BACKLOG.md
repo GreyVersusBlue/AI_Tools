@@ -87,6 +87,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-28 (v430), rank 60 rewritten, Path 20 P3 step 5.** A data-shaded built-in map is drawn on 046's live canvas (and exported from the vectors); a project whose built-in map this browser never drew (a `?map=` link, an import, a cleared cache) is rebuilt on load by `rebuildBuiltInRecord()` and arrives drawn; the a11y seed names a built-in map. `test:blank-map-live-arrival` (8588); **next free suite port: 8589.** Left in rank 60: the locator from the vectors and dropping the raster write. Detail in `HISTORY.md`.
 - **AI-28 (v426-v429), rank 60 rewritten, Path 20 P3 steps 1 to 4.** `bmg-live.js` (`parseBaseMapId`, `loadSource`, `drawBaseMap`, `drawExtent`) draws a base map from the vectors for any view and is held pixel-identical to `renderBaseMapCanvas` over 48 cases; 046's screen draws a plain built-in map on `#baseCanvas` (1 px border at every zoom, one draw per frame), the map is a focusable named group with keyboard pan/zoom and a status line. Since v429 Download PNG, Print, Save PDF, the worksheet panel and the poster draw the vectors too (a plain built-in map); the locator and every non-plain map still read the raster. Suites `test:blank-map-live` (11 mutants), `-live-parity` (8584), `-live-viewer` (8585), `-live-keys` (8586); `test:blank-map-live-export` (8587, v429: exports draw the vectors); **next free suite port: 8588.**
 - **AI-28 (v424-v425), rank 60 (Path 20 P2) deleted, the ranks after it moved up one; rank 59 narrowed to the gazetteer.** 062's `gbq-map.js` now imports `projectPoint`/`traceFeature` from `_shared/geo-project.js` (its own adapted copy is gone; `test:geo-bee-parity` holds it to a frozen copy). A dropped GeoJSON or TopoJSON file is 046's base map: own TopoJSON decoder (no library), stored in `gvb-media` (`bmg-geo`), not the cache; ports 8583 used, **next free 8584**. Detail in `HISTORY.md`.
 - **AI-24 (v419-v423), rank 44 rewritten (Path 16 P5, steps 1 to 4 of 6); 038 for science.** Curve fits with R² on the original values (`dcb-fit.js`: linear, power, exponential, logarithmic, quadratic), base-10 log axes, multi-series scatter with a marker shape each, and an annotation layer (shaded regions, arrows, callouts in data coordinates, in the share link only); v419 repaired AI-26's registry rows (a `BrRollover` delete rule for 019's `monitor-record`, `test:registry` 51/51). Suites `test:chart-fit`, `-scatter-log`, `-scatter-series`, `-scatter-notes` (pure Node, mutants), `test:chart-builder-science` (8582); **next free suite port: 8583.** Left: the chart sheet (step 5) and the 065/073 handoffs, which have no route. Inline-sink baseline for 038 is 13.
@@ -817,7 +818,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 57 | Path 19 P4 — printables: Frayer page, spaced repetition, fill-in-the-blank, word wall as a system | 040 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 58 | Path 19 P5 — audio: TTS on study mode, teacher-recorded pronunciations into the media store | 051 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 59 | Path 20 P1, what is left — the curriculum gazetteer only if a second tool wants it (the port shipped in v401; 062's `gbq-map.js` switched to `_shared/geo-project.js` in v424) | `_shared/` | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
-| 60 | Path 20 P3 — live vector viewer, **steps 1 to 4 built (v426-v429)**: left are shaded maps live (`fills` on load), a shared project's map arriving drawn, the locator from vectors and dropping the raster write for a `vector:` id, the share note's wording and the a11y seed (see the P3 bullet, "Built so far") | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
+| 60 | Path 20 P3 — live vector viewer, **steps 1 to 5 built (v426-v430)**: left are the locator inset from the vectors and dropping the raster write for a `vector:` id (see the P3 bullet, "Left in P3") | 046 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 61 | Path 20 P4 — time slices for annotations; two-way selective handoff with 015 | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 62 | Path 20 P5 — quiz memory across sessions; decide the Wikimedia network question | 046 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 63 | Track B1 — brand engine in `a11y.js`: school accent and logo, pre-paint, with an opt-out flag | `_shared/` | 1 | | [Track B](#track-b--custom-theme--branding-pass) |
@@ -8226,16 +8227,18 @@ runtime, the one content fetch that leaves the browser.
     the export's own scale (the context's transform is the dpr; the poster passes `strokePx: 2`, everything else 1). Other maps are still the
     raster. `test:blank-map-live-export` (8587): PNG middle equal to the canvas, no fat ink at 12x in the PNG or any poster tile, overlap strip
     equal. Not verified: paper, dpr 2, the worksheet and Save PDF buttons themselves.
-  - **Left in P3, in this order.** (b) the
-    locator inset from one `drawBaseMap` call at a fit view onto a 150 px canvas (`drawPngLocator` reads the canvas, not `#locatorImg`);
-    (c) data-shaded maps live (needs `buildActiveChoropleth` on load: `fills` for `loadSource`), and a shared project's map arriving
-    drawn (`?map=`), which needs (c) first; (d) no `bmg-maps` write for a `vector:` id (`useBuiltInBaseMap` stops calling
-    `buildBaseMapRecord`; the "Recently used" list then ignores the blob) and `renderBaseMapCanvas` as a wrapper, only once (b) and (c) are
-    in (the locator reads a 150 px downscale of the raster, sharp already, so (b) only matters once the raster goes); (e) the share note's wording and the a11y seed (a `vector:` project with annotations, `Tools/a11y-sweep/seeds.mjs`). Not
-    verified: a real Chromebook's frame time, 2x devicePixelRatio drawing (suites run at 1x), a screen reader reading the status line,
-    anything on paper. Finding: an empty project asks Wikimedia for a default search at page load (an existing request, blocked in the
-    suites); Devon's 2026-10-07 answer says nothing fetches until he asks, so that request is P5's to remove, and `smoke-live-viewer`
-    counts only what its own steps add.
+  - **Step 5, v430 (AI-28, 2026-10-28, increment 3).** Shaded built-in maps are drawn on the live canvas (`liveBase.show(id, record, fills)`; the page passes the
+    shading it just built, and a stored project re-derives it with `buildActiveChoropleth()`, kept only if its key is the id's), so the exports draw
+    them from the vectors too. A project whose built-in map is not in the picture cache is rebuilt on load (`rebuildBuiltInRecord()`: the id says which
+    map, the shading is re-derived, the raster is written once and cached), so a `?map=` arrival, an imported file and a cleared cache all open drawn;
+    the arrival sentence and the share note say so. 046's a11y seed names a built-in map. `test:blank-map-live-arrival` (8588). Deviation from the
+    design: the arrival builds the raster once rather than having none, because the stage, the locator and the stage-size reads still use it.
+  - **Left in P3.** (b) the locator inset from one `drawBaseMap` call at a fit view onto a 150 px canvas (`drawPngLocator` reads the canvas, not
+    `#locatorImg`); (d) no `bmg-maps` write for a `vector:` id (`useBuiltInBaseMap` and `rebuildBuiltInRecord` stop calling `buildBaseMapRecord`; the
+    stage then takes its size from the source, and "Recently used" ignores the blob) and `renderBaseMapCanvas` as a wrapper, only once (b) is in. Not
+    verified: a real Chromebook's frame time, 2x devicePixelRatio drawing (suites run at 1x), a screen reader reading the status line, anything on
+    paper. Finding: an empty project asks Wikimedia for a default search at page load (an existing request, blocked in the suites); Devon's
+    2026-10-07 answer says nothing fetches until he asks, so that request is P5's to remove, and `smoke-live-viewer` counts only what its own steps add.
 - **P4 — Time slices for annotations.** Per-slice labels/lines/regions with a
   scrubber; small-multiple print; a two-way, selective handoff with 015 (send
   selected labels *and* markers; come back from a timeline into a map project).

@@ -275,6 +275,7 @@
     "Tools/blank-map-generator/test/smoke-live-viewer.mjs",
     "Tools/blank-map-generator/test/smoke-live-keys.mjs",
     "Tools/blank-map-generator/test/smoke-live-export.mjs",
+    "Tools/blank-map-generator/test/smoke-live-arrival.mjs",
     "Tools/geography-bee-quiz-generator/test/geo-bee-parity.test.mjs",
     "Tools/grade-distribution-visualizer/test/chart-svg.test.mjs",
     "Tools/grade-distribution-visualizer/test/chart-svg-parity.test.mjs",

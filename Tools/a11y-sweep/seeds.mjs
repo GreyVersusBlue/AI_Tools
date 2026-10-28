@@ -501,15 +501,18 @@ export const PAGE_SEEDS = {
     }),
   }),
 
-  // 046 — two saved projects, so the project switcher has a choice (blank-map-generator/bmg-store.js).
+  // 046 — two saved projects, so the project switcher has a choice (blank-map-generator/bmg-store.js). The
+  // active one names a built-in map the browser never drew, so the page rebuilds it and the live canvas,
+  // the focusable map and its status line are on screen for the scan (Path 20 P3).
   '046': () => {
     const data = { __v: 1, mapId: null, view: { x: 0, y: 0, scale: 1 }, labels: [], markers: [] };
+    const drawn = { ...data, mapId: 'vector:usa-48:50,24,-125,-66.5:outline+borders' };
     return {
       bmg_workspace_v1: j({
         __v: 1, activeId: 'pA',
         labelSets: [{ id: 'ls1', name: '13 Colonies', places: [{ name: 'Boston', lat: 42.36, lon: -71.06 }] }],
         projects: [
-          { id: 'pA', name: 'Civil War Map', updatedAt: 1790000000000, data },
+          { id: 'pA', name: 'Civil War Map', updatedAt: 1790000000000, data: drawn },
           { id: 'pB', name: 'Europe 1914', updatedAt: 1790000000000, data },
         ],
       }),

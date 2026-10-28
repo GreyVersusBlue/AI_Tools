@@ -9,6 +9,38 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-28: Path 20 P3 increment 3, step 5: shaded maps live, a shared map arrives drawn, the a11y seed (2026-10-28, v430)
+
+**What shipped.** One step. (1) A data-shaded built-in map is drawn on the live canvas like a plain one: `liveBase.show()` now takes the
+band colours (`displayMap(..., { liveFills })`, which `useBuiltInBaseMap()` fills from the shading it has just built), and for a project
+opened from storage works them out again from the pasted rows with `buildActiveChoropleth()`, using them only if their key is the one the map
+id names. Because `liveBase.active` is true for it, Download PNG, Print, Save PDF, the worksheet panel and the poster now export a shaded map
+from the vectors too: band colours and ocean/land as before, a hairline border instead of the raster's blur at zoom. (2) A project whose
+built-in map this browser has never drawn (a `?map=` link, an imported file, a cleared picture cache) is rebuilt on load by
+`rebuildBuiltInRecord(id)` from `parseBaseMapId()`, with the shading re-derived the same way, and stored in the picture cache; the arrival
+sentence then no longer says "pick the same base map again", and the share note says a built-in map is drawn again from the same boundaries.
+A shaded id the rows no longer give (a hand-edited key, changed data) still opens map-less and the sentence still says to pick it again.
+(3) The a11y seed for 046 now names a built-in map (`vector:usa-48:...`) so the sweep scans the live canvas and the focusable map.
+
+**A behaviour that changed on purpose.** After "Clear cached maps", a project on a built-in or dropped-file map used to open on the empty-map
+card; it now redraws itself on load (the clear still empties the cache; the redraw refills one record). `smoke-dropped.mjs` held the old
+behaviour in a line and now asserts the redraw. The raster is still written and still sized the stage: this step does not drop it (below).
+
+**Decided here (cheap to reverse).** The design said a shared map arrives drawn with no raster at all; this builds the raster once on
+arrival instead, because the raster is still what the stage, the locator and the stage-size reads depend on. Dropping the raster write
+(design step (d)) stays in the P3 row, to be done only with the locator on the vectors. No new question for Devon.
+
+**Verified.** `test:blank-map-live-arrival` (new, port 8588: plain and shaded links to a fresh context arrive on the live canvas, the
+shaded one with band colours, a link with a stale shading key opens map-less and says so, nothing off-site; with `rebuildBuiltInRecord`
+returning null 6 of its 12 checks fail). `test:blank-map-live-viewer` (a shaded map is on the canvas with band colours, again after a reload,
+and clearing leaves the plain one; with the fills not passed 2 checks fail), `-live-keys` (a shaded map's status names the window now),
+`-live-export` (the shaded PNG carries band colours and no fat border), `smoke-dropped`. `--only blank-map-generator`, the a11y sweep for
+046, all tracked `*.test.mjs`, lint, offline build + verify and the guards named in CLAUDE.md were run; see the pending-merge row.
+
+**Not verified.** Paper; dpr 2; a real shared link from another device (the maker and victim are two contexts of one browser); a shaded
+map on a Chromebook (the fills are recomputed on every load of a shaded project: a parse of the pasted rows plus a region-name listing).
+**Obliges others.** `suite-durations.json` has a 25 s estimate for the new suite; `Tools/a11y-sweep/seeds.mjs`'s 046 seed changed.
+
 ## AI-28: Path 20 P3 increment 2, step 4: the exports draw from the vectors (2026-10-28, v429)
 
 **What shipped.** One step. `drawMapContent()`, which Download PNG, Print Map, Save PDF, the worksheet's map panel and the tiled poster
