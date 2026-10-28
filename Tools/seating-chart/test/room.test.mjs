@@ -105,5 +105,25 @@ if (SeatingRead && SeatingRead.parse) {
   ok(parsed && parsed.sections[0].desks.length === st.sections[0].desks.length, 'seating-read parses a chart with rooms');
 }
 
+// 10. editing a mark in place (Path 14 P4 step 5): size, turn, relabel; the footprint is what a turn covers
+{
+  const m0 = st.rooms[0].marks[0];
+  const e1 = R.editMark(st, roomId, 'door1', { w: 90, h: 140, label: 'Back door' });
+  const m1 = e1.state.rooms[0].marks[0];
+  ok(e1.mark && m1.w === 90 && m1.h === 140 && m1.label === 'Back door' && m1.x === m0.x && m1.y === m0.y && m1.id === 'door1', 'editMark: size and label change, place and id stay');
+  ok(st.rooms[0].marks[0].w === m0.w && st.rooms[0].marks[0].label === m0.label, 'editMark: the old state is left alone');
+  ok(R.editMark(st, roomId, 'door1', { w: 5000 }).state.rooms[0].marks[0].x + R.editMark(st, roomId, 'door1', { w: 5000 }).state.rooms[0].marks[0].w <= 1280, 'editMark: a wide mark stays on the floor');
+  ok(R.editMark(st, roomId, 'door1', { h: -3 }).state.rooms[0].marks[0].h === 10, 'editMark: a tiny height is raised to the minimum');
+  ok(R.editMark(st, roomId, 'door1', { rot: 45 }).state.rooms[0].marks[0].rot === 0, 'editMark: a turn that is not a quarter is refused (stays 0)');
+  ok(R.editMark(st, roomId, 'door1', { kind: 'nope' }).state.rooms[0].marks[0].kind === 'door' || R.editMark(st, roomId, 'door1', { kind: 'nope' }).mark === null, 'editMark: an unknown kind does not stick');
+  ok(R.editMark(st, roomId, 'zzz', { w: 50 }).mark === null && R.editMark(st, roomId, 'zzz', { w: 50 }).state === st, 'editMark: an unknown mark changes nothing');
+  ok(R.editMark(st, roomId, 'door1', { x: 5, id: 'other', bogus: 1 }).state.rooms[0].marks[0].x === m0.x, 'editMark: only size, turn, label and kind are editable');
+  const turned = R.editMark(st, roomId, 'door1', { rot: 90 }).state;
+  eq(R.footprint(turned.rooms[0].marks[0]), { x: 300 + 30 - 55, y: 100 + 55 - 30, w: 110, h: 60 }, 'footprint: a quarter turn swaps width and height about the centre');
+  eq(R.footprint(m0), { x: 300, y: 100, w: 60, h: 110 }, 'footprint: no turn is the stored box');
+  ok(JSON.stringify(R.desksNear(turned.rooms[0], 'door1', 40)) !== JSON.stringify(R.desksNear(st.rooms[0], 'door1', 40)) || R.desksNear(st.rooms[0], 'door1', 40).length === 0, 'desksNear reads the turned footprint');
+  eq(repairState(clone(turned), rng(20)), turned, 'an edited mark round-trips');
+}
+
 console.log(`seating room: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

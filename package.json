@@ -277,6 +277,7 @@
     "test:seating-room": "node Tools/seating-chart/test/room.test.mjs",
     "test:seating-room-page": "node Tools/seating-chart/test/smoke-room.mjs",
     "test:seating-room-marks": "node Tools/seating-chart/test/smoke-room-marks.mjs",
+    "test:seating-room-edit": "node Tools/seating-chart/test/smoke-room-edit.mjs",
     "test:seating-migration": "node Tools/seating-chart/test/migration.test.mjs",
     "test:seating-read": "node Tools/seating-read/test/seating-read.test.mjs",
     "test:check-entities": "node Tools/board-check/test/check-entities.test.mjs",
