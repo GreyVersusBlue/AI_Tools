@@ -78,6 +78,7 @@
     "Tools/data-chart-builder/test/chart-svg-a11y.test.mjs",
     "Tools/data-chart-builder/test/dcb-fit.test.mjs",
     "Tools/data-chart-builder/test/chart-scatter-log.test.mjs",
+    "Tools/data-chart-builder/test/chart-scatter-series.test.mjs",
     "Tools/data-chart-builder/test/smoke-science.mjs",
     "Tools/group-team-generator/test/smoke-share.mjs",
     "Tools/group-team-generator/test/smoke-pairing-history.mjs",

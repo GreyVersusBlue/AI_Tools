@@ -164,7 +164,7 @@
      Every chart takes the data the page already builds and an options object `o`:
        { W, H, pad, title, yLabel, showValues, palette (hex list, pie), pointColor,
          trendColor, trend (scatter: draw the fit), fit (scatter: a curve to draw instead of the straight
-         line, { predict(x), label, desc } from dcb-fit.js; nothing changes without it), xScale / yScale ('log': base-10 axis on
+         line, { predict(x), label, desc } from dcb-fit.js; nothing changes without it), fits (scatter with sc.series: one fit per series, in order), xScale / yScale ('log': base-10 axis on
          the scatter; points at or below 0 are left out and counted in the <desc>), grayscale (hatch per series),
          idPrefix (ids for the <title>, <desc> and patterns: unique per SVG on a page) }
      and returns a standalone SVG string. Each SVG is role="img" with a <title> and a
@@ -214,7 +214,7 @@
       yMax: o.yMax > 0 ? o.yMax : 0,
       idPrefix: o.idPrefix || 'cs',
       kind: o.kind || '',
-      fit: o.fit || null,
+      fit: o.fit || null, fits: o.fits || null,
       xScale: o.xScale === 'log' ? 'log' : 'linear', yScale: o.yScale === 'log' ? 'log' : 'linear'
     };
   }
@@ -491,13 +491,44 @@
     return parts.join('');
   }
 
+  /* ---------- Step 3: more than one series on a scatter (shape as well as colour) ---------- */
+
+  var SHAPES = ['circle', 'square', 'triangle', 'diamond'];
+
+  function markerEl(shape, cx, cy, fill, r, opacity) {
+    var a = ' fill="' + fill + '" opacity="' + opacity + '"';
+    if (shape === 'square') return '<rect x="' + (cx - r).toFixed(1) + '" y="' + (cy - r).toFixed(1) + '" width="' + (2 * r) + '" height="' + (2 * r) + '"' + a + '/>';
+    if (shape === 'triangle') return '<polygon points="' + cx.toFixed(1) + ',' + (cy - r - 1).toFixed(1) + ' ' + (cx + r + 1).toFixed(1) + ',' + (cy + r).toFixed(1) + ' ' + (cx - r - 1).toFixed(1) + ',' + (cy + r).toFixed(1) + '"' + a + '/>';
+    if (shape === 'diamond') return '<polygon points="' + cx.toFixed(1) + ',' + (cy - r - 1).toFixed(1) + ' ' + (cx + r + 1).toFixed(1) + ',' + cy.toFixed(1) + ' ' + cx.toFixed(1) + ',' + (cy + r + 1).toFixed(1) + ' ' + (cx - r - 1).toFixed(1) + ',' + cy.toFixed(1) + '"' + a + '/>';
+    return '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + r + '"' + a + '/>';
+  }
+
+  /* the legend of a multi-series scatter: the series' own marker, its name, and its R² when a fit is drawn */
+  function markerLegend(c, items) {
+    var parts = ['<g transform="translate(0,' + (c.H - 26) + ')">'], curX = c.pad.left;
+    items.forEach(function (it) {
+      var text = it.label.length > 22 ? it.label.slice(0, 21) + '…' : it.label;
+      var w = Math.min(text.length * 6 + 28, 190);
+      if (curX + w > c.W - c.pad.right) return;
+      parts.push(markerEl(it.shape, curX + 5, -4, it.color, 4, 1));
+      parts.push('<text x="' + (curX + 13) + '" y="0" font-size="10" fill="#16222e">' + escapeXml(text) + '</text>');
+      curX += w;
+    });
+    parts.push('</g>');
+    return parts.join('');
+  }
+
   function scatter(sc, o) {
     var c = chartOpts(o), W = c.W, H = c.H, PAD = c.pad;
     var plotW = W - PAD.left - PAD.right, plotH = H - PAD.top - PAD.bottom;
     var xLog = c.xScale === 'log', yLog = c.yScale === 'log';
-    var pts = sc.points, dropped = 0;
-    if (xLog || yLog) {
-      pts = sc.points.filter(function (p) { return (!xLog || p.x > 0) && (!yLog || p.y > 0); });
+    var multi = sc.series && sc.series.length > 1 ? sc.series : null;
+    var kept = function (p) { return (!xLog || p.x > 0) && (!yLog || p.y > 0); };
+    var sets = multi ? multi.map(function (se) { return { label: se.label, points: xLog || yLog ? se.points.filter(kept) : se.points, all: se.points.length }; }) : null;
+    var pts = multi ? [].concat.apply([], sets.map(function (se) { return se.points; })) : sc.points, dropped = 0;
+    if (multi) { dropped = sets.reduce(function (n, se) { return n + se.all - se.points.length; }, 0); }
+    else if (xLog || yLog) {
+      pts = sc.points.filter(kept);
       dropped = sc.points.length - pts.length;
     }
     var xs = pts.map(function (p) { return p.x; }), ys = pts.map(function (p) { return p.y; });
@@ -519,14 +550,23 @@
       return PAD.top + plotH - (v / maxY) * plotH;
     }
 
-    var trend = c.trend ? linearRegression(pts) : null;
+    var trend = c.trend && !multi ? linearRegression(pts) : null;
     var desc = 'Scatter plot of ' + sc.yLabel + ' against ' + sc.xLabel + ', ' + pts.length + ' point' + (pts.length === 1 ? '' : 's') + '.';
     if (pts.length) desc += ' ' + sc.xLabel + ' runs from ' + formatNum(Math.min.apply(null, xs)) + ' to ' + formatNum(Math.max.apply(null, xs)) + '; ' + sc.yLabel + ' from ' + formatNum(Math.min.apply(null, ys)) + ' to ' + formatNum(Math.max.apply(null, ys)) + '.';
     if (xLog || yLog) {
       desc += ' ' + (xLog && yLog ? 'Both axes are logarithmic' : xLog ? 'The horizontal axis is logarithmic' : 'The vertical axis is logarithmic') + ', in powers of ten.';
       if (dropped) desc += ' ' + dropped + ' point' + (dropped === 1 ? ' with a zero or negative value is' : 's with a zero or negative value are') + ' not plotted.';
     }
-    var fit = c.trend && c.fit && typeof c.fit.predict === 'function' ? c.fit : null;
+    if (multi) {
+      desc = 'Scatter plot of ' + sets.length + ' series against ' + sc.xLabel + ', ' + pts.length + ' point' + (pts.length === 1 ? '' : 's') + ': ' +
+        sets.map(function (se) { return (se.label || 'Series') + ' (' + se.points.length + ')'; }).join(', ') + '.';
+      if (pts.length) desc += ' ' + sc.xLabel + ' runs from ' + formatNum(Math.min.apply(null, xs)) + ' to ' + formatNum(Math.max.apply(null, xs)) + '; values from ' + formatNum(Math.min.apply(null, ys)) + ' to ' + formatNum(Math.max.apply(null, ys)) + '.';
+      if (xLog || yLog) {
+        desc += ' ' + (xLog && yLog ? 'Both axes are logarithmic' : xLog ? 'The horizontal axis is logarithmic' : 'The vertical axis is logarithmic') + ', in powers of ten.';
+        if (dropped) desc += ' ' + dropped + ' point' + (dropped === 1 ? ' with a zero or negative value is' : 's with a zero or negative value are') + ' not plotted.';
+      }
+    }
+    var fit = c.trend && !multi && c.fit && typeof c.fit.predict === 'function' ? c.fit : null;
     if (fit) trend = null;
     if (!fit && trend && (xLog || yLog)) {
       /* a straight line is not straight on a log axis: draw it as the curve it is */
@@ -537,7 +577,7 @@
     if (fit) desc += ' ' + fit.desc;
     if (trend) desc += ' Trend line y = ' + round2(trend.slope) + 'x ' + (trend.intercept >= 0 ? '+ ' : '- ') + round2(Math.abs(trend.intercept)) + ', R squared ' + round2(trend.r2) + '.';
 
-    var parts = [open(c, 'Scatter plot', desc), titleEl(c), yLog ? logYAxis(c, yd) : axes(c, maxY, null), yAxisLabel(c, sc.yLabel)];
+    var parts = [open(c, 'Scatter plot', desc), titleEl(c), yLog ? logYAxis(c, yd) : axes(c, maxY, null), yAxisLabel(c, multi ? '' : sc.yLabel)];
     if (xLog) parts.push(logXAxis(c, xd));
     parts.push('<text x="' + (W / 2) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10.5" fill="#5b6b78">' + escapeXml(sc.xLabel) + '</text>');
 
@@ -565,7 +605,34 @@
       parts.push('<text x="' + (W - PAD.right) + '" y="' + (PAD.top - 6) + '" text-anchor="end" font-size="10" fill="' + c.trendColor + '">' + escapeXml(fit.label) + '</text>');
     }
 
-    pts.forEach(function (p) {
+    if (multi) {
+      var legend = [];
+      sets.forEach(function (se, si) {
+        var color = c.palette[si % c.palette.length], shape = SHAPES[si % SHAPES.length], sf = null;
+        if (c.trend) {
+          sf = c.fits && c.fits[si] && typeof c.fits[si].predict === 'function' ? c.fits[si] : null;
+          if (!sf) {
+            var lr = linearRegression(se.points);
+            if (lr) sf = { predict: function (x) { return lr.slope * x + lr.intercept; }, r2: lr.r2, label: 'y = ' + round2(lr.slope) + 'x ' + (lr.intercept >= 0 ? '+ ' : '- ') + round2(Math.abs(lr.intercept)), desc: 'linear fit y = ' + round2(lr.slope) + 'x ' + (lr.intercept >= 0 ? '+ ' : '- ') + round2(Math.abs(lr.intercept)) + ', R squared ' + round2(lr.r2) };
+          }
+        }
+        if (sf) {
+          var sgs = [], sc2 = [], n2 = 120;
+          for (var k = 0; k <= n2; k++) {
+            var gx = xLog ? Math.pow(10, xd[0] + (xd[1] - xd[0]) * k / n2) : xLo + (xHi - xLo) * k / n2, gy = sf.predict(gx);
+            if (isFinite(gy) && gy >= yLo && gy <= yHi) sc2.push(toX(gx).toFixed(1) + ',' + toY(gy).toFixed(1));
+            else if (sc2.length) { sgs.push(sc2); sc2 = []; }
+          }
+          if (sc2.length) sgs.push(sc2);
+          sgs.forEach(function (sg) { if (sg.length > 1) parts.push('<polyline points="' + sg.join(' ') + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-dasharray="5,4"/>'); });
+          desc += ' ' + (se.label || 'Series') + ': ' + sf.desc + (/\.$/.test(sf.desc) ? '' : '.');
+        }
+        se.points.forEach(function (p) { parts.push(markerEl(shape, toX(p.x), toY(p.y), color, 4, 0.8)); });
+        legend.push({ label: (se.label || 'Series') + (sf && sf.r2 != null ? ' (R² ' + round2(sf.r2) + ')' : ''), shape: shape, color: color });
+      });
+      parts.push(markerLegend(c, legend));
+      parts[0] = open(c, 'Scatter plot', desc);
+    } else pts.forEach(function (p) {
       parts.push('<circle cx="' + toX(p.x).toFixed(1) + '" cy="' + toY(p.y).toFixed(1) + '" r="4" fill="' + c.pointColor + '" opacity="0.75"/>');
     });
     parts.push('</svg>');

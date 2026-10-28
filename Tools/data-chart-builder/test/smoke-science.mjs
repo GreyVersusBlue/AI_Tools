@@ -8,6 +8,8 @@
 // curve; a share link written without a model opens as linear and one with a model opens with it.
 // Step 2, log axes: the two checkboxes put the axis in powers of ten (decade labels, a <desc> that says so),
 // a zero or negative value is left out and counted on the page and in the <desc>, and the choice travels in a share link.
+// Step 3, more series: with a third numeric column the "More Y columns" group offers it (labelled), ticking it draws two series with
+// their own marker shapes and a legend, each fitted on its own, and the columns travel in a share link.
 // axe finds nothing serious with the select showing. Exits 1 on any failure.
 
 import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
@@ -139,6 +141,36 @@ await open(base);
 eq(await page.evaluate(() => [document.getElementById('x-log').checked, document.getElementById('y-log').checked].join()), 'false,false', 'a link from before opens linear');
 await open({ ...base, xLog: 'yes' });
 eq(await page.evaluate(() => document.getElementById('x-log').checked), false, 'a log flag that is not true is ignored');
+
+console.log('step 3 (more series)');
+await setup();
+eq(await page.evaluate(() => getComputedStyle(document.getElementById('scatter-extra-group')).display), 'none', 'two numeric columns: no extra-Y group');
+const T3 = 'Time\tMass\tVolume\tHeat\n1\t2\t4\t1\n2\t4.2\t7\t4\n3\t5.9\t10\t9\n4\t8.1\t13\t16\n5\t10\t16\t25\n';
+await page.fill('#data-input', T3);
+await page.dispatchEvent('#data-input', 'input');
+await settle(page, 600);
+eq(await page.evaluate(() => getComputedStyle(document.getElementById('scatter-extra-group')).display), 'block', 'four numeric columns: the group shows');
+eq(await page.evaluate(() => Array.from(document.querySelectorAll('#scatter-extra-list label')).map(l => l.textContent).join()), 'Volume,Heat', 'it offers the two columns that are neither X nor Y');
+eq(await page.evaluate(() => Array.from(document.querySelectorAll('#scatter-extra-list input')).every(i => document.querySelector('label[for="' + i.id + '"]'))), true, 'each box is labelled');
+await page.check('#scatter-extra-3');
+await settle(page, 400);
+s = await svg();
+ok(/Scatter plot of 2 series against Time, 10 points: Mass \(5\), Heat \(5\)\./.test(s.desc), 'two series described: ' + s.desc);
+ok(s.html.includes('>Mass<') && s.html.includes('>Heat<') && (s.html.match(/<rect /g) || []).length > 1, 'legend with both names and a square marker');
+await page.check('#show-trendline');
+await pick('power');
+s = await svg();
+ok(/Mass: Power fit/.test(s.desc) && /Heat: Power fit/.test(s.desc) && (s.html.match(/<polyline /g) || []).length === 2, 'a power fit each: ' + s.desc);
+ok(/Mass: y = /.test(await page.textContent('#fit-note')) && /Heat: y = /.test(await page.textContent('#fit-note')), 'the note lists both fits: ' + await page.textContent('#fit-note'));
+await page.selectOption('#scatter-x-col', '2');
+await settle(page, 400);
+eq(await page.evaluate(() => Array.from(document.querySelectorAll('#scatter-extra-list label')).map(l => l.textContent).join()), 'Time,Heat', 'changing X rebuilds the list (the ticked Heat stays ticked)');
+eq(await page.evaluate(() => document.querySelector('#scatter-extra-list input:checked').nextElementSibling.textContent), 'Heat', 'and keeps the tick');
+await open({ data: T3, hasHeaders: true, chartType: 'scatter', scatterX: 0, scatterY: 1, scatterYs: [3, 3, 0, 1, 99], trendline: false });
+eq(await page.evaluate(() => Array.from(document.querySelectorAll('#scatter-extra-list input:checked')).map(i => i.value).join()), '3', 'a link opens with its extra column once; the X, the Y and a column that is not there are dropped');
+await open({ ...base, data: T3 });
+eq(await page.evaluate(() => document.querySelectorAll('#scatter-extra-list input:checked').length), 0, 'a link from before has no extra series');
+eq((await svg()).html.includes('Scatter plot of'), true, 'and draws as a single series');
 
 const scan = await a11yScan(page, { impact: 'serious' });
 ok(!scan.length, 'axe: no serious violation with the Fit select showing: ' + JSON.stringify(scan.map(v => [v.id, v.nodes])));

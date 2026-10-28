@@ -230,6 +230,10 @@
             <select id="scatter-y-col"></select>
           </div>
         </div>
+        <div class="control-group" id="scatter-extra-group" style="display:none;">
+          <label id="scatter-extra-label">More Y columns (each one is its own series)</label>
+          <div id="scatter-extra-list" role="group" aria-labelledby="scatter-extra-label"></div>
+        </div>
         <div class="option-row">
           <input type="checkbox" id="show-trendline">
           <label class="option-label" for="show-trendline">Show trendline (best fit)</label>
@@ -354,7 +358,7 @@
 
   var els = {};
   ['data-input', 'has-headers', 'preview-table-wrap', 'preview-table', 'columns-card', 'category-col',
-   'value-cols-list', 'value-cols-note', 'scatter-cols-group', 'scatter-x-col', 'scatter-y-col', 'show-trendline', 'trend-model-group', 'trend-model', 'fit-note', 'x-log', 'y-log', 'log-note', 'options-card', 'chart-title',
+   'value-cols-list', 'value-cols-note', 'scatter-cols-group', 'scatter-x-col', 'scatter-y-col', 'show-trendline', 'scatter-extra-group', 'scatter-extra-list', 'trend-model-group', 'trend-model', 'fit-note', 'x-log', 'y-log', 'log-note', 'options-card', 'chart-title',
    'y-axis-label-group', 'y-axis-label', 'show-values', 'sort-row', 'sort-values', 'chart-stage', 'stats-grid', 'filename', 'btn-png', 'btn-svg', 'msg',
    'btn-choose-file', 'file-input', 'dataset-name', 'btn-save-dataset', 'saved-datasets-select',
    'btn-load-dataset', 'btn-delete-dataset', 'btn-undo-delete-dataset', 'grayscale-mode', 'show-error-bars', 'error-bars-config',
@@ -522,6 +526,20 @@
     els.previewTableWrap.style.display = 'block';
   }
 
+  // More Y columns for the scatter: every numeric column that is neither the X nor the main Y.
+  var extraYs = [];
+  function renderExtraYs() {
+    if (!table) { els.scatterExtraGroup.style.display = 'none'; return; }
+    var x = parseInt(els.scatterXCol.value, 10), y = parseInt(els.scatterYCol.value, 10);
+    var cols = numericCols.filter(function (c) { return c !== x && c !== y; });
+    extraYs = extraYs.filter(function (c) { return cols.indexOf(c) !== -1; });
+    els.scatterExtraList.innerHTML = cols.map(function (c) {
+      return '<div class="option-row"><input type="checkbox" class="scatter-extra-cb" id="scatter-extra-' + c + '" value="' + c + '"' + (extraYs.indexOf(c) !== -1 ? ' checked' : '') + '>' +
+        '<label class="option-label" for="scatter-extra-' + c + '">' + escapeHtml(table.headers[c]) + '</label></div>';
+    }).join('');
+    els.scatterExtraGroup.style.display = cols.length ? 'block' : 'none';
+  }
+
   function populateColumnSelects(t) {
     var catOpts = t.headers.map(function (h, i) { return '<option value="' + i + '">' + escapeHtml(h) + '</option>'; }).join('');
     els.categoryCol.innerHTML = catOpts;
@@ -533,6 +551,8 @@
     els.categoryCol.value = firstNonNumeric !== -1 ? firstNonNumeric : 0;
     if (numericCols.length) els.scatterXCol.value = numericCols[0];
     if (numericCols.length > 1) els.scatterYCol.value = numericCols[1];
+    extraYs = [];
+    renderExtraYs();
 
     els.valueColsList.innerHTML = numericCols.map(function (c, i) {
       var checked = i === 0 ? 'checked' : '';
@@ -741,8 +761,12 @@
   });
   els.categoryCol.addEventListener('change', scheduleRender);
   els.valueColsList.addEventListener('change', function () { renderErrorBarConfig(); scheduleRender(); });
-  els.scatterXCol.addEventListener('change', scheduleRender);
-  els.scatterYCol.addEventListener('change', scheduleRender);
+  els.scatterXCol.addEventListener('change', function () { renderExtraYs(); scheduleRender(); });
+  els.scatterYCol.addEventListener('change', function () { renderExtraYs(); scheduleRender(); });
+  els.scatterExtraList.addEventListener('change', function () {
+    extraYs = Array.from(els.scatterExtraList.querySelectorAll('.scatter-extra-cb:checked')).map(function (cb) { return parseInt(cb.value, 10); });
+    scheduleRender();
+  });
   els.showTrendline.addEventListener('change', scheduleRender);
   els.trendModel.addEventListener('change', scheduleRender);
   els.xLog.addEventListener('change', scheduleRender);
@@ -819,17 +843,25 @@
       } else {
         var sc = buildScatterData();
         if (!sc) { renderEmpty('Need at least one numeric column for each axis.'); disableDownloads(); return; }
-        var model = els.trendModel.value, fitObj = null;
-        if (els.showTrendline.checked) fitObj = ChartFit.fit(model, sc.points);
+        var model = els.trendModel.value, fitObj = null, fitsList = null;
+        if (els.showTrendline.checked && !sc.series) fitObj = ChartFit.fit(model, sc.points);
+        if (els.showTrendline.checked && sc.series) {
+          fitsList = sc.series.map(function (se) {
+            return ChartFit.fit(model, se.points) || { predict: function () { return NaN; }, label: '', desc: 'no ' + model + ' fit, too few usable points' };
+          });
+        }
         var xLog = els.xLog.checked, yLog = els.yLog.checked;
         var scOpts = fitObj && model !== 'linear' ? { fit: fitObj } : {};
+        if (fitsList && model !== 'linear') scOpts.fits = fitsList;
         if (xLog) scOpts.xScale = 'log';
         if (yLog) scOpts.yScale = 'log';
         svg = ChartSvg.scatter(sc, chartOpts(scOpts));
         var offLog = (xLog || yLog) ? sc.points.filter(function (p) { return (xLog && !(p.x > 0)) || (yLog && !(p.y > 0)); }).length : 0;
         els.logNote.textContent = offLog ? offLog + ' point' + (offLog === 1 ? ' has' : 's have') + ' a zero or negative value and ' + (offLog === 1 ? 'is' : 'are') + ' not plotted on a logarithmic axis.' : '';
         els.trendModelGroup.style.display = els.showTrendline.checked ? 'block' : 'none';
-        els.fitNote.textContent = !els.showTrendline.checked ? '' : fitObj ? fitObj.label + '. ' + fitObj.note : 'Not enough usable points for a ' + model + ' fit.';
+        if (fitsList) {
+          els.fitNote.textContent = sc.series.map(function (se, i) { return se.label + ': ' + (fitsList[i].label || fitsList[i].desc); }).join('. ') + '. ' + (fitsList[0].note || '');
+        } else els.fitNote.textContent = !els.showTrendline.checked ? '' : fitObj ? fitObj.label + '. ' + fitObj.note : 'Not enough usable points for a ' + model + ' fit.';
         statsSourceValues = sc.points.map(function (p) { return p.y; });
         statsLabel = sc.yLabel;
       }
@@ -895,7 +927,17 @@
       .filter(function (r) { return isNumeric(r[xCol]) && isNumeric(r[yCol]); })
       .map(function (r) { return { x: toNumber(r[xCol]), y: toNumber(r[yCol]) }; });
     if (!points.length) return null;
-    return { points: points, xLabel: table.headers[xCol], yLabel: table.headers[yCol] };
+    var out = { points: points, xLabel: table.headers[xCol], yLabel: table.headers[yCol] };
+    if (extraYs.length) {
+      out.series = [{ label: table.headers[yCol], points: points }].concat(extraYs.map(function (c) {
+        return {
+          label: table.headers[c],
+          points: table.rows.filter(function (r) { return isNumeric(r[xCol]) && isNumeric(r[c]); }).map(function (r) { return { x: toNumber(r[xCol]), y: toNumber(r[c]) }; })
+        };
+      }));
+      out.yLabel = '';
+    }
+    return out;
   }
 
   // Exclusive median-of-halves quartiles (the "Moore & McCabe" / TI-84 1-Var
@@ -1057,6 +1099,7 @@
         trendModel: els.trendModel.value === 'linear' ? undefined : els.trendModel.value,
         xLog: els.xLog.checked || undefined,
         yLog: els.yLog.checked || undefined,
+        scatterYs: extraYs.length ? extraYs.slice() : undefined,
         errorBars: els.showErrorBars.checked,
         errorCols: errorCols,
         title: els.chartTitle.value,
@@ -1110,6 +1153,8 @@
         if (inRange(c.categoryCol)) els.categoryCol.value = c.categoryCol;
         if (inRange(c.scatterX)) els.scatterXCol.value = c.scatterX;
         if (inRange(c.scatterY)) els.scatterYCol.value = c.scatterY;
+        extraYs = Array.isArray(c.scatterYs) ? c.scatterYs.filter(function (n, i, a) { return inRange(n) && numericCols.indexOf(n) !== -1 && a.indexOf(n) === i; }).slice(0, 6) : [];
+        renderExtraYs();
         if (Array.isArray(c.valueCols) && c.valueCols.length) {
           document.querySelectorAll('.value-col-cb').forEach(function (cb) {
             cb.checked = c.valueCols.indexOf(parseInt(cb.value, 10)) !== -1;

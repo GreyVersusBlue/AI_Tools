@@ -70,6 +70,7 @@
     "Tools/data-chart-builder/test/chart-svg-a11y.test.mjs": 1,
     "Tools/data-chart-builder/test/dcb-fit.test.mjs": 1,
     "Tools/data-chart-builder/test/chart-scatter-log.test.mjs": 1,
+    "Tools/data-chart-builder/test/chart-scatter-series.test.mjs": 1,
     "Tools/data-chart-builder/test/smoke-science.mjs": 15,
     "Tools/group-team-generator/test/smoke-share.mjs": 8,
     "Tools/group-team-generator/test/smoke-pairing-history.mjs": 31,
