@@ -12,6 +12,10 @@
 // Rule 4 is the one that needs care, and it needs care in both directions.
 // See NORMALISE below.
 
+// The cell splitting is the site's one pasted-table reader (_shared/paste-table.js, a classic
+// script; an ES module reaches it as a side-effect import and reads the global).
+import '../../_shared/paste-table.js';
+
 // ── Precision ────────────────────────────────────────────────
 //
 // Quarter percentages arrive with two decimals (TAC prints `C(73.28)`), so the
@@ -252,8 +256,8 @@ export function parseGradeToken(tok) {
  */
 export function splitRow(line) {
   const l = String(line).replace(/\r$/, '');
-  if (l.includes('\t')) return l.split('\t').map(c => c.trim());
-  return l.trim().split(/ {2,}/).map(c => c.trim()).filter(c => c !== '');
+  if (l.includes('\t')) return globalThis.PasteTable.splitLine(l, '\t', { quotes: false });
+  return globalThis.PasteTable.splitFixed(l);
 }
 
 /**
