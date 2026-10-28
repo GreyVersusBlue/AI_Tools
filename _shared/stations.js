@@ -617,8 +617,35 @@
     return out;
   }
 
-  /** Reserved for P2 (the payload budget); no body in P1. */
-  function budget() { throw new Error('Stations.budget is P2'); }
+  /** The payload budget for a set's printed codes (Path 18 P2): one row per playable station,
+      { id, n, bytes, version, modules, px, ok, reason }. Each station's code text is what the
+      page prints (a room's player link at that station, a hunt's content), planned by qr-draw.js
+      at the canvas the sheet draws it on (600 px by default) and the error-correction level the
+      page uses. `ok` is false when a module would be under qr-draw's measured floor (4 px, so a
+      phone can read it) or the text is past what any code holds; `reason` then says which
+      station, how big it is and what to shorten. Needs qr-draw.js (and the vendored encoder)
+      loaded first. */
+  function budget(set, opts) {
+    opts = opts || {};
+    var QD = global.QrDraw;
+    if (!QD) throw new Error('Stations.budget needs qr-draw.js loaded first');
+    var level = opts.ecLevel || 'Q', px = opts.px || 600, out = [];
+    playable(set, opts).forEach(function (st, n) {
+      var text = set.kind === 'room'
+        ? playUrl(set, n, { start: !!opts.start, base: opts.base, imageSrc: opts.imageSrc })
+        : codeText(set, st, opts);
+      var plan = QD.plan(text, { maxPx: px, level: level });
+      var row = { id: st.id, n: n, bytes: plan.bytes, version: plan.version, modules: plan.modules, px: plan.px, ok: plan.ok, reason: '' };
+      if (!plan.ok) {
+        row.reason = plan.modules === null
+          ? 'Station ' + (n + 1) + '\u2019s code is ' + plan.bytes + ' bytes, more than any QR code can hold (about 2,900). Shorten its clue, answers or hint.'
+          : 'Station ' + (n + 1) + '\u2019s code is ' + plan.bytes + ' bytes, ' + plan.modules + ' modules across. On the printed code that is under ' +
+            QD.MIN_PX_PER_MODULE + ' px per module, which phones cannot read reliably. Shorten its clue, answers or hint.';
+      }
+      out.push(row);
+    });
+    return out;
+  }
 
   global.Stations = {
     KINDS: KINDS, ANSWER_TYPES: ANSWER_TYPES, ID_LENGTH: ID_LENGTH, CODE_WORDS: CODE_WORDS,

@@ -32,6 +32,10 @@ function loadModule(src) {
   const ctx = { window: win, btoa, unescape, encodeURIComponent, URL, Math, Date, JSON, Object, Array, String, parseInt, parseFloat, isNaN, isFinite, RegExp, Error };
   vm.createContext(ctx);
   vm.runInContext(read('Tools/escape-room-builder/er-match.js'), ctx);
+  vm.runInContext(read('_shared/vendor/qrcode/qrcode.js'), ctx);
+  win.qrcode = ctx.qrcode;   // a vm top-level var lands on the context; qr-draw.js reads it off window
+  ctx.TextEncoder = TextEncoder;
+  vm.runInContext(read('_shared/qr-draw.js'), ctx);
   vm.runInContext(src, ctx);
   return { S: win.Stations, M: win.EscapeRoomMatch, ctx };
 }
@@ -54,14 +58,14 @@ function suite(src) {
   const sortK = (v) => Array.isArray(v) ? v.map(sortK) : (v && typeof v === 'object') ? Object.fromEntries(Object.keys(v).sort().map(k => [k, sortK(v[k])])) : v;
   const eq = (a, b, l) => ok(JSON.stringify(sortK(a)) === JSON.stringify(sortK(b)), `${l} (got ${JSON.stringify(a)}, want ${JSON.stringify(b)})`);
 
-  const html019 = read('Tools/019-escape-room-builder.html');
+  const html019 = fs.readFileSync(path.join(here, '_old-019-functions.txt'), 'utf8');   // 019's v379 functions, frozen (P2 deleted two from the page)
   const html018 = read('Tools/018-qr-scavenger-hunt-builder.html');
   // 019's own functions, run against a `state` we set
   const pageCtx = { state: null, ER: { src: (x) => x }, btoa, unescape, encodeURIComponent, JSON, Math, parseInt, parseFloat, String, Object };
   vm.createContext(pageCtx);
   vm.runInContext([cut(html019, 'splitAnswers'), cut(html019, 'clampShift'), cut(html019, 'validStations'),
     cut(html019, 'buildRoomPayload'), cut(html019, 'stationPayloadFor'), cut(html019, 'trStationNext'), cut(html019, 'unreachableStations')].join('\n'), pageCtx);
-  const huntCtx = { state: null, ensureStationDefaults: (s) => s, ensureStationCodeWords: () => {}, parseFloat, JSON, String, Object };
+  const huntCtx = { state: null, Stations: { ensureIds: () => false }, ensureStationDefaults: (s) => s, ensureStationCodeWords: () => {}, parseFloat, JSON, String, Object };
   vm.createContext(huntCtx);
   vm.runInContext([cut(html018, 'looksLikeUrl'), cut(html018, 'normalizeContent'), cut(html018, 'validStations')].join('\n'), huntCtx);
 
@@ -291,7 +295,22 @@ function suite(src) {
   // constants and the reserved name
   eq(S.ID_LENGTH, 4, 'ID_LENGTH'); eq(S.CODE_WORDS.length, 30, 'CODE_WORDS is 018\'s thirty');
   { const m = /var CODE_WORDS = \[([\s\S]*?)\];/.exec(read('Tools/018-qr-scavenger-hunt-builder.html')); eq(S.CODE_WORDS, [...m[1].matchAll(/'([A-Z]+)'/g)].map(x => x[1]), 'CODE_WORDS is 018\'s list, in order'); }
-  let threw = false; try { S.budget(); } catch (e) { threw = true; } ok(threw, 'budget() is reserved for P2');
+  {   // budget() (P2): one row per playable station, planned at the printed canvas
+    const room = S.read(jc(F.R2()));
+    const rows = S.budget(room, { ecLevel: 'Q', base: BASE });
+    ok(rows.length === S.playable(room).length && rows.every((r, i) => r.n === i && /^[a-z0-9]{4}$/.test(r.id)), 'budget(): a row per playable station, in play order, with its id');
+    ok(rows.every(r => r.ok && r.px >= 4 && r.bytes > 0 && r.version >= 1 && r.reason === ''), 'budget(): an ordinary room is inside the budget');
+    ok(rows[0].bytes === S.playUrl(room, 0, { base: BASE }).length, 'budget(): the bytes are the printed code\u2019s own link');
+    const fat = jc(F.R2()); fat.stations[1].clue = 'x'.repeat(700);
+    const fr = S.budget(S.read(fat), { ecLevel: 'Q', base: BASE });
+    ok(!fr[1].ok && /Station 2\u2019s code is \d+ bytes, \d+ modules across/.test(fr[1].reason) && /Shorten/.test(fr[1].reason) && fr[0].ok, 'budget(): a fat station is refused by number, with what to shorten, and only that station');
+    const huge = jc(F.R2()); huge.stations[0].clue = 'x'.repeat(4000);
+    const hr = S.budget(S.read(huge), { ecLevel: 'Q', base: BASE });
+    ok(!hr[0].ok && hr[0].modules === null && /more than any QR code can hold/.test(hr[0].reason), 'budget(): past every version it says so');
+    const hunt = S.budget(S.read(jc(F.H2())), { ecLevel: 'Q' });
+    ok(hunt.length > 0 && hunt.every(r => r.ok), 'budget(): a hunt\u2019s codes (the content) are inside it');
+    ok(S.budget(room, { ecLevel: 'L', base: BASE })[0].bytes === rows[0].bytes && S.budget(room, { ecLevel: 'Q', px: 100, base: BASE }).some(r => !r.ok), 'budget(): the printed size matters (a 100 px canvas refuses what 600 px takes)');
+  }
 
   return { passed, fails };
 }
@@ -307,6 +326,7 @@ const MUTANTS = [
   ['a duplicate id is kept', "var id = isObj(st) && validId(st.id) && seen[st.id] === 1 ? st.id : null;", "var id = isObj(st) && validId(st.id) ? st.id : null;"],
   ['the ids string is dropped from the payload', "out.ids = valid.map(function (s) { return s.id; }).join('');", "out.ids = '';"],
   ['a numeric tolerance is ignored', "Math.abs(val - target) <= tol", "Math.abs(val - target) <= 0"],
+  ['budget ignores the readable floor', "ok: plan.ok, reason: '' }", "ok: true, reason: '' }"],
   ['an orphan mark is kept', "if (id === undefined || String(parseInt(k, 10)) !== k) { dropped++; return; }", "if (id === undefined) id = k;"]
 ];
 let mutantFail = 0;

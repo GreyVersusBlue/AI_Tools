@@ -1071,7 +1071,10 @@
       }
     });
 
-    var problems = [];
+    // The payload budget (Path 18 P2): a code too dense to read at the printed size is refused by station
+    // number, with what to shorten, instead of printing a code a phone cannot scan.
+    var overBudget = Stations.budget(set, { ecLevel: ecLevel, start: els.randomizeStart.checked, imageSrc: ER.src }).filter(function (r) { return !r.ok; });
+    var problems = overBudget.map(function (r) { return r.reason; });
     if (failures.length) {
       problems.push('Could not build a QR code for: ' + failures.join(', ') + '. Try shortening that station’s clue, answers or hint, or lowering error correction.');
     }
@@ -1080,7 +1083,7 @@
     if (problems.length) showMsg(problems.join(' '));
 
     els.previewNote.textContent = valid.length + ' station' + (valid.length === 1 ? '' : 's') + ' ready.';
-    els.printCodesBtn.disabled = false;
+    els.printCodesBtn.disabled = overBudget.length > 0;
     els.printAnswersBtn.disabled = false;
     els.testRunBtn.disabled = false;
     els.printPacketBtn.disabled = false;
