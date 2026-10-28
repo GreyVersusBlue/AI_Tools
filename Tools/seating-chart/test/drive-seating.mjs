@@ -802,7 +802,11 @@ async function buildChart(page) {
   sv = (await stored(page)).sections[0];
   ok(!sv.assign.a && Object.keys(sv.assign).length === 4, 'a desk left empty stays empty through Auto-assign, Shuffle and Fill the gaps');
   // a tap-to-place onto it is refused
-  await page.focus('.desk[data-id="b"] .seat'); await page.keyboard.press('Enter');
+  // Auto-assign and Shuffle above are random, so which desks hold a student is too: pick up from a
+  // desk the stored chart says is seated (a fixed desk was empty in ~1 run in 3, so nothing was picked up).
+  const seatedDesk = Object.keys(sv.assign)[0];
+  await page.focus(`.desk[data-id="${seatedDesk}"] .seat`); await page.keyboard.press('Enter');
+  await page.waitForSelector('.desk.selected', { timeout: 3000 }); // the pick-up registered before the second press
   await page.focus('.desk[data-id="a"] .seat'); await page.keyboard.press('Enter');
   ok(/left empty/.test(await page.textContent('#status')), 'placing a student on it is refused with a sentence');
   // undo brings the desk back; E again turns it off and removes the field

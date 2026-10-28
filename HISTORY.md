@@ -9,6 +9,21 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-22: drive-seating's "refused with a sentence" flake (2026-10-27, test only, no CACHE_VERSION)
+
+The check at "placing a student on it is refused with a sentence" (`Tools/seating-chart/test/drive-seating.mjs`, from v362) failed about 1 run in 3
+under CPU load. **The page was right; the test assumed a random result.** The Auto-assign and Shuffle presses just above it are random, so which four of
+the five non-empty desks hold a student is too, and desk `b` was empty in about a third of runs: the first Enter picked nothing up, the second Enter on the
+left-empty desk had no selection to refuse, and `#status` still read Fill the gaps' "Seated nobody new; nobody else moved." (seen directly: status text,
+no `.selected` desk). A late zoom announcement, the autosave and the status timers were checked and are not involved. The test now picks up from a desk
+the stored chart says is seated and waits for `.desk.selected` before the second press (a named condition, no longer sleep). Proved: 22 of 22 green
+with four busy loops running (before: 3 failures in 8 under the same load); changing the refusal sentence on the page made it fail again.
+
+- `Tools/class-screen/test/smoke-widgets.mjs` ("Add picture" click intercepted by the a11y widget) fails the same way on a clean `origin/main` worktree:
+  it was already failing before AI-22's changes; not fixed here.
+- `Tools/group-team-generator/test/smoke-seat-near.mjs` flaked once for an earlier session; 0 failures in 20 back-to-back runs here, so not reproduced
+  and not changed.
+
 ## AI-22: Path 14 P4 increment 2, marks dragged, printed and read (2026-10-27, v367-v368)
 
 Audit entry AI-22, rank 36 (2+, Partial). Two steps, each its own commit and `CACHE_VERSION`.
