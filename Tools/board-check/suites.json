@@ -324,6 +324,7 @@
     "Tools/review-game-board/test/smoke-named-sets.mjs",
     "Tools/question-bank/test/smoke-seed-sets.mjs",
     "Tools/export/test/export.test.mjs",
+    "Tools/stations/test/stations.test.mjs",
     "Tools/export/test/smoke-export.mjs",
     "Tools/export/test/smoke-csv-adopters.mjs",
     "Tools/export/test/smoke-sheet-adopters.mjs",

@@ -36,6 +36,7 @@ const SITE_GLOBALS = {
   // _shared/
   StateLink: 'readonly',
   Store: 'readonly',
+  Stations: 'readonly',
   A11y: 'readonly',
   QrScan: 'readonly',
   QrDraw: 'readonly',

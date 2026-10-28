@@ -316,6 +316,7 @@
     "Tools/review-game-board/test/smoke-named-sets.mjs": 24,
     "Tools/question-bank/test/smoke-seed-sets.mjs": 22,
     "Tools/export/test/export.test.mjs": 1,
+    "Tools/stations/test/stations.test.mjs": 1,
     "Tools/export/test/smoke-export.mjs": 2,
     "Tools/export/test/smoke-csv-adopters.mjs": 11,
     "Tools/export/test/smoke-sheet-adopters.mjs": 16,
