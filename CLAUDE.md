@@ -637,6 +637,12 @@ files must be added there too.
   tool cannot read is reported with its line number, never dropped or guessed. An ES module reaches it by `import
   '../../_shared/paste-table.js'` and reads `globalThis.PasteTable`. A new adopter gets a `paste-table-<tool>-parity` suite in
   `Tools/paste-table/test/` (a frozen copy of the old reader, the page's own function cut out of its HTML). `npm run test:paste-table`.
+- **037's per-question item analysis is `Tools/grade-distribution-visualizer/gd-items.js`** (`GradeItems`, Path 16 P3, v411-v415): pasted
+  scores by question through `PasteTable`, percent correct, the reteach/watch/secure tiers, section comparison and the plain-language
+  sentences, all pure and held by `npm run test:gd-items` with mutants. The page keeps `items` and `itemLine` on the assignment record it
+  already stored (no new key, no name shown), draws through `ChartSvg`, and prints the reteach list and the "What this says" page
+  through the print kit in one `#reteachSheet` under `body.printing-reteach` (the preview's page count is held to Chromium's PDF in
+  `test:gd-items-smoke`, port 8578). A new reader of the item table calls `GradeItems.analyze` and does not split the paste itself.
 - **A WebRTC pairing code is drawn with `QrDraw.fit(canvas, text)`** (`_shared/qr-draw.js`,
   AI-10, v223), which takes the size from the room the canvas's parent has, draws whole px per
   module and never under 4, and puts a note on the page when there is not room. Do not write

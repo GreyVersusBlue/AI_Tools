@@ -108,6 +108,32 @@ function check(G) {
   const D = G.analyze('Name,Q1\nAda,0.7\nBo,1');
   ok(G.compare([{ label: 'a', res: C }, { label: 'b', res: D }]).rows[0].gap === 8 && !G.compare([{ label: 'a', res: C }, { label: 'b', res: D }]).flagged, 'an 8-point gap is not flagged');
   ok(G.compare([{ label: 'a', res: A }, { label: 'b', res: A }]).rows.every(r => r.gap === 0), 'the same section twice: no gap');
+  // 14. the plain-language page
+  const base = { name: 'Unit 4', n: 10, mean: 70, median: 78, stdev: 18, min: 0, max: 99, letters: { A: 2, B: 3, C: 1, D: 2, F: 2 }, zeros: 1, compare: [], sections: [], line: 70 };
+  let nr = G.narrate(base);
+  ok(nr[0].h === 'How the class did' && /10 scores were read/.test(nr[0].t) && /mean was 70/.test(nr[0].t) && /median 78/.test(nr[0].t), 'overview names n, mean and median');
+  ok(/50% of the class earned an A or B, and 40% earned a D or F/.test(nr[0].t), 'letter shares');
+  ok(/pulling the mean below the median/.test(nr[0].t), 'mean 8 under the median: low scores pull it down');
+  ok(/widely spread/.test(nr[0].t), 'stdev 18 is wide');
+  ok(nr.some(x => x.h === 'Zeros' && /1 score was exactly 0 \(10%/.test(x.t)), 'one zero, singular');
+  ok(G.narrate(Object.assign({}, base, { mean: 78.5, median: 78, stdev: 10, zeros: 0 }))[0].t.includes('close, so the average is a fair picture'), 'close mean and median');
+  ok(G.narrate(Object.assign({}, base, { mean: 84, median: 78 }))[0].t.includes('pulling the mean above'), 'high scores pull it up');
+  ok(G.narrate(Object.assign({}, base, { stdev: 5 }))[0].t.includes('tightly bunched'), 'small stdev is tight');
+  ok(!G.narrate(Object.assign({}, base, { zeros: 0 })).some(x => x.h === 'Zeros'), 'no zeros: no zeros paragraph');
+  nr = G.narrate(Object.assign({}, base, { compare: [{ name: 'Unit 3', mean: 75 }, { name: 'Unit 2', mean: 71 }, { name: 'Unit 1', mean: 70 }] }));
+  ok(nr.find(x => x.h === 'Compared with Unit 3').t === 'The mean is 5 points lower than on Unit 3.', 'lower than the earlier unit');
+  ok(nr.find(x => x.h === 'Compared with Unit 2').t === 'The mean is 1 point lower than on Unit 2.', 'one point, singular');
+  ok(nr.find(x => x.h === 'Compared with Unit 1').t === 'The mean is the same as Unit 1\u2019s.', 'the same mean');
+  const S1 = { label: '3rd', res: A }, S2 = { label: '6th', res: B };
+  nr = G.narrate(Object.assign({}, base, { sections: [S1], line: 80 }));
+  const qs = nr.find(x => x.h === 'Questions');
+  ok(qs && /question was below 80% correct|questions were below 80% correct/.test(qs.t) && /Q2 \(75%\)/.test(qs.t) && /strongest was Q1 at 100%/.test(qs.t), 'questions paragraph names the weak ones and the strongest: ' + (qs && qs.t));
+  ok(/No question fell below 50% correct/.test(G.narrate(Object.assign({}, base, { sections: [S1], line: 50 })).find(x => x.h === 'Questions').t), 'none below the line');
+  nr = G.narrate(Object.assign({}, base, { sections: [S1, S2], line: 70 }));
+  ok(nr.some(x => x.h === 'Questions \u2014 3rd') && nr.some(x => x.h === 'Questions \u2014 6th'), 'a paragraph per section when there are several');
+  ok(/differed most on Q2 \(3rd 75%, 6th 25%\), Q1 \(3rd 100%, 6th 75%\)\./.test(nr.find(x => x.h === 'Sections differed').t), 'sections differed names the question and both figures: ' + nr.find(x => x.h === 'Sections differed').t);
+  ok(G.narrate(Object.assign({}, base, { n: 0 }))[0].h === 'About these numbers', 'no scores: only the caveat');
+  ok(nr[nr.length - 1].h === 'About these numbers', 'the caveat is last');
   return bad;
 }
 
@@ -125,6 +151,11 @@ const MUTANTS = [
   ['gap not flagged', s => s.replace('gap >= GAP_FLAG', 'gap > 100')],
   ['gap in the wrong unit', s => s.replace('Math.round((Math.max.apply(null, have) - Math.min.apply(null, have)) * 10) / 10', '0')],
   ['questions matched by position', s => s.replace('x.label === label &&', 'true &&')],
+  ['mean/median direction reversed', s => s.replace('if (gap <= -3) t += \' A few low', 'if (gap >= 3) t += \' A few low')],
+  ['letters share uses D only', s => s.replace('(m.letters.D + m.letters.F) / n', 'm.letters.D / n')],
+  ['plural always many', s => s.replace("(n === 1 ? one : many)", "many")],
+  ['strongest is the weakest', s => s.replace('res.order[res.order.length - 1]', 'res.order[0]')],
+  ['no zeros paragraph ever', s => s.replace('if (m.zeros > 0)', 'if (false)')],
   ['negative accepted', s => s.replace('v === null || v < 0', 'v === null')]
 ];
 

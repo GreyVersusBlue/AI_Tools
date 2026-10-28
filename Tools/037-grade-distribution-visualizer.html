@@ -172,6 +172,10 @@
   .items-table .tier-reteach { font-weight: 700; }
   .items-table .tier-watch { font-style: italic; }
   .items-table .tier-secure { color: var(--muted); }
+  .brief-h { font-size: .95rem; margin: 1rem 0 .2rem; }
+  .brief-p { margin: 0 0 .4rem; font-size: .92rem; }
+  #reteachSheet .brief-sh { font-size: 1.05rem; margin: 1rem 0 .15rem; }
+  #reteachSheet .brief-sp { margin: 0; font-size: .95rem; line-height: 1.5; break-inside: avoid; }
   .sm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .6rem; margin: .4rem 0 1rem; }
   .sm-cell { margin: 0; break-inside: avoid; }
   .sm-cell svg { width: 100%; height: auto; display: block; border: 1px solid var(--line); border-radius: 6px; }
@@ -693,6 +697,47 @@
     return out;
   }
 
+  /* ---------- "what this says": plain sentences for a PLC binder ---------- */
+  var lastBrief = null;
+  function briefModel() {
+    var parsed = parseScores(state.text);
+    var m = { name: state.name || 'Assignment', n: 0, zeros: 0, compare: [], sections: lastItems || [], line: itemLine() };
+    if (parsed.scores.length) {
+      var st = computeStats(parsed.scores);
+      m.n = st.n; m.mean = st.mean; m.median = st.median; m.stdev = st.stdev; m.min = st.min; m.max = st.max;
+      m.letters = computeLetters(parsed.scores, readCutoffs());
+      m.zeros = parsed.scores.filter(function (v) { return v === 0; }).length;
+      (state.compareNames || []).forEach(function (nm) {
+        var o = computeForSavedSet(nm);
+        if (o) m.compare.push({ name: o.name, mean: o.stats.mean });
+      });
+    }
+    return m;
+  }
+  function briefHtml() {
+    var m = briefModel();
+    if (!m.n && !m.sections.length) { lastBrief = null; return ''; }
+    lastBrief = GradeItems.narrate(m);
+    return '<h3>What this says</h3>' +
+      lastBrief.map(function (p) { return '<h4 class="brief-h">' + escapeHtml(p.h) + '</h4><p class="brief-p">' + escapeHtml(p.t) + '</p>'; }).join('') +
+      '<div class="chart-dl-row">' +
+        '<button type="button" class="secondary small" data-act="brief-preview">Preview this page</button>' +
+        '<button type="button" class="secondary small" data-act="brief-print">Print this page</button>' +
+      '</div>';
+  }
+  function buildBriefSheet() {
+    var sheet = document.getElementById('reteachSheet');
+    sheet.textContent = '';
+    if (!lastBrief) return false;
+    sheet.appendChild(node('h1', '', 'What this says'));
+    sheet.appendChild(node('p', 'rt-sub', state.name || 'Assignment'));
+    lastBrief.forEach(function (p) {
+      sheet.appendChild(node('h2', 'brief-sh', p.h));
+      sheet.appendChild(node('p', 'brief-sp', p.t));
+    });
+    return true;
+  }
+
   /* The reteach priority list, built into #reteachSheet with textContent only. */
   function node(tag, cls, text) {
     var el = document.createElement(tag);
@@ -735,29 +780,31 @@
 
   function pageOn() { PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.4in' }); }
   function pageOff() { var st = document.getElementById('pk-page-style'); if (st) st.remove(); }
-  function printReteach() {
-    if (!buildReteachSheet()) return;
+  function printSheet(build) {
+    if (!build()) return;
     pageOn();
     document.body.classList.add('printing-reteach');
     var done = function () { document.body.classList.remove('printing-reteach'); pageOff(); window.removeEventListener('afterprint', done); };
     window.addEventListener('afterprint', done);
     window.print();
   }
-  function previewReteach(trigger) {
-    if (!buildReteachSheet()) return;
+  function previewSheet(build, trigger, title) {
+    if (!build()) return;
     pageOn();
     document.body.classList.add('printing-reteach');
     PrintKit.preview({
-      area: document.getElementById('reteachSheet'), trigger: trigger, title: 'Reteach priority list',
+      area: document.getElementById('reteachSheet'), trigger: trigger, title: title,
       onClose: function () { document.body.classList.remove('printing-reteach'); pageOff(); },
-      onPrint: printReteach
+      onPrint: function () { printSheet(build); }
     });
   }
   els.outputBody.addEventListener('click', function (e) {
     var b = e.target.closest('[data-act]');
     if (!b) return;
-    if (b.dataset.act === 'reteach-print') printReteach();
-    else if (b.dataset.act === 'reteach-preview') previewReteach(b);
+    if (b.dataset.act === 'reteach-print') printSheet(buildReteachSheet);
+    else if (b.dataset.act === 'reteach-preview') previewSheet(buildReteachSheet, b, 'Reteach priority list');
+    else if (b.dataset.act === 'brief-print') printSheet(buildBriefSheet);
+    else if (b.dataset.act === 'brief-preview') previewSheet(buildBriefSheet, b, 'What this says');
   });
 
   var lastAnnounced = '';
@@ -796,7 +843,7 @@
 
     if (!scores.length) {
       lastChartData = null;
-      els.outputBody.innerHTML = (itemsHtml ? '' : '<p class="empty-note">Paste some scores on the left to see stats here.</p>') + itemsHtml;
+      els.outputBody.innerHTML = (itemsHtml ? '' : '<p class="empty-note">Paste some scores on the left to see stats here.</p>') + itemsHtml + briefHtml();
       els.compareWrap.innerHTML = '';
       return;
     }
@@ -899,7 +946,7 @@
 
     lastChartData = { name: state.name, stats: stats, letters: letters, letterOrder: letterOrder, buckets: buckets, bucketWidth: bucketWidth, excluded: parsed.skipped };
 
-    els.outputBody.innerHTML = statsHtml + letterHtml + histHtml + itemsHtml;
+    els.outputBody.innerHTML = statsHtml + letterHtml + histHtml + itemsHtml + briefHtml();
     renderComparison();
   }
 
@@ -1065,7 +1112,7 @@
     state.compareNames = Array.prototype.slice.call(els.compareChecks.querySelectorAll('input[type="checkbox"]:checked'))
       .map(function (cb) { return cb.value; });
     save();
-    renderComparison();
+    renderOutput();   // the plain-language page quotes the compared assignments too
   });
 
   function readFormIntoState() {

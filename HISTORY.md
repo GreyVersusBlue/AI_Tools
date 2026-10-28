@@ -9,6 +9,38 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-24: Path 16 P3, per-question item analysis in 037, whole (2026-10-28, v411-v415)
+
+**What shipped.** Five commits after the design (written into the P3 bullet first), each its own `CACHE_VERSION`.
+v411: a "Per-question scores" box read through `PasteTable`, `Tools/grade-distribution-visualizer/gd-items.js`
+(`GradeItems.analyze`, `tier`, `chart`), a missed-questions chart (`ChartSvg.bar`, which gained a `yMax` option so a
+percent axis ends at 100 and not 200) and a ranked reteach table. v412: the printed reteach priority list through the print
+kit (`#reteachSheet`, `PrintKit.setPage`, `PrintKit.preview({ area })`). v413: section against section (`items` is a
+list; `GradeItems.compare`; a hatched percent-correct chart; gap flag at 15 points; a reteach table per section).
+v414: small multiples of the compared assignments on one bucket list and one count axis. v415: "What this says",
+`GradeItems.narrate`, plain sentences from the page's own numbers, printed through the kit. Storage: new fields (`items`,
+`itemLine`) on the assignment record under the existing keys, no new key, no name ever displayed or drawn. Suites:
+`test:gd-items` (pure Node, named cases and 19 mutants) and `test:gd-items-smoke` (port 8578, next free 8579; includes axe,
+the print preview against Chromium's PDF page count, and the 70-question multi-page list).
+
+**What the checks found that the design did not.** (1) The reteach sheet printed a blank last page: `body { padding-bottom:
+100px }` stayed on the page, and `.pk-page:last-child` does not match when scripts follow the sheet in `<body>`; both
+are fixed in the print block and the suite holds the preview's count to the PDF's. (2) 037's assignment switcher, New and
+Delete were hidden after any reload, because only `newList()` showed the toolbar; `loadListByName()` does now. (3) The
+compare-with trend bars had no label colour (axe, serious: contrast); they take `textColorFor` as the main bar does. (4) My
+first "break-on-purpose" for the axis (no `yMax`) survived because the test data's tallest bar happened to give 100
+anyway; the suite now also pastes an easy test (25 % missed) and fails without `yMax`.
+
+**Defaults taken, none of them Devon's open questions:** percent correct against the highest score in a column when no
+"points possible" row is pasted; reteach below 70 %, watch within 10 points above; sections matched by question label,
+up to four; a 15-point gap is flagged; English only; the reteach list and the narrative print through one `#reteachSheet`
+and one `body.printing-reteach` class. **Not done / not verified:** nothing was printed on paper or read by a screen reader;
+no question text or standard (Path 12's bank); small multiples have no download button; the narrative's wording is rule
+text nobody has read in a PLC; the missed-questions chart for a second section is drawn but only the first has download
+buttons. No decision numbers.
+
+---
+
 ## AI-24: Path 16 P2, `_shared/paste-table.js` built; 046, 038, 036, 037, 075 and 006 read through it (2026-10-28, v404-v410)
 
 **What shipped.** `PasteTable`, one classic script that an ES module also reaches as a side-effect import
