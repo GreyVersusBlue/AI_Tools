@@ -9,6 +9,18 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-22: Path 14 P5 increment 2, `_shared/undo.js` in 002, 021 and 027 (2026-10-28, v374-v376)
+
+One tool per commit, each with its own `CACHE_VERSION` and its own `smoke-undo.mjs`, seen failing once with `limit: 1`. Path 13's `test:grouping-parity` (122,352), `test:grouping-adopters` (256) and `test:rotation-parity` (64,000 checks) are unchanged and green, and 002's golden classes were not touched.
+
+- **v374, 002.** Undo walks back up to 30 shuffles (it kept one). The snapshot is the same (groups, pair history, locks, role memory); the first Make Groups still has nothing behind it, so Undo stays grey there. `smoke-undo.mjs` (port 8564): grey before and after the first grouping, one reshuffle one Undo, three reshuffles undone in reverse, a new class clears the stack.
+- **v375, 021.** Undo walks back every Reset and New unit (30 steps). The two `captureUndoSnapshot()` call sites are unchanged. `smoke-undo.mjs` (port 8565): one Reset one Undo, two Resets undone in reverse, switching unit clears the stack.
+- **v376, 027.** Undo walks back every meeting delete and role-history reset (30 steps). The button still names the step it will take (`Undo: delete meeting`); a label list runs alongside the stack. Logging a meeting or switching project still empties it. `smoke-undo.mjs` (port 8566): delete, reset, delete undone in reverse with the label following, each step restoring only its own field.
+
+**Decided, not built: 024.** "Undo clear" cannot hold a second step. Clear board needs cards on the board; Add card empties the undo (a restored board would overwrite the new card), so the stack never reaches depth 2. Adopting would change nothing a teacher sees. If Remove-card is ever made undoable, that is a new feature and a new row.
+
+**Still not done.** 003 (no undo today; adopting adds a feature, not a port), 018 (15-second Undo clear window) and 043 (10-second deleted-trip bar), both kept as timed windows per the design, and live mode (cross-tool, needs its own design). Not run: the whole `--changed` list (`sw.js` is site-wide).
+
 ## AI-22: Path 14 P5 increment 1, `_shared/undo.js` and three adopters (2026-10-28, v371-v373)
 
 P5 had no written design; it is now in the P5 bullet in `BACKLOG.md` (surface, limits, what is kept per tool, buttons and keys, adoption order). `_shared/undo.js` publishes `UndoStack`: `create({ limit, maxBytes, serialize, parse, onChange })`, `push`, `pushRaw`, `undo(current?)`, `redo(current?)`, `canUndo/canRedo/depth/redoDepth/clear` and `keyHandler`. Snapshots are strings; 60 steps by default; redo only fills when a tool passes `current`.
