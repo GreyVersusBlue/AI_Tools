@@ -29,6 +29,7 @@
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/print-kit.css">
 <style>
   :root {
     /* Letter-grade palette: a single-hue sequential ramp (ColorBrewer "Blues" —
@@ -172,6 +173,19 @@
   .items-table .tier-watch { font-style: italic; }
   .items-table .tier-secure { color: var(--muted); }
   .items-line { display: grid; grid-template-columns: 1fr 5.5rem; gap: .6rem; align-items: end; }
+  /* The reteach list: a sheet of its own (Path 16 P3), drawn through the print kit. It is never on screen;
+     body.printing-reteach (set for the length of one print or preview) swaps it in for the page. */
+  #reteachSheet { display: none; }
+  #reteachSheet h1 { font-size: 1.3rem; margin: 0 0 .2rem; }
+  #reteachSheet .rt-sub { margin: 0 0 .8rem; font-size: .9rem; }
+  .rt-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  .rt-table th, .rt-table td { border: 1px solid #000; padding: .45rem .5rem; text-align: left; vertical-align: top; }
+  .rt-table th { font-size: .8rem; }
+  .rt-table thead { display: table-header-group; }
+  .rt-table tr { break-inside: avoid; }
+  .rt-table .rt-plan { width: 36%; padding-top: 1.1rem; padding-bottom: 1.1rem; }
+  .rt-table .rt-reteach td:nth-child(5) { font-weight: 700; }
+  .rt-foot { margin-top: .8rem; font-size: .8rem; }
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
   footer.note a { color: var(--accent-2); }
 
@@ -181,6 +195,12 @@
     /* What visibility hides still takes its height, and that height printed as
        blank sheets after this one. Everything but the sheet leaves the flow. */
     body > *:not(.wrap), .wrap > *:not(.layout), .layout > *:not(#printArea) { display: none !important; }
+    /* The reteach list prints alone: the page leaves the flow and the sheet takes its place. */
+    body.printing-reteach { padding: 0 !important; }
+    body.printing-reteach > .wrap { display: none !important; }
+    /* Scripts follow the sheet in <body>, so it is not :last-child and the kit's page break would add a blank page. */
+    body.printing-reteach > #reteachSheet { display: block !important; break-after: auto !important; page-break-after: auto !important; }
+    body.printing-reteach #reteachSheet, body.printing-reteach #reteachSheet * { visibility: visible; }
     /* The copy/download buttons under each chart sit inside the print area. */
     #printArea .chart-dl-row { display: none; }
     #printArea {
@@ -279,8 +299,11 @@
 
 </div>
 
+<div id="reteachSheet" class="pk-page pk-paper"></div>
+
 <script src="../_shared/chart-svg.js"></script>
 <script src="../_shared/paste-table.js"></script>
+<script src="../_shared/print-kit.js"></script>
 <script src="grade-distribution-visualizer/gd-items.js"></script>
 <script>
 (function () {
@@ -334,6 +357,7 @@
   };
 
   var state = null; // { name, text, cutA, cutB, cutC, cutD, bucketWidth, compareNames }
+  var lastItems = null;     // the analysis behind the section on screen, for the reteach list
   var lastItemsSvg = '';    // the missed-questions chart as drawn, for its downloads and its announcement
   var lastChartData = null; // snapshot of what's currently rendered, for the PNG/SVG downloads below
 
@@ -565,10 +589,10 @@
     var res = GradeItems.analyze(text, { line: itemLine() });
     var note = '', noteOk = false;
     if (!String(text).trim()) {
-      lastItemsSvg = '';
+      lastItemsSvg = ''; lastItems = null;
     } else if (!res.order.length) {
       note = 'No question columns with scores were found. Put one question per column, with a number in each cell.';
-      lastItemsSvg = '';
+      lastItemsSvg = ''; lastItems = null;
     } else {
       note = res.order.length + ' question(s), ' + res.students + ' student(s) read' + (res.maxGiven ? ', points possible taken from your row' : ', each question out of its highest score') + '.';
       if (res.problems.length) note += ' ' + res.problems.length + ' cell(s) left out: ' + describeProblems(res.problems) + '.';
@@ -582,6 +606,7 @@
     var title = (state.name || 'Assignment') + ': percent of students who missed each question';
     var svg = ChartSvg.bar(GradeItems.chart(res), { W: 640, H: 360, title: title, yLabel: 'Percent missed', showValues: true, yMax: 100, idPrefix: 'gdi', pad: { top: 40, right: 24, bottom: 64, left: 56 } });
     lastItemsSvg = svg;
+    lastItems = res;
 
     var rows = res.order.map(function (qi, rank) {
       var q = res.questions[qi], t = GradeItems.tier(q.pct, res.line);
@@ -599,9 +624,71 @@
         '<button type="button" class="secondary small" data-dl="items-copy">📋 Copy image</button>' +
         '<button type="button" class="secondary small" data-dl="items-svg">Download SVG</button>' +
         '<button type="button" class="secondary small" data-dl="items-png">Download PNG</button>' +
+        '<button type="button" class="secondary small" data-act="reteach-preview">Preview reteach list</button>' +
+        '<button type="button" class="secondary small" data-act="reteach-print">Print reteach list</button>' +
       '</div>' +
       '<table class="items-table"><thead><tr><th>Rank</th><th>Question</th><th>Correct</th><th>Missed</th><th>Tier</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
+
+  /* The reteach priority list, built into #reteachSheet with textContent only. */
+  function node(tag, cls, text) {
+    var el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (text != null) el.textContent = text;
+    return el;
+  }
+  function buildReteachSheet() {
+    var res = lastItems, sheet = document.getElementById('reteachSheet');
+    sheet.textContent = '';
+    if (!res) return false;
+    sheet.appendChild(node('h1', '', 'Reteach priority list'));
+    sheet.appendChild(node('p', 'rt-sub', (state.name || 'Assignment') + ' \u2014 ' + res.students + ' student(s), ' + res.order.length +
+      ' question(s). Lowest percent correct first; reteach is below ' + fmt(res.line, 0) + '%, watch is within ' + GradeItems.WATCH_BAND + ' points above it.'));
+    var table = node('table', 'rt-table');
+    var head = node('tr');
+    ['Priority', 'Question', 'Correct', 'Missed', 'Tier', 'Reteach plan'].forEach(function (h) { head.appendChild(node('th', '', h)); });
+    table.appendChild(node('thead')).appendChild(head);
+    var body = node('tbody');
+    res.order.forEach(function (qi, rank) {
+      var q = res.questions[qi], t = GradeItems.tier(q.pct, res.line);
+      var tr = node('tr', 'rt-' + t);
+      [rank + 1, q.label, fmt(q.pct * 100, 1) + '%', q.missed + ' of ' + q.n, t === 'reteach' ? 'Reteach' : t === 'watch' ? 'Watch' : 'Secure'].forEach(function (v) { tr.appendChild(node('td', '', v)); });
+      tr.appendChild(node('td', 'rt-plan'));
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    sheet.appendChild(table);
+    sheet.appendChild(node('p', 'rt-foot', 'Percent correct is the question\u2019s mean score over its points possible' + (res.maxGiven ? '' : ' (the highest score in its column, as no points row was pasted)') +
+      '. A blank cell is not attempted. ' + (res.problems.length ? res.problems.length + ' cell(s) could not be read and were left out.' : '')));
+    return true;
+  }
+
+  function pageOn() { PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.4in' }); }
+  function pageOff() { var st = document.getElementById('pk-page-style'); if (st) st.remove(); }
+  function printReteach() {
+    if (!buildReteachSheet()) return;
+    pageOn();
+    document.body.classList.add('printing-reteach');
+    var done = function () { document.body.classList.remove('printing-reteach'); pageOff(); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    window.print();
+  }
+  function previewReteach(trigger) {
+    if (!buildReteachSheet()) return;
+    pageOn();
+    document.body.classList.add('printing-reteach');
+    PrintKit.preview({
+      area: document.getElementById('reteachSheet'), trigger: trigger, title: 'Reteach priority list',
+      onClose: function () { document.body.classList.remove('printing-reteach'); pageOff(); },
+      onPrint: printReteach
+    });
+  }
+  els.outputBody.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act]');
+    if (!b) return;
+    if (b.dataset.act === 'reteach-print') printReteach();
+    else if (b.dataset.act === 'reteach-preview') previewReteach(b);
+  });
 
   var lastAnnounced = '';
   function announceItems() {

@@ -130,6 +130,60 @@ await settle(page, 300);
 const topEasy = await page.$eval('.items-chart svg', s => Math.max(...Array.from(s.querySelectorAll('text[text-anchor="end"][font-size="10"]')).map(t => parseFloat(t.textContent))));
 eq(topEasy, 100, 'with only 25% missed the axis still tops out at 100');
 
+// 10c. the printed reteach list, through the print kit
+await page.fill('#itemInput', TABLE);
+await page.dispatchEvent('#itemInput', 'input');
+await settle(page, 300);
+await page.evaluate(() => { window.__prints = 0; window.print = () => { window.__prints++; }; });
+const pdfPages = async () => {
+  await page.emulateMedia({ media: 'print' });
+  const buf = await page.pdf({ preferCSSPageSize: true });
+  await page.emulateMedia({ media: 'screen' });
+  return (buf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+};
+ok(await page.locator('[data-act="reteach-preview"]').count() === 1 && await page.locator('[data-act="reteach-print"]').count() === 1, 'a Preview and a Print button for the reteach list');
+await page.click('[data-act="reteach-preview"]');
+await page.waitForSelector('dialog.pk-preview[open]', { timeout: 10000 });
+await page.waitForFunction(() => /Page 1 of \d+/.test(document.querySelector('.pk-preview-status').textContent), null, { timeout: 10000 });
+eq(await page.evaluate(() => window.__prints), 0, 'opening the preview prints nothing');
+const pv = await page.evaluate(() => {
+  const d = document.querySelector('.pk-preview-frame').contentDocument;
+  return { rows: Array.from(d.querySelectorAll('.rt-table tbody tr')).map(r => r.cells[1].textContent + ':' + r.cells[4].textContent),
+    text: d.body.textContent, status: document.querySelector('.pk-preview-status').textContent, wrapShown: !!d.querySelector('.wrap') };
+});
+eq(pv.rows.join(), 'Q2:Reteach,Q3:Reteach,Q4:Reteach,Q1:Watch', 'the sheet ranks lowest percent correct first, ties in question order, with the tier written out (the line is 80 here)');
+ok(!/Zelda|Quimby|Baker|Chen|Diaz/.test(pv.text), 'no student name on the sheet');
+ok(/Unit 4 Test/.test(pv.text) && /Reteach priority list/.test(pv.text), 'the sheet names the assignment');
+ok(!pv.wrapShown, 'the page itself is not in the preview');
+eq(pv.status, 'Page 1 of 1', 'four questions are one page');
+await page.click('.pk-preview-print');
+eq(await page.evaluate(() => window.__prints), 1, 'the preview\u2019s Print button prints once');
+ok(await page.evaluate(() => document.body.classList.contains('printing-reteach')), 'with the reteach list in place of the page');
+eq(await pdfPages(), 1, 'and Chromium\u2019s PDF of it is one page');
+await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+ok(await page.evaluate(() => !document.body.classList.contains('printing-reteach') && !document.getElementById('pk-page-style')), 'after printing the page is back and the kit\u2019s page rule is gone');
+// the ordinary Print button still prints the panel, not the list
+await page.click('#printBtn');
+ok(await page.evaluate(() => !document.body.classList.contains('printing-reteach')), 'the Print button prints the output panel as before');
+// a long list: the preview and Chromium agree on the page count
+const wide = ['Name'].concat(Array.from({ length: 70 }, (_, i) => 'Q' + (i + 1))).join('\t') + '\n' +
+  ['Ada'].concat(Array.from({ length: 70 }, (_, i) => String(i % 2))).join('\t') + '\n' +
+  ['Bo'].concat(Array.from({ length: 70 }, (_, i) => String((i + 1) % 2))).join('\t');
+await page.fill('#itemInput', wide);
+await page.dispatchEvent('#itemInput', 'input');
+await settle(page, 400);
+await page.click('[data-act="reteach-preview"]');
+await page.waitForSelector('dialog.pk-preview[open]', { timeout: 10000 });
+await page.waitForFunction(() => /Page 1 of \d+/.test(document.querySelector('.pk-preview-status').textContent), null, { timeout: 10000 });
+const longPages = Number((await page.textContent('.pk-preview-status')).match(/of (\d+)/)[1]);
+ok(longPages > 1, 'seventy questions run to more than one page: ' + longPages);
+await page.click('.pk-preview-print');
+eq(await pdfPages(), longPages, 'the preview\u2019s page count is Chromium\u2019s PDF page count');
+await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+await page.fill('#itemInput', TABLE);
+await page.dispatchEvent('#itemInput', 'input');
+await settle(page, 300);
+
 // 11. axe
 await page.fill('#itemInput', TABLE);
 await page.dispatchEvent('#itemInput', 'input');
