@@ -9,6 +9,7 @@
 // Exits 1 on any failure.
 
 import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
+import { seedCalendar2026 } from '../../school-calendar/scv-seed.js';
 
 const PORT = 8579;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -102,6 +103,52 @@ await page.click('#tab-calc-btn');
 await setTerms(4);
 eq((await texts('.student-card .quarter-label')).slice(0, 4), ['Quarter 1', 'Quarter 2', 'Quarter 3', 'Quarter 4'], 'quarters again');
 eq(await page.evaluate(() => localStorage.getItem('final-grade-checker:settings-v1')), null, 'nothing was stored: no setting was kept and no grade ever is');
+
+/* ── 6. the grading window follows the count (Path 9's calendar, read through SchoolDay) ────────── */
+// The 2026-27 seed ends marking periods on Nov 4, Jan 22 and Apr 7 (and the year's last day): four.
+// Taking Nov 4 and Apr 7 off leaves Jan 22, two semesters; taking only Apr 7 off leaves three trimesters.
+const calendarWithout = drop => {
+  const cal = seedCalendar2026();
+  for (const d of drop) cal.days[d].types = cal.days[d].types.filter(t => t !== 'mpend');
+  return JSON.stringify(cal);
+};
+const openWith = async (when, cal, settings) => {
+  const pg = await prepPage(browser, BASE, { width: 1280, height: 1000 });
+  await pg.clock.setFixedTime(new Date(when));
+  await pg.goto(BASE + '/index.html');
+  await pg.evaluate(([c, st]) => { localStorage.clear(); localStorage.setItem('scv_calendar_v1', c); if (st) localStorage.setItem('final-grade-checker:settings-v1', st); }, [cal, settings]);
+  await pg.goto(URL_PAGE, { waitUntil: 'networkidle' });
+  await pg.click('#tab-need-btn');
+  await settle(pg, 200);
+  return pg;
+};
+const SEM = JSON.stringify({ boundary: 'half', precision: 'none', weightsEnabled: false, weights: [50, 50], terms: 2, showWork: false, persist: true });
+const TRI = JSON.stringify({ boundary: 'half', precision: 'none', weightsEnabled: false, weights: [33.33, 33.33, 33.33], terms: 3, showWork: false, persist: true });
+{
+  const pg = await openWith('2026-12-01T10:00:00', calendarWithout(['2026-11-04', '2027-04-07']), SEM);
+  const note = await pg.$eval('#need-calendar', e => e.textContent);
+  ok(/today is in Semester 1 \(.*\), \d+ school days? left/.test(note) && /Semester 1 is marked as the open one/.test(note), 'two semesters: December is Semester 1 and it is marked open: ' + note);
+  eq(await pg.$eval('input[name="need-solve"]:checked', e => e.value), '0', 'the first semester is the open one');
+  await pg.close();
+}
+{
+  const pg = await openWith('2027-03-01T10:00:00', calendarWithout(['2026-11-04', '2027-04-07']), SEM);
+  eq(await pg.$eval('input[name="need-solve"]:checked', e => e.value), '1', 'March is Semester 2');
+  await pg.close();
+}
+{
+  const pg = await openWith('2027-05-01T10:00:00', calendarWithout(['2027-04-07']), TRI);
+  const note = await pg.$eval('#need-calendar', e => e.textContent);
+  ok(/today is in Trimester 3 /.test(note) && /Trimester 3 is marked as the open one/.test(note), 'three trimesters: May is Trimester 3, marked open: ' + note);
+  await pg.close();
+}
+{
+  // four periods in the calendar, two semesters chosen: the periods are not read as semesters, as six were never read as quarters
+  const pg = await openWith('2026-12-01T10:00:00', JSON.stringify(seedCalendar2026()), SEM);
+  const note = await pg.$eval('#need-calendar', e => e.textContent);
+  ok(/today is in grading period 2 of 4 /.test(note) && !/marked as the open one/.test(note), 'a four-period calendar is not read as two semesters: ' + note);
+  await pg.close();
+}
 
 eq(errors, [], 'no page errors');
 await browser.close();

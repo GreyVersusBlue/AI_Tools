@@ -295,7 +295,7 @@ const BREAKS = [
   ['001: another tab ignored', { [H]: (s) => s.replace('if (!state || (e.key !== null && !(window.SchoolDay && e.key === SchoolDay.KEY))) return;', 'return;') }],
   ['036: the quarter not marked', { [G]: (s) => s.replace('if (radio) radio.checked = true;', '') }],
   ['036: half days not named', { [G]: (s) => s.replace("(!left.half ? '' :", "(true ? '' :") }],
-  ['036: any year read as quarters', { [G]: (s) => s.replace('const quarters = periods.length === QUARTERS;', 'const quarters = true;') }],
+  ['036: any year read as quarters', { [G]: (s) => s.replace('const quarters = periods.length === termCount();', 'const quarters = true;') }],
   ['school-day: closures counted as days left', { [S]: (s) => s.replace('      if (!isSchoolDay(cal, iso)) continue;\n      out.days++;', '      if (!isWeekday(iso)) continue;\n      out.days++;') }],
 ];
 let caught = 0;
