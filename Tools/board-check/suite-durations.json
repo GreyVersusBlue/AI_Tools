@@ -196,6 +196,7 @@
     "Tools/qr-scavenger-hunt-builder/test/smoke-paper-mode.mjs": 4,
     "Tools/lab-group-role-randomizer/test/smoke-equipment-mode.mjs": 9,
     "Tools/lab-group-role-randomizer/test/smoke-safety-gate.mjs": 9,
+    "Tools/lab-group-role-randomizer/test/smoke-undo.mjs": 9,
     "Tools/field-trip-permission-slip/test/smoke-bilingual.mjs": 9,
     "Tools/math-drill-generator/test/drill-math.test.mjs": 1,
     "Tools/math-drill-generator/test/smoke-new-types.mjs": 24,
