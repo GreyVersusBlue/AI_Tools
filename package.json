@@ -245,6 +245,7 @@
     "test:stations-smoke": "node Tools/stations/test/smoke-ids.mjs",
     "test:stations": "node Tools/stations/test/stations.test.mjs",
     "test:scavenger-hunt-images": "node Tools/qr-scavenger-hunt-builder/test/smoke-images.mjs",
+    "test:scavenger-hunt-required": "node Tools/qr-scavenger-hunt-builder/test/smoke-required.mjs",
     "test:stations-legacy": "node Tools/stations/test/smoke-legacy-codes.mjs",
     "test:export": "node Tools/export/test/export.test.mjs && node Tools/export/test/smoke-export.mjs",
     "test:trading-card-pdf": "node Tools/historical-trading-card-maker/test/smoke-pdf-export.mjs",

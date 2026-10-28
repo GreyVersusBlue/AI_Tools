@@ -867,6 +867,28 @@
   }
 
 
+  /** Where a team stands in a set. `set.required` (ids) is the free-order required
+      set: a team is finished when it has reached every one of them, and any other
+      station is a bonus. With none set (or none still playable) every playable station
+      is required, which is how a hunt always counted. `marks` is a team's { id: mark }. */
+  function progress(set, marks) {
+    var pl = playable(set), marks_ = isObj(marks) ? marks : {};
+    var req = Array.isArray(set.required) ? set.required.filter(function (id) {
+      return pl.some(function (s) { return s.id === id; });
+    }) : [];
+    var explicit = req.length > 0;
+    if (!explicit) req = pl.map(function (s) { return s.id; });
+    var done = 0, bonus = 0, nextId = null;
+    pl.forEach(function (s) {
+      var marked = Object.prototype.hasOwnProperty.call(marks_, s.id), isReq = req.indexOf(s.id) !== -1;
+      if (marked && isReq) done++;
+      else if (marked) bonus++;
+      else if (isReq && nextId === null) nextId = s.id;
+    });
+    return { total: req.length, done: done, bonus: bonus, explicit: explicit, required: req,
+      finished: req.length > 0 && done >= req.length, nextId: nextId };
+  }
+
   // ── runs and progress ─────────────────────────────────────────────────────
   /** 018's index-keyed run to an id-keyed one (or, with `alreadyById`, the
       id-keyed form write() emits back to the canonical one). `idsByIndex` is the playable
@@ -961,7 +983,7 @@
     KINDS: KINDS, ANSWER_TYPES: ANSWER_TYPES, ID_LENGTH: ID_LENGTH, CODE_WORDS: CODE_WORDS,
     detect: detect, read: read, write: write, ensureIds: ensureIds, newId: newId, newSetId: newSetId,
     playable: playable, playPayload: playPayload, playUrl: playUrl, playRead: playRead,
-    codeText: codeText, teamCodeText: teamCodeText, check: check, toDisk: toDisk, shareState: shareState, fromShare: fromShare, nextOf: nextOf, reachable: reachable,
+    codeText: codeText, teamCodeText: teamCodeText, check: check, toDisk: toDisk, shareState: shareState, fromShare: fromShare, nextOf: nextOf, reachable: reachable, progress: progress,
     remapRun: remapRun, upgradeProgress: upgradeProgress, budget: budget
   };
   global.EscapeRoomMatch = {

@@ -108,6 +108,7 @@
   .remove-row-btn { width: 1.8rem; height: 1.8rem; font-size: 0.85rem; }
   .remove-row-btn:hover { background: var(--danger); color: var(--accent-ink); border-color: var(--danger); }
   .move-row-btn:hover:not(:disabled) { background: var(--surface2); color: var(--text); border-color: var(--accent); }
+  .move-row-btn.req-on { background: var(--accent); color: var(--bg, #fff); border-color: var(--accent); }
   .move-row-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
   button { cursor: pointer; font-family: inherit; font-size: 0.875rem; font-weight: 600; border-radius: 8px; padding: 0.6rem 1.1rem; border: none; transition: opacity 0.15s, transform 0.1s; }
@@ -296,6 +297,7 @@
         </div>
       </div>
       <div class="hint">A QR content value that looks like a bare web address (like "example.com/clue") gets "https://" added automatically. Anything that doesn't look like a link is encoded as plain text as-is.</div>
+      <div class="hint" id="required-info">Every station counts toward finishing. Press the star on a row to make it required: a team then finishes when it has reached every starred station, and the others are bonus stops.</div>
     </div>
 
     <div class="card">
@@ -672,6 +674,7 @@
         '<td class="actions-cell"><div class="row-actions">' +
           '<button type="button" class="move-row-btn" data-move="-1" title="Move up"' + (i === 0 ? ' disabled' : '') + '>&#8593;</button>' +
           '<button type="button" class="move-row-btn" data-move="1" title="Move down"' + (i === state.stations.length - 1 ? ' disabled' : '') + '>&#8595;</button>' +
+          '<button type="button" class="move-row-btn' + (isRequired(s) ? ' req-on' : '') + '" data-required-toggle="' + i + '" aria-pressed="' + (isRequired(s) ? 'true' : 'false') + '" title="' + (isRequired(s) ? 'Required: a team must reach this station to finish. Press to make it a bonus stop.' : 'Press to require this station; a team then finishes when it has reached every required station.') + '" aria-label="Station ' + (i + 1) + ' is ' + (isRequired(s) ? 'required' : 'not required') + '">' + (isRequired(s) ? '&#9733;' : '&#9734;') + '</button>' +
           '<button type="button" class="move-row-btn" data-hint-toggle="' + i + '" title="Add/edit a hint or a picture (both optional)" aria-label="Hint or picture for station ' + (i + 1) + '">&#128161;</button>' +
           '<button type="button" class="remove-row-btn" data-remove="' + i + '" title="Remove station">&#10005;</button>' +
         '</div></td>' +
@@ -681,6 +684,10 @@
       return row;
     }).join('');
   }
+
+  // Path 18 P3: the free-order required set. state.required lists station ids; empty means every
+  // station is required, which is how a hunt always counted.
+  function isRequired(s) { return Array.isArray(state.required) && state.required.indexOf(s.id) !== -1; }
 
   function renderQTypeSelect(s, i) {
     return '<select class="f-qtype" data-idx="' + i + '" aria-label="Answer type for station ' + (i + 1) + '">' + Q_TYPES.map(function (t) {
@@ -794,6 +801,7 @@
     var addChoiceBtn = e.target.closest('.btn-choice-add');
     var removeChoiceBtn = e.target.closest('.btn-choice-remove');
     var hintToggleBtn = e.target.closest('[data-hint-toggle]');
+    var requiredBtn = e.target.closest('[data-required-toggle]');
     var recodeStationBtn = e.target.closest('[data-recode-station]');
     var removeImageBtn = e.target.closest('[data-remove-image]');
     if (removeImageBtn) {
@@ -812,6 +820,16 @@
       state.stations[rsi].codeWord = generateCodeWord(usedWords);
       renderRows();
       save();
+      return;
+    }
+    if (requiredBtn) {
+      var rq = state.stations[parseInt(requiredBtn.dataset.requiredToggle, 10)];
+      if (!rq) return;
+      var list = Array.isArray(state.required) ? state.required.slice() : [];
+      var at = list.indexOf(rq.id);
+      if (at === -1) list.push(rq.id); else list.splice(at, 1);
+      if (list.length) state.required = list; else delete state.required;
+      renderRows(); save(); refreshRunView();
       return;
     }
     if (hintToggleBtn) {
@@ -1315,9 +1333,15 @@
       (distinct < teams.length ? ' — there are more teams than stations, so some will share a starting point.' : '.');
   }
 
+  // A bonus stop on a route card, only once the teacher has starred some stations as required.
+  function routeTag(st, pr) {
+    return pr.explicit && pr.required.indexOf(st.id) === -1 ? ' (bonus)' : '';
+  }
+
   function buildPrintRoutes() {
     var teams = state.run.teams;
     var stations = validStations();
+    var pr = Stations.progress(Stations.read(state), {});
     PrintKit.renderCards(els.printRoutesGrid, teams, cardGrid('2'), function (t, i) {
       var card = pEl('div', 'p-card');
       card.appendChild(pEl('div', 'p-num', 'Route card'));
@@ -1325,7 +1349,7 @@
       card.appendChild(pEl('div', 'p-extra p-team-code', 'Code: ' + t.code));
       var list = pEl('ol', 'p-route');
       teamRoute(i, teams.length, stations).forEach(function (st, ri) {
-        list.appendChild(pEl('li', ri === 0 ? 'first' : '', st.label));
+        list.appendChild(pEl('li', ri === 0 ? 'first' : '', st.label + routeTag(st, pr)));
       });
       card.appendChild(list);
       card.appendChild(pEl('div', 'p-route-note', 'Start at the first station on this list and work down it. ' +
@@ -1355,6 +1379,7 @@
   function buildPrintAnswerSheets() {
     var teams = state.run.teams;
     var stations = validStations();
+    var pr = Stations.progress(Stations.read(state), {});
     PrintKit.renderCards(els.printAnswersheetsGrid, teams, cardGrid('2'), function (t, i) {
       var card = pEl('div', 'p-card');
       card.appendChild(pEl('div', 'p-num', 'Answer Sheet'));
@@ -1367,7 +1392,7 @@
       teamRoute(i, teams.length, stations).forEach(function (st, ri) {
         var tr = body.appendChild(document.createElement('tr'));
         tr.appendChild(pEl('td', '', ri + 1));
-        var station = tr.appendChild(pEl('td', '', st.label));
+        var station = tr.appendChild(pEl('td', '', st.label + routeTag(st, pr)));
         var extra = answerSheetExtra(st);
         if (extra) station.appendChild(pEl('span', 'p-as-hint', extra));
         tr.appendChild(pEl('td', 'p-as-blank'));
@@ -1700,20 +1725,22 @@
       els.teamProgressList.innerHTML = '<p class="empty-hint">Add at least one team above to track progress.</p>';
       return;
     }
+    var canon = Stations.read(state);   // progress() takes the canonical set, not the on-disk shape
     els.teamProgressList.innerHTML = state.run.teams.map(function (t, ti) {
       var btns = '';
-      var solvedCount = 0;
-      var nextIdx = -1;
+      var pr = Stations.progress(canon, t.marks);
       for (var j = 0; j < total; j++) {
         var solved = Object.prototype.hasOwnProperty.call(t.marks, valid[j].id);
         var attempts = t.attempts[valid[j].id] || 0;
-        if (solved) solvedCount++;
-        else if (nextIdx === -1) nextIdx = j;
+        var bonus = pr.explicit && pr.required.indexOf(valid[j].id) === -1;
         var cls = 'station-btn' + (solved ? ' solved' : (attempts > 0 ? ' attempted' : ''));
-        var title = 'Station ' + (j + 1) + (solved ? ' — reached' : attempts > 0 ? ' — ' + attempts + ' attempt' + (attempts === 1 ? '' : 's') + ' so far' : '');
+        var title = 'Station ' + (j + 1) + (bonus ? ' (bonus)' : '') + (solved ? ' — reached' : attempts > 0 ? ' — ' + attempts + ' attempt' + (attempts === 1 ? '' : 's') + ' so far' : '');
         btns += '<button type="button" class="' + cls + '" data-team="' + ti + '" data-station="' + j + '" title="' + escapeAttr(title) + '">' + (j + 1) + '</button>';
       }
-      var statusLine = solvedCount >= total ? 'All stations complete!' : 'Next up: Station ' + (nextIdx + 1) + ' — ' + escapeHtml(valid[nextIdx].label);
+      var nextIdx = -1;
+      valid.forEach(function (v, vi) { if (v.id === pr.nextId) nextIdx = vi; });
+      var statusLine = pr.finished ? (pr.explicit ? 'All required stations complete!' : 'All stations complete!') : 'Next up: Station ' + (nextIdx + 1) + ' — ' + escapeHtml(valid[nextIdx].label);
+      if (pr.explicit && pr.bonus) statusLine += ' · ' + pr.bonus + ' bonus';
       var hintCount = t.hintsUsed ? Object.keys(t.hintsUsed).length : 0;
       if (hintCount) statusLine += ' · ' + hintCount + ' hint' + (hintCount === 1 ? '' : 's') + ' used (−' + formatPenaltyMinutes(t.penaltyMs || 0) + ' min)';
       return '<div class="team-progress"><div class="tp-name">' + escapeHtml(t.name || ('Team ' + (ti + 1))) + '<span class="tp-code">' + escapeHtml(t.code || '') + '</span></div>' +
@@ -1743,15 +1770,18 @@
   function renderLeaderboard() {
     var valid = validStations();
     var total = valid.length;
+    var canon = Stations.read(state);
     var rows = state.run.teams.map(function (t, i) {
       var markTimes = Object.keys(t.marks).map(function (k) { return t.marks[k].at; });
+      var pr = Stations.progress(canon, t.marks);
       var nextIdx = -1;
-      for (var j = 0; j < total; j++) { if (!Object.prototype.hasOwnProperty.call(t.marks, valid[j].id)) { nextIdx = j; break; } }
+      valid.forEach(function (v, vi) { if (v.id === pr.nextId) nextIdx = vi; });
       var lastMark = markTimes.length ? Math.max.apply(Math, markTimes) : null;
       var penaltyMs = t.penaltyMs || 0;
       return {
         name: t.name || ('Team ' + (i + 1)),
         count: markTimes.length,
+        done: pr.done, required: pr.total, bonus: pr.bonus, explicit: pr.explicit, finished: pr.finished,
         lastMark: lastMark,
         effectiveMark: lastMark == null ? null : lastMark + penaltyMs,
         penaltyMs: penaltyMs,
@@ -1760,6 +1790,7 @@
       };
     });
     rows.sort(function (a, b) {
+      if (b.done !== a.done) return b.done - a.done;
       if (b.count !== a.count) return b.count - a.count;
       if (a.effectiveMark == null && b.effectiveMark == null) return 0;
       if (a.effectiveMark == null) return 1;
@@ -1772,7 +1803,7 @@
     }
     els.leaderboardBody.innerHTML = rows.map(function (r, i) {
       var status;
-      if (total && r.count >= total) {
+      if (total && r.finished) {
         status = (state.run.raceStartAt && r.lastMark) ? 'Finished in ' + formatElapsed((r.effectiveMark - state.run.raceStartAt)) : 'Finished';
       } else if (r.count > 0) {
         status = 'In progress';
@@ -1781,7 +1812,7 @@
       }
       var heading = r.nextLabel ? escapeHtml(r.nextLabel) : '—';
       var hints = r.hintCount ? (r.hintCount + ' (−' + formatPenaltyMinutes(r.penaltyMs) + ' min)') : '—';
-      return '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(r.name) + '</td><td>' + r.count + ' / ' + total + '</td><td>' + heading + '</td><td>' + hints + '</td><td>' + status + '</td></tr>';
+      return '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(r.name) + '</td><td>' + r.done + ' / ' + r.required + (r.explicit && r.bonus ? ' (+' + r.bonus + ' bonus)' : '') + '</td><td>' + heading + '</td><td>' + hints + '</td><td>' + status + '</td></tr>';
     }).join('');
   }
 

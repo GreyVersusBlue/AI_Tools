@@ -357,6 +357,25 @@ function suite(src) {
     eq([hw.stations[0].image, hw.stations[0].encode, S.write(hset0).stations[0].image], ['idb:abc', 'player', undefined], 'P3: and writes them only when set');
   }
 
+  { // v389: progress(), the free-order required set
+    const h = S.read(jc(F.H2())), ids = h.stations.map(x => x.id);
+    ok(ids.length >= 3, 'PR: the hunt fixture has three stations');
+    const none = S.progress(h, {});
+    eq([none.total, none.done, none.bonus, none.explicit, none.finished, none.nextId], [ids.length, 0, 0, false, false, ids[0]], 'PR: no required set means every station is required');
+    const all = {}; ids.forEach(i => { all[i] = { at: 1, correct: true }; });
+    ok(S.progress(h, all).finished && S.progress(h, all).done === ids.length, 'PR: every station reached is finished');
+    h.required = [ids[1], ids[2]];
+    const p1 = S.progress(h, { [ids[0]]: { at: 1 } });
+    eq([p1.total, p1.done, p1.bonus, p1.explicit, p1.finished, p1.nextId], [2, 0, 1, true, false, ids[1]], 'PR: an unrequired mark is a bonus and does not finish the hunt');
+    const p2 = S.progress(h, { [ids[1]]: { at: 1 }, [ids[2]]: { at: 2 } });
+    eq([p2.done, p2.bonus, p2.finished, p2.nextId], [2, 0, true, null], 'PR: the required stations reached finish the hunt without the rest');
+    const p3 = S.progress(h, { [ids[2]]: { at: 1 } });
+    eq([p3.done, p3.finished, p3.nextId], [1, false, ids[1]], 'PR: next is the first required station not yet reached, whatever the order reached in');
+    h.required = ['nope'];
+    ok(!S.progress(h, {}).explicit && S.progress(h, {}).total === ids.length, 'PR: a required id no station has falls back to every station');
+    eq(S.progress(h, null).done, 0, 'PR: no marks object is no marks');
+  }
+
   { // v385: a go-to stored as the target's id
     const room = jc(F.R2());
     room.stations[0].next = 2; room.stations[1].next = 'end'; room.stations[2].next = 0;
@@ -424,6 +443,8 @@ const MUTANTS = [
   ['toDisk keeps the position', "st.next = out.stations[st.next].id;", "st.next = st.next;"],
   ['fromShare keeps an unknown room type', "type: ROOM_TYPES.indexOf(st.type) !== -1 ? st.type : 'text',", "type: st.type,"],
   ['shareState carries the run', "      name: state.name,\n      cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,\n      stations: state.stations.map(function (s) {\n        return {\n          id: s.id,", "      name: state.name, run: state.run,\n      cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,\n      stations: state.stations.map(function (s) {\n        return {\n          id: s.id,"],
+  ['progress counts a bonus mark as required', "if (marked && isReq) done++;", "if (marked) done++;"],
+  ['progress ignores the required set', "var explicit = req.length > 0;", "var explicit = false; req = [];"],
   ['an orphan mark is kept', "if (id === undefined || String(parseInt(k, 10)) !== k) { dropped++; return; }", "if (id === undefined) id = k;"]
 ];
 let mutantFail = 0;
