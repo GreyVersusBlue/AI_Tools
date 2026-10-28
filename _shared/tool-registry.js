@@ -81,7 +81,7 @@
                                    (rgb-audio and stviz-recovery did, until
                                    v240).
      reads / readPrefixes          another tool's keys this tool only reads.
-                                   TWENTY-FIVE rows read np_rosters (28 tool
+                                   TWENTY-SIX rows read np_rosters (28 tool
                                    pages mention the key at all, counting its
                                    owner 007, its writer 006 and 009, which
                                    backs up every key generically). This said
@@ -495,6 +495,7 @@
         { k: 'final-grade-checker:settings-v1' },
       ],
       reads: [
+        'np_rosters',
         'scv_calendar_v1',
       ],
     },

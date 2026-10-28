@@ -62,6 +62,8 @@
     "Tools/final-grade-checker/terms.test.mjs": 1,
     "Tools/final-grade-checker/test/smoke-terms.mjs": 8,
     "Tools/final-grade-checker/test/smoke-scenario-chart.mjs": 8,
+    "Tools/final-grade-checker/roster-join.test.mjs": 1,
+    "Tools/final-grade-checker/test/smoke-roster-join.mjs": 8,
     "Tools/data-chart-builder/test/smoke-xlsx.mjs": 6,
     "Tools/data-chart-builder/test/smoke-chart-a11y.mjs": 20,
     "Tools/data-chart-builder/test/chart-svg-draw-parity.test.mjs": 1,

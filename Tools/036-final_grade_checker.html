@@ -26,6 +26,8 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/export.js"></script>
 <script src="../_shared/chart-svg.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <script src="../_shared/school-day.js"></script>
 <link rel="stylesheet" href="../_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css">
 <link rel="stylesheet" href="../_shared/theme.css">
@@ -531,6 +533,31 @@
     </div>
   </div>
 
+  <!-- The roster check, like the triage, asks about a whole paste and is hidden until there is one.
+       Neither list is stored: the roster is read from Class Roster Hub or typed here and lives in
+       this page only, and this tool still saves no grade. -->
+  <div class="card blueprint no-print" id="roster-card" style="display:none;">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="settings-row">
+      <strong>Check the paste against a class roster</strong>
+      <p class="whatif-hint">Finds the students who are on your class list but have no row in the grades above, and the rows that are
+        not on the list. Names match whatever the order (&ldquo;Lee, Jordan&rdquo; is &ldquo;Jordan Lee&rdquo;), capitals or accents; a
+        near spelling is shown as a hint and never matched for you. The list is kept in this page only &mdash; nothing is saved.</p>
+      <div class="rj-controls">
+        <label for="rj-roster">A roster from Class Roster Hub</label>
+        <select id="rj-roster" class="input"><option value="">None chosen</option></select>
+      </div>
+      <label for="rj-area" style="display:block;margin-top:8px;">Or paste the class list, one name per line</label>
+      <textarea class="input import-textarea" id="rj-area" rows="4" placeholder="Ada Lovelace&#10;Polo, Marco"></textarea>
+      <div class="import-actions">
+        <button class="btn btn-primary" id="rj-check-btn" type="button">Check the roster</button>
+        <button class="btn btn-secondary" id="rj-clear-btn" type="button">Clear</button>
+      </div>
+      <div id="rj-summary" class="sc-summary" role="status" aria-live="polite"></div>
+      <div id="rj-lists" class="triage-columns"></div>
+    </div>
+  </div>
+
   <div id="students-container"></div>
 
   <div class="no-print" id="add-student-row" style="text-align:center;margin:-0.25rem 0 1.5rem;">
@@ -621,6 +648,7 @@ import {
   findQuarterWindow, splitRow, curveScores, triageStudent,
   termsOf, termLabel, termNoun,
 } from './final-grade-checker/grade-math.mjs';
+import { joinRoster } from './final-grade-checker/roster-join.mjs';
 import {
   cleanScenario, compareClass, describeScenario, isNoScenario, distributions,
 } from './final-grade-checker/scenario-math.mjs';
@@ -1221,6 +1249,8 @@ function renderImportedStudents(students) {
   renderScenario(students);
   document.getElementById('triage-card').style.display = students.length ? '' : 'none';
   renderTriageSummary(students);
+  document.getElementById('roster-card').style.display = students.length ? '' : 'none';
+  showRosterResult(null);
 }
 
 /* ── Class-wide what-if ──────────────────────────────────────────────────────
@@ -1466,6 +1496,55 @@ document.getElementById('sc-charts').addEventListener('click', e => {
   if (b) downloadScenarioChart(b.dataset.scDl);
 });
 
+// ── The roster check ─────────────────────────────────────────
+// Two lists held in memory: the students just read and a class list typed or read (never
+// written) from Class Roster Hub. roster-join.mjs decides; this only draws what it found.
+function rosterNamesFromBox() {
+  return document.getElementById('rj-area').value.split('\n').map(l => l.replace(/\t+/g, ' ').trim()).filter(Boolean);
+}
+function rosterList(title, items, cls) {
+  const col = document.createElement('div'); col.className = 'triage-col';
+  const h = document.createElement('h3'); h.textContent = `${title} (${items.length})`;
+  col.append(h);
+  if (!items.length) { const p = document.createElement('p'); p.className = 'triage-empty'; p.textContent = 'None.'; col.append(p); return col; }
+  const ul = document.createElement('ul'); ul.className = cls;
+  items.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.append(li); });
+  col.append(ul);
+  return col;
+}
+function showRosterResult(res) {
+  const sum = document.getElementById('rj-summary'), box = document.getElementById('rj-lists');
+  box.textContent = '';
+  if (!res) { sum.textContent = ''; return; }
+  const parts = [`${res.rosterSize} on the roster`, `${res.matched.length} matched to a row`];
+  if (res.missing.length) parts.push(`${res.missing.length} with no row`);
+  if (res.extra.length) parts.push(`${res.extra.length} row${res.extra.length === 1 ? '' : 's'} not on the roster`);
+  if (res.ambiguous.length) parts.push(`${res.ambiguous.length} that fit more than one roster name`);
+  if (res.duplicates.length) parts.push(`${res.duplicates.length} name${res.duplicates.length === 1 ? '' : 's'} pasted more than once`);
+  sum.textContent = (res.rosterSize ? parts.join('; ') + '.' : 'The roster is empty, so every row is shown as not on it.');
+  if (!res.missing.length && !res.extra.length && !res.ambiguous.length && !res.duplicates.length && res.rosterSize) {
+    sum.textContent += ' Everyone lines up.';
+  }
+  box.append(rosterList('On the roster, no row above', res.missing, 'rj-missing'));
+  box.append(rosterList('In the grades, not on the roster', res.extra.map(e => e.closeTo ? `${e.name} \u2014 close to ${e.closeTo}?` : e.name), 'rj-extra'));
+  const odd = [
+    ...res.ambiguous.map(a => `${a.name} fits ${a.candidates.join(' and ')}`),
+    ...res.duplicates.map(d => `${d.name} appears on ${d.indexes.length} rows`),
+  ];
+  if (odd.length) box.append(rosterList('Needs a look', odd, 'rj-odd'));
+}
+function checkRoster() {
+  const names = rosterNamesFromBox();
+  if (!names.length) { showRosterResult(null); document.getElementById('rj-summary').textContent = 'Choose a roster or paste a class list first.'; return; }
+  showRosterResult(joinRoster(currentStudents, names));
+}
+function fillRosterChoices() {
+  const sel = document.getElementById('rj-roster');
+  const lists = window.Roster ? Roster.listRosters() : [];
+  lists.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; sel.append(o); });
+  sel.disabled = !lists.length;
+  if (!lists.length) sel.options[0].textContent = 'No saved rosters found in this browser';
+}
 function refreshScenario() { if (currentStudents && currentStudents.length && mode !== 'manual') renderScenario(currentStudents); }
 
 // ── Saved scenarios ──
@@ -1725,6 +1804,7 @@ function switchToManual() {
   document.getElementById('whatif-card').style.display = 'none';
   document.getElementById('scenario-card').style.display = 'none';
   document.getElementById('triage-card').style.display = 'none';
+  document.getElementById('roster-card').style.display = 'none';
   document.getElementById('import-area').value = '';
   setStatus('','');
   currentStudents = Array.from({length: DEFAULT_MANUAL_COUNT}, () => ({ id: manualNextId++, name:'', scores: fitScores(null, termCount()) }));
@@ -2412,6 +2492,13 @@ window.addEventListener('afterprint', () => document.body.classList.remove('prin
 const on = (id, fn) => document.getElementById(id).addEventListener('click', fn);
 
 on('import-btn', doImport);
+on('rj-check-btn', checkRoster);
+on('rj-clear-btn', () => { document.getElementById('rj-area').value = ''; document.getElementById('rj-roster').value = ''; showRosterResult(null); });
+document.getElementById('rj-roster').addEventListener('change', e => {
+  document.getElementById('rj-area').value = e.target.value && window.Roster ? Roster.getRoster(e.target.value).join('\n') : '';
+  showRosterResult(null);
+});
+fillRosterChoices();
 on('clear-paste-btn', () => {
   document.getElementById('import-area').value = '';
   setStatus('', '');
