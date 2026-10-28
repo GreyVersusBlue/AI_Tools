@@ -29,6 +29,7 @@
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <script src="../_shared/print-kit.js"></script>
 <script src="../_shared/rotation.js"></script>
+<script src="../_shared/stage.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -211,6 +212,11 @@
     padding: 2.5vh 3vw; overflow: auto;
   }
   .projector[hidden] { display: none; }
+  /* The projector's fullscreen is _shared/stage.js's (Path 5 P5-1). Its refused-
+     fullscreen fallback paints `var(--paper)` from a `.stage-fallback.is-fullscreen`
+     rule injected into <head> after this <style>, so a same-weight `.projector`
+     background loses; an id-level rule is what keeps the board dark. */
+  #projectorView.is-fullscreen { background: #12151b; color: #f4f3ee; }
   .pj-head { text-align: center; flex: 0 0 auto; }
   .pj-round { font-size: clamp(1rem, 2.6vw, 2rem); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #9fb6cf; }
   .pj-clock { font-family: Consolas, monospace; font-weight: 700; line-height: 1; font-size: clamp(4rem, 20vh, 13rem); }
@@ -1725,6 +1731,12 @@
     els.projectorView.classList.toggle('rotating', Date.now() < rotateFlashUntil);
   }
 
+  /* `show` and fullscreen are two things: the view is `hidden` until the teacher
+     opens it, and an element that is display:none cannot be fullscreened, so it
+     is un-hidden first and then handed to the stage. `fullscreenKey: false` with
+     `f` in the hotkey map instead of the helper's own key, for the same reason.
+     The stage's onChange is the one place the view is torn down (Escape in real
+     fullscreen is the browser's; Escape on the fallback is the helper's). */
   function setProjector(on) {
     projectorOpen = !!on;
     els.projectorView.hidden = !projectorOpen;
@@ -1734,16 +1746,24 @@
     else { els.projectorView.classList.remove('rotating'); els.projectorBtn.focus(); }
   }
 
-  els.projectorBtn.addEventListener('click', function () { setProjector(true); });
-  els.pjExit.addEventListener('click', function () { setProjector(false); });
+  var projectorStage = Stage.mount(els.projectorView, {
+    exitButton: els.pjExit,
+    fullscreenKey: false,
+    hotkeys: { f: function () { toggleProjector(); } },
+    onChange: function (on) { if (!on && projectorOpen) setProjector(false); }
+  });
+
+  function toggleProjector() {
+    if (projectorStage.isActive()) return projectorStage.exit();
+    setProjector(true);
+    return projectorStage.enter();
+  }
+
+  els.projectorBtn.addEventListener('click', toggleProjector);
   els.pjStart.addEventListener('click', function () { els.timerStartBtn.click(); });
   els.pjPause.addEventListener('click', function () { els.timerPauseBtn.click(); });
   els.pjResume.addEventListener('click', function () { els.timerResumeBtn.click(); });
   els.pjRotate.addEventListener('click', function () { els.timerRotateNowBtn.click(); });
-  document.addEventListener('keydown', function (e) {
-    if (!projectorOpen) return;
-    if (e.key === 'Escape') { e.preventDefault(); setProjector(false); }
-  });
 
   function tickTimer() {
     if (!state) return;

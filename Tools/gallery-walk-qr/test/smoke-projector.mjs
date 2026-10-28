@@ -146,10 +146,15 @@ const last = await board();
 eq(last.length, 4, 'the final placement stays on screen rather than emptying out');
 eq(last.reduce((n, s) => n + s.who.length, 0), WALKERS.length, 'with everybody still accounted for');
 
-/* ── 6. Escape gets you back to the editor ─────────────────────────────── */
-await page.keyboard.press('Escape');
-await settle(page, 250);
-ok(!(await page.isVisible('#projectorView')), 'Escape closes it — the way out has to work without hunting for a button');
+/* ── 6. F gets you back to the editor ─────────────────────────────────────
+   The view is _shared/stage.js's since Path 5 P5-1. Escape in real fullscreen is
+   the browser's own key and headless Chromium ignores it, so F is the keyboard
+   way out driven here; Escape on the refused-fullscreen fallback is driven in
+   Tools/stage/test/smoke-stage-rollout.mjs. */
+await page.evaluate(() => document.activeElement && document.activeElement.blur());
+await page.keyboard.press('f');
+await settle(page, 400);
+ok(!(await page.isVisible('#projectorView')), 'F closes it — the way out has to work without hunting for a button');
 eq(await page.evaluate(() => document.activeElement && document.activeElement.id), 'projectorBtn',
    'and focus comes back to where it left from');
 

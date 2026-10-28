@@ -63,7 +63,7 @@ const eq = (a, b, label) => ok(a === b, `${label} (got ${JSON.stringify(a)}, wan
 const server = await serve(PORT);
 const browser = await launch();
 
-console.log('Stage rollout — 001, 004, 021, 023 and 025 on _shared/stage.js');
+console.log('Stage rollout — 001, 004, 017, 021, 023 and 025 on _shared/stage.js');
 
 /** The state every one of these checks reads, for a given stage + button. */
 const readState = (page, stageSel, btnSel) => page.evaluate(({ stageSel, btnSel }) => {
@@ -269,6 +269,20 @@ await driveStage(browser, {
   stage: '#projectorView',
   stageName: 'projectorView',
   btn: '#projectorCloseBtn',
+  enterBtn: '#projectorBtn',
+  hudded: false,
+});
+
+/* ── 017 — Gallery Walk QR, rotation projector (Path 5 P5-1) ──────────────
+   Devon's call of 2026-10-21: the home-made `inset: 0` overlay moved onto the
+   shared fullscreen. 001's shape: a display:none view the tool un-hides, a
+   toolbar button that enters, the view's own Exit button inside the subtree. */
+await driveStage(browser, {
+  label: '017 projector',
+  url: BASE + '/Tools/017-gallery-walk-qr.html',
+  stage: '#projectorView',
+  stageName: 'projectorView',
+  btn: '#pjExit',
   enterBtn: '#projectorBtn',
   hudded: false,
 });
