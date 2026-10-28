@@ -622,10 +622,15 @@
     var loaded = store.sets[name];
     if (!loaded) return;
     if (!Array.isArray(loaded.stations)) loaded.stations = [];
-    state = loaded;
+    // Path 18 P2: the hunt goes through Stations.read/write once, so every station has an id and
+    // a run saved with index keys (marks, attempts, hints, the check-in station) comes back keyed by id.
+    var before = JSON.stringify(loaded);
+    var set = Stations.read(loaded);
+    state = set ? Stations.write(set) : loaded;
     ensureAtLeastOneRow();
     ensureRun();
-    if (Stations.ensureIds(state)) save();   // ids drawn on first read are saved then, so a reload prints the same ones
+    Stations.ensureIds(state);
+    if (JSON.stringify(state) !== before) save();   // ids drawn on first read are saved then, so a reload prints the same ones
     applyStateToForm();
     refreshSwitcher();
     scheduleRender();
@@ -892,10 +897,12 @@
   function validStations() {
     state.stations.forEach(ensureStationDefaults);
     ensureStationCodeWords();
+    Stations.ensureIds(state);   // a row added since the last save has no id yet; it is saved with the next save()
     return state.stations
       .map(function (s, i) {
         return {
           idx: i,
+          id: s.id,
           label: (s.label || '').trim() || ('Station ' + (i + 1)),
           content: normalizeContent(s.content),
           note: (s.note || '').trim(),
@@ -1150,7 +1157,7 @@
 
   // ── Live Run mode: teams, race timer, station marks, leaderboard ────────
   // Optional and additive — none of this touches the printable station set.
-  // state.run = { teams: [{name, code, marks: {stationIdx: {at, correct, attempts}}, attempts: {stationIdx: count}}],
+  // state.run = { teams: [{name, code, marks: {stationId: {at, correct, attempts}}, attempts: {stationId: count}}],
   //               timerRunning, timerStartedAt, timerElapsedMs, raceStartAt, checkinStation }
   var pendingCheckin = null; // { teamIdx, stationIdx } — set while a choice/numeric check-in is mid-answer
 
@@ -1184,7 +1191,14 @@
     if (typeof state.run.timerStartedAt !== 'number') state.run.timerStartedAt = null;
     if (typeof state.run.timerElapsedMs !== 'number') state.run.timerElapsedMs = 0;
     if (typeof state.run.raceStartAt !== 'number') state.run.raceStartAt = null;
-    if (typeof state.run.checkinStation !== 'number') state.run.checkinStation = 0;
+    if (typeof state.run.checkinStation !== 'string') state.run.checkinStation = null;   // a station id; null means the first
+    state.run.by = 'id';
+  }
+
+  /** Position of the check-in station in the valid list (the first when it is unset or gone). */
+  function checkinIdx(valid) {
+    for (var i = 0; i < valid.length; i++) if (valid[i].id === state.run.checkinStation) return i;
+    return 0;
   }
 
   function setMode(mode) {
@@ -1432,30 +1446,31 @@
       return;
     }
     els.checkinStation.disabled = false;
-    var current = state.run.checkinStation;
-    if (current >= valid.length) current = 0;
+    var current = checkinIdx(valid);
     els.checkinStation.innerHTML = valid.map(function (s, i) {
       return '<option value="' + i + '"' + (i === current ? ' selected' : '') + '>' + (i + 1) + '. ' + escapeHtml(s.label) + '</option>';
     }).join('');
-    state.run.checkinStation = current;
+    state.run.checkinStation = valid[current].id;
     updateCheckinStationInfo();
   }
 
   function updateCheckinStationInfo() {
     var valid = validStations();
-    var s = valid[state.run.checkinStation];
+    var ci = checkinIdx(valid);
+    var s = valid[ci];
     if (!s) { els.checkinStationInfo.textContent = ''; els.checkinHintBtn.disabled = true; return; }
     var descr = s.qType === 'text' ? 'open-ended — checking in marks it reached.'
       : s.qType === 'photo' ? 'photo proof — check their photo, then check them in.'
       : s.qType === 'choice' ? 'multiple choice — you\'ll pick the letter they answer.'
       : 'a numeric answer — you\'ll enter the number they give.';
-    els.checkinStationInfo.textContent = 'Set the helper here to Station ' + (state.run.checkinStation + 1) + '. This station is ' + descr;
+    els.checkinStationInfo.textContent = 'Set the helper here to Station ' + (ci + 1) + '. This station is ' + descr;
     els.checkinHintBtn.disabled = !s.hint;
     els.checkinHintBtn.title = s.hint ? ('Show this station’s hint to a team (−' + s.hintPenalty + ' min penalty on first use)') : 'This station has no hint set';
   }
 
   els.checkinStation.addEventListener('change', function () {
-    state.run.checkinStation = parseInt(els.checkinStation.value, 10) || 0;
+    var pick = validStations()[parseInt(els.checkinStation.value, 10) || 0];
+    state.run.checkinStation = pick ? pick.id : null;
     pendingCheckin = null;
     renderCheckinAnswerPanel();
     els.checkinHintPanel.textContent = '';
@@ -1477,15 +1492,14 @@
     if (!state.run.teams.length) { setCheckinFeedback('Add a team first.', true); return; }
     var valid = validStations();
     if (!valid.length) { setCheckinFeedback('Add stations in Build mode first.', true); return; }
-    var stationIdx = state.run.checkinStation || 0;
-    if (stationIdx >= valid.length) stationIdx = 0;
+    var stationIdx = checkinIdx(valid);
     var code = raw.toUpperCase();
     var teamIdx = -1;
     state.run.teams.forEach(function (t, i) { if (t.code === code) teamIdx = i; });
     if (teamIdx === -1) { setCheckinFeedback('No team matches code “' + raw + '”.', true); focusCheckinCode(); return; }
     var team = state.run.teams[teamIdx];
     var station = valid[stationIdx];
-    if (Object.prototype.hasOwnProperty.call(team.marks, stationIdx)) {
+    if (Object.prototype.hasOwnProperty.call(team.marks, station.id)) {
       setCheckinFeedback((team.name || 'That team') + ' already checked in at Station ' + (stationIdx + 1) + '.', false);
       focusCheckinCode();
       return;
@@ -1496,7 +1510,7 @@
       setCheckinFeedback('Enter ' + (team.name || 'their') + ' answer below.', false);
       return;
     }
-    team.marks[stationIdx] = { at: Date.now(), correct: true };
+    team.marks[station.id] = { at: Date.now(), correct: true };
     save();
     renderTeamProgress();
     renderLeaderboard();
@@ -1514,8 +1528,7 @@
     if (!state.run.teams.length) { setCheckinFeedback('Add a team first.', true); return; }
     var valid = validStations();
     if (!valid.length) { setCheckinFeedback('Add stations in Build mode first.', true); return; }
-    var stationIdx = state.run.checkinStation || 0;
-    if (stationIdx >= valid.length) stationIdx = 0;
+    var stationIdx = checkinIdx(valid);
     var station = valid[stationIdx];
     if (!station.hint) { setCheckinFeedback('This station has no hint set.', true); return; }
     var raw = els.checkinCode.value.trim();
@@ -1526,12 +1539,12 @@
     if (teamIdx === -1) { setCheckinFeedback('No team matches code “' + raw + '”.', true); return; }
     var team = state.run.teams[teamIdx];
     if (!team.hintsUsed || typeof team.hintsUsed !== 'object') team.hintsUsed = {};
-    var alreadyUsed = Object.prototype.hasOwnProperty.call(team.hintsUsed, stationIdx);
+    var alreadyUsed = Object.prototype.hasOwnProperty.call(team.hintsUsed, station.id);
     var penaltyNote;
     if (alreadyUsed) {
       penaltyNote = 'already used — no additional penalty.';
     } else {
-      team.hintsUsed[stationIdx] = { at: Date.now(), penaltyMin: station.hintPenalty };
+      team.hintsUsed[station.id] = { at: Date.now(), penaltyMin: station.hintPenalty };
       team.penaltyMs = (team.penaltyMs || 0) + station.hintPenalty * 60000;
       penaltyNote = station.hintPenalty > 0 ? ('−' + station.hintPenalty + ' minute penalty applied to ' + (team.name || 'their') + ' time.') : 'no time penalty configured for this hint.';
       save();
@@ -1597,9 +1610,10 @@
   function evaluateCheckin(correct) {
     var team = state.run.teams[pendingCheckin.teamIdx];
     var stationIdx = pendingCheckin.stationIdx;
+    var sid = validStations()[stationIdx].id;
     if (correct) {
-      var attemptsSoFar = team.attempts[stationIdx] || 0;
-      team.marks[stationIdx] = { at: Date.now(), correct: true, attempts: attemptsSoFar };
+      var attemptsSoFar = team.attempts[sid] || 0;
+      team.marks[sid] = { at: Date.now(), correct: true, attempts: attemptsSoFar };
       pendingCheckin = null;
       save();
       renderCheckinAnswerPanel();
@@ -1608,7 +1622,7 @@
       setCheckinFeedback((team.name || 'Team') + ' checked in at Station ' + (stationIdx + 1) + ' — correct!', false);
       focusCheckinCode();
     } else {
-      team.attempts[stationIdx] = (team.attempts[stationIdx] || 0) + 1;
+      team.attempts[sid] = (team.attempts[sid] || 0) + 1;
       save();
       renderTeamProgress();
       setCheckinFeedback('Not correct yet — ' + (team.name || 'the team') + ' can try again.', true);
@@ -1637,8 +1651,8 @@
       var solvedCount = 0;
       var nextIdx = -1;
       for (var j = 0; j < total; j++) {
-        var solved = Object.prototype.hasOwnProperty.call(t.marks, j);
-        var attempts = t.attempts[j] || 0;
+        var solved = Object.prototype.hasOwnProperty.call(t.marks, valid[j].id);
+        var attempts = t.attempts[valid[j].id] || 0;
         if (solved) solvedCount++;
         else if (nextIdx === -1) nextIdx = j;
         var cls = 'station-btn' + (solved ? ' solved' : (attempts > 0 ? ' attempted' : ''));
@@ -1658,7 +1672,9 @@
     if (!btn) return;
     var team = state.run.teams[parseInt(btn.dataset.team, 10)];
     if (!team) return;
-    var si = parseInt(btn.dataset.station, 10);
+    var pickedStation = validStations()[parseInt(btn.dataset.station, 10)];
+    if (!pickedStation) return;
+    var si = pickedStation.id;
     if (Object.prototype.hasOwnProperty.call(team.marks, si)) delete team.marks[si];
     else team.marks[si] = { at: Date.now(), correct: true };
     save();
@@ -1676,7 +1692,7 @@
     var rows = state.run.teams.map(function (t, i) {
       var markTimes = Object.keys(t.marks).map(function (k) { return t.marks[k].at; });
       var nextIdx = -1;
-      for (var j = 0; j < total; j++) { if (!Object.prototype.hasOwnProperty.call(t.marks, j)) { nextIdx = j; break; } }
+      for (var j = 0; j < total; j++) { if (!Object.prototype.hasOwnProperty.call(t.marks, valid[j].id)) { nextIdx = j; break; } }
       var lastMark = markTimes.length ? Math.max.apply(Math, markTimes) : null;
       var penaltyMs = t.penaltyMs || 0;
       return {
@@ -1931,7 +1947,7 @@
         cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,
         stations: state.stations.map(function (s) {
           return {
-            label: s.label, content: s.content, note: s.note,
+            id: s.id, label: s.label, content: s.content, note: s.note,
             qType: s.qType, choices: (s.choices || []).slice(), correctChoice: s.correctChoice,
             numericAnswer: s.numericAnswer, tolerance: s.tolerance,
             hint: s.hint || '', hintPenalty: s.hintPenalty || '0', codeWord: s.codeWord || ''
@@ -1966,6 +1982,7 @@
       stations: obj.stations.map(function (s) {
         var st = blankStation();
         if (!s || typeof s !== 'object') return st;
+        if (typeof s.id === 'string') st.id = s.id;   // the sender's station ids ride the link; the hunt's own id is new here
         st.label = String(s.label || '');
         st.content = String(s.content || '');
         st.note = String(s.note || '');
