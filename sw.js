@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v410';
+const CACHE_VERSION = 'v411';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -336,6 +336,7 @@ const PRECACHE_URLS = [
   "Tools/geography-bee-quiz-generator/gbq-bank.js",
   "Tools/geography-bee-quiz-generator/gbq-map.js",
   "Tools/037-grade-distribution-visualizer.html",
+  "Tools/grade-distribution-visualizer/gd-items.js",
   "Tools/063-grammar-mad-libs-generator.html",
   "Tools/012-graph-paper-generator.html",
   "Tools/graph-paper-generator/gpg-render.js",

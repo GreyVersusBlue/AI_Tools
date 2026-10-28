@@ -209,6 +209,7 @@
       palette: o.palette || ['#6c8ef5', '#a78bfa', '#4ade80', '#fbbf24', '#f87171', '#38bdf8'],
       pointColor: o.pointColor || '#6c8ef5', trendColor: o.trendColor || '#f87171',
       xLabel: o.xLabel || '',
+      yMax: o.yMax > 0 ? o.yMax : 0,
       idPrefix: o.idPrefix || 'cs',
       kind: o.kind || ''
     };
@@ -343,7 +344,7 @@
   function bar(built, o) {
     var c = chartOpts(o), W = c.W, H = c.H, PAD = c.pad;
     var plotW = W - PAD.left - PAD.right, plotH = H - PAD.top - PAD.bottom;
-    var maxVal = maxOf(built.series);
+    var maxVal = c.yMax || maxOf(built.series);
     var n = built.categories.length;
     var slot = plotW / n;
     var groupPad = slot * 0.18;

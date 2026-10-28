@@ -162,6 +162,16 @@
   .compare-trend-label { flex: 0 0 9rem; font-size: .82rem; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .compare-trend-bar { flex: 1; margin-bottom: 0; height: 1.5rem; }
 
+  .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); border: 0; white-space: nowrap; }
+  .items-chart svg { width: 100%; height: auto; display: block; border: 1px solid var(--line); border-radius: 6px; }
+  .items-table { width: 100%; border-collapse: collapse; font-size: .88rem; margin: .8rem 0 .4rem; }
+  .items-table th, .items-table td { padding: .35rem .5rem; border-bottom: 1px solid var(--line); text-align: right; }
+  .items-table th:nth-child(-n+2), .items-table td:nth-child(-n+2) { text-align: left; }
+  .items-table th { color: var(--muted); font-weight: 600; font-size: .8rem; }
+  .items-table .tier-reteach { font-weight: 700; }
+  .items-table .tier-watch { font-style: italic; }
+  .items-table .tier-secure { color: var(--muted); }
+  .items-line { display: grid; grid-template-columns: 1fr 5.5rem; gap: .6rem; align-items: end; }
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
   footer.note a { color: var(--accent-2); }
 
@@ -236,6 +246,17 @@
       </div>
 
       <div class="card">
+        <label for="itemInput">Per-question scores (optional)</label>
+        <p class="hint">One row per student, one column per question, pasted from a spreadsheet. A first column of names and a header row are found for you and no name is ever shown. A row starting &ldquo;Points possible&rdquo; gives each question&rsquo;s maximum; without it a question is out of the highest score in its column, so a 1/0 right-or-wrong export needs no marking. A blank cell means not attempted.</p>
+        <textarea id="itemInput" placeholder="Name&#9;Q1&#9;Q2&#9;Q3&#10;Points possible&#9;4&#9;2&#9;1&#10;Alvarez&#9;4&#9;1&#9;1&#10;Baker&#9;2&#9;0&#9;1"></textarea>
+        <p class="parse-note" id="itemNote"></p>
+        <div class="items-line">
+          <div><label for="itemLine">Reteach questions below this percent correct</label></div>
+          <div><input type="number" id="itemLine" value="70" min="0" max="100" step="1" style="margin-bottom:0"></div>
+        </div>
+      </div>
+
+      <div class="card">
         <label>Compare current assignment with</label>
         <div class="compare-checks" id="compareChecks"></div>
         <p class="hint">Pick any number of saved assignments to pull in their own scores and letter cutoffs and line them up alongside this one &mdash; handy for tracking a trend across a unit.</p>
@@ -246,6 +267,7 @@
       <h2 id="printTitle">Assignment</h2>
       <div id="outputBody"></div>
       <div id="compareWrap"></div>
+      <div id="itemsAnnounce" class="sr-only" role="status" aria-live="polite"></div>
     </div>
   </div>
 
@@ -259,6 +281,7 @@
 
 <script src="../_shared/chart-svg.js"></script>
 <script src="../_shared/paste-table.js"></script>
+<script src="grade-distribution-visualizer/gd-items.js"></script>
 <script>
 (function () {
   'use strict';
@@ -298,7 +321,7 @@
   var els = {};
   ['toolbar', 'listSwitch', 'newListBtn', 'deleteListBtn', 'undoDeleteBtn', 'listName', 'scoreInput', 'parseNote',
    'cutoffPreset', 'cutA', 'cutB', 'cutC', 'cutD', 'bucketWidth', 'printBtn', 'printTitle', 'outputBody',
-   'compareChecks', 'compareWrap'
+   'compareChecks', 'compareWrap', 'itemInput', 'itemNote', 'itemLine', 'itemsAnnounce'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   // Presets a teacher can pick instead of typing four cutoffs from scratch.
@@ -311,6 +334,7 @@
   };
 
   var state = null; // { name, text, cutA, cutB, cutC, cutD, bucketWidth, compareNames }
+  var lastItemsSvg = '';    // the missed-questions chart as drawn, for its downloads and its announcement
   var lastChartData = null; // snapshot of what's currently rendered, for the PNG/SVG downloads below
 
   /* ---------- tolerant score parser ----------
@@ -487,14 +511,17 @@
 
   els.outputBody.addEventListener('click', function (e) {
     var btn = e.target.closest('[data-dl]');
-    if (!btn || !lastChartData) return;
-    var base = (lastChartData.name || 'assignment').trim().replace(/[\\/:*?"<>|]+/g, '-') || 'assignment';
+    if (!btn || (!lastChartData && btn.dataset.dl.indexOf('items-') !== 0) || (btn.dataset.dl.indexOf('items-') === 0 && !lastItemsSvg)) return;
+    var base = ((lastChartData ? lastChartData.name : state && state.name) || 'assignment').trim().replace(/[\\/:*?"<>|]+/g, '-') || 'assignment';
     var row = btn.closest('.chart-dl-row');
     if (btn.dataset.dl === 'letter-svg') ChartSvg.downloadSvg(ChartSvg.stackedBar(lastChartData), base + '-letter-grades');
     else if (btn.dataset.dl === 'letter-png') ChartSvg.downloadPng(ChartSvg.stackedBar(lastChartData), base + '-letter-grades', 640, 168);
     else if (btn.dataset.dl === 'letter-copy') ChartSvg.copyImage(ChartSvg.stackedBar(lastChartData), base + '-letter-grades', 640, 168, row);
     else if (btn.dataset.dl === 'hist-svg') ChartSvg.downloadSvg(ChartSvg.histogram(lastChartData), base + '-histogram');
     else if (btn.dataset.dl === 'hist-png') ChartSvg.downloadPng(ChartSvg.histogram(lastChartData), base + '-histogram', 640, 330);
+    else if (btn.dataset.dl === 'items-svg') ChartSvg.downloadSvg(lastItemsSvg, base + '-missed-questions');
+    else if (btn.dataset.dl === 'items-png') ChartSvg.downloadPng(lastItemsSvg, base + '-missed-questions', 640, 360);
+    else if (btn.dataset.dl === 'items-copy') ChartSvg.copyImage(lastItemsSvg, base + '-missed-questions', 640, 360, row);
     else if (btn.dataset.dl === 'hist-copy') ChartSvg.copyImage(ChartSvg.histogram(lastChartData), base + '-histogram', 640, 330, row);
   });
 
@@ -518,6 +545,73 @@
     return shown.join(', ') + (list.length > 3 ? ' and ' + (list.length - 3) + ' more' : '');
   }
 
+  /* ---------- per-question item analysis (Path 16 P3) ---------- */
+  function itemLine() {
+    var v = parseFloat(els.itemLine.value);
+    return isNaN(v) ? GradeItems.DEFAULT_LINE : Math.min(100, Math.max(0, v));
+  }
+
+  /* Which cells were left out, so a teacher can fix them: the first three. */
+  function describeProblems(list) {
+    var shown = list.slice(0, 3).map(function (p) {
+      return p.label + ' on line ' + p.line + ' \u201c' + (p.text.length > 16 ? p.text.slice(0, 15) + '\u2026' : p.text) + '\u201d (' + p.why + ')';
+    });
+    return shown.join('; ') + (list.length > 3 ? ' and ' + (list.length - 3) + ' more' : '');
+  }
+
+  /* Returns the section's markup ('' when nothing is pasted) and writes the note under the box. */
+  function renderItems() {
+    var text = state.items && state.items[0] ? state.items[0].text : '';
+    var res = GradeItems.analyze(text, { line: itemLine() });
+    var note = '', noteOk = false;
+    if (!String(text).trim()) {
+      lastItemsSvg = '';
+    } else if (!res.order.length) {
+      note = 'No question columns with scores were found. Put one question per column, with a number in each cell.';
+      lastItemsSvg = '';
+    } else {
+      note = res.order.length + ' question(s), ' + res.students + ' student(s) read' + (res.maxGiven ? ', points possible taken from your row' : ', each question out of its highest score') + '.';
+      if (res.problems.length) note += ' ' + res.problems.length + ' cell(s) left out: ' + describeProblems(res.problems) + '.';
+      if (res.ragged.length) note += ' ' + res.ragged.length + ' line(s) had fewer cells than the widest, e.g. line ' + res.ragged[0].line + '.';
+      noteOk = !res.problems.length && !res.ragged.length;
+    }
+    els.itemNote.textContent = note;
+    els.itemNote.className = 'parse-note' + (noteOk ? ' ok' : '');
+    if (!res.order.length) return '';
+
+    var title = (state.name || 'Assignment') + ': percent of students who missed each question';
+    var svg = ChartSvg.bar(GradeItems.chart(res), { W: 640, H: 360, title: title, yLabel: 'Percent missed', showValues: true, yMax: 100, idPrefix: 'gdi', pad: { top: 40, right: 24, bottom: 64, left: 56 } });
+    lastItemsSvg = svg;
+
+    var rows = res.order.map(function (qi, rank) {
+      var q = res.questions[qi], t = GradeItems.tier(q.pct, res.line);
+      return '<tr><td>' + (rank + 1) + '</td><td>' + escapeHtml(q.label) + '</td><td>' + fmt(q.pct * 100, 1) + '%</td><td>' +
+        q.missed + ' of ' + q.n + '</td><td class="tier-' + t + '">' + (t === 'reteach' ? 'Reteach' : t === 'watch' ? 'Watch' : 'Secure') + '</td></tr>';
+    }).join('');
+    var counts = { reteach: 0, watch: 0, secure: 0 };
+    res.order.forEach(function (qi) { counts[GradeItems.tier(res.questions[qi].pct, res.line)]++; });
+
+    return '<h3>Questions the class missed</h3>' +
+      '<p class="chart-note">' + counts.reteach + ' of ' + res.order.length + ' question(s) are below ' + fmt(res.line, 0) + '% correct (reteach); ' +
+        counts.watch + ' within ' + GradeItems.WATCH_BAND + ' points above it (watch). Lowest percent correct first.</p>' +
+      '<div class="items-chart">' + svg + '</div>' +
+      '<div class="chart-dl-row">' +
+        '<button type="button" class="secondary small" data-dl="items-copy">📋 Copy image</button>' +
+        '<button type="button" class="secondary small" data-dl="items-svg">Download SVG</button>' +
+        '<button type="button" class="secondary small" data-dl="items-png">Download PNG</button>' +
+      '</div>' +
+      '<table class="items-table"><thead><tr><th>Rank</th><th>Question</th><th>Correct</th><th>Missed</th><th>Tier</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  var lastAnnounced = '';
+  function announceItems() {
+    var d = lastItemsSvg ? /<desc[^>]*>([^<]*)<\/desc>/.exec(lastItemsSvg) : null;
+    var msg = d ? 'Missed-questions chart updated. ' + d[1] : '';
+    if (msg === lastAnnounced) return;
+    lastAnnounced = msg;
+    els.itemsAnnounce.textContent = msg;
+  }
+
   function renderOutput() {
     var parsed = parseScores(state.text);
     var scores = parsed.scores;
@@ -539,9 +633,12 @@
     // to land here too for that default filename to be worth anything.
     document.title = (state.name ? state.name + ' — ' : '') + 'Grade Distribution Visualizer';
 
+    var itemsHtml = renderItems();
+    announceItems();
+
     if (!scores.length) {
       lastChartData = null;
-      els.outputBody.innerHTML = '<p class="empty-note">Paste some scores on the left to see stats here.</p>';
+      els.outputBody.innerHTML = (itemsHtml ? '' : '<p class="empty-note">Paste some scores on the left to see stats here.</p>') + itemsHtml;
       els.compareWrap.innerHTML = '';
       return;
     }
@@ -644,7 +741,7 @@
 
     lastChartData = { name: state.name, stats: stats, letters: letters, letterOrder: letterOrder, buckets: buckets, bucketWidth: bucketWidth, excluded: parsed.skipped };
 
-    els.outputBody.innerHTML = statsHtml + letterHtml + histHtml;
+    els.outputBody.innerHTML = statsHtml + letterHtml + histHtml + itemsHtml;
     renderComparison();
   }
 
@@ -789,6 +886,8 @@
 
   function readFormIntoState() {
     state.text = els.scoreInput.value;
+    state.items = [{ label: '', text: els.itemInput.value }];
+    state.itemLine = itemLine();
     var c = readCutoffs();
     state.cutA = c.A; state.cutB = c.B; state.cutC = c.C; state.cutD = c.D;
     state.bucketWidth = parseInt(els.bucketWidth.value, 10) || 10;
@@ -824,6 +923,8 @@
   function applyStateToForm() {
     els.listName.value = state.name;
     els.scoreInput.value = state.text;
+    els.itemInput.value = state.items && state.items[0] ? state.items[0].text : '';
+    els.itemLine.value = state.itemLine != null ? state.itemLine : GradeItems.DEFAULT_LINE;
     els.cutA.value = state.cutA;
     els.cutB.value = state.cutB;
     els.cutC.value = state.cutC;
@@ -841,7 +942,7 @@
 
   /* ---------- lifecycle ---------- */
   function newList(name) {
-    state = { name: name, text: '', cutA: 90, cutB: 80, cutC: 70, cutD: 60, bucketWidth: 10, compareNames: [] };
+    state = { name: name, text: '', cutA: 90, cutB: 80, cutC: 70, cutD: 60, bucketWidth: 10, compareNames: [], items: [{ label: '', text: '' }], itemLine: GradeItems.DEFAULT_LINE };
     applyStateToForm();
     refreshSwitcher();
     els.toolbar.style.display = '';
@@ -855,6 +956,7 @@
     state = loaded;
     if (state.bucketWidth == null) state.bucketWidth = 10;
     if (!state.compareNames) state.compareNames = [];
+    if (!state.items) state.items = [{ label: '', text: '' }];
     applyStateToForm();
     refreshSwitcher();
     renderOutput();
@@ -870,6 +972,8 @@
   });
 
   els.scoreInput.addEventListener('input', refresh);
+  els.itemInput.addEventListener('input', refresh);
+  els.itemLine.addEventListener('input', refresh);
   ['cutA', 'cutB', 'cutC', 'cutD'].forEach(function (id) {
     els[id].addEventListener('input', function () {
       els.cutoffPreset.value = 'custom'; // hand-edited — no longer a clean match to any preset

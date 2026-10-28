@@ -239,6 +239,8 @@
     "Tools/blank-map-generator/test/geo-project-parity.test.mjs": 1,
     "Tools/grade-distribution-visualizer/test/chart-svg.test.mjs": 1,
     "Tools/grade-distribution-visualizer/test/chart-svg-parity.test.mjs": 1,
+    "Tools/grade-distribution-visualizer/test/gd-items.test.mjs": 1,
+    "Tools/grade-distribution-visualizer/test/smoke-items.mjs": 15,
     "Tools/paste-table/test/paste-table.test.mjs": 1,
     "Tools/paste-table/test/paste-table-bmg-parity.test.mjs": 1,
     "Tools/paste-table/test/paste-table-038-parity.test.mjs": 1,
