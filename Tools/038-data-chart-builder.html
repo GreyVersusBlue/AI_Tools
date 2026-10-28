@@ -210,6 +210,7 @@
       <div class="control-group" id="value-cols-group">
         <label>Value column(s)</label>
         <div id="value-cols-list"></div>
+        <p class="hint" id="value-cols-note" role="status" hidden></p>
         <div class="hint">Only columns that look numeric are offered here.</div>
         <div class="option-row" id="error-bars-row">
           <input type="checkbox" id="show-error-bars">
@@ -308,6 +309,7 @@
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
 <script src="../_shared/chart-svg.js"></script>
+<script src="../_shared/paste-table.js"></script>
 <script>
 (function () {
   "use strict";
@@ -331,7 +333,7 @@
 
   var els = {};
   ['data-input', 'has-headers', 'preview-table-wrap', 'preview-table', 'columns-card', 'category-col',
-   'value-cols-list', 'scatter-cols-group', 'scatter-x-col', 'scatter-y-col', 'show-trendline', 'options-card', 'chart-title',
+   'value-cols-list', 'value-cols-note', 'scatter-cols-group', 'scatter-x-col', 'scatter-y-col', 'show-trendline', 'options-card', 'chart-title',
    'y-axis-label-group', 'y-axis-label', 'show-values', 'sort-row', 'sort-values', 'chart-stage', 'stats-grid', 'filename', 'btn-png', 'btn-svg', 'msg',
    'btn-choose-file', 'file-input', 'dataset-name', 'btn-save-dataset', 'saved-datasets-select',
    'btn-load-dataset', 'btn-delete-dataset', 'btn-undo-delete-dataset', 'grayscale-mode', 'show-error-bars', 'error-bars-config',
@@ -445,39 +447,17 @@
   });
 
   // ── Parsing ──────────────────────────────────────────────────────────────
-  function splitLine(line, delim) {
-    var result = [], cur = '', inQuotes = false;
-    for (var i = 0; i < line.length; i++) {
-      var ch = line[i];
-      if (inQuotes) {
-        if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else inQuotes = false; }
-        else cur += ch;
-      } else {
-        if (ch === '"') inQuotes = true;
-        else if (ch === delim) { result.push(cur); cur = ''; }
-        else cur += ch;
-      }
-    }
-    result.push(cur);
-    return result.map(function (s) { return s.trim(); });
-  }
-
+  // PasteTable.parse reads the region: a tab if the first line has one, else commas; quoted
+  // cells; every row padded to the widest; the first row the header only when the box is ticked.
   function parseTable(text) {
-    var lines = text.split(/\r?\n/).filter(function (l) { return l.trim().length; });
-    if (!lines.length) return null;
-    var delim = lines[0].indexOf('\t') !== -1 ? '\t' : ',';
-    var rows = lines.map(function (l) { return splitLine(l, delim); });
-    var width = rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
-    rows = rows.map(function (r) { while (r.length < width) r.push(''); return r; });
-
-    var headers;
-    if (els.hasHeaders.checked) {
-      headers = rows.shift();
-    } else {
+    var p = PasteTable.parse(text, { candidates: ['\t'], firstLine: true, fallback: ',', header: els.hasHeaders.checked });
+    if (!p.rows.length && !p.header) return null;
+    var headers = p.header;
+    if (!headers) {
       headers = [];
-      for (var i = 0; i < width; i++) headers.push('Column ' + (i + 1));
+      for (var i = 0; i < p.width; i++) headers.push('Column ' + (i + 1));
     }
-    return { headers: headers, rows: rows };
+    return { headers: headers, rows: p.rows, lines: p.lines };
   }
 
   function isNumeric(v) {
@@ -493,6 +473,22 @@
       if (vals.length && vals.every(isNumeric)) cols.push(c);
     }
     return cols;
+  }
+
+  /* A column that is almost all numbers but for a few cells ("n/a", "—", a typo) is left out of
+     the value columns, as it always was; this says which cells did it, so a teacher can fix the
+     cell instead of wondering where the column went. */
+  function renderValueColsNote(t) {
+    var rep = PasteTable.columnReport(t.rows, { isNumber: isNumeric });
+    var notes = [];
+    rep.forEach(function (c, i) {
+      if (numericCols.indexOf(i) !== -1 || !c.unreadable.length || c.numbers < c.unreadable.length) return;
+      var shown = c.unreadable.slice(0, 3).map(function (u) { return 'line ' + t.lines[u.row - 1] + ' reads \u201c' + u.text + '\u201d'; });
+      notes.push('\u201c' + t.headers[i] + '\u201d is not offered as a value column: ' + shown.join('; ') +
+        (c.unreadable.length > 3 ? ' (and ' + (c.unreadable.length - 3) + ' more)' : '') + ', which is not a number.');
+    });
+    els.valueColsNote.textContent = notes.join(' ');
+    els.valueColsNote.hidden = !notes.length;
   }
 
   function renderPreview(t) {
@@ -586,6 +582,7 @@
     errorColSelections = {};
     renderPreview(t);
     populateColumnSelects(t);
+    renderValueColsNote(t);
     els.columnsCard.style.display = 'block';
     els.optionsCard.style.display = 'block';
     syncChartTypeUI();

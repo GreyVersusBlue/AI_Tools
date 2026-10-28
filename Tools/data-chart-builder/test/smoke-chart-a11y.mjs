@@ -142,6 +142,21 @@ ok(ids.desc && /Nothing is plotted/.test(ids.desc) && !/12\.5/.test(ids.desc), '
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs.slice(0, 4)));
 eq(page.__blocked.length, 0, 'nothing tried to leave the site: ' + JSON.stringify(page.__blocked.slice(0, 4)));
 
+// Path 16 P2: a column that is numbers but for one cell is left out, and the page says which line did it.
+console.log('A column stopped by one cell is named');
+await page.fill('#data-input', 'Group\tMass\tVol\nAlpha\t12\t10\nBeta\tn/a\t14\nGamma\t7\t9\n');
+await page.dispatchEvent('#data-input', 'input');
+await settle(page, 500);
+const note = await page.evaluate(() => { const n = document.getElementById('value-cols-note'); return { hidden: n.hidden, text: n.textContent, boxes: document.querySelectorAll('.value-col-cb').length }; });
+ok(!note.hidden && /“Mass” is not offered as a value column: line 3 reads “n\/a”/.test(note.text), 'the note names the column, the line and the cell: ' + JSON.stringify(note.text));
+eq(note.boxes, 1, 'only the clean column is offered');
+await page.fill('#data-input', DATA);
+await page.dispatchEvent('#data-input', 'input');
+await settle(page, 500);
+ok(await page.evaluate(() => document.getElementById('value-cols-note').hidden), 'a clean table shows no note');
+const noteScan = await a11yScan(page, { impact: 'serious' });
+ok(!noteScan.length, 'axe: no serious violation with the page in this state');
+
 await browser.close();
 server.close();
 

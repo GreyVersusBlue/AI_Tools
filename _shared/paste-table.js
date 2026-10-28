@@ -109,7 +109,7 @@
     var delim = opts.delimiter != null ? opts.delimiter : pickDelimiter(opts.firstLine ? lines[0].text : lines.map(function (l) { return l.text; }).join('\n'), opts);
     var rows = lines.map(function (l) {
       if (opts.fixed && l.text.indexOf('\t') === -1) return splitFixed(l.text);
-      return splitLine(l.text.replace(/\r$/, ''), delim, opts);
+      return splitLine(l.text, delim, opts);
     });
     var width = rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
     // A row that is not as wide as the widest is named, not guessed at: the cell count is
