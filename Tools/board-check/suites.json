@@ -330,6 +330,7 @@
     "Tools/qr-scavenger-hunt-builder/test/smoke-images.mjs",
     "Tools/qr-scavenger-hunt-builder/test/smoke-required.mjs",
     "Tools/qr-scavenger-hunt-builder/test/smoke-branches.mjs",
+    "Tools/qr-scavenger-hunt-builder/test/smoke-debrief.mjs",
     "Tools/escape-room-builder/test/er-board.test.mjs",
     "Tools/escape-room-builder/test/smoke-monitor-board.mjs",
     "Tools/export/test/smoke-export.mjs",

@@ -167,7 +167,7 @@ ok(!/@page/.test(code), 'writes no @page rule of its own (PrintKit.setPage does)
 ok(src.indexOf('print-kit.css') < src.indexOf('<style>') && src.indexOf('print-area.css') < src.indexOf('print-kit.css'), 'print-area.css, then print-kit.css, are linked before the inline <style>');
 ok(!/page-break|break-inside|break-after|flex-wrap:\s*wrap;\s*}\s*\.print-station-grid|\.pp-\d/.test(code), 'the columns, the cut into pages and the page breaks are the kit\'s, not the page\'s');
 ok(!/#printArea\s*\{[^}]*display/.test(code), 'and it does not hide or show #printArea itself');
-eq((code.match(/PrintKit\.renderCards\(/g) || []).length, 5, 'the five card sheets are each one PrintKit.renderCards() call');
+eq((code.match(/PrintKit\.renderCards\(/g) || []).length, 6, 'the six card sheets (the debrief is the sixth) are each one PrintKit.renderCards() call');
 ok(!/(Grid|answerKeyBody)\.innerHTML/.test(code), 'no sheet is built from a string');
 ok(!/beforeprint/.test(code), 'nothing is drawn on beforeprint (a canvas drawn there prints as replayed commands)');
 ok(/<\/div>\s*\n\s*<div id="printArea" class="pk-paper">\s*\n\s*<div class="print-only active" id="print-station-area">/.test(src), '#printArea is a .pk-paper, written as a child of <body>, showing the station cards until a button asks for another sheet');

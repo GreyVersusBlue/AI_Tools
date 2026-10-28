@@ -447,6 +447,7 @@ const TOOLS = [
       { preview: 'preview-teams-btn', print: 'print-teams-btn', what: ' team cards', label: 'Preview Team Cards', tab: '#tab-run', piece: '#print-teams-area .pk-card', rest: true },
       { preview: 'preview-routes-btn', print: 'print-routes-btn', what: ' route cards', label: 'Preview Route Cards', tab: '#tab-run', piece: '#print-routes-area .pk-card', rest: true },
       { preview: 'preview-answersheets-btn', print: 'print-answersheets-btn', what: ' answer sheets', label: 'Preview Answer Sheets', tab: '#tab-run', piece: '#print-answersheets-area .pk-card', rest: true },
+      { preview: 'preview-debrief-btn', print: 'print-debrief-btn', what: ' debrief pages', label: 'Preview Debrief', tab: '#tab-run', piece: '#print-debrief-area .pk-card', rest: true },
     ],
     store: s => s.hunt ? [['qr-scavenger-hunt-sets', JSON.stringify({ current: s.hunt.name, sets: { [s.hunt.name]: s.hunt } })]] : [],
     rest: () => [...document.querySelectorAll('.print-only.active')].map(x => x.id).join(','),

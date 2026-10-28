@@ -376,6 +376,36 @@ function suite(src) {
     eq(S.progress(h, null).done, 0, 'PR: no marks object is no marks');
   }
 
+  { // debrief(): what a team did, from the records alone (Path 18 P4)
+    const h = S.read(jc(F.H2())), ids = h.stations.map(x => x.id);
+    const T0 = 1000000;
+    const run = { raceStartAt: T0, teams: [
+      { name: 'Reds', code: 'K7Q', marks: { [ids[1]]: { at: T0 + 120000, correct: true, attempts: 2 }, [ids[0]]: { at: T0 + 300000, correct: true, attempts: 0 }, [ids[2]]: { at: T0 + 500000, correct: true, branch: ids[0] } },
+        attempts: { [ids[1]]: 2 }, hintsUsed: { [ids[1]]: { at: T0 + 100000, penaltyMin: 5 } }, penaltyMs: 300000 },
+      { name: 'Blues', code: 'M3X', marks: { [ids[2]]: { at: T0 + 90000 } }, attempts: { [ids[0]]: 3 }, hintsUsed: { [ids[0]]: { at: T0 + 10, penaltyMin: 2 } }, penaltyMs: 120000 },
+      { name: 'Greens', code: 'R9T', marks: {}, attempts: {}, hintsUsed: {} }
+    ] };
+    const d = S.debrief(h, run);
+    eq(d.length, 3, 'DB: one row per team');
+    eq(d[0].path.map(x => x.n), [1, 0, 2], 'DB: the path is the order reached, not the order of the stations');
+    eq(d[0].path.map(x => x.legMs), [120000, 180000, 200000], 'DB: a leg is the time since the previous stop, the first from the clock start');
+    eq(d[0].path.map(x => x.sinceStartMs), [120000, 300000, 500000], 'DB: time since the clock started');
+    eq(d[0].path.map(x => x.misses), [2, 0, 0], 'DB: wrong tries before each stop');
+    eq(d[0].path[0].hint, { at: T0 + 100000, penaltyMin: 5 }, 'DB: the hint taken at a stop');
+    eq(d[0].path[2].sentTo, { n: 0, label: h.stations[0].label || 'Station 1' }, 'DB: a branch names the station the team was sent to');
+    eq([d[0].misses, d[0].hints, d[0].hintMinutes, d[0].totalMs, d[0].finished], [2, 1, 5, 500000, true], 'DB: totals');
+    eq(d[1].path.map(x => x.n), [2], 'DB: a team that skipped ahead has a path of one');
+    eq(d[1].unreached.map(x => x.n), [0, 1], 'DB: the stations still open');
+    eq([d[1].unreached[0].misses, d[1].unreached[0].hint, d[1].misses, d[1].hints, d[1].finished], [3, true, 3, 1, false], 'DB: misses and hints on an unreached station still count');
+    eq(d[1].path[0].legMs, 90000, 'DB: a bare-number-free mark with a time still has a leg');
+    eq([d[2].path.length, d[2].totalMs, d[2].misses], [0, null, 0], 'DB: a team that did nothing has an empty path and no total');
+    const noClock = S.debrief(h, { raceStartAt: null, teams: [run.teams[0]] })[0];
+    eq([noClock.path[0].legMs, noClock.path[0].sinceStartMs, noClock.path[1].legMs, noClock.totalMs], [null, null, 180000, null], 'DB: with no clock start the first leg and the total are null, never a guess');
+    eq(S.debrief(h, null), [], 'DB: no run is no rows');
+    h.required = [ids[0], ids[1]];
+    eq(S.debrief(h, run)[0].requiredTotal, 2, 'DB: the required set is read from the set');
+  }
+
   { // v385: a go-to stored as the target's id
     const room = jc(F.R2());
     room.stations[0].next = 2; room.stations[1].next = 'end'; room.stations[2].next = 0;
@@ -525,6 +555,9 @@ const MUTANTS = [
   ['a self branch is not refused', "if (t === st.id) out.push(", "if (false) out.push("],
   ['a closed loop of right answers is not refused', "if (stuck.length) {", "if (false) {"],
   ['an unmatched answer takes the branch', "normalizeTextAnswer(keys[k]) === want && (by[keys[k]]", "(by[keys[k]]"],
+  ['debrief reads the path in station order', "reached.sort(function (a, b) {", "reached.sort(function (a, b) { return num[a.s.id] - num[b.s.id];"],
+  ['debrief guesses a leg without a clock start', "var prev = start, missTotal", "var prev = start === null ? 0 : start, missTotal"],
+  ['debrief drops the misses on a station not reached', "unreached.forEach(function (u) { missTotal += u.misses;", "unreached.forEach(function (u) {"],
   ['an orphan mark is kept', "if (id === undefined || String(parseInt(k, 10)) !== k) { dropped++; return; }", "if (id === undefined) id = k;"]
 ];
 let mutantFail = 0;

@@ -1107,11 +1107,76 @@
     return out;
   }
 
+  // ── the debrief ──────────────────────────────────────────────────────────
+  /** What each team did, worked out from the records a run already holds and nothing else
+      (Path 18 P4). `run` is the id-keyed run: `teams [{ name, code, marks { id: { at, attempts?,
+      branch? } }, attempts { id: n }, hintsUsed { id: { at, penaltyMin } }, penaltyMs }]` and
+      `raceStartAt` (when the teacher started the clock, or null). Per team: `path` (the stations
+      reached, in the order they were reached, each with its number in the set, the time since the
+      clock started `sinceStartMs`, the time since the previous stop `legMs`, the wrong tries before
+      it `misses`, the hint taken there and the branch it was sent on), `unreached` (the stations
+      still open, with their wrong tries), and totals. A time the records cannot give (no clock start
+      for a first leg, a mark with no time) is null, never a guess. */
+  function debrief(set, run) {
+    var pl = playable(set), r = isObj(run) ? run : {};
+    var start = typeof r.raceStartAt === 'number' ? r.raceStartAt : null;
+    var num = {};
+    pl.forEach(function (s, n) { num[s.id] = n; });
+    function label(s, n) {
+      var t = String(s.label || '').trim();
+      return t || 'Station ' + (n + 1);
+    }
+    return (Array.isArray(r.teams) ? r.teams : []).map(function (t) {
+      var marks = isObj(t.marks) ? t.marks : {}, att = isObj(t.attempts) ? t.attempts : {}, hints = isObj(t.hintsUsed) ? t.hintsUsed : {};
+      var reached = pl.filter(function (s) { return Object.prototype.hasOwnProperty.call(marks, s.id); })
+        .map(function (s) {
+          var m = marks[s.id], at = isObj(m) && typeof m.at === 'number' ? m.at : (typeof m === 'number' ? m : null);
+          var misses = isObj(m) && typeof m.attempts === 'number' ? m.attempts : (att[s.id] || 0);
+          return { s: s, at: at, misses: misses, branch: isObj(m) && m.branch ? m.branch : null };
+        });
+      reached.sort(function (a, b) {
+        if (a.at === null && b.at === null) return num[a.s.id] - num[b.s.id];
+        if (a.at === null) return 1;
+        if (b.at === null) return -1;
+        return a.at - b.at || num[a.s.id] - num[b.s.id];
+      });
+      var prev = start, missTotal = 0, hintCount = 0, hintMin = 0;
+      var path = reached.map(function (x, i) {
+        var h = isObj(hints[x.s.id]) ? hints[x.s.id] : null;
+        var leg = x.at !== null && prev !== null ? Math.max(0, x.at - prev) : null;
+        if (x.at !== null) prev = x.at;
+        missTotal += x.misses;
+        if (h) { hintCount++; hintMin += typeof h.penaltyMin === 'number' ? h.penaltyMin : 0; }
+        var to = null;
+        if (x.branch === 'end') to = { end: true };
+        else if (x.branch && num[x.branch] !== undefined) to = { n: num[x.branch], label: label(pl[num[x.branch]], num[x.branch]) };
+        return {
+          order: i + 1, id: x.s.id, n: num[x.s.id], label: label(x.s, num[x.s.id]),
+          at: x.at, sinceStartMs: x.at !== null && start !== null ? Math.max(0, x.at - start) : null, legMs: leg,
+          misses: x.misses, hint: h ? { at: typeof h.at === 'number' ? h.at : null, penaltyMin: typeof h.penaltyMin === 'number' ? h.penaltyMin : 0 } : null,
+          sentTo: to
+        };
+      });
+      var unreached = pl.filter(function (s) { return !Object.prototype.hasOwnProperty.call(marks, s.id); })
+        .map(function (s) { return { id: s.id, n: num[s.id], label: label(s, num[s.id]), misses: att[s.id] || 0, hint: isObj(hints[s.id]) }; });
+      unreached.forEach(function (u) { missTotal += u.misses; if (u.hint) { hintCount++; hintMin += typeof hints[u.id].penaltyMin === 'number' ? hints[u.id].penaltyMin : 0; } });
+      var pr = progress(set, marks);
+      var last = path.length ? path[path.length - 1].at : null;
+      return {
+        name: String(t.name || ''), code: String(t.code || ''), path: path, unreached: unreached,
+        reached: path.length, total: pl.length, requiredDone: pr.done, requiredTotal: pr.total, finished: pr.finished,
+        misses: missTotal, hints: hintCount, hintMinutes: hintMin,
+        penaltyMs: typeof t.penaltyMs === 'number' ? t.penaltyMs : 0,
+        totalMs: last !== null && start !== null ? Math.max(0, last - start) : null
+      };
+    });
+  }
+
   global.Stations = {
     KINDS: KINDS, ANSWER_TYPES: ANSWER_TYPES, ID_LENGTH: ID_LENGTH, CODE_WORDS: CODE_WORDS,
     detect: detect, read: read, write: write, ensureIds: ensureIds, newId: newId, newSetId: newSetId,
     playable: playable, playPayload: playPayload, playUrl: playUrl, playRead: playRead,
-    codeText: codeText, teamCodeText: teamCodeText, check: check, toDisk: toDisk, shareState: shareState, fromShare: fromShare, nextOf: nextOf, branchOf: branchOf, branchProblems: branchProblems, reachable: reachable, progress: progress, rank: rank,
+    codeText: codeText, teamCodeText: teamCodeText, check: check, toDisk: toDisk, shareState: shareState, fromShare: fromShare, nextOf: nextOf, branchOf: branchOf, branchProblems: branchProblems, reachable: reachable, progress: progress, rank: rank, debrief: debrief,
     remapRun: remapRun, upgradeProgress: upgradeProgress, budget: budget
   };
   global.EscapeRoomMatch = {

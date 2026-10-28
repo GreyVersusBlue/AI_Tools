@@ -247,6 +247,7 @@
     "test:scavenger-hunt-images": "node Tools/qr-scavenger-hunt-builder/test/smoke-images.mjs",
     "test:scavenger-hunt-required": "node Tools/qr-scavenger-hunt-builder/test/smoke-required.mjs",
     "test:scavenger-hunt-branches": "node Tools/qr-scavenger-hunt-builder/test/smoke-branches.mjs",
+    "test:scavenger-hunt-debrief": "node Tools/qr-scavenger-hunt-builder/test/smoke-debrief.mjs",
     "test:er-board": "node Tools/escape-room-builder/test/er-board.test.mjs",
     "test:er-monitor-board": "node Tools/escape-room-builder/test/smoke-monitor-board.mjs",
     "test:stations-legacy": "node Tools/stations/test/smoke-legacy-codes.mjs",
