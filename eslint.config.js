@@ -56,6 +56,7 @@ const SITE_GLOBALS = {
   Countdown: 'readonly',
   PrintKit: 'readonly',
   ExportKit: 'readonly',
+  ChartSvg: 'readonly',
   Bracket: 'readonly',
   Grouping: 'readonly',
   Rotation: 'readonly',

@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v401';
+const CACHE_VERSION = 'v402';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -151,6 +151,7 @@ const SHELL_URLS = [
   "_shared/a11y.css",
   "_shared/a11y.js",
   "_shared/backup-crypto.js",
+  "_shared/chart-svg.js",
   "_shared/base.css",
   "_shared/gvb-save.js",
   "_shared/handoffs.js",
@@ -517,6 +518,7 @@ const PRECACHE_URLS = [
   "_shared/a11y.css",
   "_shared/a11y.js",
   "_shared/backup-crypto.js",
+  "_shared/chart-svg.js",
   "_shared/base.css",
   "_shared/gvb-save.js",
   "_shared/handoffs.js",

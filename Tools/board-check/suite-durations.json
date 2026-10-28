@@ -234,6 +234,8 @@
     "Tools/blank-map-generator/test/smoke-hittest.mjs": 16,
     "Tools/blank-map-generator/test/geo-project.test.mjs": 1,
     "Tools/blank-map-generator/test/geo-project-parity.test.mjs": 1,
+    "Tools/grade-distribution-visualizer/test/chart-svg.test.mjs": 1,
+    "Tools/grade-distribution-visualizer/test/chart-svg-parity.test.mjs": 1,
     "Tools/timeline-builder/test/label-packing.test.mjs": 1,
     "Tools/civics-role-card-generator/test/smoke-file-transfer.mjs": 3,
     "Tools/current-events-discussion-guide-generator/test/readability.test.mjs": 1,
