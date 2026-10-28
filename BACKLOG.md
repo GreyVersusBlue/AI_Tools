@@ -642,7 +642,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **220 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `media-db.js` 16 · `stage.js` 16 · `export.js` 15 · `print-kit.css` 15 · `print-kit.js` 15 · `tool-registry.js` 11 · `qr-scan.js` 10 · `school-day.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `grouping.js` 6 · `student-flags.js` 6 · `undo.js` 6 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `rotation.js` 2 · `seating-read.js` 2 · `stations.js` 2 · `backup-crypto.js` 1 · `bracket.js` 1 · `gvb-save.js` 1 (+1 via a module) · `stations-debrief.css` 1 · `stations-debrief.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `media-db.js` 16 · `stage.js` 16 · `export.js` 15 · `print-kit.css` 15 · `print-kit.js` 15 · `tool-registry.js` 11 · `qr-scan.js` 10 · `school-day.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `grouping.js` 6 · `student-flags.js` 6 · `undo.js` 6 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `rotation.js` 2 · `seating-read.js` 2 · `stations.js` 2 · `backup-crypto.js` 1 · `bracket.js` 1 · `gvb-save.js` 1 (+1 via a module) · `stations-debrief.css` 1 · `stations-debrief.js` 1 · `student-details.js` 1 (+1 via a module) · `geo-project.js` 0 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **168**, contiguous (counted 2026-10-28 after rank 53 shipped). Path 21 is finished; per-tool rows start at rank **78**; 159–167 are Path 22 P6–P14 |
@@ -812,7 +812,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 59 | Path 19 P3 — conjugation pattern engine for Spanish and French, with irregular overrides. **Designed, not built (AI-27, 2026-10-06): the design is in the P3 bullet**; the engine can be built before P1 and P2, its storage on the word record cannot | 039 | 2+ | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 60 | Path 19 P4 — printables: Frayer page, spaced repetition, fill-in-the-blank, word wall as a system | 040 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 61 | Path 19 P5 — audio: TTS on study mode, teacher-recorded pronunciations into the media store | 051 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
-| 62 | Path 20 P1 — `_shared/geo-project.js` + `traceFeature`, hit-test and the curriculum gazetteer | `_shared/` | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
+| 62 | Path 20 P1, what is left — switch `gbq-map.js`'s adapted `unwrapRing`/`drawableRings` to `_shared/geo-project.js` (the port itself shipped in v401), and the curriculum gazetteer only if a second tool wants it | `_shared/`, 062 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 63 | Path 20 P2 — dropped GeoJSON/TopoJSON as a base map | 046 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 64 | Path 20 P3 — live vector viewer, keeping the raster path for poster export (**designed 2026-10-06, not built**: the design, its measurements and six questions for Devon are under the P3 bullet; P1 and P2 are not built and the design does not wait for them) | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 65 | Path 20 P4 — time slices for annotations; two-way selective handoff with 015 | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
@@ -7678,12 +7678,29 @@ runtime, the one content fetch that leaves the browser.
 
 **Phases.**
 
-- **P1 — `_shared/geo-project.js`.** Projection and inverse, `unwrapRing`,
-  `drawableRings`, `traceFeature(ctx, feature)` (per-feature, so a highlighted
-  country's holes cancel against its own rings), and an output-size argument for
-  `renderBaseMapCanvas`. 046, 015 and 062 import it; the copies go. Move the
-  `data/` GeoJSON alongside. Also lift `bmg-hittest.js` (point-in-polygon taking
-  the transform as an argument) and the curriculum gazetteer that 015 duplicated.
+- **P1 — `_shared/geo-project.js`. Built as a port, v401 (AI-28, 2026-10-28); two things left, below.**
+  *Design (written with the port; there was none before).* `_shared/geo-project.js` is a pure ES module with the
+  geometry that was `bmg-vector.js`'s and `bmg-hittest.js`'s: `DEFAULT_LONG_SIDE`, `pixelSizeFor`, `projectPoint`
+  and its inverse `unprojectPoint` (new, and the only code in it that did not exist), `unwrapRing`,
+  `drawableRings`, `tracePolygon`, `traceFeature(ctx, feature, bounds, w, h, forStroke)` (one feature, so its holes
+  cancel against its own rings; was the private `traceOneFeature`), `traceFeatures`, and the hit test
+  (`featureRings`, `projectFeatureRings`, `buildRegionIndex`, `pointInRings`, `hitTestRegion`, `largestRing`,
+  `compactRings`). It touches no DOM, fetch or storage. `bmg-vector.js` and `bmg-hittest.js` keep their names and
+  re-export the shared functions, so 046, 015 (which reaches `bmg-vector.js` by dynamic import) and the tests are
+  untouched; the `data/` GeoJSON stays where it is, because the offline copy's bundler, `tlb-places.js` and
+  `gbq-map.js` all name it there and nothing is gained by moving files. The "output-size argument for
+  `renderBaseMapCanvas`" was already there (`longSide`), so nothing was added. Held by
+  `Tools/blank-map-generator/test/_legacy-geo.mjs` (the old code, frozen) and `npm run test:geo-project-parity`
+  (every recorded path operation of the four files under all nine presets, stroke and fill, whole and per feature;
+  `drawableRings` for every ring; the region index and 3,721 hit-test points per preset; the re-exports), and by
+  `npm run test:geo-project` (hand-made shapes with known answers plus 15 deliberate defects that must each be
+  caught). Both are pure Node, no port. **Left in P1:** (a) `gbq-map.js` still carries its own adapted
+  `unwrapRing`/`drawableRings`; it loads `bmg-vector.js` by dynamic import with a fallback for a stale service
+  worker, so switching it is a behaviour change to a second tool, not part of a port, and wants its own suite run.
+  (b) The curriculum gazetteer: there is one copy, in `Tools/timeline-builder/tlb-places.js` (a classic script,
+  015 only), and 046's label sets are a different shape (`[name, lat, lon]` triples for a map's own projection), so
+  "the copy 015 duplicated" is not a duplicate today; lifting it needs a decision on module versus global that no
+  second reader has asked for yet. Not done, and rank 62 says so. 062 (`gbq-map.js`) draws its own thumbnails from the data and still carries the copy in (a).
 - **P2 — Dropped GeoJSON/TopoJSON.** Accept a dropped file as a base map (district
   boundaries, watersheds, historical borders), with the same calibration path as
   the bundled sets; store in the media store (Path 4).

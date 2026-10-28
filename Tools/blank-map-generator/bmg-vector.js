@@ -25,6 +25,10 @@
 // Keep this file free of DOM/UI concerns beyond the canvas it draws on: the
 // host page owns the picker, the cache write, and displayMap().
 
+import { DEFAULT_LONG_SIDE, pixelSizeFor, traceFeature, traceFeatures } from '../../_shared/geo-project.js';
+
+const TARGET_LONG_SIDE = DEFAULT_LONG_SIDE;
+
 const DATA_DIR = new URL('./data/', import.meta.url);
 const ART_DIR = new URL('./art/', import.meta.url);
 
@@ -199,122 +203,10 @@ export async function loadDividedGeoJson(preset) {
   return loadGeoJson(files.divided);
 }
 
-// Target size of the raster's longer side. Big enough that a full-page or
-// poster-tile print stays crisp (a US Letter page at 300 dpi is 3300 px on
-// its long edge), small enough that the render and the PNG encode stay
-// quick and the blob stays a sensible thing to keep in IndexedDB.
-const TARGET_LONG_SIDE = 4000;
-
-/** Pixel dimensions for a bounds rectangle: plate carrée means one degree of latitude and one of longitude occupy the same number of pixels, so the raster is simply the degree-extent scaled up. */
-export function pixelSizeFor(bounds, longSide = TARGET_LONG_SIDE) {
-  const lonSpan = Math.abs(bounds.east - bounds.west);
-  const latSpan = Math.abs(bounds.north - bounds.south);
-  const scale = longSide / Math.max(lonSpan, latSpan);
-  return {
-    width: Math.max(2, Math.round(lonSpan * scale)),
-    height: Math.max(2, Math.round(latSpan * scale)),
-  };
-}
-
-/**
- * The projection, in one place. Everything else here — and the calibration
- * the record carries — is this function and its inverse.
- *
- * Exported (as `projectPoint`) so bmg-hittest.js can turn a click into a
- * region using the identical arithmetic rather than a second copy of it: a
- * hit test that disagrees with what was drawn is wrong silently, which is
- * the worst way for it to be wrong.
- */
-export function projectPoint(bounds, width, height, lon, lat) {
-  return {
-    x: ((lon - bounds.west) / (bounds.east - bounds.west)) * width,
-    y: ((bounds.north - lat) / (bounds.north - bounds.south)) * height,
-  };
-}
-
-/**
- * Rewrites a ring's longitudes so consecutive points never jump more than
- * 180°, letting values run past ±180 instead.
- *
- * This matters because Natural Earth stores a ring that straddles the
- * antimeridian with its vertices clamped to ±180 — so the ring contains a
- * step from, say, -180 straight to +179.4 (Fiji), or +180 to -180
- * (Antarctica's closing edge). Drawn naively, each of those steps is a
- * `lineTo` clean across the entire map: the stray full-width horizontal
- * lines through the South Pacific and across northern Siberia that a plate
- * carrée render of this data otherwise picks up.
- */
-function unwrapRing(ring) {
-  const out = [[ring[0][0], ring[0][1]]];
-  for (let i = 1; i < ring.length; i++) {
-    let lon = ring[i][0];
-    const prev = out[i - 1][0];
-    while (lon - prev > 180) lon -= 360;
-    while (prev - lon > 180) lon += 360;
-    out.push([lon, ring[i][1]]);
-  }
-  return out;
-}
-
-/**
- * One ring in, one or more drawable subpaths out — in continuous longitude
- * space, with the antimeridian handled.
- *
- * A ring that goes all the way around the globe (Antarctica) comes out of
- * unwrapRing() with its ends 360° apart, so it can't simply be closed. For
- * *filling* it is closed through the pole, which is what makes Antarctica
- * fill as a polar cap down to the bottom of the map rather than as a sliver
- * cut off at the data's own clip latitude. For *stroking* that closure is
- * left off entirely: it is a construction, not a coastline, and drawing it
- * would put a hard line along the bottom edge of every world map. A ring
- * that merely pokes past ±180 (Fiji, the tip of Chukotka) is additionally
- * emitted shifted a full 360°, so the part belonging at the opposite edge of
- * the map is drawn there.
- */
-export function drawableRings(ring, forStroke) {
-  const un = unwrapRing(ring);
-  const first = un[0][0], last = un[un.length - 1][0];
-  const encircles = Math.abs(last - first) > 180;
-  if (encircles && !forStroke) {
-    const meanLat = un.reduce((sum, p) => sum + p[1], 0) / un.length;
-    const pole = meanLat < 0 ? -90 : 90;
-    un.push([last, pole], [first, pole]);
-  }
-  let min = Infinity, max = -Infinity;
-  for (const p of un) { if (p[0] < min) min = p[0]; if (p[0] > max) max = p[0]; }
-  const shifts = [0];
-  if (max > 180) shifts.push(-360);
-  if (min < -180) shifts.push(360);
-  return shifts.map(shift => ({
-    points: shift ? un.map(p => [p[0] + shift, p[1]]) : un,
-    closed: !(encircles && forStroke),
-  }));
-}
-
-function tracePolygon(ctx, rings, bounds, width, height, forStroke) {
-  for (const ring of rings) {
-    for (const { points, closed } of drawableRings(ring, forStroke)) {
-      for (let i = 0; i < points.length; i++) {
-        const { x, y } = projectPoint(bounds, width, height, points[i][0], points[i][1]);
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      }
-      if (closed) ctx.closePath();
-    }
-  }
-}
-
-function traceOneFeature(ctx, feature, bounds, width, height, forStroke) {
-  const g = feature.geometry;
-  if (!g) return;
-  if (g.type === 'Polygon') tracePolygon(ctx, g.coordinates, bounds, width, height, forStroke);
-  else if (g.type === 'MultiPolygon') for (const poly of g.coordinates) tracePolygon(ctx, poly, bounds, width, height, forStroke);
-}
-
-/** Adds every polygon of a FeatureCollection to the current path. `evenodd` filling then handles holes (lakes, enclaves) correctly. `forStroke` drops the synthetic polar closure described in drawableRings(). */
-function traceFeatures(ctx, geojson, bounds, width, height, forStroke = false) {
-  ctx.beginPath();
-  for (const feature of geojson.features || []) traceOneFeature(ctx, feature, bounds, width, height, forStroke);
-}
+// The projection, antimeridian handling and path tracing live in
+// _shared/geo-project.js (Path 20 P1); these names are re-exported so every
+// importer of this file (015, the hit test, the tests) is unchanged.
+export { pixelSizeFor, projectPoint, drawableRings } from '../../_shared/geo-project.js';
 
 /**
  * Paints each named region that has a colour in `fills` (see
@@ -333,7 +225,7 @@ function paintChoropleth(ctx, geojson, bounds, width, height, fills) {
     const hex = name && fills[name];
     if (!hex) continue;
     ctx.beginPath();
-    traceOneFeature(ctx, feature, bounds, width, height, false);
+    traceFeature(ctx, feature, bounds, width, height, false);
     ctx.fillStyle = hex;
     ctx.fill('evenodd');
   }

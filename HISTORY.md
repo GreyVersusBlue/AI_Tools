@@ -9,6 +9,29 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-28: offline:verify fixed, Path 20 P1 ported to `_shared/geo-project.js` (2026-10-28, v401)
+
+**The offline failure (part A).** `npm run offline:verify` had failed on 046 with `Uncaught TypeError: Failed to
+construct 'URL': Invalid URL` since the relief art arrived. Cause: `bmg-vector.js` gained a second
+`new URL('./art/', import.meta.url)` (`ART_DIR`) after `make-offline-copy.mjs` was written, and the generator's
+patch knew only `DATA_DIR`. esbuild's IIFE output leaves `import.meta` empty, so the constant threw as the bundle
+loaded. The patch now rewrites `ART_DIR` from `document.baseURI` (asserted exactly once, like the others), and
+`bundleModule()` fails the build if any offline bundle still contains `import.meta`, which is the check that would
+have caught it at build time. Verified: `offline:build` then `offline:verify` pass all 11 entry points, twice.
+`offline:verify` is still not in CI. Not run: a real file:// check that the relief image paints (the verify only
+proves nothing throws).
+
+**P1 (part B).** The projection, antimeridian handling, per-feature tracing and the hit test moved out of
+`bmg-vector.js`/`bmg-hittest.js` into `_shared/geo-project.js`, which they now re-export. 046's maps are unchanged:
+`test:geo-project-parity` compares the module with a frozen copy of the old code over the real data (135 checks)
+and `test:geo-project` has 559 checks and 15 mutants. `blank-map-generator`, `timeline-builder` and
+`geography-bee-quiz-generator` suites green. Decisions taken (reversible): the `data/` files stay put; the
+gazetteer is not lifted (one copy, classic script, no second reader), `gbq-map.js` is not switched; both are rank
+62's remainder. `unprojectPoint` is new and not yet used by anything: `bmg-latlong.js` keeps its own inverse.
+Shared lists this obliges others to touch: `sw.js` (done, both tiers), `suites.json`, `suite-durations.json`,
+`package.json`. Another thing found: `check:registry` prints a STALE line for `br_rollover_v1` that is not from this
+change.
+
 ## AI-31: Path 5 P5-1, the three home-made projector overlays move to the shared fullscreen (2026-10-28, v398-v400)
 
 Devon's 2026-10-21 answer to Path 5's one open question was "Move them to the shared fullscreen". One tool per commit, each with its own `CACHE_VERSION`; `_shared/stage.js` did not change.
