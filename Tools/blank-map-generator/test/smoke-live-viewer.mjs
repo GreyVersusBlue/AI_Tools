@@ -7,8 +7,8 @@
 // burst of 20 wheel events in one task is drawn once. Annotations keep their stage positions across
 // the change (a label placed before a zoom is where it was). A reload reopens the saved project on the
 // live canvas at the saved view. A shaded map stays on the raster (the canvas is hidden), and un-shading
-// brings the canvas back. Exports still read the raster: Download PNG's pixels at the saved view match a
-// render of the raster, not the canvas. Nothing leaves the browser.
+// brings the canvas back. Download PNG does not depend on the canvas element being shown (exports draw from the vectors:
+// smoke-live-export). Nothing leaves the browser.
 
 import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
 
@@ -117,7 +117,7 @@ await page.click('#btnChoroClear');
 await page.waitForFunction(() => !document.getElementById('baseCanvas').hidden, null, { timeout: 30000 });
 eq((await state()).canvasHidden, false, 'clearing the shading brings the live canvas back');
 
-/* exports still read the raster: Download PNG's bytes do not depend on the canvas being there */
+/* an export draws from the vectors, not from the canvas element: hiding the element changes nothing in the file (smoke-live-export holds what it does draw) */
 const png = async () => {
   const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 30000 }), page.click('#btnDownloadPng')]);
   const fs = await import('node:fs');
@@ -128,7 +128,7 @@ const png = async () => {
 const liveOn = await png();
 await page.evaluate(() => { document.getElementById('baseCanvas').hidden = true; document.getElementById('mapImg').style.visibility = ''; });
 const liveOff = await png();
-ok(liveOn.length > 1000 && liveOn === liveOff, 'Download PNG is byte-identical with the live canvas shown or not (' + liveOn.length + ' base64 chars)');
+ok(liveOn.length > 1000 && liveOn === liveOff, 'Download PNG is byte-identical with the canvas element shown or not (' + liveOn.length + ' base64 chars)');
 
 const a11y = await a11yScan(page, { impact: 'serious' });
 ok(!a11y || a11y.length === 0, 'axe: no serious or critical violations with the canvas showing' + (a11y && a11y.length ? ' ' + JSON.stringify(a11y.map(v => v.id)) : ''));

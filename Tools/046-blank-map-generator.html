@@ -955,9 +955,13 @@ const liveBase = (() => {
     mapImg.style.visibility = 'hidden';
   }
   new ResizeObserver(schedule).observe(viewport);
+  /** Draws the base map into an export's context in place of drawImage(mapImg): same view, same projection, the context's own scale as dpr. */
+  function drawInto(ctx, cssW, cssH, strokePx) {
+    drawBaseMap(ctx, source, viewer.getView(), cssW, cssH, { dpr: ctx.getTransform().a, strokePx: strokePx || 1 });
+  }
   /** The lat/long window on screen, or null when the picture is not drawn from the vectors. */
   function extent() { return source ? drawExtent(source, viewer.getView(), viewport.clientWidth, viewport.clientHeight) : null; }
-  return { show, hide, schedule, draw, extent, get active() { return !!source; }, toCanvas() { return canvas; } };
+  return { show, hide, schedule, draw, drawInto, extent, get active() { return !!source; }, toCanvas() { return canvas; } };
 })();
 
 const viewer = createViewer(viewport, stage, {
@@ -3787,7 +3791,10 @@ async function drawMapContent(ctx, cssW, cssH, opts = {}) {
   ctx.fillRect(0, 0, cssW, cssH);
 
   const { x, y, scale } = viewer.getView();
-  ctx.drawImage(mapImg, -x / scale, -y / scale, cssW / scale, cssH / scale, 0, 0, cssW, cssH);
+  // A plain built-in map is drawn from the vectors at the export's own scale (Path 20 P3), so a zoomed
+  // border stays a hairline on paper; every other map is still the raster picture.
+  if (liveBase.active) liveBase.drawInto(ctx, cssW, cssH, opts.strokePx);
+  else ctx.drawImage(mapImg, -x / scale, -y / scale, cssW / scale, cssH / scale, 0, 0, cssW, cssH);
 
   if (project.gridEnabled && isCalibrated(project.calibration)) {
     const { vLines, hLines } = computeGraticule(project.calibration, currentSize.width, currentSize.height);
@@ -4585,7 +4592,7 @@ async function printTiledPages(cols, rows) {
     posterCanvas.width = posterW;
     posterCanvas.height = posterH;
     const pctx = posterCanvas.getContext('2d');
-    await drawMapContent(pctx, posterW, posterH);
+    await drawMapContent(pctx, posterW, posterH, { strokePx: 2 });
     // Compass/scale bar drawn directly onto page 1's region (top-left
     // tile) at a fixed offset — not the real on-screen drag position,
     // which wouldn't mean anything relative to this virtual poster view.

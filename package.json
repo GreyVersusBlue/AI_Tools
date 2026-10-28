@@ -42,6 +42,7 @@
     "test:blank-map-live": "node Tools/blank-map-generator/test/live-base.test.mjs",
     "test:blank-map-live-viewer": "node Tools/blank-map-generator/test/smoke-live-viewer.mjs",
     "test:blank-map-live-keys": "node Tools/blank-map-generator/test/smoke-live-keys.mjs",
+    "test:blank-map-live-export": "node Tools/blank-map-generator/test/smoke-live-export.mjs",
     "test:blank-map-live-parity": "node Tools/blank-map-generator/test/smoke-live-parity.mjs",
     "test:geo-bee-parity": "node Tools/geography-bee-quiz-generator/test/geo-bee-parity.test.mjs",
     "test:chart-svg": "node Tools/grade-distribution-visualizer/test/chart-svg.test.mjs",
