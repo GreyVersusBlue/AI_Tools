@@ -25,6 +25,7 @@
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/bracket.js"></script>
+<script src="../_shared/undo.js"></script>
 <script src="../_shared/stage.js"></script>
 <script src="bracket-tournament-generator/bt-store.js"></script>
 <script src="bracket-tournament-generator/bt-teams.js"></script>
@@ -337,7 +338,7 @@
     <select id="bracketSwitch"></select>
     <button class="secondary" id="newBracketBtn">New bracket</button>
     <button class="secondary" id="resetPicksBtn">Reset picks</button>
-    <button class="secondary" id="undoBtn" style="display:none;" title="Reverts the single most recent winner pick, including any bye auto-advance it triggered.">Undo last pick</button>
+    <button class="secondary" id="undoBtn" style="display:none;" title="Takes back the most recent winner pick, including any bye auto-advance it triggered. Press again to go back further.">Undo last pick</button>
     <button class="danger" id="deleteBracketBtn">Delete</button>
     <button type="button" class="secondary" id="shareBtn">&#128279; Share bracket&hellip;</button>
     <button type="button" class="secondary" id="scheduleBtn">Schedule</button>
@@ -578,18 +579,19 @@
 
   var state = null; // { name, slots: [ [round0...], [round1...], ... ] }
 
-  /* ---------- undo (single-level) ----------
+  /* ---------- undo ----------
      A "mis-tap" undo: before every winner-advance click (elimination pick,
-     round-robin pick, or grand-final pick) captureUndoSnapshot() stashes a
-     full JSON clone of `state` as it stood immediately before that click.
-     Undo just swaps `state` back to that clone and re-renders — since the
-     clone was taken pre-mutation, it already reflects whatever earlier byes
-     had auto-advanced, so restoring it also correctly un-does any cascade
-     the undone click triggered downstream. Deliberately single-level (not a
-     full history stack) per the ask; it's cleared (not chained) on the next
-     pick, on Undo itself, and whenever the bracket is switched/reset/
-     regenerated so Undo never reaches across those boundaries. */
-  var undoSnapshot = null;
+     round-robin pick, or grand-final pick) captureUndoSnapshot() pushes a
+     full JSON clone of `state` as it stood immediately before that click onto
+     an UndoStack (_shared/undo.js). Undo swaps `state` back to the newest
+     clone and re-renders — since the clone was taken pre-mutation, it already
+     reflects whatever earlier byes had auto-advanced, so restoring it also
+     correctly un-does any cascade the undone click triggered downstream.
+     Each press takes back one pick, newest first (it used to take back only
+     the last one). The stack is emptied whenever the bracket is switched,
+     reset, regenerated or imported so Undo never reaches across those
+     boundaries; it is kept in the page only, never saved. */
+  var undoStack = UndoStack.create({ limit: 40, maxBytes: 8000000, onChange: function () { updateUndoButton(); } });
 
   /* ---------- academic-tournament mode (Path 12 P2) ----------
      bt-academic.js owns the card, the match panel and the printed sheet. What
@@ -634,11 +636,11 @@
   });
 
   function captureUndoSnapshot() {
-    if (state) undoSnapshot = JSON.stringify(state);
+    if (state) undoStack.push(state);
   }
 
   function updateUndoButton() {
-    els.undoBtn.style.display = (state && undoSnapshot) ? '' : 'none';
+    els.undoBtn.style.display = (state && undoStack.canUndo()) ? '' : 'none';
   }
 
   /* The bracket engine moved to _shared/bracket.js (Path 13 P3, v353) with its bodies unchanged; these are the page's names for it. */
@@ -2875,7 +2877,7 @@
     var loaded = BracketStore.loadBracket(name);
     if (!loaded) return;
     state = loaded;
-    undoSnapshot = null; // undo never reaches across a bracket switch
+    undoStack.clear();
     if (state.type === 'roundrobin' || state.type === 'swiss') {
       if (!state.scores) state.scores = {};
     } else if (state.type === 'pools') {
@@ -2909,7 +2911,7 @@
 
   function showSetup() {
     state = null;
-    undoSnapshot = null;
+    undoStack.clear();
     els.setupCard.style.display = '';
     els.bracketCard.style.display = 'none';
     els.toolbar.style.display = BracketStore.listBrackets().length ? '' : 'none';
@@ -2966,7 +2968,7 @@
     }
     if (teamed && teamed.members) state.members = teamed.members;
     if (type === 'single' && els.consolationOn.checked && names.length >= 3) state.consolation = BtTeams.fresh(state);
-    undoSnapshot = null;
+    undoStack.clear();
     BracketStore.setCurrentName(name);
     refreshSwitcher();
     render();
@@ -2984,7 +2986,7 @@
   els.resetPicksBtn.addEventListener('click', function () {
     if (!state) return;
     if (!confirm('Clear all picks in "' + state.name + '" and start the bracket over with the same contestants?')) return;
-    undoSnapshot = null; // a full reset starts a fresh undo history too
+    undoStack.clear();
     // Academic mode: the settings and the seed stay, the questions dealt and
     // the marks go with the picks, so the deal starts over from the top.
     var mode = state.academic;
@@ -3025,9 +3027,9 @@
   });
 
   els.undoBtn.addEventListener('click', function () {
-    if (!state || !undoSnapshot) return;
-    var restored = JSON.parse(undoSnapshot);
-    undoSnapshot = null; // single-level undo — nothing further back is kept
+    if (!state) return;
+    var restored = undoStack.undo();
+    if (!restored) return;
     state = restored;
     render();
   });
@@ -3121,7 +3123,7 @@
 
   function applySharedBracket(decoded) {
     var name = uniqueBracketName(decoded.name);
-    undoSnapshot = null; // a freshly-imported bracket starts its own undo history
+    undoStack.clear();
     if (decoded.type === 'roundrobin') {
       state = {
         name: name,

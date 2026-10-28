@@ -234,6 +234,7 @@
     "test:grouping-adopters": "node Tools/grouping/test/smoke-adopters.mjs",
     "test:bracket-engine": "node Tools/bracket-tournament-generator/test/bracket.test.mjs",
     "test:bracket-parity": "node Tools/bracket-tournament-generator/test/bracket-parity.test.mjs",
+    "test:bracket-undo": "node Tools/bracket-tournament-generator/test/smoke-undo.mjs",
     "test:bracket-redecide": "node Tools/bracket-tournament-generator/test/smoke-redecide.mjs",
     "test:bracket-display": "node Tools/bracket-tournament-generator/test/smoke-display.mjs",
     "test:rotation": "node Tools/pe-tournament-stations/test/rotation.test.mjs",
