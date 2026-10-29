@@ -795,9 +795,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 32 | Path 13 P2 — the rest. **All six splitters call `_shared/grouping.js` (v336–v341); 002, 022 and 027 keep their memory in a `groupHistory` field with the old fields written from it (v341–v343) and key it by roster id (v344–v346); the five improvements are in (002's floater fix v347, `keepStrategy` v348, `together: 'units'` v349, `restarts` for 002 and 022 v350, `method: 'best'` for 022 and 027 v351); the P2 bullet's increments 1–6.** Seating-aware grouping on 002 is in (v352, increment 6). Left: project teams on 002, parked on Devon's six questions (the P2 bullet, increment 6). Hold the twelve golden classes (`golden-old-groupings.json` now carries six re-recorded scenarios, each with an `amended` note), `smoke-rename-follow.mjs`, `test:grouping-parity` and `test:grouping-adopters` | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 36 | Path 14 P4 — the room, not the grid. **Everything buildable is built (AI-22, v365-v370): `seating-room.mjs`; the Room card on 005 (one room shared by periods); marks dragged, moved by arrow keys, resized, turned and relabelled, printed on the live page, Print all and the sub packet; marks in 010's and 008's pictures; a zone rule "desks near a mark" that follows its mark.** Waits on Devon: marks in 007's and 045's pictures (if wanted; those readers do not ask for marks yet); his two open questions (a: does the room live in 005's storage or a shared store; b: layouts per room or per section), built on their defaults | 005 | ¼ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 37 | Path 14 P5 — what is left: `_shared/undo.js` for 003 (no undo today, so a new feature); and "a point in 008" / "a pass in 001" from live mode, which needs Devon to pick a route (a `Handoffs` entry plus a receiver in each tool, or 005 writing their storage as 003 writes 037's); neither tool takes anything in today (live mode, absent today, 018 and 043 decided out: v377) | 005 | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
-| 40 | Path 15 P3 — equity dashboard across weeks and periods, printed as one page | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
-| 41 | Path 15 P4 — question-attached picks | 007 | ½ | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
-| 42 | Path 15 P5 — artifacts and remotes: hand off to grouping and the bracket; theme packs as JSON | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
+| 42 | Path 15 P5 — artifacts and remotes: Team Draft's teams to 002 (`?groups=`, one `Handoffs` entry) and to 020 (a built bracket through `Bracket.buildBracket`); theme packs as JSON. Read and designed in the bullet (AI-23, 2026-10-29), nothing built; phone remote waits on Path 8 | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
 | 43 | Path 16 P4, what is left — 036's triage lists to 085/068 (neither accepts a share link yet: a `Share.receive` + registry `share` row on each, then a `_shared/handoffs.js` entry), and Devon's persistence question | 036, 068, 085 | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
 | 44 | Path 16 P5, what is left — 038's chart sheet (several charts to a printed page through the print kit with Preview); the 065/073 handoffs have no route to use (listed in the bullet) | 038, 065, 073 | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
 | 45 | Path 17 P1 — thumbnail-grid reordering, crop/straighten, real-photo validation of the retry presets | 011 | 1 | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
@@ -6811,7 +6809,7 @@ day; the cross-week, cross-period view teachers actually want does not.
   reloads; the fold is on the page's in-memory overflow and the invariant the smoke holds is rollup + last 500 = every pick.
   Not done, on purpose: no reader uses `view()` yet (P3); the ids come from the sidecar the page already loads, so a name
   with no id is keyed on its name until P3 reads it through `view()`.
-- **P3 — Equity dashboard.** Who hasn't been called on in three weeks, distribution
+- **P3 — Equity dashboard. Built (AI-23, 2026-10-29, v456-v457); nothing left in it except the seat-join `unmatched` fix, which stays with `np-seat-equity.js`.** Who hasn't been called on in three weeks, distribution
   by seat position, per period and across periods, printed as a one-page artifact.
   A "Data" front door with an erase button, matching the site's privacy posture.
   **Design (AI-23, 2026-10-29; written before any code, read against 007 at v455).** *What exists.* The Equity tab
@@ -6843,7 +6841,23 @@ day; the cross-week, cross-period view teachers actually want does not.
   `unmatched` fix stays with the seat join (it reads names; moving it to ids is its own change, not in P3). *Defaults
   taken, none of them Devon's open questions:* three weeks is the "quiet" line; Monday starts a week; eight weeks is
   the opening window.
-- **P4 — Question-attached picks.** A pick is `{student, question}` when a prompt
+  **As built (v456-v457).** As designed. `np-dashboard.js` (pure: `weekStart`, `weekList`, `build`, `compare`, `chartData`, `lines`; held by
+  `test:name-picker-dashboard`, 46 cases, six mutants checked, including the 21-day line, the Monday rule and the record-start rule) and
+  `np-dashboard-view.js` (elements and `textContent`; the one SVG string is ChartSvg's), wired into 007's Equity tab as a card: period
+  and week pickers, the picks-per-week chart through `ChartSvg.bar` (grayscale-safe, titled and described), a polite live region, the
+  quiet list, the student-by-week table with "quiet" written as a word, the periods side by side, and the Data line with a button to
+  the Data tab and one to the existing Clear-pick-history handler. The page is `#dashSheet.pk-page.pk-paper` under
+  `body.printing-dash`, Preview and Print through the kit; its row cap is 22 students less one per period past three, so it stays on
+  one page (a 60-student roster with eight periods: preview and Chromium's PDF both say 1; with the cap lifted both say 3).
+  `test:name-picker-dashboard-smoke` (32 cases, port 8607). Three things the design did not foresee: 007's `html,body{overflow:hidden}`
+  cut every printed sheet to one page in the PDF, so a print-only `html,body{height:auto;overflow:visible}` was added (this also
+  un-clips the existing Participation Summary and Today's Picks printouts when they run long; they were not re-checked on paper);
+  a `:has()`-scoped version of that rule made the kit's preview count 1 against Chromium's 3, so it is deliberately unscoped; and a
+  student stored under a name key before an id existed is matched on both keys (the counts add), because P2 never rewrites stored keys.
+  *Defaults taken, none of them Devon's open questions:* periods are the saved rosters (a student on two counts in both; "All periods"
+  counts them once); three weeks is the quiet line; eight weeks opens; the period and window are page variables, nothing is stored.
+  Not done: `np-seat-equity.js` still joins by name, so its `unmatched` count is unchanged; moving the seat join to ids is its own change.
+- **P4 — Question-attached picks. Built (AI-23, 2026-10-29, v458); nothing left in it.** A pick is `{student, question}` when a prompt
   bank is loaded (Exit Ticket, Number Talks, the question bank of Path 12), logged
   together.
   **Design (AI-23, 2026-10-29; written before any code, read against 007 at v457).** *What exists.* A pick can already carry
@@ -6870,9 +6884,30 @@ day; the cross-week, cross-period view teachers actually want does not.
   *Not in P4:* showing the answer to the teacher (a teacher-only view is its own design), Exit Ticket and Number Talks as
   sources (their prompts live in `gvb-exit-ticket:customPrompts` and are not bank questions; that is P5's hand-off to
   read, or a bank import on their side), and a per-question equity cut (who has been asked which question).
+  **As built (v458).** As designed. `np-question-source.js` (pure; `test:name-picker-qsource`, 30 cases, mutants checked on the seed-id
+  rule, the bag's no-repeat rule, the answer-never-copied rule and the `qid`-needs-a-prompt rule), `np-store`'s history repair
+  keeping `qid`, `np-ui.js`'s two optional hooks (`parity-ui.mjs` unchanged and green: a host without them is the old code), the
+  Prompts tab's "Questions from" chooser, and 007's registry row reading `gvb-question-bank`. `test:name-picker-qsource-smoke` (18
+  cases, port 8608, next free 8609) drives the real page: all three questions asked before any repeats, no answer on the board or in
+  the log, `qid` on each entry, "Same question, next student" keeps it, the bank left byte-identical, a deleted question leaves the old
+  entry's words, an emptied bank falls back to typed prompts. Default taken: the chosen source is not remembered across reloads.
 - **P5 — Artifacts and remotes.** Team Draft hands off to Group Generator and the
   bracket (Path 13) instead of ending in a board; phone remote via Path 8; theme
   packs importable as JSON so a unit-themed board is a file.
+  **Read, not built (AI-23, 2026-10-29, v458).** *To 002:* it already opens `?groups=` (`share: { param: 'groups' }`,
+  `looksLikeSharePayload`: `{ v, title, groups: [{ label, members }] }`), so the hand-off is one `_shared/handoffs.js` entry
+  (`from: 'name-picker'`, `to: 'group-team-generator'`, `sheet: false`, a button on Team Draft's finished board calling
+  `Handoffs.open()`), a transform from `np-mode-draft.js`'s `draftTeams` (names only: no pick count, absence or flag travels), and
+  the receiver unchanged. *To 020:* it opens `?bracket=` and wants a whole state, `looksLikeBracket` (`slots`, or `type:
+  'roundrobin'` with `players` and `rounds`); `Bracket.buildBracket(name, names, seedMode)` in `_shared/bracket.js` builds one, so
+  the transform can be a call to it rather than a second builder (the sender then loads `bracket.js`, or the entry's transform is
+  handed it). Either needs 007 to load `handoffs.js` and `tool-registry.js` (007 is not a sender today), `Tools/share/test/handoffs.test.mjs`
+  gets the new `from`, and 007's `inline-sinks` line must not rise. *Theme packs:* `np-themes.js` already holds the eleven palettes as
+  data (`THEMES`, `themeVars`); a pack is `{ v: 1, name, themes: { <id>: { <var>: <colour> } } }` with the variable names whitelisted
+  to the ones `themeVars` writes and every value tested as a hex colour (a pack is a file a colleague sent: it must not carry a
+  `url()` or an expression), stored in one new `np_theme_packs` key (not student data; a registry row, a `br-rollover` line, a backup
+  entry). *Phone remote* waits on Path 8 P1 (`_shared/remote.js` does not exist). Suggested order: the two hand-offs (one step, with the
+  receiver suites), then theme packs (one step).
 
 **Model.** Opus.
 

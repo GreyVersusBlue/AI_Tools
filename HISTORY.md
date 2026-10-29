@@ -9,6 +9,21 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-23 (third session): Path 15 P3 and P4 built (2026-10-29, v456-v458)
+
+**What shipped.**
+- **P3, v456-v457.** The Equity dashboard. `np-dashboard.js` is the numbers (weeks by student by period, from `np-rollup.js` `view()`, the first reader of it); `np-dashboard-view.js` draws them as elements; 007's Equity tab gets a card (chart through `ChartSvg.bar`, quiet list, student-by-week table, periods side by side, the Data line) and one printed page through the print kit with Preview. Nothing new is stored. The design is in the P3 bullet, written first. `test:name-picker-dashboard` (46 cases, six mutants) and `test:name-picker-dashboard-smoke` (32 cases, port 8607).
+- **P4, v458.** A pick can carry a question from the teacher's bank. `np-question-source.js` (pure), two optional hooks on `np-ui.js` (`parity-ui.mjs` untouched and green), the Prompts tab's "Questions from" chooser, `qid` kept by `np-store`'s history repair. Only the question's words reach the board and the log. `test:name-picker-qsource` (30 cases) and `test:name-picker-qsource-smoke` (18 cases, port 8608).
+- P5 was read and written into its bullet, not built (rank 42).
+
+**Decisions taken (reversible).** A period is a saved roster, read at view time, because a history entry has no roster and adding one would be a new fact about a student on disk. Three weeks is the quiet line; eight weeks opens. The chosen question source is not remembered across reloads. `qid` is never a `seed:` id. 007 loads `question-bank.js` but none of the seed-set data files. None of Devon's open questions is touched.
+
+**Found.** 007's `html,body{height:100%;overflow:hidden}` cut every printed sheet to one page in Chromium's PDF; the kit's preview said 3 where the PDF said 1 until a print-only `html,body{height:auto;overflow:visible}` went in. A `:has(body.printing-dash)` version of that rule made the preview say 1 against the PDF's 3 (the preview iframe copies the page's print rules), so the rule is unscoped on purpose. The same rule un-clips the page's older Participation Summary and Today's Picks printouts when they run past a page; those were not re-checked on paper. The sheet's row cap (22 students, one fewer per period past three) was found by lifting it and watching both counts rise together.
+
+**Left.** Path 15 P5 (rank 42): the two hand-offs and the theme packs, with the plan in the bullet. The seat join's `unmatched` fix (ids instead of names in `np-seat-equity.js`) is its own change.
+
+**Not verified.** The full `npm test`. Nothing was printed on paper or read by a person; the dashboard was driven in Chromium only. The dashboard has not been looked at on a phone-width screen beyond the a11y sweep. A real question bank with hundreds of questions was not timed (the bank is read on a source change and on a bank storage event, not on every pick).
+
 ## AI-23 (second session): Path 15 P1 finished, Path 15 P2 built (2026-10-29, v453-v455)
 
 **What shipped.**
