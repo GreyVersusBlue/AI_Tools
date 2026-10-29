@@ -11,6 +11,7 @@ name, would have meant a board change and a broken URL; see the session notes.
 | --- | --- |
 | `np-store.js` | All thirteen storage keys, on `_shared/gvb-save.js`. DOM-free. |
 | `np-pick.js` | Who gets called and how fairly. Pure, injectable `rng`. DOM-free. |
+| `np-themes.js` | The eleven skins as plain data (`THEMES`) and `themeVars(name)`, the property map the page writes on `<html>`. DOM-free. |
 | `fonts/` | Bungee, Outfit, Press Start 2P, vendored. See its README. |
 | `test/smoke.mjs` | 207 assertions under plain Node. |
 | `test/blocked-storage.html` | The one case Node cannot reach — a browser that blocks storage. |
