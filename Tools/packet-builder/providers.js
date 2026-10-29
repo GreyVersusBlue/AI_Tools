@@ -12,7 +12,13 @@
      subPlanBuilder.standingDetails.v1  044's standing details: teacherName, roomNumber,
        rosterLocation, absenceLocation, emergencyLocation, periods [{label, time}], keysLocation,
        whoToAsk, techFailureText, attendanceText, behaviorCustom, phoneNurse, phoneCounseling,
-       phoneSupport, phoneOther, signOffName, fireRoute, lockdownProcedure, medicalAlerts. */
+       phoneSupport, phoneOther, signOffName, fireRoute, lockdownProcedure, medicalAlerts.
+     hall-pass-log-sections  001's { sets: { <section name>: { destinations: [{ label, overtimeMin,
+       requiresNote }], oneOutAtATime, weeklyBudget } } }, the settings half only; the pass log itself
+       (who went where) is never read.
+     scv_calendar_v1  032's calendar, read through ctx.SchoolDay (_shared/school-day.js), which owns its shape.
+     np_rosters  { <roster name>: [student names] }, with crh_students_v1's
+       { version: 1, rosters: { <name>: { students: [{ name, preferred }] } } } for preferred names. */
 (function (root) {
   'use strict';
   var PS = root.PacketSections;
@@ -87,6 +93,139 @@
     build: function (ctx) {
       var s = standing(ctx);
       return { pages: [{ title: 'Emergency information', blocks: s ? [{ type: 'kv', rows: emergencyRows(s) }] : [] }] };
+    }
+  });
+
+  /* ---- hall pass procedure (001's settings, never its log) ---- */
+
+  var HALL_KEY = 'hall-pass-log-sections';
+
+  function hallSets(ctx) {
+    var raw = ctx.read(HALL_KEY);
+    if (!isObj(raw) || !isObj(raw.sets)) return [];
+    return Object.keys(raw.sets).filter(function (n) { return isObj(raw.sets[n]); }).map(function (n) { return [n, raw.sets[n]]; });
+  }
+
+  PS.register({
+    id: 'hall-pass-log',
+    title: 'Hall pass procedure',
+    sourceSlug: 'hall-pass-log',
+    setupHint: 'Set up your hall pass destinations in Digital Hall Pass / Sign-Out Log.',
+    storageKeys: [HALL_KEY],
+    evaluate: function (ctx) {
+      var n = hallSets(ctx).length;
+      if (!n) return { available: false, status: 'No hall pass sections set up yet.' };
+      return { available: true, status: 'Saved (' + n + (n === 1 ? ' section' : ' sections') + ').' };
+    },
+    build: function (ctx) {
+      var sets = hallSets(ctx);
+      return { pages: [{ title: 'Hall passes', blocks: sets.reduce(function (blocks, pair) {
+        var sec = pair[1];
+        var dests = Array.isArray(sec.destinations) ? sec.destinations.filter(isObj) : [];
+        if (sets.length > 1) blocks.push({ type: 'h', text: pair[0], level: 3 });
+        if (dests.length) {
+          blocks.push({ type: 'table', head: ['Destination', 'Time limit', 'Note at sign-out?'], rows: dests.map(function (d) {
+            return [d.label, d.overtimeMin ? d.overtimeMin + ' min' : '', d.requiresNote ? 'Yes' : 'No'];
+          }) });
+        } else {
+          blocks.push({ type: 'p', text: 'No destinations configured.' });
+        }
+        var rules = [];
+        if (sec.oneOutAtATime) rules.push('Only one student out at a time.');
+        if (sec.weeklyBudget) rules.push('Weekly pass budget: ' + sec.weeklyBudget + '.');
+        if (rules.length) blocks.push({ type: 'note', text: rules.join(' ') });
+        return blocks;
+      }, []) }] };
+    }
+  });
+
+  /* ---- the school calendar, through SchoolDay ---- */
+
+  var CAL_KEY = 'scv_calendar_v1';
+  var AHEAD_DAYS = 28;
+
+  function calendar(ctx) {
+    var cal = ctx.read(CAL_KEY);
+    return ctx.SchoolDay && ctx.SchoolDay.isCalendar(cal) ? cal : null;
+  }
+  function isoPlus(iso, n) {
+    var p = iso.split('-');
+    var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n));
+    return d.getUTCFullYear() + '-' + ('0' + (d.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + d.getUTCDate()).slice(-2);
+  }
+
+  PS.register({
+    id: 'school-calendar',
+    title: 'School calendar: today and the next four weeks',
+    sourceSlug: 'school-calendar-visualizer',
+    setupHint: 'Save your school year in School Calendar Visualizer.',
+    storageKeys: [CAL_KEY],
+    evaluate: function (ctx) {
+      var cal = calendar(ctx);
+      if (!cal) return { available: false, status: 'No school calendar saved yet.' };
+      var label = typeof cal.meta.yearLabel === 'string' && cal.meta.yearLabel.trim() ? cal.meta.yearLabel.trim() : cal.meta.start + ' to ' + cal.meta.end;
+      return { available: true, status: 'Saved (' + label + ').' };
+    },
+    build: function (ctx) {
+      var cal = calendar(ctx), SD = ctx.SchoolDay, today = ctx.todayISO;
+      var blocks = [];
+      if (!cal) return { pages: [{ title: 'School calendar', blocks: blocks }] };
+      blocks.push({ type: 'kv', rows: [['Today', today + ': ' + (SD.describe(cal, SD.dayOf(cal, today)) || 'No calendar for this date')]] });
+      var rows = [];
+      for (var i = 1; i <= AHEAD_DAYS; i++) {
+        var iso = isoPlus(today, i), day = SD.dayOf(cal, iso);
+        if (day.why === 'weekend' || day.why === 'outside' || day.why === 'invalid') continue;
+        var words = SD.describe(cal, day);
+        if (words !== 'A school day' && words !== (day.letter ? day.letter + ' day' : '')) rows.push([iso, words]);
+      }
+      blocks.push({ type: 'h', text: 'Coming up', level: 3 });
+      blocks.push(rows.length ? { type: 'table', head: ['Date', 'What it is'], rows: rows } : { type: 'p', text: 'Nothing out of the ordinary in the next ' + AHEAD_DAYS + ' days.' });
+      return { pages: [{ title: 'School calendar', blocks: blocks }] };
+    }
+  });
+
+  /* ---- class rosters: one name list per class ---- */
+
+  var ROSTERS_KEY = 'np_rosters';
+  var RECORDS_KEY = 'crh_students_v1';
+  var PER_PAGE = 40;
+
+  function rosterLists(ctx) {
+    var raw = ctx.read(ROSTERS_KEY);
+    if (!isObj(raw)) return [];
+    var recs = ctx.read(RECORDS_KEY);
+    var db = isObj(recs) && isObj(recs.rosters) ? recs.rosters : {};
+    return Object.keys(raw).filter(function (n) { return Array.isArray(raw[n]); }).map(function (n) {
+      var pref = {};
+      var entry = isObj(db[n]) && Array.isArray(db[n].students) ? db[n].students : [];
+      entry.forEach(function (r) { if (isObj(r) && has(r.name) && has(r.preferred)) pref[r.name.trim().toLowerCase()] = r.preferred.trim(); });
+      var names = raw[n].filter(has).map(function (x) { return pref[x.trim().toLowerCase()] || x.trim(); });
+      return { name: n, names: names };
+    }).filter(function (r) { return r.names.length; });
+  }
+
+  PS.register({
+    id: 'class-rosters',
+    title: 'Class rosters',
+    sourceSlug: 'class-roster-hub',
+    setupHint: 'Add your classes in Class Roster Hub.',
+    storageKeys: [ROSTERS_KEY, RECORDS_KEY],
+    evaluate: function (ctx) {
+      var n = rosterLists(ctx).length;
+      if (!n) return { available: false, status: 'No rosters saved yet.' };
+      return { available: true, status: 'Saved (' + n + (n === 1 ? ' class' : ' classes') + ').' };
+    },
+    build: function (ctx) {
+      var pages = [];
+      rosterLists(ctx).forEach(function (r) {
+        for (var i = 0; i < r.names.length; i += PER_PAGE) {
+          var chunk = r.names.slice(i, i + PER_PAGE);
+          pages.push({ title: r.name + (r.names.length > PER_PAGE ? ' (' + (Math.floor(i / PER_PAGE) + 1) + ')' : ''), blocks: [
+            { type: 'table', head: ['#', 'Student'], rows: chunk.map(function (nm, k) { return [String(i + k + 1), nm]; }) }
+          ] });
+        }
+      });
+      return { pages: pages };
     }
   });
 })(typeof window !== 'undefined' ? window : globalThis);

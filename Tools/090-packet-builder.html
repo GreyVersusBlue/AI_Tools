@@ -30,6 +30,7 @@
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/tool-registry.js"></script>
+<script src="../_shared/school-day.js"></script>
 <script src="../_shared/print-kit.js"></script>
 <script src="packet-builder/sections.js"></script>
 <script src="packet-builder/providers.js"></script>
@@ -173,8 +174,8 @@
 
   /* Two presets ship, built in and read-only; ids no section answers to are left out. */
   var BUILT_IN = [
-    { name: 'Sub day', ids: ['sub-plan', 'emergency-info'] },
-    { name: 'Emergency binder', ids: ['emergency-info', 'sub-plan'] }
+    { name: 'Sub day', ids: ['sub-plan', 'school-calendar', 'class-rosters', 'hall-pass-log', 'emergency-info'] },
+    { name: 'Emergency binder', ids: ['emergency-info', 'sub-plan', 'hall-pass-log', 'class-rosters'] }
   ];
   function builtIns() {
     var known = PS.ids();

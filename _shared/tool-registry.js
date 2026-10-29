@@ -474,6 +474,10 @@
         { k: 'gvb-packet:presets.v1' },
       ],
       reads: [
+        'crh_students_v1',
+        'hall-pass-log-sections',
+        'np_rosters',
+        'scv_calendar_v1',
         'subPlanBuilder.standingDetails.v1',
       ],
     },

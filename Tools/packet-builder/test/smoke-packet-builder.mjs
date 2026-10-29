@@ -76,7 +76,7 @@ try {
     const s = await secs(page);
     ok(s.length >= 2, 'the sections are listed');
     ok(s.every(x => x.off && x.disabled && !x.checked), 'empty profile: every section greyed, disabled and unticked');
-    ok(s.every(x => x.link && /^044-/.test(x.link)), 'empty profile: each links the tool that fills it in');
+    ok(s.length === 5 && s.every(x => x.link && /^\d{3}-/.test(x.link)), 'empty profile: each links the tool that fills it in');
     eq(await page.$eval('#printBtn', b => b.disabled), true, 'empty profile: Print is off');
     eq(await page.$eval('#previewBtn', b => b.disabled), true, 'empty profile: Preview is off');
     ok(/Tick a page/.test(await page.$eval('#live', e => e.textContent)), 'empty profile: the preview says what to do');
@@ -90,10 +90,9 @@ try {
     const page = await open(browser, { seed: { [STANDING]: FULL }, dark });
     const what = dark ? 'dark' : 'light';
     const s = await secs(page);
-    ok(s.every(x => !x.off && !x.disabled && !x.checked), `${what}: both sections are on and unticked at first`);
+    ok(s.slice(0, 2).every(x => !x.off && !x.disabled && !x.checked) && s.slice(2).every(x => x.off), `${what}: the two sub plan sections are on and unticked at first, the other three greyed`);
     await page.check('#secList .sec:nth-child(1) input');
     await page.check('#secList .sec:nth-child(2) input');
-    const first = (await secs(page)).map(x => x.name);
     ok((await livePages(page)).length === 2, `${what}: ticking both fills the preview with two pages`);
     const order1 = await livePages(page);
     await page.click('#secList .sec:nth-child(1) button[aria-label$="down"]');
@@ -104,7 +103,6 @@ try {
     ok(stored.v === 1 && stored.ids.join() === order2.join(), `${what}: the order is saved, ids only`);
     ok(!JSON.stringify(stored).includes('Ms. Example'), `${what}: no content is stored with the layout`);
     ok((await page.$eval('#live', e => e.textContent)).includes('Ms. Example'), `${what}: the preview shows the saved teacher name`);
-    ok(first.length === 2, `${what}: two rows`);
 
     await page.click('#printBtn');
     await settle(page, 150);
@@ -121,6 +119,29 @@ try {
     await page.reload({ waitUntil: 'load' });
     await settle(page, 300);
     ok((await livePages(page)).join() === order2.join(), `${what}: the order survives a reload`);
+    await page.close();
+  }
+
+  // ---- every section, the Sub day preset ----
+  {
+    const seed = {
+      [STANDING]: FULL,
+      'hall-pass-log-sections': { sets: { A: { destinations: [{ label: 'Restroom', overtimeMin: 5 }], oneOutAtATime: true } } },
+      scv_calendar_v1: { __v: 2, meta: { start: '2026-08-17', end: '2027-06-04', yearLabel: '2026-27' }, dayTypes: [{ id: 'nosc', label: 'No school', noSchool: true }], days: {} },
+      np_rosters: { 'Period 1': ['Ann Lee', 'Bo Ray'], 'Period 2': ['Cy Day'] }
+    };
+    const page = await open(browser, { seed });
+    ok((await secs(page)).every(x => !x.off), 'all five sections are on with everything saved');
+    await page.selectOption('#presetSelect', 'b:Sub day');
+    await page.click('#applyPresetBtn');
+    eq((await livePages(page)).join(), 'sub-plan,school-calendar,class-rosters,class-rosters,hall-pass-log,emergency-info', 'Sub day: the pages are in the preset order, one per class for the rosters');
+    await page.click('#printBtn');
+    await settle(page, 150);
+    eq(await page.evaluate(() => document.querySelectorAll('#printArea > .pk-page').length), 6, 'Sub day: six printed pages');
+    await page.emulateMedia({ media: null });
+    eq(pdfPageCount(await page.pdf({ preferCSSPageSize: true, printBackground: false })), 6, "Sub day: Chromium's PDF holds six pages");
+    const bad = await a11yScan(page);
+    ok(bad.length === 0, 'five sections: axe finds nothing serious ' + JSON.stringify(bad));
     await page.close();
   }
 
