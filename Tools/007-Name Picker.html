@@ -727,7 +727,8 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
    Nothing in this file touches localStorage — np-store owns all thirteen keys and
    lets gvb-save do the probing, because reading the `localStorage` property
    throws outright in a browser configured to block storage. */
-import { createStore, OPTION_DEFAULTS } from './name-picker/np-store.js';
+import { MAX_HISTORY, createStore, OPTION_DEFAULTS } from './name-picker/np-store.js';
+import * as rollup from './name-picker/np-rollup.js';
 import { freshRotation, pickOne, pickMany, shuffle, leastPicked, fairnessWeights } from './name-picker/np-pick.js';
 import { report as equityReport, summaryLine as equitySummaryLine, dayKey } from './name-picker/np-equity.js';
 import { loadDetails, lookupDetail, displayName, loadIds, lookupId } from './name-picker/np-details.js';
@@ -1163,8 +1164,16 @@ function updateStatsUI(){
   });
 }
 
-function saveHistory(){store.set('history',history);}
-function loadHistory(){history=store.get('history');updateHistoryUI();}
+/* np_history is cut to its last MAX_HISTORY entries on every write. The entries that fall off the front are folded into
+   np_daily (np-rollup.js) first, once: `rolledUp` is how many of the front entries of the in-memory list have been. */
+let rolledUp=0;
+const rollupId=(n)=>lookupId(rosterIds,n,currentRosterName);
+function saveHistory(){
+  const r=rollup.foldOverflow(store.get('daily'),history,rolledUp,MAX_HISTORY,rollupId);
+  if(r.rolledUp!==rolledUp){store.set('daily',r.doc);rolledUp=r.rolledUp;}
+  store.set('history',history);
+}
+function loadHistory(){history=store.get('history');rolledUp=0;updateHistoryUI();}
 
 function updateHistoryUI(){
   const list=document.getElementById('historyList');
@@ -1998,7 +2007,7 @@ function restoreFromState(state){
     `are left alone.`
   );
   if(!ok)return;
-  const wrote=store.restore(state,{merge:true});
+  const wrote=store.restore(state,{merge:true,idOf:rollupId});
   loadStats();loadHistory();loadHof();loadPrompts();updateRosterUI();updateStatsUI();updateDataTab();
   alert(`✅ Restored. ${wrote.length} of the tool's data keys were updated.`);
 }
@@ -2060,7 +2069,7 @@ function eraseStudentData(){
   );
   if(!ok)return;
   store.clearStudentData();
-  names=[];originalNames=[];history=[];statsCache={};hallOfFame=[];
+  names=[];originalNames=[];history=[];rolledUp=0;statsCache={};hallOfFame=[];
   absentSet=new Set();luckyStudent=null;luckyDate=null;
   draft.clear();
   rotation=freshRotation();
@@ -2073,7 +2082,7 @@ function eraseEverything(){
   if(!confirm('Erase everything this tool has stored, including themes, task prompts, options and the unlocked retro theme?\n\nThis cannot be undone.'))return;
   store.clearAll();
   opts={...OPTION_DEFAULTS};
-  names=[];originalNames=[];history=[];statsCache={};hallOfFame=[];prompts=[];
+  names=[];originalNames=[];history=[];rolledUp=0;statsCache={};hallOfFame=[];prompts=[];
   absentSet=new Set();luckyStudent=null;luckyDate=null;
   draft.clear();
   retroUnlocked=false;retroActive=false;crazyMode=false;
@@ -2171,7 +2180,7 @@ document.getElementById('closePanel').addEventListener('click',()=>{document.get
 document.getElementById('loadNames').addEventListener('click',loadNamesFromInput);
 document.getElementById('clearInput').addEventListener('click',()=>{if(confirm('Clear the input area? (Saved rosters are not affected)'))document.getElementById('namesInput').value='';});
 document.getElementById('saveRoster').addEventListener('click',saveRoster);
-document.getElementById('clearHistory').addEventListener('click',()=>{if(confirm('Clear pick history?')){history=[];saveHistory();updateHistoryUI();updateDataTab();}});
+document.getElementById('clearHistory').addEventListener('click',()=>{if(confirm('Clear pick history?')){history=[];rolledUp=0;store.clear('daily');saveHistory();updateHistoryUI();updateDataTab();}});
 document.getElementById('exportHistory').addEventListener('click',()=>{
   if(!history.length){alert('No history to export.');return;}
   const text=['Date\tTime\tName\tQuestion']

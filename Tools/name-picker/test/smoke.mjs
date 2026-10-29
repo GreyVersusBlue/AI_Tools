@@ -116,7 +116,7 @@ console.log("name-picker smoke\n");
   assert(store.get("luckyEnabled") === true, "np_lucky_enabled '1' decodes to true");
   assert(store.get("retroActive") === false, "np_retro_active '0' decodes to false");
   assert(store.get("retroUnlocked") === true, "the retro unlock survives — it is an earned thing");
-  assert(KEYS.length === 14, "twelve original keys plus np_options plus np_absent");
+  assert(KEYS.length === 15, "twelve original keys plus np_options, np_absent and np_daily");
   assert(KEYS.filter(d => LEGACY_DISK[d.key] !== undefined).length === 12,
          "all twelve original keys are covered by a descriptor");
 }
@@ -425,7 +425,7 @@ console.log("name-picker smoke\n");
   assert(before.tracked === 24, "census counts students with pick counts");
 
   const cleared = store.clearStudentData();
-  assert(cleared.length === 7, "seven keys hold student names: rosters, current, lucky, absent, stats, history, hof");
+  assert(cleared.length === 8, "eight keys hold student names: rosters, current, lucky, absent, stats, history, daily, hof");
   assert(cleared.includes("lucky"), "np_lucky counts as student data — it stores a name");
 
   const after = store.census();

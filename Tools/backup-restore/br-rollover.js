@@ -819,6 +819,7 @@
     /* ── Kind A: student data and nothing else, deleted. ── */
     { key: 'np_current', tool: '007', kind: 'delete' },
     { key: 'np_history', tool: '007', kind: 'delete' },
+    { key: 'np_daily', tool: '007', kind: 'delete' },
     { key: 'np_stats', tool: '007', kind: 'delete' },
     { key: 'np_hof', tool: '007', kind: 'delete' },
     { key: 'np_lucky', tool: '007', kind: 'delete' },

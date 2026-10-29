@@ -178,6 +178,7 @@
         { k: 'np_absent', student: true },
         { k: 'np_crazy' },
         { k: 'np_current', student: true },
+        { k: 'np_daily', student: true },
         { k: 'np_history', student: true },
         { k: 'np_hof', student: true },
         { k: 'np_lucky', student: true },

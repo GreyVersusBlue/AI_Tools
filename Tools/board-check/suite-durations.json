@@ -55,6 +55,8 @@
     "Tools/name-picker/test/parity-modes.mjs": 2,
     "Tools/name-picker/test/parity-draft.mjs": 2,
     "Tools/name-picker/test/parity-ui.mjs": 2,
+    "Tools/name-picker/test/rollup.test.mjs": 2,
+    "Tools/name-picker/test/smoke-rollup.mjs": 40,
     "Tools/name-picker/test/smoke-modes.mjs": 120,
     "Tools/name-picker/test/smoke-sound.mjs": 12,
     "Tools/name-picker/test/smoke-themes.mjs": 15,
