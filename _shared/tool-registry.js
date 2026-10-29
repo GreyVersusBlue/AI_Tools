@@ -1541,9 +1541,11 @@
       prefixes: [
         { p: 'clm_list_v1:' },
       ],
+      /* The shared word lists (Path 19 P2): a list can be added to the box; read-only. */
       reads: [
         'clm_lang_v1',
         'clm_words_v1',
+        'gvb-word-lists',
       ],
     },
     {

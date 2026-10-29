@@ -395,6 +395,7 @@
     "Tools/word-list/test/smoke-hub.mjs",
     "Tools/word-list/test/smoke-adopter-039.mjs",
     "Tools/word-list/test/smoke-adopter-027.mjs",
+    "Tools/word-list/test/smoke-adopter-051.mjs",
     "Tools/stations/test/smoke-bank-stations.mjs",
     "Tools/qr-scavenger-hunt-builder/test/smoke-images.mjs",
     "Tools/qr-scavenger-hunt-builder/test/smoke-required.mjs",
