@@ -9,6 +9,39 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-14: Path 12 P2 increment 6, station questions from the bank for 019 and 018 (2026-10-29, v435-v436)
+
+**What shipped.** A **Question bank** card on 019 (Escape Room Builder, v435) and 018 (QR Scavenger Hunt Builder, v436), both built by one new
+shared file, `_shared/stations-bank.js` (`StationsBank`: pure `toStation`, `addTo`, `heldIds`, and `mount`, which builds the card into a host div). It
+lists the teacher's bank and the built-in sets (`QuestionBank.sources({ peek: true })`, `sourceLabel`), ticks, and on **Add ticked as stations** appends
+one station per question in the page's own shape with `bankId` set to the question's id. Nothing is written until the press and then only by the page's
+own save; the bank is never written. 019: a text station (prompt to clue, answer to accepted answers; a comma in an answer becomes a space, a comma
+between digits is dropped, so the matcher reads it as it read the original). 018: two to six choices with the answer among them is a choice station
+(`correctChoice` its place); anything else is a text station with "Answer: ..." in its note, so it is on the answer key. A question already a station
+(its id is a `bankId` in the set) is shown as such and skipped; a lone empty station is replaced. Nothing student-facing changed (Devon, 2026-10-05); a
+bank station encodes as a hand-typed one (Devon, 2026-10-07: answers stay readable in the code). The design is in the Path 12 P2 bullet, committed first
+(`487ad71`), with four new questions for Devon (66 to 69), each on its default. Rank 28 is deleted: **Path 12 is whole**; Path 18 P3's row no longer
+lists the bank as left.
+
+**Verified.** `test:stations-bank` (pure Node, 53 assertions, 12 mutants all caught); `test:stations-bank-smoke` (new, port 8593, 32 checks on both pages;
+break-on-purpose run against each page); `--only stations` (10 green), `--only escape-room-builder` (7), `--only qr-scavenger-hunt-builder` (7),
+`--only service-worker`, a11y sweep 018 and 019, `test:theme`, `test:registry`, lint, check:tests/precache(--base)/registry/dedupe/entities/hidden-flex/
+print-clip/inline-sinks/adoption(--check). `test:stations` still 366+ (the module is untouched).
+
+**What was wrong or different.** (1) The design first said `bankId` rides the share link; `shareState` never listed it, and it should not (a tie to
+one teacher's bank means nothing on another's, and links keep their bytes), so the design text was corrected before the build and the test pins its
+absence. (2) A first draft expected "Washington, D.C." to accept "washington dc"; the matcher turns each dot into a space, so it does not, and never did
+for the original answer either: the test now types what the answer says. (3) **Ranks were not renumbered**: the Tier 1 table already has gaps (111 rows
+up to 161) and many "rank N" cross-references in the file point at old numbers, so deleting row 28 left a gap, as v265 and AI-20's rows did. (4) 018
+had no `store.js`; `question-bank.js` needs it, so it is loaded there now (42 adopters).
+
+**Obliges others.** `Tools/board-check/suite-durations.json` has estimated rows for the two new suites (2 s, 30 s): refresh from CI logs. Nothing else shared.
+
+**Not verified.** No person used the card; no class played a hunt or room built from it; a bank of thousands in the chooser; no real phone scanned a bank
+station's code; the full `npm test`.
+
+---
+
 ## AI-28: Path 20 P5, quiz memory across sessions and no Wikimedia search at load (2026-10-29, v434)
 
 **What shipped.** `bmg-quiz-memory.js` (pure, plus `load()`/`save()` on `bmg_quiz_memory_v1`) and its wiring on 046's quiz bar, as written into the P5 bullet before

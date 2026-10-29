@@ -620,6 +620,10 @@ files must be added there too.
   holds an `idb:` reference, and only 030 deletes a stored picture (its pass at load keeps the bank's). A tool that
   shows no picture needs no code for it and says so on its card, as 040 and 020 do (`npm run test:bank-media`,
   `npm run test:question-bank-media`).
+  Since v435 019 and 018 are readers too (Path 12 P2, increment 6): `_shared/stations-bank.js` builds their **Question bank** card, reads with
+  `peek()`, writes nothing, and turns a ticked question into a station with `bankId` on it (a text station on 019; a choice or text station on 018).
+  A new page that makes stations from questions calls `StationsBank.mount` and does not write a second chooser (`npm run test:stations-bank`,
+  `npm run test:stations-bank-smoke`).
   Since v300 the bank holds the teacher's **named sets** (`sets` beside `questions`, Devon's "B": an ordered list of
   question ids saved with the bank, repeats allowed, seed ids allowed); the stored `schema` is 2 only while a set exists,
   which is what stops a v265–v299 page from saving the bank without them. A file's sets are imported beside the
