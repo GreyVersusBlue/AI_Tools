@@ -61,6 +61,7 @@
     "Tools/name-picker/test/parity-sound.mjs",
     "Tools/name-picker/test/parity-modes.mjs",
     "Tools/name-picker/test/parity-draft.mjs",
+    "Tools/name-picker/test/parity-ui.mjs",
     "Tools/name-picker/test/smoke-modes.mjs",
     "Tools/name-picker/test/smoke-sound.mjs",
     "Tools/name-picker/test/smoke-themes.mjs",
