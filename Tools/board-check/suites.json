@@ -224,6 +224,7 @@
     "Tools/picture-prompt-generator/test/smoke-image-sets.mjs",
     "Tools/verb-conjugation-poster-generator/test/smoke-panel-colors.mjs",
     "Tools/verb-conjugation-poster-generator/test/smoke-callouts.mjs",
+    "Tools/verb-conjugation-poster-generator/test/smoke-add-verb.mjs",
     "Tools/historical-trading-card-maker/test/smoke-card-size.mjs",
     "Tools/historical-trading-card-maker/test/smoke-photo.mjs",
     "Tools/historical-trading-card-maker/test/smoke-photo-store.mjs",

@@ -207,6 +207,7 @@
     "test:trading-cards-photo-store": "node Tools/historical-trading-card-maker/test/smoke-photo-store.mjs",
     "test:verb-poster": "node Tools/verb-conjugation-poster-generator/test/smoke-panel-colors.mjs",
     "test:verb-poster-callouts": "node Tools/verb-conjugation-poster-generator/test/smoke-callouts.mjs",
+    "test:verb-poster-add-verb": "node Tools/verb-conjugation-poster-generator/test/smoke-add-verb.mjs",
     "test:trading-cards": "node Tools/historical-trading-card-maker/test/smoke-card-size.mjs && node Tools/historical-trading-card-maker/test/smoke-photo.mjs && node Tools/historical-trading-card-maker/test/smoke-share.mjs && node Tools/historical-trading-card-maker/test/smoke-game.mjs",
     "test:lab-report": "node Tools/lab-report-template-builder/test/smoke-typed-columns.mjs",
     "test:lab-report-packets": "node Tools/lab-report-template-builder/test/smoke-packet-split.mjs",

@@ -117,6 +117,9 @@
   .callout-verb input { width: auto; margin: 0; }
   .callout-verb label { margin: 0; font-weight: 400; font-size: .84rem; }
   .callout-status { font-size: .78rem; color: var(--muted); margin: 0; }
+  .addverb-row { display: flex; gap: .6rem; flex-wrap: wrap; }
+  .addverb-row > div { flex: 1 1 8rem; min-width: 0; }
+  .panel-unchecked { font-size: .78rem; color: var(--muted); margin: .2rem 0 .4rem; }
 
   /* The call-out box prints under the panels: small, one line per verb, so a
      poster that fits its page still fits it with the box. Paper, like the rest
@@ -225,6 +228,22 @@
     </div>
 
     <div>
+      <div class="card" id="addVerbCard">
+        <h2>Add a verb</h2>
+        <p class="hint" style="margin-top:0;">Type an infinitive and the poster gets a panel with its six forms, worked out from
+          the pattern for that language. You can edit any form afterwards.</p>
+        <div class="addverb-row">
+          <div><label for="addVerbLang">Language</label><select id="addVerbLang"></select></div>
+          <div><label for="addVerbTense">Tense</label><select id="addVerbTense"></select></div>
+        </div>
+        <div class="addverb-row">
+          <div><label for="addVerbInf">Infinitive</label><input type="text" id="addVerbInf" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. bailar"></div>
+          <div><label for="addVerbGloss">English meaning (optional)</label><input type="text" id="addVerbGloss" autocomplete="off" placeholder="e.g. to dance"></div>
+        </div>
+        <button class="secondary full" id="addVerbBtn" type="button">Add verb as a panel</button>
+        <p class="callout-status" id="addVerbStatus" role="status" aria-live="polite">Unreviewed: no language teacher has read the forms this makes.</p>
+      </div>
+
       <div class="card">
         <h2>Panels (one per verb group or tense)</h2>
         <div id="panelsWrap"></div>
@@ -307,6 +326,7 @@
   ['templateSelect', 'loadTemplateBtn', 'posterTitle', 'personsWrap', 'panelsWrap', 'addPanelBtn',
    'printBtn', 'printArea', 'colCount', 'colorPanels',
    'calloutOn', 'calloutLang', 'calloutTense', 'calloutVerbs', 'calloutStatus',
+   'addVerbLang', 'addVerbTense', 'addVerbInf', 'addVerbGloss', 'addVerbBtn', 'addVerbStatus',
    'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var COLS_KEY = 'vcp_columns_v1';
@@ -430,7 +450,8 @@
         '<input type="text" data-panel-name="' + panel.id + '" value="' + escapeAttr(panel.name) + '" placeholder="Verb group name">' +
         '<select data-panel-color="' + panel.id + '" aria-label="Accent color for ' + escapeAttr(panel.name || 'this panel') + '">' + options + '</select>' +
         '<button type="button" class="danger small" data-del-panel="' + panel.id + '">Remove</button>' +
-        '</div>' + rows + '</div>';
+        '</div>' + (panel.unchecked === true ? '<p class="panel-unchecked">Unchecked: this verb is not on the pattern list, so the regular pattern was assumed. Read every form before you print.</p>' : '') +
+        rows + '</div>';
     }).join('');
   }
 
@@ -466,6 +487,68 @@
     state.panels.push({ id: uid(), name: 'New verb group', color: 'auto', forms: state.persons.map(function () { return ''; }) });
     save(); renderPanels();
   });
+
+  /* ---------- add a verb (Path 19 P3: _shared/conjugate.js) ----------
+     The infinitive is worked out by the engine into an ordinary panel, so nothing
+     new is stored but an `unchecked` flag. A verb the pack does not list is accepted and
+     conjugated as a regular one, marked unchecked (P19-7); a word the pack cannot read
+     as a verb at all is refused with the reason. Nothing it makes is called reviewed. */
+  var ADD_UNREVIEWED = ' Unreviewed: no language teacher has read these forms yet.';
+  function renderAddVerb() {
+    var langs = window.Conjugate.languages();
+    var lang = els.addVerbLang.value || langs[0].id;
+    els.addVerbLang.textContent = '';
+    langs.forEach(function (l) { els.addVerbLang.appendChild(option(l.id, l.name, l.id === lang)); });
+    fillAddVerbTenses(lang, els.addVerbTense.value);
+  }
+  function fillAddVerbTenses(lang, keep) {
+    var l = window.Conjugate.languages().filter(function (x) { return x.id === lang; })[0];
+    els.addVerbTense.textContent = '';
+    l.tenses.forEach(function (t) {
+      els.addVerbTense.appendChild(option(t.id, t.name, keep ? t.id === keep : t.id === 'present'));
+    });
+  }
+  els.addVerbLang.addEventListener('change', function () { fillAddVerbTenses(els.addVerbLang.value, ''); });
+
+  function addVerb() {
+    var lang = els.addVerbLang.value, tense = els.addVerbTense.value;
+    var inf = els.addVerbInf.value.trim(), gloss = els.addVerbGloss.value.trim();
+    if (!inf) {
+      els.addVerbStatus.textContent = 'Type an infinitive first, e.g. ' + (lang === 'fr' ? 'danser' : 'bailar') + '.';
+      els.addVerbInf.focus(); return;
+    }
+    var res = window.Conjugate.conjugate(lang, inf, tense);
+    if (res.problem || !res.forms.some(Boolean)) {
+      els.addVerbStatus.textContent = '\u201c' + inf + '\u201d does not look like a ' +
+        window.Conjugate.languages().filter(function (x) { return x.id === lang; })[0].name + ' infinitive, so no panel was added.';
+      els.addVerbInf.focus(); return;
+    }
+    var pack = window.Conjugate.languages().filter(function (x) { return x.id === lang; })[0];
+    /* Person labels follow the language when nothing is typed yet; otherwise the
+       poster's own column stays and the status says so. */
+    var empty = state.panels.every(function (p) { return !p.forms.some(function (f) { return String(f).trim(); }); });
+    var samePersons = JSON.stringify(state.persons) === JSON.stringify(pack.persons);
+    var personNote = '';
+    if (!samePersons) {
+      if (empty) { state.persons = pack.persons.slice(); renderPersons(); }
+      else personNote = ' The person column still reads as before; change it if this verb is in another language.';
+    }
+    var panel = {
+      id: uid(), name: res.infinitive + (gloss ? ' (' + gloss + ')' : ''), color: 'auto',
+      forms: res.forms.slice()
+    };
+    if (!res.known) panel.unchecked = true;
+    state.panels.push(panel);
+    save(); renderPanels();
+    els.addVerbInf.value = ''; els.addVerbGloss.value = '';
+    els.addVerbStatus.textContent = '\u201c' + res.infinitive + '\u201d added as a panel (' +
+      (pack.tenses.filter(function (t) { return t.id === tense; })[0] || { name: tense }).name.toLowerCase() + ').' +
+      (res.known ? '' : ' It is not on the pattern list, so it was conjugated as a regular verb and is unchecked.') +
+      ADD_UNREVIEWED + personNote;
+    els.addVerbInf.focus();
+  }
+  els.addVerbBtn.addEventListener('click', addVerb);
+  els.addVerbInf.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); addVerb(); } });
 
   els.colorPanels.addEventListener('change', function () {
     state.colorPanels = els.colorPanels.checked;
@@ -582,6 +665,7 @@
     renderPersons();
     renderPanels();
     renderCallout();
+    renderAddVerb();
   }
 
   function posterHtml() {
