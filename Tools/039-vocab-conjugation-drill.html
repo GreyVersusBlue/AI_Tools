@@ -25,6 +25,9 @@
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <script src="../_shared/state-link.js"></script>
+<!-- The site's word lists (Path 19 P2): this page reads 040's lists from them and writes its vocabulary to them. -->
+<script src="../_shared/store.js"></script>
+<script src="../_shared/word-list.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
@@ -270,8 +273,8 @@
           <textarea id="vocabInput" placeholder="la mesa: the table&#10;el libro: the book"></textarea>
 
           <div class="import-bridge" id="importFlashRow" style="display:none;">
-            <label for="flashSetSelect">Import from Vocabulary Flashcard Generator</label>
-            <p class="hint">Reads that tool's saved word lists straight from this browser (term/definition only &mdash; example, pronunciation, and part of speech aren&rsquo;t bridged yet).</p>
+            <label for="flashSetSelect">Import from a saved word list</label>
+            <p class="hint">Reads the word lists saved in this browser, including the Vocabulary Flashcard Generator&rsquo;s (term/definition only &mdash; example, pronunciation, and part of speech stay in the list).</p>
             <div class="row2">
               <select id="flashSetSelect"></select>
               <button type="button" class="secondary" id="importFlashBtn" style="margin:0;">Add words to this list</button>
@@ -354,6 +357,7 @@
       if (names.indexOf(name) === -1) { names.push(name); localStorage.setItem(STORE_LIST, JSON.stringify(names)); }
       localStorage.setItem(STORE_DATA + name, JSON.stringify(state));
       localStorage.setItem(STORE_CURRENT, name);
+      wordListDo(function () { WordList.putPairs(name, state.vocabText); });
     },
     load: function (name) { return safeParse(localStorage.getItem(STORE_DATA + name), null); },
     remove: function (name) {
@@ -365,55 +369,25 @@
     getCurrent: function () { return localStorage.getItem(STORE_CURRENT); }
   };
 
-  /* ---------- read-only cross-tool bridge: import from Vocabulary Flashcard Generator ----------
-     Reads Vocabulary Flashcard & Word Wall Generator's own localStorage
-     contract (Tools/vocab-flashcard-generator/vfg-store.js: a list of list
-     names under 'gvb-vocab-flashcards:list', one JSON blob per name under
-     'gvb-vocab-flashcards:data:<name>', each holding a `words` string in
-     that tool's own tab/colon/CSV "term: definition" format — see its
-     VocabLayout.parseWordList). This is a single-file tool, so rather than
-     loading that tool's own vfg-layout.js as a dependency, this is a
-     minimal, deliberately read-only reimplementation of just enough of its
-     parsing to convert a saved list into this tool's own {word, translation}
-     vocab shape. Only term/definition make the trip — that list's example
-     sentence, pronunciation, and part-of-speech columns are dropped, since
-     this tool's own vocab format has nowhere to put them yet. */
-  var VFG_LIST_KEY = 'gvb-vocab-flashcards:list';
-  var VFG_DATA_PREFIX = 'gvb-vocab-flashcards:data:';
+  /* ---------- the site's word lists (Path 19 P2): import from Vocabulary Flashcard Generator ----------
+     _shared/word-list.js holds every saved word list, and Vocabulary Flashcard & Word Wall
+     Generator's lists are in it (it takes 040's own keys over once). This page reads from there
+     instead of from 040's localStorage keys: only term and definition come over, this tool's own
+     vocab format has nowhere to put the rest, and a word's example, gender and tags stay in the list
+     for the tools that use them. It writes the other way too: Store.save() below puts this set's
+     vocabulary into the list of the same name by term and definition only (WordList.putPairs). A
+     failure there never stops a save. */
+  function wordListDo(fn) { try { return fn(); } catch (e) { return undefined; } }
 
   function listFlashcardSets() {
-    var names = safeParse(localStorage.getItem(VFG_LIST_KEY), []);
-    return Array.isArray(names) ? names.filter(function (n) { return typeof n === 'string' && n; }) : [];
-  }
-
-  function parseFlashcardWordsText(text) {
-    var out = [];
-    String(text || '').replace(/\r\n/g, '\n').split('\n').forEach(function (line) {
-      if (!line.trim()) return;
-      var term, definition = '';
-      if (line.indexOf('\t') !== -1) {
-        var tabParts = line.split('\t');
-        term = (tabParts[0] || '').trim(); definition = (tabParts[1] || '').trim();
-      } else if (line.indexOf(':') !== -1) {
-        var idx = line.indexOf(':');
-        term = line.slice(0, idx).trim();
-        definition = line.slice(idx + 1).split('|')[0].trim();
-      } else if (line.indexOf(',') !== -1) {
-        var commaParts = line.split(',');
-        term = (commaParts[0] || '').trim(); definition = (commaParts[1] || '').trim();
-      } else {
-        return;
-      }
-      if (term) out.push({ word: term, translation: definition });
-    });
-    return out;
+    return wordListDo(function () { return WordList.names(); }) || [];
   }
 
   function getFlashcardItems(name) {
     if (!name) return [];
-    var data = safeParse(localStorage.getItem(VFG_DATA_PREFIX + name), null);
-    if (!data || typeof data.words !== 'string') return [];
-    return parseFlashcardWordsText(data.words);
+    var list = wordListDo(function () { return WordList.get(name); });
+    if (!list) return [];
+    return list.words.map(function (w) { return { word: w.term, translation: w.definition }; });
   }
 
   var els = {};
@@ -1373,6 +1347,9 @@
   });
 
   /* ---------- boot ---------- */
+  // The word lists take 040's lists and this page's own sets over once each (word-list.js), so the
+  // import row below finds them and a set typed here before the hub is a list too.
+  wordListDo(function () { WordList.importLegacy(window.localStorage); WordList.importLegacyDrill(window.localStorage); });
   if (!importSharedSet()) {
     var current = Store.getCurrent();
     if (current && Store.load(current)) {

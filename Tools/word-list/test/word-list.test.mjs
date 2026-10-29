@@ -6,7 +6,9 @@
 //
 // word-list.js is a classic script publishing window.WordList. It runs here in a vm context over a
 // fake localStorage, beside store.js, paste-table.js and export.js. The suite then runs itself against
-// deliberately broken copies of the module and requires each to fail (break-on-purpose). Every word is
+// deliberately broken copies of the module and requires each to fail (break-on-purpose). The word-pair
+// reader is held to 039's own parseVocab, which this file CUTS OUT OF 039'S PAGE BY TEXT (a rename of
+// that function in the page fails the suite on purpose: it is the other half of the parity). Every word is
 // invented. Exits 1 on any failure.
 
 import fs from 'node:fs';
@@ -49,6 +51,12 @@ function page(storage, src = SRC, { noStore = false } = {}) {
   return win;
 }
 
+const PAGE_039 = read('Tools/039-vocab-conjugation-drill.html');
+const parseVocab039 = (() => {
+  const m = PAGE_039.match(/function parseVocab\(text\) \{[\s\S]*?\n {2}\}\n/);
+  if (!m) { console.log('  FAIL parseVocab was not found in 039; the pair-reader parity cannot be held'); process.exit(1); }
+  return vm.runInNewContext('(' + m[0].replace(/^function parseVocab/, 'function') + ')');
+})();
 const plain = v => JSON.parse(JSON.stringify(v));
 const sorted = v => Array.isArray(v) ? v.map(sorted) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map(k => [k, sorted(v[k])])) : v;
 const stable = v => JSON.stringify(sorted(plain(v)));
@@ -59,6 +67,7 @@ function suite(label, src) {
   const eq = (a, b, l) => ok(stable(a) === stable(b), l + (stable(a) === stable(b) ? '' : ` (got ${stable(a)})`));
   const mk = (seed) => { const st = fakeStorage(seed); const w = page(st, src); return { st, w, WL: w.WordList }; };
   const { WL, w: win } = mk();
+  win.__parseVocab039 = parseVocab039;
   const T = (term, o = {}) => ({ term, definition: '', partOfSpeech: '', example: '', pronunciation: '', gender: '', tags: [], ...o });
 
   // ---- the word ----
@@ -90,6 +99,21 @@ function suite(label, src) {
     if (JSON.stringify(WL.fromText(line)) !== JSON.stringify(plain(win.VocabLayout.parseWordList(line)))) { same = false; break; }
   }
   ok(same, 'fromText equals parseWordList on 400 seeded random lines');
+
+  // ---- 039's word pairs held to its own parseVocab ----
+  const pairCorpus = ['casa: house', 'casa:', ': nothing', 'a:b:c', 'bare word', '  spaced  :  out  ', 'é: ü', '', '   ', 'x:y\nz', 'one: 1\n\ntwo: 2\r\nthree'];
+  for (const text of pairCorpus) {
+    eq(WL.fromPairs(text).map(x => ({ word: x.term, translation: x.definition })), win.__parseVocab039(text), 'fromPairs equals 039\'s parseVocab on ' + JSON.stringify(text));
+  }
+  let samePairs = true;
+  for (let i = 0; i < 300; i++) {
+    let text = ''; const n = Math.floor(rnd() * 16);
+    for (let j = 0; j < n; j++) text += ['a', ' ', ':', '\n', 'é', '|'][Math.floor(rnd() * 6)];
+    if (JSON.stringify(WL.fromPairs(text).map(x => ({ word: x.term, translation: x.definition }))) !== JSON.stringify(win.__parseVocab039(text))) { samePairs = false; break; }
+  }
+  ok(samePairs, 'fromPairs equals parseVocab on 300 seeded random texts');
+  eq(WL.toPairs([T('casa', { definition: 'house' }), T('solo'), T('a:b', { definition: 'x' })]), 'casa: house\nsolo', 'toPairs writes term: definition, a bare term alone, and leaves out a term 039 could not read back');
+  eq(WL.fromPairs(WL.toPairs([T('a', { definition: 'b' }), T('c'), T('d', { definition: 'e' })])).length, 3, 'toPairs then fromPairs keeps every term it could write');
 
   // ---- toText round-trips ----
   const rt = [
@@ -190,6 +214,38 @@ function suite(label, src) {
   eq(m2.WL.importLegacy(m2.st, 8000).merged, 1, 'a set whose name a list already has is merged into it');
   eq(m2.WL.get('Spanish 1').words.map(x => [x.term, x.definition, x.gender]), [['casa', 'MINE', 'f'], ['perro', 'dog', ''], ['luz', 'light', '']], 'the merge keeps the hub\'s own words and fills, never overwrites');
 
+
+  // ---- 039's write-through and its migration ----
+  const q = mk();
+  q.WL.put('Unit 4', [T('casa', { definition: 'house', example: 'Mi casa', gender: 'f', tags: ['u4'] }), T('perro', { definition: 'dog' })], 1);
+  q.WL.putPairs('Unit 4', 'perro: hound\nnueva: new\ncasa: home', 2);
+  eq(q.WL.get('Unit 4').words.map(x => [x.term, x.definition, x.example, x.gender, x.tags]),
+    [['perro', 'hound', '', '', []], ['nueva', 'new', '', '', []], ['casa', 'home', 'Mi casa', 'f', ['u4']]], 'putPairs changes term and definition only: an example, gender and tags stay with their term');
+  ok(q.WL.putPairs('No such', '  \n') === null && !q.WL.names().includes('No such'), 'a blank text makes no list');
+  ok(q.WL.putPairs('Made', 'a: b') && q.WL.names().includes('Made'), 'a text with words makes the list');
+  const drillBlob = (vocabText, extra = {}) => JSON.stringify({ name: 'x', mode: 'vocab', vocabText, persons: [], conjugations: [], ...extra });
+  const oldDrill = {
+    'gvb-vocab-conj:list': JSON.stringify(['Drill A', 'Drill B', 'Conj only', 'Broken', 'Unit 4']),
+    'gvb-vocab-conj:data:Drill A': drillBlob('hablar: to speak\ncomer\nbad:'),
+    'gvb-vocab-conj:data:Drill B': drillBlob('uno: one'),
+    'gvb-vocab-conj:data:Conj only': drillBlob('', { mode: 'conjugation' }),
+    'gvb-vocab-conj:data:Broken': '{nope',
+    'gvb-vocab-conj:data:Unit 4': drillBlob('casa: DRILL\nluz: light'),
+    'gvb-vocab-conj:current': 'Drill A',
+  };
+  const dm = mk(oldDrill);
+  dm.WL.put('Unit 4', [T('casa', { definition: 'house' })], 1);
+  const writesBefore = dm.st.writes.length;
+  eq(dm.WL.importLegacyDrill(dm.st, 9000), { moved: 2, merged: 1 }, 'two drill sets move, one joins a list of its name; one with no vocabulary and one broken are skipped');
+  eq(dm.WL.get('Drill A').words.map(x => [x.term, x.definition]), [['hablar', 'to speak'], ['comer', ''], ['bad', '']], 'a drill set reads as 039 reads it: a bare word is kept');
+  eq(dm.WL.get('Unit 4').words.map(x => [x.term, x.definition]), [['casa', 'house'], ['luz', 'light']], 'a drill set joining a list fills it and changes nothing it has');
+  ok(dm.st.writes.slice(writesBefore).every(k => k === 'gvb-word-lists'), '039\'s keys are only read');
+  eq(dm.WL.importLegacyDrill(dm.st, 9500), { moved: 0, merged: 0 }, 'a second call adds nothing');
+  dm.WL.remove('Drill B'); dm.WL.importLegacyDrill(dm.st, 9600);
+  ok(!dm.WL.names().includes('Drill B'), 'a list deleted after the move does not come back');
+  eq(dm.WL.load().legacyDrill, ['Drill A', 'Drill B', 'Conj only', 'Unit 4'], 'the drill names are recorded apart from 040\'s');
+  eq(mk({ ...oldDrill, ...old }).WL.importLegacy(undefined, 1).moved, 3, 'the two migrations do not disturb each other (040 first)');
+
   // ---- an import is planned before it is stored ----
   const p = mk(); p.WL.put('Unit 1', [T('casa', { definition: 'house' })], 1);
   const plan = p.WL.importPlan([{ name: 'Unit 1', words: [T('casa', { example: 'e' }), T('luz')] }, { name: 'New', words: [T('x')] }]);
@@ -222,6 +278,9 @@ const mutants = [
   ['the CSV apostrophe stays', s => s.replace("function unguard(s) { return /^'[=+\\-@]/.test(s) ? s.slice(1) : s; }", "function unguard(s) { return s; }")],
   ['a header needs one name', s => s.replace("hits >= 2", "hits >= 1")],
   ['put keeps duplicates of ids', s => s.replace("if (seen[w.id]) w.id = '';", "")],
+  ['putPairs blanks the example', s => s.replace("reconcile(l ? l.words : [], pairs, ['term', 'definition'])", "reconcile(l ? l.words : [], pairs)")],
+  ['importLegacyDrill forgets its names', s => s.replace("s.legacyDrill.push(name); touched = true;", "touched = true;")],
+  ['fromPairs drops a bare word', s => s.replace("out.push({ term: trimmed, definition: '' }); return;", "return;")],
   ['a dangling current is kept', s => s.replace("if (s.current && !seenName[s.current]) s.current = '';", "")],
   ['toText never uses the tab form', s => s.replace("if (t.indexOf(':') !== -1 ||", "if (false &&")],
   ['unknown fields are dropped', s => s.replace("for (k in w) if (Object.prototype.hasOwnProperty.call(w, k)) out[k] = w[k];", "")],

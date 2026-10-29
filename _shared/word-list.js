@@ -36,7 +36,16 @@
            (040's own column order, then two new ones; tags joined with ';'); the
            header row is optional on the way in, and without one the columns are in
            that order, so a five-column paste made for 040 reads the same here.
-   A file is read into a plan (importPlan) before anything is stored.            */
+   A file is read into a plan (importPlan) before anything is stored.
+
+   039'S WORD PAIRS (Path 19 P2)
+   039 Vocab & Conjugation Drill keeps a set's vocabulary as `vocabText`, lines of
+   "word: translation" (a line with no colon is a word with no translation).
+   fromPairs / toPairs are that format; putPairs(name, text) writes it through to the
+   hub changing ONLY term and definition, so a list 040 gave an example, a gender or
+   tags keeps them; importLegacyDrill() takes 039's own keys ('gvb-vocab-conj:list',
+   'gvb-vocab-conj:data:<name>', read, never written) over once per set name, recorded
+   in `legacyDrill`, and skips a set that has no vocabulary (a conjugation-only set).  */
 (function (root) {
   'use strict';
 
@@ -147,6 +156,31 @@
     }).filter(Boolean);
   }
 
+  /* 039's vocabText -> words (term, definition only). A line with no colon is a word alone. */
+  function fromPairs(text) {
+    var out = [];
+    String(text || '').split('\n').forEach(function (line) {
+      var trimmed = line.trim();
+      if (!trimmed) return;
+      var idx = trimmed.indexOf(':');
+      if (idx === -1) { out.push({ term: trimmed, definition: '' }); return; }
+      var term = trimmed.slice(0, idx).trim();
+      if (term) out.push({ term: term, definition: trimmed.slice(idx + 1).trim() });
+    });
+    return out;
+  }
+
+  /* Words -> 039's vocabText: "term: definition", or the bare term when there is no definition.
+     A term holding a colon cannot be written in that format (039 would read it as term and
+     definition) and is left out. */
+  function toPairs(words) {
+    return (words || []).map(function (w) {
+      var t = str(w.term).replace(/[\r\n]+/g, ' '), d = str(w.definition).replace(/[\r\n]+/g, ' ');
+      if (!t) return null;
+      return t.indexOf(':') !== -1 ? null : (d ? t + ': ' + d : t);
+    }).filter(function (l) { return l !== null; }).join('\n');
+  }
+
   /* Words -> the textarea's text, in the form fromText reads back to the same five fields. */
   function toText(words) {
     function flat(s) { return str(s).replace(/[\t\r\n]+/g, ' '); }
@@ -165,14 +199,15 @@
   /* Edited text -> the list's words, keeping what the text cannot hold. Each parsed word takes
      the id and the extra fields (gender, tags, anything unknown) of the first unused word that
      has the same term; the five text fields are the text's. */
-  function reconcile(existing, parsed) {
+  function reconcile(existing, parsed, fields) {
+    fields = fields || ['term', 'definition', 'example', 'pronunciation', 'partOfSpeech'];
     var used = {}, pool = (existing || []);
     var out = parsed.map(function (p) {
       var hit = -1;
       for (var i = 0; i < pool.length; i++) if (!used[i] && pool[i].term === p.term) { hit = i; break; }
       var base = {};
       if (hit >= 0) { used[hit] = 1; for (var k in pool[hit]) if (Object.prototype.hasOwnProperty.call(pool[hit], k)) base[k] = pool[hit][k]; }
-      ['term', 'definition', 'example', 'pronunciation', 'partOfSpeech'].forEach(function (f) { base[f] = p[f]; });
+      fields.forEach(function (f) { base[f] = p[f]; });
       return normalizeWord(base);
     });
     var n = nextNumber(out.concat(pool), 'w');
@@ -296,7 +331,7 @@
 
   /* ---- the state and storage ---------------------------------------------- */
 
-  function emptyState() { return { schema: SCHEMA, lists: [], current: '', legacy: [] }; }
+  function emptyState() { return { schema: SCHEMA, lists: [], current: '', legacy: [], legacyDrill: [] }; }
 
   function cleanState(d) {
     var s = emptyState();
@@ -317,7 +352,9 @@
     s.lists.forEach(function (l) { if (!l.id || seen[l.id]) l.id = 'l' + (n++); seen[l.id] = 1; });
     s.current = str(d.current);
     if (s.current && !seenName[s.current]) s.current = '';
-    s.legacy = Array.isArray(d.legacy) ? d.legacy.filter(function (x) { return typeof x === 'string' && x; }) : [];
+    function names(x) { return Array.isArray(x) ? x.filter(function (n) { return typeof n === 'string' && n; }) : []; }
+    s.legacy = names(d.legacy);
+    s.legacyDrill = names(d.legacyDrill);
     return s;
   }
 
@@ -359,6 +396,15 @@
   function putText(name, text, now) {
     var l = get(name);
     return put(name, reconcile(l ? l.words : [], fromText(text)), now);
+  }
+
+  /* 039's write-through: the vocabulary text becomes the list `name`'s terms and definitions in
+     order; a word's other fields, id and tags stay with its term. Writes nothing for a blank text
+     when there is no such list yet. */
+  function putPairs(name, text, now) {
+    var l = get(name), pairs = fromPairs(text);
+    if (!l && !pairs.length) return null;
+    return put(name, reconcile(l ? l.words : [], pairs, ['term', 'definition']), now);
   }
 
   function remove(name) {
@@ -407,6 +453,29 @@
     return { moved: moved, merged: merged };
   }
 
+  /* 039's own keys -> lists, once per set name; a set with no vocabulary is skipped. */
+  function importLegacyDrill(ls, now) {
+    ls = ls || root.localStorage;
+    var list;
+    try { list = JSON.parse(ls.getItem('gvb-vocab-conj:list') || '[]'); } catch (e) { list = []; }
+    if (!Array.isArray(list)) list = [];
+    var s = load(), moved = 0, merged = 0, t = typeof now === 'number' ? now : Date.now(), touched = false;
+    list.forEach(function (name) {
+      if (typeof name !== 'string' || !name || s.legacyDrill.indexOf(name) !== -1) return;
+      var blob = null;
+      try { blob = JSON.parse(ls.getItem('gvb-vocab-conj:data:' + name) || 'null'); } catch (e) { blob = null; }
+      if (!blob || typeof blob !== 'object') return;
+      s.legacyDrill.push(name); touched = true;
+      var pairs = fromPairs(typeof blob.vocabText === 'string' ? blob.vocabText : '');
+      if (!pairs.length) return;
+      var have = findList(s, name);
+      if (have) { have.words = mergeWords(have.words, pairs).words; have.updatedAt = t; merged++; }
+      else { s.lists.push({ id: 'l' + nextNumber(s.lists, 'l'), name: name, words: cleanWords(pairs), createdAt: t, updatedAt: t }); moved++; }
+    });
+    if (touched) save(s);
+    return { moved: moved, merged: merged };
+  }
+
   /* What storing a file's lists would do, shown before anything is stored: per list, new or
      merged, and how many words each way. Writes nothing. */
   function importPlan(incoming) {
@@ -434,11 +503,11 @@
   root.WordList = {
     KEY: KEY, SCHEMA: SCHEMA, COLUMNS: COLUMNS.slice(),
     normalizeWord: normalizeWord, cleanWords: cleanWords,
-    fromText: fromText, toText: toText, reconcile: reconcile, mergeWords: mergeWords,
+    fromText: fromText, toText: toText, fromPairs: fromPairs, toPairs: toPairs, reconcile: reconcile, mergeWords: mergeWords,
     parseTable: parseTable, toCsv: toCsv, templateCsv: templateCsv,
     toJSON: toJSON, fromJSON: fromJSON,
     load: load, save: save, names: names, get: get, put: put, putText: putText,
     remove: remove, rename: rename, setCurrent: setCurrent,
-    importLegacy: importLegacy, importPlan: importPlan, applyImport: applyImport
+    putPairs: putPairs, importLegacy: importLegacy, importLegacyDrill: importLegacyDrill, importPlan: importPlan, applyImport: applyImport
   };
 })(typeof window !== 'undefined' ? window : globalThis);

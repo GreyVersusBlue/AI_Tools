@@ -1482,8 +1482,15 @@
         { p: 'gvb-vocab-conj:', legacy: true },
         { p: 'gvb-vocab-conj:data:' },
       ],
+      /* The shared word lists (Path 19 P2): this page reads 040's lists from them and writes its
+         vocabulary into the list of the same name (term and definition only). 040's own keys are
+         read once by word-list.js's importLegacy. */
       reads: [
         'gvb-vocab-flashcards:list',
+        'gvb-word-lists',
+      ],
+      writes: [
+        'gvb-word-lists',
       ],
       readPrefixes: [
         'gvb-vocab-flashcards:data:',
