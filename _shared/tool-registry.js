@@ -1605,6 +1605,10 @@
       keys: [
         { k: 'cffb_list_v1' },
       ],
+      /* The shared word lists (Path 19 P2): a list can be put in the bulk box; read-only. */
+      reads: [
+        'gvb-word-lists',
+      ],
     },
     {
       slug: 'braille-reading-trainer',

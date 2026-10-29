@@ -329,6 +329,7 @@
     "test:word-list-039": "node Tools/word-list/test/smoke-adopter-039.mjs",
     "test:word-list-027": "node Tools/word-list/test/smoke-adopter-027.mjs",
     "test:word-list-051": "node Tools/word-list/test/smoke-adopter-051.mjs",
+    "test:word-list-052": "node Tools/word-list/test/smoke-adopter-052.mjs",
     "test:stations-bank-smoke": "node Tools/stations/test/smoke-bank-stations.mjs",
     "test:export": "node Tools/export/test/export.test.mjs && node Tools/export/test/smoke-export.mjs",
     "test:trading-card-pdf": "node Tools/historical-trading-card-maker/test/smoke-pdf-export.mjs",

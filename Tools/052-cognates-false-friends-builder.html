@@ -24,6 +24,9 @@
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/state-link.js"></script>
+<!-- The site's word lists (Path 19 P2): a saved list can be put in the bulk box. -->
+<script src="../_shared/store.js"></script>
+<script src="../_shared/word-list.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
@@ -139,6 +142,12 @@
     <textarea id="bulkInput" placeholder="animal | animal&#10;hospital | hospital&#10;embarazada | embarrassed | Actually means &quot;pregnant.&quot;"></textarea>
     <button type="button" class="secondary" id="bulkImportBtn">Add to lists</button>
     <p class="bulk-note" id="bulkNote" style="display:none;" aria-live="polite"></p>
+    <div id="wordListRow" hidden style="margin-top:.8rem;">
+      <label for="wordListSelect">Or start from a saved word list</label>
+      <p class="hint">Puts the words of a list saved in this browser (the Vocabulary Flashcard Generator&rsquo;s, for one) in the box above as <code>word | English</code> lines. Check them, then Add to lists. A line with a tab and a third field after it (what the word actually means) is added as a false friend.</p>
+      <select id="wordListSelect"></select>
+      <button type="button" class="secondary" id="wordListFillBtn">Put the words in the box</button>
+    </div>
   </div>
 
   <div class="card">
@@ -223,7 +232,7 @@
   var els = {};
   ['langName', 'templateSelect', 'loadTemplateBtn', 'cognatesWrap', 'addCognateBtn',
    'falseFriendsWrap', 'addFalseFriendBtn', 'printBtn', 'printArea',
-   'bulkInput', 'bulkImportBtn', 'bulkNote',
+   'bulkInput', 'bulkImportBtn', 'bulkNote', 'wordListRow', 'wordListSelect', 'wordListFillBtn',
    'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { lang: '', cognates: [], falseFriends: [] };
@@ -505,10 +514,45 @@
     });
   }
 
+  /* ---------- start from a saved word list (Path 19 P2) ----------
+     Read-only: _shared/word-list.js holds the saved lists. The words go in the bulk box as tab-separated
+     lines (parseBulkLine reads a tab as a field break, so a "|" in a word is safe) and are added to the
+     lists only by the existing Add to lists button, as typed words are. */
+  function wordListDo(fn) { try { return fn(); } catch (e) { return undefined; } }
+  function refreshWordListRow() {
+    var names = wordListDo(function () { return WordList.names(); }) || [];
+    els.wordListRow.hidden = !names.length;
+    var current = els.wordListSelect.value;
+    els.wordListSelect.innerHTML = '';
+    names.forEach(function (n) {
+      var opt = document.createElement('option');
+      opt.value = n; opt.textContent = n;
+      els.wordListSelect.appendChild(opt);
+    });
+    if (current && names.indexOf(current) !== -1) els.wordListSelect.value = current;
+  }
+  els.wordListFillBtn.addEventListener('click', function () {
+    var list = wordListDo(function () { return WordList.get(els.wordListSelect.value); });
+    var words = list ? list.words.filter(function (w) { return w.definition; }) : [];
+    if (!words.length) {
+      els.bulkNote.textContent = 'That list has no words with a definition yet.';
+      els.bulkNote.className = 'bulk-note error';
+      els.bulkNote.style.display = '';
+      return;
+    }
+    var lines = words.map(function (w) { return w.term.replace(/[\t\r\n]+/g, ' ') + '\t' + w.definition.replace(/[\t\r\n]+/g, ' '); });
+    els.bulkInput.value = (els.bulkInput.value.trim() ? els.bulkInput.value.replace(/\n*$/, '\n') : '') + lines.join('\n');
+    els.bulkNote.textContent = 'Put ' + words.length + (words.length === 1 ? ' word' : ' words') + ' from "' + list.name + '" in the box. Nothing is added to the lists until you press Add to lists.';
+    els.bulkNote.className = 'bulk-note';
+    els.bulkNote.style.display = '';
+  });
+
   /* ---------- boot ---------- */
+  wordListDo(function () { WordList.importLegacy(window.localStorage); WordList.importLegacyDrill(window.localStorage); });
   var hadSaved = load();
   importSharedList(hadSaved);
   renderAll();
+  refreshWordListRow();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>
