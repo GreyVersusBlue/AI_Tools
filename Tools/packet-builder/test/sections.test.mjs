@@ -187,6 +187,23 @@ function checks(PS) {
     return isDeepStrictEqual(plain(PS.parsePresets(plain(PS.presetsRecord(l)))), l);
   });
 
+  // load() and readerFor()
+  t('load returns what the provider cleans, and null for an unknown id or a provider with no load', () => {
+    const r = PS.create(); r.register(provider({ load: ctx => ctx.read('demo-key') })); r.register(provider({ id: 'plain' }));
+    const ctx = { read: () => ({ a: 1 }) };
+    return r.load('demo', ctx).a === 1 && r.load('nope', ctx) === null && r.load('plain', ctx) === null;
+  });
+  t('load that throws, or returns undefined, is null', () => {
+    const r = PS.create(); r.register(provider({ load: () => { throw new Error('x'); } })); r.register(provider({ id: 'u', load: () => undefined }));
+    return r.load('demo', {}) === null && r.load('u', {}) === null;
+  });
+  t('a load that is not a function is refused at register', () => { try { PS.create().register(provider({ load: 5 })); return false; } catch (e) { return /load must be a function/.test(e.message); } });
+  t('readerFor parses JSON, and is undefined for missing, broken or a refusing storage', () => {
+    const store = { a: '{"x":1}', b: '{oops', c: '0' };
+    const rd = PS.readerFor({ getItem: k => (k in store ? store[k] : null) });
+    const bad = PS.readerFor({ getItem: () => { throw new Error('blocked'); } });
+    return rd('a').x === 1 && rd('b') === undefined && rd('zz') === undefined && rd('c') === 0 && bad('a') === undefined;
+  });
   // moveTo (drag and drop)
   t('moveTo puts the dragged id where the target was, in both directions', () => PS.moveTo(['a', 'b', 'c', 'd'], 0, 2).join() === 'b,c,a,d' && PS.moveTo(['a', 'b', 'c', 'd'], 3, 1).join() === 'a,d,b,c');
   t('moveTo to the same place or out of range changes nothing', () =>
@@ -222,6 +239,12 @@ const MUTANTS = [
   ['parsePresets allows repeated names', s => s.replace("if (!name || seen[key] ||", "if (!name ||")],
   ['parsePresets ignores the cap', s => s.replace(" || out.length >= MAX_PRESETS", '')],
   ['deletePreset is case-sensitive', s => s.replace("p.name.toLowerCase() !== String(name).trim().toLowerCase()", "p.name !== String(name)")],
+  ['load lets a throw through', s => s.replace('try { var r = p.load(ctx); return r === undefined ? null : r; } catch (e) { return null; }', 'var r = p.load(ctx); return r === undefined ? null : r;')],
+  ['load returns undefined for nothing', s => s.replace('return r === undefined ? null : r;', 'return r;')],
+  ['load answers for an unknown id', s => s.replace('if (!p || !p.load) return null;', 'if (!p.load) return null;')],
+  ['register takes a bad load', s => s.replace("if (p.load !== undefined && typeof p.load !== 'function') return 'load must be a function when given';", '')],
+  ['readerFor lets a bad value throw', s => s.replace('} catch (e) { return undefined; }\n    };', '} catch (e) { throw e; }\n    };')],
+  ['readerFor reads a missing key as null', s => s.replace('raw === null || raw === undefined ? undefined : JSON.parse(raw)', 'raw === undefined ? undefined : JSON.parse(raw)')],
   ['moveTo drops the dragged id', s => s.replace('out.splice(to, 0, one);', '')],
   ['moveTo inserts one place late', s => s.replace('out.splice(to, 0, one);', 'out.splice(to + 1, 0, one);')],
   ['moveTo accepts an index past the end', s => s.replace('from >= ids.length || to >= ids.length', 'from >= ids.length')],

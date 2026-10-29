@@ -12,6 +12,10 @@
    becomes markup. `html` carries markup a source tool already builds and
    escapes itself (seating's buildPrintPage); a provider that uses it owns that.
 
+   A provider may also have `load(ctx) -> the source tool's saved data, cleaned, or null`: the one place the
+   key's shape is read. 045 Sub Binder prints its own markup from `PacketSections.load(id, ctx)` and keeps no
+   key of its own. `readerFor(storage)` is the `read(key)` both pages hand a provider.
+
    A provider never throws at the page: evaluate() that throws is "unavailable",
    build() that throws puts the section in `skipped`. A key that is missing or
    broken reads as undefined, which every provider treats as "nothing saved".
@@ -169,6 +173,17 @@
     return out;
   }
 
+  /* read(key) over a localStorage-like object: parsed JSON, or undefined when the key is missing, broken or
+     the storage refuses. The storage is an argument, so this stays pure. */
+  function readerFor(storage) {
+    return function (key) {
+      try {
+        var raw = storage.getItem(key);
+        return raw === null || raw === undefined ? undefined : JSON.parse(raw);
+      } catch (e) { return undefined; }
+    };
+  }
+
   /* ---- the registry ---- */
 
   function create() {
@@ -188,6 +203,7 @@
       if (!Array.isArray(p.storageKeys) || p.storageKeys.some(function (k) { return typeof k !== 'string' || !k; })) return 'storageKeys must be a list of key names';
       if (typeof p.evaluate !== 'function') return 'evaluate must be a function';
       if (typeof p.build !== 'function') return 'build must be a function';
+      if (p.load !== undefined && typeof p.load !== 'function') return 'load must be a function when given';
       return '';
     }
 
@@ -197,7 +213,8 @@
       list.push({
         id: p.id, title: p.title.trim(), sourceSlug: p.sourceSlug,
         setupHint: typeof p.setupHint === 'string' ? p.setupHint : '',
-        storageKeys: p.storageKeys.slice(), evaluate: p.evaluate, build: p.build
+        storageKeys: p.storageKeys.slice(), evaluate: p.evaluate, build: p.build,
+        load: typeof p.load === 'function' ? p.load : null
       });
     }
 
@@ -215,6 +232,14 @@
       try { r = p.evaluate(ctx); } catch (e) { r = null; }
       if (!isObj(r)) return { available: false, status: 'Could not be read.' };
       return { available: r.available === true, status: str(r.status) };
+    }
+
+    /* The section's saved data as its provider's load() cleans it, or null: an unknown id, a provider
+       with no load(), a load() that throws, and "nothing saved" are all null. */
+    function load(id, ctx) {
+      var p = find(id);
+      if (!p || !p.load) return null;
+      try { var r = p.load(ctx); return r === undefined ? null : r; } catch (e) { return null; }
     }
 
     /* Every section, in registration order, with its status. Never throws. */
@@ -247,7 +272,7 @@
 
     return {
       register: register, ids: ids, get: get, list: all, storageKeys: storageKeys,
-      evaluate: evaluate, build: build
+      evaluate: evaluate, build: build, load: load
     };
   }
 
@@ -269,5 +294,6 @@
   api.deletePreset = deletePreset;
   api.move = move;
   api.moveTo = moveTo;
+  api.readerFor = readerFor;
   root.PacketSections = api;
 })(typeof window !== 'undefined' ? window : globalThis);

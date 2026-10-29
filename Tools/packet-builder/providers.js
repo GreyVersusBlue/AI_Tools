@@ -20,6 +20,11 @@
      seating-chart-v1  005's chart: { sections: [{ name, students: [{ id, name }], desks: [{ id, x, y, rot }],
        assign: { deskId: studentId } }], mirror, numbered, rooms }, read through ctx.SeatingRead
        (_shared/seating-read.js), which owns the geometry. Names only: a student's note or flag is never printed.
+     behavior-points-tracker-sections  008's { sets: { <section>: { tags: [{ label, delta }] } } }, the chip lists only.
+     gvb-exit-ticket:customPrompts  023's saved bank: [{ text }].
+     subPlanBuilder.lastAbsence.v1 { dates: [iso] } and subPlanBuilder.history.v1 [{ date, lessonTitle, overviewText,
+       scheduleText, materialsNote, ... }]  044's dated plans.
+     snfs_slip_v1  076's feedback slips: { v: 2, sets: [{ id, name, prompts: [{ text }] }], currentId } or the older bare { prompts }.
      np_rosters  { <roster name>: [student names] }, with crh_students_v1's
        { version: 1, rosters: { <name>: { students: [{ name, preferred }] } } } for preferred names. */
 (function (root) {
@@ -65,6 +70,7 @@
     sourceSlug: 'sub-plan-builder',
     setupHint: SUB_SETUP,
     storageKeys: [STANDING_KEY],
+    load: standing,
     evaluate: function (ctx) {
       var s = standing(ctx);
       if (!s) return { available: false, status: 'No standing details saved yet.' };
@@ -87,6 +93,7 @@
     sourceSlug: 'sub-plan-builder',
     setupHint: 'Add a fire route, lockdown procedure or medical alerts in Sub Plan Builder’s Emergency info card.',
     storageKeys: [STANDING_KEY],
+    load: standing,
     evaluate: function (ctx) {
       var s = standing(ctx);
       if (!s) return { available: false, status: 'No standing details saved yet.' };
@@ -115,6 +122,7 @@
     sourceSlug: 'hall-pass-log',
     setupHint: 'Set up your hall pass destinations in Digital Hall Pass / Sign-Out Log.',
     storageKeys: [HALL_KEY],
+    load: function (ctx) { var raw = ctx.read(HALL_KEY); return isObj(raw) && isObj(raw.sets) ? raw : null; },
     evaluate: function (ctx) {
       var n = hallSets(ctx).length;
       if (!n) return { available: false, status: 'No hall pass sections set up yet.' };
@@ -163,6 +171,7 @@
     sourceSlug: 'school-calendar-visualizer',
     setupHint: 'Save your school year in School Calendar Visualizer.',
     storageKeys: [CAL_KEY],
+    load: calendar,
     evaluate: function (ctx) {
       var cal = calendar(ctx);
       if (!cal) return { available: false, status: 'No school calendar saved yet.' };
@@ -287,6 +296,7 @@
     sourceSlug: 'seating-chart',
     setupHint: 'Build a seating chart in Seating Chart Generator.',
     storageKeys: [SEATING_KEY],
+    load: function (ctx) { var c = ctx.read(SEATING_KEY); return isObj(c) && Array.isArray(c.sections) ? c : null; },
     evaluate: function (ctx) {
       var s = seatingSections(ctx);
       if (!s) return { available: false, status: 'No seating chart saved yet.' };
@@ -312,6 +322,159 @@
         ] });
       });
       return { pages: pages };
+    }
+  });
+
+  /* ---- behavior plan: 008's chip lists, never its points ---- */
+
+  var BEHAVIOR_KEY = 'behavior-points-tracker-sections';
+
+  function behaviorStore(ctx) { var raw = ctx.read(BEHAVIOR_KEY); return isObj(raw) && isObj(raw.sets) ? raw : null; }
+  function behaviorSets(ctx) { var b = behaviorStore(ctx); return b ? Object.keys(b.sets).filter(function (n) { return isObj(b.sets[n]); }) : []; }
+
+  PS.register({
+    id: 'behavior-plan',
+    title: 'Behavior plan',
+    sourceSlug: 'behavior-points-tracker',
+    setupHint: 'Set up your behaviors in Behavior Points Tracker.',
+    storageKeys: [BEHAVIOR_KEY],
+    load: behaviorStore,
+    evaluate: function (ctx) {
+      var n = behaviorSets(ctx).length;
+      if (!n) return { available: false, status: 'No behavior tracker sections set up yet.' };
+      return { available: true, status: 'Saved (' + n + (n === 1 ? ' section' : ' sections') + ').' };
+    },
+    build: function (ctx) {
+      var b = behaviorStore(ctx), names = behaviorSets(ctx), blocks = [];
+      names.forEach(function (name) {
+        var tags = Array.isArray(b.sets[name].tags) ? b.sets[name].tags.filter(isObj) : [];
+        if (names.length > 1) blocks.push({ type: 'h', text: name, level: 3 });
+        blocks.push(tags.length
+          ? { type: 'table', head: ['Behavior', 'Points'], rows: tags.map(function (t) { return [t.label, (t.delta > 0 ? '+' : '') + t.delta]; }) }
+          : { type: 'p', text: 'No behaviors configured.' });
+      });
+      return { pages: [{ title: 'Behavior plan', blocks: blocks }] };
+    }
+  });
+
+  /* ---- exit ticket and bell ringer prompts: the teacher's saved bank ---- */
+
+  var PROMPTS_KEY = 'gvb-exit-ticket:customPrompts';
+  var PROMPTS_SHOWN = 12;
+
+  function prompts(ctx) { var raw = ctx.read(PROMPTS_KEY); return Array.isArray(raw) ? raw : []; }
+  function promptTexts(ctx) { return prompts(ctx).filter(function (p) { return isObj(p) && has(p.text); }).map(function (p) { return p.text.trim(); }); }
+
+  PS.register({
+    id: 'exit-ticket',
+    title: 'Exit ticket and bell ringer prompts',
+    sourceSlug: 'exit-ticket-generator',
+    setupHint: 'Save some prompts in Exit Ticket Generator.',
+    storageKeys: [PROMPTS_KEY],
+    load: prompts,
+    evaluate: function (ctx) {
+      var n = promptTexts(ctx).length;
+      if (!n) return { available: false, status: 'No custom prompts saved yet.' };
+      return { available: true, status: 'Saved (' + n + ' custom prompt' + (n === 1 ? '' : 's') + ').' };
+    },
+    build: function (ctx) {
+      return { pages: [{ title: 'Exit ticket and bell ringer prompts', blocks: [
+        { type: 'note', text: 'Your saved bank. Pick one before class; the tool does not remember which was used on a given day.' },
+        { type: 'list', items: promptTexts(ctx).slice(0, PROMPTS_SHOWN) }
+      ] }] };
+    }
+  });
+
+  /* ---- the lessons 044 saved for the last absence ---- */
+
+  var LAST_KEY = 'subPlanBuilder.lastAbsence.v1';
+  var HISTORY_KEY = 'subPlanBuilder.history.v1';
+
+  /* { dates: the absence's dates or null, history: 044's dated plans } */
+  function absence(ctx) {
+    var last = ctx.read(LAST_KEY), hist = ctx.read(HISTORY_KEY);
+    return {
+      dates: isObj(last) && Array.isArray(last.dates) && last.dates.length ? last.dates : null,
+      history: Array.isArray(hist) ? hist : []
+    };
+  }
+  function lessonsFor(ctx) {
+    var a = absence(ctx);
+    return (a.dates || []).map(function (d) {
+      for (var i = 0; i < a.history.length; i++) if (isObj(a.history[i]) && a.history[i].date === d) return a.history[i];
+      return null;
+    }).filter(function (h) { return h && (has(h.lessonTitle) || has(h.overviewText) || has(h.scheduleText) || has(h.materialsNote)); });
+  }
+
+  PS.register({
+    id: 'sub-plan-days',
+    title: 'Lessons for the last absence',
+    sourceSlug: 'sub-plan-builder',
+    setupHint: 'Save a dated plan in Sub Plan Builder (tick “Also save this plan as a dated history entry”).',
+    storageKeys: [LAST_KEY, HISTORY_KEY],
+    load: absence,
+    evaluate: function (ctx) {
+      var a = absence(ctx);
+      if (!a.dates) return { available: false, status: 'No absence set up in Sub Plan Builder yet.' };
+      var n = lessonsFor(ctx).length;
+      if (!n) return { available: false, status: 'No plan saved for the absence’s ' + (a.dates.length === 1 ? 'day' : 'days') + ' yet.' };
+      return { available: true, status: 'Saved (' + n + ' of ' + a.dates.length + (a.dates.length === 1 ? ' day' : ' days') + ').' };
+    },
+    build: function (ctx) {
+      return { pages: lessonsFor(ctx).map(function (h) {
+        var blocks = [];
+        var facts = rows([['Title', h.lessonTitle], ['Overview', h.overviewText], ['Schedule', h.scheduleText], ['Materials', h.materialsNote]]);
+        if (facts.length) blocks.push({ type: 'kv', rows: facts });
+        return { title: 'Lesson: ' + h.date, blocks: blocks };
+      }) };
+    }
+  });
+
+  /* ---- the substitute's feedback page: the questions on 076's current slip ---- */
+
+  var SLIP_KEY = 'snfs_slip_v1';
+  var SLIP_MAX = 12, SLIP_TEXT = 200;
+
+  /* 076 saves { v: 2, sets: [{ id, name, prompts: [{ id, text }] }], currentId, ...the current slip's fields at the top }
+     or, before saved slips, the bare { prompts }. Returns { name, prompts: [text] } for the slip in use, or null
+     when none is saved or it has no question in it. An untouched 076 saves nothing, and that is null here too. */
+  function slipPrompts(ctx) {
+    var d = ctx.read(SLIP_KEY);
+    if (!isObj(d)) return null;
+    var set = d;
+    if (d.v >= 2 && Array.isArray(d.sets)) {
+      var sets = d.sets.filter(isObj);
+      set = null;
+      for (var i = 0; i < sets.length; i++) if (sets[i].id === d.currentId) set = sets[i];
+      if (!set) set = sets[0] || null;
+    }
+    if (!isObj(set) || !Array.isArray(set.prompts)) return null;
+    var prompts = set.prompts.map(function (p) { return isObj(p) ? p.text : p; }).filter(has)
+      .map(function (t) { return t.trim().slice(0, SLIP_TEXT); }).slice(0, SLIP_MAX);
+    return prompts.length ? { name: has(set.name) ? set.name.trim() : '', prompts: prompts } : null;
+  }
+
+  PS.register({
+    id: 'sub-feedback',
+    title: 'Substitute feedback page (they fill it in)',
+    sourceSlug: 'sub-note-feedback-slip',
+    setupHint: 'Write your questions in Sub Note / Feedback Slip Generator.',
+    storageKeys: [SLIP_KEY],
+    load: slipPrompts,
+    evaluate: function (ctx) {
+      var f = slipPrompts(ctx);
+      if (!f) return { available: false, status: 'No feedback questions saved yet.' };
+      return { available: true, status: 'Saved (' + f.prompts.length + (f.prompts.length === 1 ? ' question' : ' questions') + ').' };
+    },
+    build: function (ctx) {
+      var f = slipPrompts(ctx);
+      var boxes = f ? f.prompts.map(function (t) {
+        return '<div class="pb-fb"><div class="pb-fb-label">' + PS.esc(t) + '</div><div class="pb-fb-box"></div></div>';
+      }).join('') : '';
+      return { pages: f ? [{ title: 'How did today go?', blocks: [
+        { type: 'note', text: 'Please fill this in before you leave and leave it on the desk.' },
+        { type: 'html', html: boxes }
+      ] }] : [] };
     }
   });
 })(typeof window !== 'undefined' ? window : globalThis);

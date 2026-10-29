@@ -639,7 +639,7 @@ files must be added there too.
   `providers.js` the sections. A provider is data in, blocks out (`evaluate(ctx)`, `build(ctx)`; it reads only through `ctx.read(key)` and never
   touches storage or the DOM), `toHtml()` is the one place its text becomes markup, and its `storageKeys` must equal 090's `reads` on its row in
   `_shared/tool-registry.js` and be keys its source tool's row declares (`npm run test:packet-providers` fails otherwise). A new section is a
-  provider, a registry `reads` line and a case in that suite; do not write a page-private list of sections. `npm run test:packet-sections`,
+  provider, a registry `reads` line and a case in that suite; do not write a page-private list of sections. A page that prints a source tool's data in its own markup (045) reads it with `PacketSections.load(id, ctx)` and names no other tool's key (`test:sub-binder-providers` holds that, and 045's output against a frozen copy). `npm run test:packet-sections`,
   `npm run test:packet-builder`. No packet has been printed on paper.
 - **A pasted spreadsheet region is read by `_shared/paste-table.js`** (`PasteTable`, Path 16 P2, v404): `splitLine`,
   `pickDelimiter`, `parse` (rows padded, short rows named in `ragged`), `columnReport` (the cells that stopped a column reading

@@ -9,6 +9,39 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-19: Path 10 P2, 045 Sub Binder on the providers, 076's questions, and the share sheet (2026-10-29, v441)
+
+**What shipped.** (1) `PacketSections` gained an optional `load(ctx)` on a provider (the one place a source key's shape is read) and `readerFor(storage)`.
+`load` was added to the sub plan, emergency, hall pass, calendar and seating providers, and three providers were added for what 045 read and 090 had no
+section for: `behavior-plan` (008's chip lists), `exit-ticket` (023's saved bank, first twelve) and `sub-plan-days` (044's last absence and dated plans).
+090 now has ten sections. (2) 045 loads `sections.js` and `providers.js` and its script names no other tool's key: every loader is one `PS.load` line.
+Its printed output is unchanged, proved against `Tools/sub-binder-generator/test/_045-frozen.html` (the page as it was, only its script paths moved) for
+five profiles. (3) A `sub-feedback` provider reads the slip in use from `snfs_slip_v1` (`{ v: 2, sets, currentId }` or the older bare shape); 045's
+feedback page asks those questions in place of its four standing ones when there are any. (4) 045 has a share sheet, the last tool of Path 6 P3.
+
+**Decisions taken (all reversible, none Devon's open question).** 045 keeps its own markup instead of rendering `toHtml()` blocks, because the
+standing rule was unchanged output and the two renderers look different. The link carries the recipe (ticked sections plus the note to the sub),
+never another tool's data, because the receiver has nowhere to put a snapshot and the seating chart holds student names. An arrival asks first when the
+device has its own ticks or note.
+
+**Verified.** `test:packet-sections` 57 checks, 37 breaks caught; `test:packet-providers` 62 checks, 40 breaks caught; `test:packet-builder` 66;
+`test:sub-binder-providers` 78 (parity plus the slip cases; a changed provider turns six assertions red); `test:sub-binder-share` 43 (a payload that
+leaked the seating turned three red, an arrival that skipped the question five); the existing `test:sub-binder` (28) and
+`smoke-consumers-sub-plans` (47, 10 breaks); `test:theme` (966, with 045 dark); a11y sweep on 045 and 090; lint; check:registry, precache
+(`--base origin/main`), inline-sinks (045 baselined at 17 after reading its sinks), entities, hidden-flex, print-clip, dedupe, tests, docs-commands,
+adoption (`--check` after pasting the row).
+
+**What was wrong or different.** The lesson note is the only link input that reaches the page's markup, and both places it is printed escape it.
+`smoke-share-rollout.mjs` was not given a row (its table assumes one JSON key). An empty `seating-chart-v1` list stays a chart in `load()`, because
+045 says "no chart saved" for it in its own words.
+
+**Obliges others.** `suite-durations.json` rows for `smoke-binder-providers` (40 s) and `smoke-binder-share` (30 s) are estimates.
+
+**Not verified.** No packet or binder was printed on paper; the QR row of the sheet was not scanned; no real browser's clipboard was used (the suite
+stubs it).
+
+---
+
 ## AI-19: Path 10 P1 finished, the seating section, source-tool comments and drag-to-reorder (2026-10-29, v440)
 
 **What shipped.** (1) A `seating` section in `Tools/packet-builder/providers.js`: it reads `seating-chart-v1` and draws each class that has a desk as

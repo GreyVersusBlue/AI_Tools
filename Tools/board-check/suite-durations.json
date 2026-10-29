@@ -173,6 +173,8 @@
     "Tools/packet-builder/test/sections.test.mjs": 2,
     "Tools/packet-builder/test/providers.test.mjs": 2,
     "Tools/packet-builder/test/smoke-packet-builder.mjs": 30,
+    "Tools/sub-binder-generator/test/smoke-binder-providers.mjs": 40,
+    "Tools/sub-binder-generator/test/smoke-binder-share.mjs": 30,
     "Tools/school-calendar/test/school-day.test.mjs": 14,
     "Tools/school-calendar/test/smoke-bell.mjs": 11,
     "Tools/schedule-visualizer/test/smoke-bell-from-calendar.mjs": 10,

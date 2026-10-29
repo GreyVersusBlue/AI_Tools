@@ -63,6 +63,13 @@ const CHART = {
   ]
 };
 
+const BEHAVIOR = { sets: { 'Period 1': { tags: [{ label: 'On task', delta: 1 }, { label: 'Calling out', delta: -1 }] } } };
+const PROMPTS = Array.from({ length: 14 }, (_, i) => ({ text: 'Prompt ' + (i + 1) }));
+const LAST = { dates: ['2026-10-29', '2026-10-30'] };
+const HISTORY = [{ date: '2026-10-29', lessonTitle: 'Fall of Rome', overviewText: 'Watch the video', scheduleText: '', materialsNote: 'Worksheet A' }, { date: '2026-10-30', lessonTitle: '', overviewText: '' }, { date: '2026-09-01', lessonTitle: 'Old' }];
+
+const SLIP = { v: 2, currentId: 'b', sets: [{ id: 'a', name: 'General', prompts: [{ id: '1', text: 'What worked?' }] }, { id: 'b', name: 'Lab day', prompts: [{ id: '2', text: 'Did the lab run?' }, { id: '3', text: '  ' }, { id: '4', text: 'Who stayed late?' }] }] };
+
 const plain = v => JSON.parse(JSON.stringify(v));
 const ctxOf = (W, data) => ({ read: k => (k in data ? plain(data[k]) : undefined), todayISO: '2026-10-29', SchoolDay: W.SchoolDay, SeatingRead: W.SeatingRead });
 
@@ -73,10 +80,11 @@ function checks(W, REG) {
   const html = (id, data) => { const b = PS.build([id], ctxOf(W, data)); return PS.toHtml(b.sections); };
   const ev = (id, data) => PS.evaluate(ctxOf(W, data)).find(e => e.id === id);
 
-  t('the six sections are registered, in this order', () => PS.ids().join() === 'sub-plan,emergency-info,hall-pass-log,school-calendar,class-rosters,seating');
+  t('the ten sections are registered, in this order', () => PS.ids().join() === 'sub-plan,emergency-info,hall-pass-log,school-calendar,class-rosters,seating,behavior-plan,exit-ticket,sub-plan-days,sub-feedback');
   t('nothing saved: every section is unavailable', () => PS.evaluate(ctxOf(W, {})).every(e => !e.available && e.status.length > 0));
   t('a broken value reads as nothing saved', () => PS.evaluate(ctxOf(W, {
-    'subPlanBuilder.standingDetails.v1': 'x', 'hall-pass-log-sections': [], 'scv_calendar_v1': { meta: 1 }, 'np_rosters': 7, 'crh_students_v1': 'x'
+    'subPlanBuilder.standingDetails.v1': 'x', 'hall-pass-log-sections': [], 'scv_calendar_v1': { meta: 1 }, 'np_rosters': 7, 'crh_students_v1': 'x',
+    'behavior-points-tracker-sections': 'x', 'gvb-exit-ticket:customPrompts': 7, 'subPlanBuilder.lastAbsence.v1': 'x', 'subPlanBuilder.history.v1': 'x', 'seating-chart-v1': 'x', snfs_slip_v1: 'x'
   })).every(e => !e.available));
 
   // the registry contract
@@ -188,6 +196,70 @@ function checks(W, REG) {
   });
   t('seating: the drawing is ink-safe (black on white, no colour)', () => !/#[0-9a-f]{3,6}/i.test(html('seating', { 'seating-chart-v1': CHART }).replace(/#(000|fff)\b/gi, '')));
 
+  // behavior plan
+  t('behavior: the chip list prints with signed points', () => {
+    const h = html('behavior-plan', { 'behavior-points-tracker-sections': BEHAVIOR });
+    return h.includes('On task') && h.includes('+1') && h.includes('Calling out') && h.includes('>-1<');
+  });
+  t('behavior: no sections is unavailable; two sections name themselves', () => {
+    const two = { sets: { A: BEHAVIOR.sets['Period 1'], B: BEHAVIOR.sets['Period 1'] } };
+    return !ev('behavior-plan', { 'behavior-points-tracker-sections': { sets: {} } }).available && html('behavior-plan', { 'behavior-points-tracker-sections': two }).includes('<h3 class="pb-h">A</h3>');
+  });
+  t('behavior: a section with no behaviors says so', () => html('behavior-plan', { 'behavior-points-tracker-sections': { sets: { A: { tags: [] } } } }).includes('No behaviors configured.'));
+
+  // exit ticket prompts
+  t('exit ticket: the first twelve prompts print and the rest do not', () => {
+    const h = html('exit-ticket', { 'gvb-exit-ticket:customPrompts': PROMPTS });
+    return h.includes('Prompt 12<') && !h.includes('Prompt 13') && h.includes('does not remember which');
+  });
+  t('exit ticket: blank prompts do not count', () => !ev('exit-ticket', { 'gvb-exit-ticket:customPrompts': [{ text: ' ' }] }).available && !ev('exit-ticket', { 'gvb-exit-ticket:customPrompts': [{}] }).available && ev('exit-ticket', { 'gvb-exit-ticket:customPrompts': [{ text: 'x' }] }).status.includes('1 custom prompt)'));
+
+  // lessons for the last absence
+  t('lessons: one page per absence day that has a plan with something in it', () => {
+    const b = PS.build(['sub-plan-days'], ctxOf(W, { 'subPlanBuilder.lastAbsence.v1': LAST, 'subPlanBuilder.history.v1': HISTORY }));
+    const h = PS.toHtml(b.sections);
+    return b.sections[0].pages.length === 1 && h.includes('Lesson: 2026-10-29') && h.includes('Fall of Rome') && h.includes('Worksheet A') && !h.includes('Old');
+  });
+  t('lessons: no absence, or no plan for its days, is unavailable', () =>
+    !ev('sub-plan-days', { 'subPlanBuilder.history.v1': HISTORY }).available && !ev('sub-plan-days', { 'subPlanBuilder.lastAbsence.v1': { dates: ['2027-01-01'] }, 'subPlanBuilder.history.v1': HISTORY }).available);
+  t('lessons: the status counts days with a plan', () => ev('sub-plan-days', { 'subPlanBuilder.lastAbsence.v1': LAST, 'subPlanBuilder.history.v1': HISTORY }).status.includes('1 of 2 days'));
+
+  // the substitute's feedback page
+  t('feedback: the slip in use supplies the questions, blanks skipped', () => {
+    const f = PS.load('sub-feedback', ctxOf(W, { snfs_slip_v1: SLIP }));
+    return f.name === 'Lab day' && f.prompts.join('|') === 'Did the lab run?|Who stayed late?';
+  });
+  t('feedback: an unknown currentId falls back to the first slip', () => PS.load('sub-feedback', ctxOf(W, { snfs_slip_v1: { ...SLIP, currentId: 'zz' } })).name === 'General');
+  t('feedback: the older bare slip is read', () => PS.load('sub-feedback', ctxOf(W, { snfs_slip_v1: { prompts: [{ text: 'Old?' }, 'plain'] } })).prompts.join() === 'Old?,plain');
+  t('feedback: nothing saved, no questions or a broken slip is unavailable', () => [undefined, { v: 2, sets: [] }, { v: 2, sets: [{ id: 'a', prompts: [{ text: ' ' }] }] }, { prompts: [] }, { v: 2, sets: 'x' }, 'x'].every(v => !ev('sub-feedback', v === undefined ? {} : { snfs_slip_v1: v }).available));
+  t('feedback: at most twelve questions of at most 200 characters', () => {
+    const many = { prompts: Array.from({ length: 20 }, (_, i) => ({ text: i === 0 ? 'x'.repeat(300) : 'q' + i })) };
+    const f = PS.load('sub-feedback', ctxOf(W, { snfs_slip_v1: many }));
+    return f.prompts.length === 12 && f.prompts[0].length === 200;
+  });
+  t('feedback: the page prints each question over a write-in box, as text', () => {
+    const h = html('sub-feedback', { snfs_slip_v1: { prompts: [{ text: '<img src=x onerror=1>' }, { text: 'Fine?' }] } });
+    return (h.match(/class="pb-fb-box"/g) || []).length === 2 && h.includes('Fine?') && !/<img/i.test(h) && h.includes('How did today go?');
+  });
+  t('feedback: status counts the questions', () => ev('sub-feedback', { snfs_slip_v1: SLIP }).status.includes('2 questions'));
+
+  // load(): what 045 prints from
+  t('load: each provider with a load returns the saved data, or null for nothing or a broken value', () => {
+    const none = ctxOf(W, {}), bad = ctxOf(W, { 'subPlanBuilder.standingDetails.v1': 'x', 'hall-pass-log-sections': [], 'seating-chart-v1': { sections: 4 }, 'behavior-points-tracker-sections': { sets: 3 }, scv_calendar_v1: { meta: 1 } });
+    const ids = ['sub-plan', 'emergency-info', 'hall-pass-log', 'school-calendar', 'seating', 'behavior-plan'];
+    return ids.every(id => PS.load(id, none) === null && PS.load(id, bad) === null);
+  });
+  t('load: whole values come back as saved', () => {
+    const c = ctxOf(W, { 'subPlanBuilder.standingDetails.v1': STANDING, 'hall-pass-log-sections': HALL, 'seating-chart-v1': CHART, 'behavior-points-tracker-sections': BEHAVIOR, scv_calendar_v1: CAL, 'gvb-exit-ticket:customPrompts': PROMPTS, 'subPlanBuilder.lastAbsence.v1': LAST, 'subPlanBuilder.history.v1': HISTORY });
+    return PS.load('sub-plan', c).teacherName === 'Ms. Example' && PS.load('hall-pass-log', c).sets['Period 1'].weeklyBudget === 4 && PS.load('seating', c).sections.length === 3 &&
+      PS.load('behavior-plan', c).sets['Period 1'].tags.length === 2 && PS.load('school-calendar', c).meta.yearLabel === '2026-27' && PS.load('exit-ticket', c).length === 14 &&
+      PS.load('sub-plan-days', c).dates.length === 2 && PS.load('sub-plan-days', c).history.length === 3;
+  });
+  t('load: an empty seating list is still a chart (045 says "no chart" for it itself)', () => PS.load('seating', ctxOf(W, { 'seating-chart-v1': { sections: [] } })).sections.length === 0);
+  t('load: the absence has no dates when the key is missing, empty or broken', () =>
+    [undefined, { dates: [] }, { dates: 'x' }, 'x'].every(v => PS.load('sub-plan-days', ctxOf(W, v === undefined ? {} : { 'subPlanBuilder.lastAbsence.v1': v })).dates === null));
+  t('load: a prompts bank that is not a list is an empty list', () => PS.load('exit-ticket', ctxOf(W, { 'gvb-exit-ticket:customPrompts': 7 })).length === 0);
+
   // text, never markup
   t('a saved field with markup is printed as text', () => {
     const bad = '<img src=x onerror=1>';
@@ -220,6 +292,22 @@ const MUTANTS = [
   ['seating keeps classes with no desks', s => s.replace('Array.isArray(s.desks) && s.desks.length;', 'true;')],
   ['seating drops the turn of a desk', s => s.replace("rotate(' + num(d.rot)", "rotate(' + 0")],
   ['seating reads the reader-less chart as available', s => s.replace("if (!ctx.SeatingRead) return { available: false, status: 'The seating reader did not load.' };", '')],
+  ['behavior drops the plus sign', s => s.replace("(t.delta > 0 ? '+' : '') + t.delta", 't.delta')],
+  ['behavior reads the tracker\'s points too', s => s.replace('storageKeys: [BEHAVIOR_KEY],', "storageKeys: [BEHAVIOR_KEY, 'behavior-points-tracker-points'],")],
+  ['exit ticket shows every prompt', s => s.replace('.slice(0, PROMPTS_SHOWN)', '')],
+  ['exit ticket counts blank prompts', s => s.replace("filter(function (p) { return isObj(p) && has(p.text); })", 'filter(function (p) { return true; })')],
+  ['lessons include a day with an empty plan', s => s.replace('return h && (has(h.lessonTitle) || has(h.overviewText) || has(h.scheduleText) || has(h.materialsNote));', 'return !!h;')],
+  ['lessons include days outside the absence', s => s.replace('return (a.dates || []).map', 'return (a.dates || [""]).concat(a.history.map(function (x) { return x && x.date; })).map')],
+  ['absence keeps an empty date list', s => s.replace('Array.isArray(last.dates) && last.dates.length ? last.dates : null', 'Array.isArray(last.dates) ? last.dates : null')],
+  ['seating load demands a section to exist', s => s.replace('isObj(c) && Array.isArray(c.sections) ? c : null; },', 'isObj(c) && Array.isArray(c.sections) && c.sections.length ? c : null; },')],
+  ['hall pass load returns the raw value', s => s.replace('return isObj(raw) && isObj(raw.sets) ? raw : null; },', 'return raw || null; },')],
+  ['calendar load skips the SchoolDay check', s => s.replace('load: calendar,', 'load: function (ctx) { return ctx.read(CAL_KEY) || null; },')],
+  ['standing load returns anything', s => s.replace('load: standing,\n    evaluate: function (ctx) {\n      var s = standing(ctx);\n      if (!s) return { available: false, status: \'No standing details saved yet.\' };\n      if (!standingBlocks', "load: function (ctx) { return ctx.read(STANDING_KEY) || null; },\n    evaluate: function (ctx) {\n      var s = standing(ctx);\n      if (!s) return { available: false, status: 'No standing details saved yet.' };\n      if (!standingBlocks")],
+  ['feedback keeps blank questions', s => s.replace('.filter(has)\n      .map(function (t) { return t.trim().slice(0, SLIP_TEXT); })', '.map(function (t) { return String(t).trim().slice(0, SLIP_TEXT); })')],
+  ['feedback ignores the slip in use', s => s.replace('if (sets[i].id === d.currentId) set = sets[i];', 'if (i === 0) set = sets[i];')],
+  ['feedback has no cap', s => s.replace('.slice(0, SLIP_MAX);', ';')],
+  ['feedback does not escape a question', s => s.replace("PS.esc(t) + '</div><div class=\"pb-fb-box\">", "t + '</div><div class=\"pb-fb-box\">")],
+  ['feedback cannot read the older slip', s => s.replace('var set = d;', 'var set = null;')],
   ['a provider is registered twice', s => s.replace("id: 'class-rosters',", "id: 'sub-plan',")],
   ['sub plan needs no details at all', s => s.replace("if (!standingBlocks(s).length) return { available: false, status: 'Standing details exist but are empty.' };", '')]
 ];

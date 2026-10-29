@@ -426,7 +426,9 @@
     "conference-signup/test/smoke-flow.mjs",
     "Tools/packet-builder/test/sections.test.mjs",
     "Tools/packet-builder/test/providers.test.mjs",
-    "Tools/packet-builder/test/smoke-packet-builder.mjs"
+    "Tools/packet-builder/test/smoke-packet-builder.mjs",
+    "Tools/sub-binder-generator/test/smoke-binder-providers.mjs",
+    "Tools/sub-binder-generator/test/smoke-binder-share.mjs"
   ],
   "expectedFailures": []
 }
