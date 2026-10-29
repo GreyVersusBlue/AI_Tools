@@ -26,6 +26,9 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/conjugate.js"></script>
+<script src="../_shared/conjugate-es.js"></script>
+<script src="../_shared/conjugate-fr.js"></script>
 <script src="verb-conjugation-poster-generator/irregulars.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -257,91 +260,48 @@
   // ink-paper's light tokens) and pale on a dark card, so it serves both.
   var NO_COLOR = { line: 'var(--ink)', tint: 'transparent' };
 
-  var TEMPLATES = {
-    es_present: {
-      lang: 'es', tense: 'present',
-      title: 'Present Tense — Regular Verbs',
-      persons: DEFAULT_PERSONS,
-      panels: [
-        { name: '-AR: hablar (to speak)', forms: ['hablo', 'hablas', 'habla', 'hablamos', 'habláis', 'hablan'] },
-        { name: '-ER: comer (to eat)', forms: ['como', 'comes', 'come', 'comemos', 'coméis', 'comen'] },
-        { name: '-IR: vivir (to live)', forms: ['vivo', 'vives', 'vive', 'vivimos', 'vivís', 'viven'] }
-      ]
-    },
-    es_preterite: {
-      lang: 'es', tense: 'preterite',
-      title: 'Preterite Tense — Regular Verbs',
-      persons: DEFAULT_PERSONS,
-      panels: [
-        { name: '-AR: hablar (to speak)', forms: ['hablé', 'hablaste', 'habló', 'hablamos', 'hablasteis', 'hablaron'] },
-        { name: '-ER: comer (to eat)', forms: ['comí', 'comiste', 'comió', 'comimos', 'comisteis', 'comieron'] },
-        { name: '-IR: vivir (to live)', forms: ['viví', 'viviste', 'vivió', 'vivimos', 'vivisteis', 'vivieron'] }
-      ]
-    },
-    es_imperfect: {
-      lang: 'es', tense: 'imperfect',
-      title: 'Imperfect Tense — Regular Verbs',
-      persons: DEFAULT_PERSONS,
-      panels: [
-        { name: '-AR: hablar (to speak)', forms: ['hablaba', 'hablabas', 'hablaba', 'hablábamos', 'hablabais', 'hablaban'] },
-        { name: '-ER: comer (to eat)', forms: ['comía', 'comías', 'comía', 'comíamos', 'comíais', 'comían'] },
-        { name: '-IR: vivir (to live)', forms: ['vivía', 'vivías', 'vivía', 'vivíamos', 'vivíais', 'vivían'] }
-      ]
-    },
-    es_future: {
-      lang: 'es', tense: 'future',
-      title: 'Future Tense — Regular Verbs',
-      persons: DEFAULT_PERSONS,
-      panels: [
-        { name: '-AR: hablar (to speak)', forms: ['hablaré', 'hablarás', 'hablará', 'hablaremos', 'hablaréis', 'hablarán'] },
-        { name: '-ER: comer (to eat)', forms: ['comeré', 'comerás', 'comerá', 'comeremos', 'comeréis', 'comerán'] },
-        { name: '-IR: vivir (to live)', forms: ['viviré', 'vivirás', 'vivirá', 'viviremos', 'viviréis', 'vivirán'] }
-      ]
-    },
-    es_irregulars: {
-      lang: 'es', tense: 'present',
-      title: 'Irregular Verbs — Present Tense',
-      persons: DEFAULT_PERSONS,
-      panels: [
-        { name: 'ser (to be)', forms: ['soy', 'eres', 'es', 'somos', 'sois', 'son'] },
-        { name: 'estar (to be)', forms: ['estoy', 'estás', 'está', 'estamos', 'estáis', 'están'] }
-      ]
-    },
-    fr_present: {
-      lang: 'fr', tense: 'present',
-      title: 'Present Tense — Regular Verbs',
-      persons: ['je', 'tu', 'il / elle / on', 'nous', 'vous', 'ils / elles'],
-      panels: [
-        { name: '-ER: parler (to speak)', forms: ['parle', 'parles', 'parle', 'parlons', 'parlez', 'parlent'] },
-        { name: '-IR: finir (to finish)', forms: ['finis', 'finis', 'finit', 'finissons', 'finissez', 'finissent'] },
-        { name: '-RE: vendre (to sell)', forms: ['vends', 'vends', 'vend', 'vendons', 'vendez', 'vendent'] }
-      ]
-    },
-    fr_imperfect: {
-      lang: 'fr', tense: 'imperfect',
-      title: 'Imperfect Tense — Regular Verbs',
-      persons: ['je', 'tu', 'il / elle / on', 'nous', 'vous', 'ils / elles'],
-      panels: [
-        { name: '-ER: parler (to speak)', forms: ['parlais', 'parlais', 'parlait', 'parlions', 'parliez', 'parlaient'] },
-        { name: '-IR: finir (to finish)', forms: ['finissais', 'finissais', 'finissait', 'finissions', 'finissiez', 'finissaient'] },
-        { name: '-RE: vendre (to sell)', forms: ['vendais', 'vendais', 'vendait', 'vendions', 'vendiez', 'vendaient'] }
-      ]
-    },
-    fr_irregulars: {
-      lang: 'fr', tense: 'present',
-      title: 'Irregular Verbs — Present Tense',
-      persons: ['je', 'tu', 'il / elle / on', 'nous', 'vous', 'ils / elles'],
-      panels: [
-        { name: 'avoir (to have)', forms: ['ai', 'as', 'a', 'avons', 'avez', 'ont'] },
-        { name: 'être (to be)', forms: ['suis', 'es', 'est', 'sommes', 'êtes', 'sont'] }
-      ]
-    },
-    blank: {
-      title: 'Verb Conjugation Reference',
-      persons: DEFAULT_PERSONS,
-      panels: [{ name: 'Verb group', forms: ['', '', '', '', '', ''] }]
-    }
+  /* The starter posters. Each panel is a verb and the label printed over it; its six
+     forms are computed from _shared/conjugate.js when the page loads (Path 19 P3), so
+     a form is typed once, in the engine's data. The posters print exactly what the
+     hand-typed lists here printed (Tools/verb-conjugation-poster-generator/test/
+     golden-old-posters.json holds the 29 of them). Nothing the engine writes has been
+     read by a language teacher; the call-out status line below says so. */
+  var ES_AR = { name: '-AR: hablar (to speak)', verb: 'hablar' };
+  var ES_ER = { name: '-ER: comer (to eat)', verb: 'comer' };
+  var ES_IR = { name: '-IR: vivir (to live)', verb: 'vivir' };
+  var FR_ER = { name: '-ER: parler (to speak)', verb: 'parler' };
+  var FR_IR = { name: '-IR: finir (to finish)', verb: 'finir' };
+  var FR_RE = { name: '-RE: vendre (to sell)', verb: 'vendre' };
+  var STARTERS = {
+    es_present: ['es', 'present', 'Present Tense — Regular Verbs', [ES_AR, ES_ER, ES_IR]],
+    es_preterite: ['es', 'preterite', 'Preterite Tense — Regular Verbs', [ES_AR, ES_ER, ES_IR]],
+    es_imperfect: ['es', 'imperfect', 'Imperfect Tense — Regular Verbs', [ES_AR, ES_ER, ES_IR]],
+    es_future: ['es', 'future', 'Future Tense — Regular Verbs', [ES_AR, ES_ER, ES_IR]],
+    es_irregulars: ['es', 'present', 'Irregular Verbs — Present Tense',
+      [{ name: 'ser (to be)', verb: 'ser' }, { name: 'estar (to be)', verb: 'estar' }]],
+    fr_present: ['fr', 'present', 'Present Tense — Regular Verbs', [FR_ER, FR_IR, FR_RE]],
+    fr_imperfect: ['fr', 'imperfect', 'Imperfect Tense — Regular Verbs', [FR_ER, FR_IR, FR_RE]],
+    fr_irregulars: ['fr', 'present', 'Irregular Verbs — Present Tense',
+      [{ name: 'avoir (to have)', verb: 'avoir' }, { name: 'être (to be)', verb: 'être' }]]
   };
+  var TEMPLATES = {};
+  Object.keys(STARTERS).forEach(function (key) {
+    var d = STARTERS[key], lang = d[0], tense = d[1];
+    var pack = window.Conjugate.languages().filter(function (l) { return l.id === lang; })[0];
+    TEMPLATES[key] = {
+      lang: lang, tense: tense, title: d[2],
+      persons: pack.persons.slice(),
+      panels: d[3].map(function (v) {
+        return { name: v.name, forms: window.Conjugate.conjugate(lang, v.verb, tense).forms };
+      })
+    };
+  });
+  TEMPLATES.blank = {
+    title: 'Verb Conjugation Reference',
+    persons: DEFAULT_PERSONS,
+    panels: [{ name: 'Verb group', forms: ['', '', '', '', '', ''] }]
+  };
+
 
   var els = {};
   ['templateSelect', 'loadTemplateBtn', 'posterTitle', 'personsWrap', 'panelsWrap', 'addPanelBtn',

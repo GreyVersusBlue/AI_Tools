@@ -13,7 +13,8 @@
 // until that person has read the check sheet, no table is called reviewed, and the suite pins
 // that every result says "unreviewed".
 //
-// 079 parity reads the page's TEMPLATES literal and irregulars.js by text, so a change to
+// 079 parity reads irregulars.js by text and holds the engine to _079-templates-frozen.json (the starters
+// 079 printed before it computed them); a change to
 // either that the engine does not agree with fails here, which is what it is for.
 //
 // Broken copies at the end: the suite is run against copies of the source with one thing
@@ -493,14 +494,13 @@ function suite(win) {
 function parity(win) {
   const C = win.Conjugate;
   const fails = [];
+  // 079's TEMPLATES are computed from the engine now (v474), so the page holds no literal to read.
+  // The forms it printed before are frozen in _079-templates-frozen.json (cut from the page at
+  // 6c84811); the poster-level proof is smoke-callouts.mjs against golden-old-posters.json.
+  const T = JSON.parse(read('Tools/conjugate/test/_079-templates-frozen.json'));
   const page = read('Tools/079-verb-conjugation-poster-generator.html');
-  const start = page.indexOf('var TEMPLATES = {');
-  const end = page.indexOf('\n  };', start) + 5;
-  if (start < 0 || end < start) return ['could not find 079\'s TEMPLATES'];
-  const tctx = { DEFAULT_PERSONS: [] };
-  vm.createContext(tctx);
-  vm.runInContext(page.slice(start, end).replace('var TEMPLATES', 'TEMPLATES'), tctx);
-  const T = tctx.TEMPLATES;
+  if (!/Conjugate\.conjugate\(lang, v\.verb, tense\)/.test(page)) fails.push('079 no longer computes its starters from Conjugate.conjugate');
+  if (/forms: \['(hablo|parle|soy)'/.test(page)) fails.push('079 holds a typed-out starter form again');
   let n = 0;
   for (const key of Object.keys(T)) {
     const t = T[key];
