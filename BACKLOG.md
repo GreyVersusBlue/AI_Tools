@@ -7875,6 +7875,28 @@ neither P1 nor P2, its storage does.
   paste import (Path 16's `paste-table.js`), export, and the template-download
   pattern from 030. Decide the owner: this plan says a small "Word Lists" hub UI
   inside 040 (the hub pattern that 006 uses for rosters), not a new tool number.
+  **Design (AI-27, 2026-10-29).** *Surface:* `_shared/word-list.js`, a classic script publishing
+  `window.WordList`; the pure half (normalize, parse, files, merge) needs nothing, storage needs
+  `_shared/store.js`, CSV needs `ExportKit`. *Storage:* one key, `gvb-word-lists`, a Store envelope
+  `{ v:1, data:{ schema:1, lists:[{ id, name, words:[word], createdAt, updatedAt }], current, legacy:[name] } }`.
+  A word is `{ id, term, definition, partOfSpeech, example, pronunciation, gender, tags }`; a field the
+  module does not know is kept through every read, write and file. *Migration:* 040's own keys
+  (`gvb-vocab-flashcards:list`, `:data:<name>`, `:current`) are READ and never written, removed or
+  renamed here (an older 040 tab, a pre-hub 009 backup); the first `importLegacy()` turns each set's `words`
+  text into a list by the old `VocabLayout.parseWordList` rules (held to it, byte for byte, by the
+  suite), names it as the set was, and records the name in `legacy` so a list the teacher deletes does not
+  come back. *The hub in 040:* a "Word Lists" card, not a tool number. Until P2 finishes 040 keeps its
+  textarea and settings record where they are and **writes through**: `save()` also upserts the list into
+  the hub by name, matching words by term so `gender`, `tags` and ids survive an edit made in the textarea;
+  delete and rename go to both. The hub card lists the shared lists with counts, imports a pasted table
+  (`PasteTable`, header row optional), a JSON file or a CSV, exports JSON and CSV, offers a template
+  download (030's pattern) and opens a list in the editor. *Files:* the JSON envelope is
+  `{ app:'word-lists', v:1, lists }`; CSV columns are term, definition, partOfSpeech, example,
+  pronunciation, gender, tags (`;`-joined). A file is shown before it is stored (`importPlan()`), as the
+  question bank does; a same-named list is merged by term, never overwritten. *Registry:* `gvb-word-lists`
+  is added to 040's row (not student data); the other tools get a `reads` line when they adopt it in P2.
+  *Not decided here:* the pronunciation-audio field (P5) and the conjugation record (P3) are unknown
+  fields to P1 and survive. A new question gets the default and a line here.
 - **P2 — Adopters.** 040 reads/writes; 039 reads the full record and writes back
   edits; 014 pulls scenario vocabulary; 027 logs to it; 051 and 052 read. Delete
   `vfg-conjdrill-link.js`.
