@@ -28,6 +28,9 @@
 <!-- The site's word lists (Path 19 P2): this page reads 040's lists from them and writes its vocabulary to them. -->
 <script src="../_shared/store.js"></script>
 <script src="../_shared/word-list.js"></script>
+<script src="../_shared/conjugate.js"></script>
+<script src="../_shared/conjugate-es.js"></script>
+<script src="../_shared/conjugate-fr.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
@@ -116,6 +119,13 @@
   .lang-select-row { display: flex; align-items: center; gap: .5rem; }
   .lang-select-row label { margin: 0; white-space: nowrap; }
   .lang-select-row select { width: auto; margin: 0; }
+
+  /* ---- fill from pattern (Path 19 P3) ---- */
+  .pattern-row { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin: .1rem 0 .2rem; }
+  .pattern-row select { font-family: inherit; font-size: .82rem; padding: .35rem .45rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); color: var(--ink); }
+  .pattern-status { font-size: .74rem; color: var(--muted); margin: .1rem 0 .3rem; min-height: 1em; }
+  .rule-tag { display: inline-block; font-size: .62rem; font-weight: 700; padding: 0 .3rem; margin-left: .3rem; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--warn-ink); vertical-align: baseline; }
+  .conj-card .gen-note { font-size: .62rem; color: #444; text-align: center; margin-top: .25rem; }
 
   /* ---- irregular verb flag ---- */
   .irregular-toggle { display: flex; align-items: center; gap: .4rem; font-weight: 600; font-size: .78rem; margin: .3rem 0 0; cursor: pointer; }
@@ -606,9 +616,144 @@
     });
   }
 
+  /* ---------- fill from pattern (Path 19 P3: _shared/conjugate.js) ----------
+     An entry may name a language and a tense; Fill from pattern then writes the rows from the
+     engine. A cell the teacher edits afterwards is kept in entry.verb (the engine's record
+     shape, forms only) and, when the infinitive is a word of this set's list, on that word as
+     well; it applies to this set only. Nothing the engine makes has been read by a language
+     teacher, and this page says so wherever it shows a generated table. */
+  var HAS_ENGINE = typeof Conjugate !== 'undefined';
+  var LANG_FOR_PRESET = { spanish: 'es', french: 'fr' };
+  var RULE_TAGS = {
+    irregular: ['irr', 'Irregular form'], stem: ['stem', 'Stem change'], spelling: ['spell', 'Spelling change'],
+    teacher: ['edit', 'Typed by you; it overrides the pattern'], assumed: ['?', 'This verb is not on the pattern list, so this form is unchecked'],
+    defective: ['none', 'This verb has no form here'], agreement: ['agr', 'Auxiliary être: the masculine singular is printed']
+  };
+
+  function langInfo(id) {
+    if (!HAS_ENGINE) return null;
+    return Conjugate.languages().filter(function (l) { return l.id === id; })[0] || null;
+  }
+
+  function defaultSlots(n) {
+    var a = [];
+    for (var i = 0; i < n; i++) a.push(i < 6 ? i : null);
+    return a;
+  }
+
+  function ensurePersonSlots() {
+    var s = state.personSlots;
+    var ok = Array.isArray(s) && s.length === state.persons.length && s.every(function (x) {
+      return x === null || (typeof x === 'number' && x >= 0 && x <= 5 && x % 1 === 0);
+    });
+    if (!ok) state.personSlots = defaultSlots(state.persons.length);
+  }
+
+  function sanitizePattern() {
+    ensurePersonSlots();
+    state.conjugations.forEach(function (c) {
+      var l = langInfo(c.lang);
+      if (!l) { c.lang = ''; c.tenseId = ''; }
+      else if (!l.tenses.some(function (t) { return t.id === c.tenseId; })) c.tenseId = '';
+      if (c.verb) {
+        var clean = wordListDo(function () { return WordList.cleanVerb(c.verb); });
+        if (clean) c.verb = clean; else delete c.verb;
+      }
+      c.generated = c.generated === true;
+    });
+  }
+
+  function tenseName(lang, id) {
+    var l = langInfo(lang);
+    var t = l && l.tenses.filter(function (x) { return x.id === id; })[0];
+    return t ? t.name : '';
+  }
+
+  function verbBase(entry) {
+    if (entry.verb) return entry.verb;
+    return wordListDo(function () { return WordList.getVerb(state.name, entry.infinitive); }) || null;
+  }
+
+  /* The engine's record for the entry: the pack's, with the teacher's cells over it. */
+  function recordFor(entry, mine) {
+    var inf = String(entry.infinitive || '').trim();
+    var rec = Conjugate.merge(Conjugate.lookup(entry.lang, inf) || { infinitive: inf }, mine === undefined ? verbBase(entry) : mine);
+    rec.infinitive = inf;
+    return rec;
+  }
+
+  function patternReady(entry) {
+    return HAS_ENGINE && !!entry.lang && !!entry.tenseId && !!String(entry.infinitive || '').trim();
+  }
+
+  function patternResult(entry, mine) {
+    if (!patternReady(entry)) return null;
+    return Conjugate.conjugate(entry.lang, recordFor(entry, mine), entry.tenseId, {});
+  }
+
+  function cellText(res, slot) {
+    return [res.forms[slot]].concat(res.alts[slot] || []).filter(Boolean).join(' / ');
+  }
+
+  function noteForRow(res, pi) {
+    var slot = state.personSlots[pi];
+    if (!res || slot === null || slot === undefined) return null;
+    var n = res.notes.filter(function (x) { return x.slot === slot; })[0];
+    return n && RULE_TAGS[n.kind] ? n : null;
+  }
+
+  function syncWord(entry) {
+    wordListDo(function () {
+      var l = WordList.get(state.name);
+      if (!l) return;
+      var inf = String(entry.infinitive || '').trim().toLowerCase();
+      var has = l.words.some(function (w) { return w.term.toLowerCase() === inf; });
+      if (has && entry.verb) { WordList.setVerb(state.name, entry.infinitive, entry.verb); entry.wordSynced = true; }
+      else if (has && entry.wordSynced) { WordList.setVerb(state.name, entry.infinitive, null); entry.wordSynced = false; }
+      if (entry.lang && !WordList.getLang(state.name)) WordList.setLang(state.name, entry.lang);
+    });
+  }
+
+  function fillFromPattern(entry) {
+    var res = patternResult(entry);
+    if (!res) return null;
+    ensurePersonSlots();
+    state.persons.forEach(function (_, pi) {
+      var slot = state.personSlots[pi];
+      if (slot === null || slot === undefined) return;
+      entry.forms[pi] = cellText(res, slot);
+    });
+    entry.generated = true;
+    if (!entry.tense) entry.tense = tenseName(entry.lang, entry.tenseId);
+    if (res.notes.some(function (n) { return n.kind === 'irregular' || n.kind === 'stem' || n.kind === 'teacher'; })) entry.irregular = true;
+    syncWord(entry);
+    save();
+    return res;
+  }
+
+  /* A typed cell is the teacher's when it differs from what the pattern gives without it. */
+  function recordTeacherEdit(entry, pi, value) {
+    var slot = state.personSlots[pi];
+    if (!patternReady(entry) || slot === null || slot === undefined) return;
+    var mine = entry.verb ? JSON.parse(JSON.stringify(entry.verb)) : { infinitive: String(entry.infinitive || '').trim() };
+    if (mine.forms && mine.forms[entry.tenseId]) delete mine.forms[entry.tenseId][slot];
+    var natural = cellText(patternResult(entry, mine), slot);
+    var typed = String(value || '').trim();
+    if (typed && typed !== natural) {
+      mine.forms = mine.forms || {};
+      mine.forms[entry.tenseId] = mine.forms[entry.tenseId] || {};
+      mine.forms[entry.tenseId][slot] = typed;
+    }
+    var clean = wordListDo(function () { return WordList.cleanVerb(mine); });
+    var has = clean && clean.forms;
+    if (has) entry.verb = clean; else delete entry.verb;
+    syncWord(entry);
+  }
+
   /* ---------- persons editor ---------- */
   function applyPersonsPreset(newPersons) {
     state.persons = newPersons.slice();
+    state.personSlots = defaultSlots(state.persons.length);
     var len = state.persons.length;
     state.conjugations.forEach(function (c) {
       while (c.forms.length < len) c.forms.push('');
@@ -634,6 +779,8 @@
       removeBtn.disabled = state.persons.length <= 1;
       removeBtn.addEventListener('click', function () {
         if (!confirm('Remove this row from every verb?')) return;
+        ensurePersonSlots();
+        state.personSlots.splice(i, 1);
         state.persons.splice(i, 1);
         state.conjugations.forEach(function (c) { c.forms.splice(i, 1); });
         renderConjugationEditor(); renderPreview();
@@ -671,6 +818,73 @@
       row2.appendChild(infFieldRow); row2.appendChild(tenseInput);
       block.appendChild(row2);
 
+      var patternRow = null, patternStatus = null, refreshPattern = function () {};
+      var inputRefs = [], tagRefs = [];
+      if (HAS_ENGINE) {
+        patternRow = document.createElement('div');
+        patternRow.className = 'pattern-row';
+        var langSel = document.createElement('select');
+        langSel.setAttribute('aria-label', 'Language for the pattern');
+        var tenseSel = document.createElement('select');
+        tenseSel.setAttribute('aria-label', 'Tense for the pattern');
+        var fillBtn = document.createElement('button');
+        fillBtn.type = 'button'; fillBtn.className = 'secondary small'; fillBtn.textContent = 'Fill from pattern';
+        patternStatus = document.createElement('div');
+        patternStatus.className = 'pattern-status'; patternStatus.setAttribute('aria-live', 'polite');
+        var fillOptions = function (sel, items, blankLabel, value) {
+          sel.innerHTML = '';
+          var blank = document.createElement('option'); blank.value = ''; blank.textContent = blankLabel; sel.appendChild(blank);
+          items.forEach(function (it) { var o = document.createElement('option'); o.value = it.id; o.textContent = it.name; sel.appendChild(o); });
+          sel.value = value || '';
+        };
+        var tensesOf = function () { var l = langInfo(entry.lang); return l ? l.tenses : []; };
+        fillOptions(langSel, Conjugate.languages(), 'No pattern', entry.lang);
+        fillOptions(tenseSel, tensesOf(), 'Tense', entry.tenseId);
+        refreshPattern = function (justFilled) {
+          var res = patternResult(entry);
+          fillBtn.disabled = !res;
+          tenseSel.disabled = !entry.lang;
+          state.persons.forEach(function (_, pi) {
+            var note = res ? noteForRow(res, pi) : null;
+            var tag = tagRefs[pi];
+            if (!tag) return;
+            tag.textContent = note ? RULE_TAGS[note.kind][0] : '';
+            tag.title = note ? RULE_TAGS[note.kind][1] + (note.from && note.kind !== 'teacher' && note.kind !== 'defective' ? ' (' + note.from + ')' : '') : '';
+            tag.style.display = note ? '' : 'none';
+          });
+          var msg = '';
+          if (entry.generated) {
+            msg = 'Filled by pattern. Unreviewed: no language teacher has read this table yet.';
+            if (res && !res.known) msg += ' \u201c' + entry.infinitive + '\u201d is not on the pattern list, so it was conjugated as a regular verb and is unchecked.';
+            if (res && !res.complete) msg += ' Some forms could not be made; type them in.';
+          } else if (res) msg = 'Press Fill from pattern to write the rows.';
+          else if (justFilled === false) msg = '';
+          patternStatus.textContent = msg;
+        };
+        langSel.addEventListener('change', function () {
+          entry.lang = langSel.value; entry.tenseId = '';
+          fillOptions(tenseSel, tensesOf(), 'Tense', '');
+          refreshPattern(); save();
+        });
+        tenseSel.addEventListener('change', function () {
+          var prev = tenseName(entry.lang, entry.tenseId);
+          entry.tenseId = tenseSel.value;
+          if (entry.tenseId && (!entry.tense || entry.tense === prev)) { entry.tense = tenseName(entry.lang, entry.tenseId); tenseInput.value = entry.tense; }
+          refreshPattern(); save(); renderPreview();
+        });
+        fillBtn.addEventListener('click', function () {
+          var res = fillFromPattern(entry);
+          if (!res) return;
+          state.persons.forEach(function (_, pi) { if (inputRefs[pi]) inputRefs[pi].value = entry.forms[pi] || ''; });
+          irregInput.checked = !!entry.irregular;
+          refreshPattern(true); renderPreview();
+        });
+        infInput.addEventListener('input', function () { refreshPattern(); });
+        patternRow.appendChild(langSel); patternRow.appendChild(tenseSel); patternRow.appendChild(fillBtn);
+        block.appendChild(patternRow);
+        block.appendChild(patternStatus);
+      }
+
       var irregLabel = document.createElement('label');
       irregLabel.className = 'irregular-toggle';
       var irregInput = document.createElement('input');
@@ -692,7 +906,17 @@
         fieldRow.className = 'field-row';
         var input = document.createElement('input');
         input.type = 'text'; input.value = entry.forms[pi] || ''; input.placeholder = 'Conjugated form';
-        input.addEventListener('input', function () { entry.forms[pi] = input.value; renderPreview(); });
+        input.addEventListener('input', function () {
+          entry.forms[pi] = input.value;
+          if (HAS_ENGINE) { recordTeacherEdit(entry, pi, input.value); refreshPattern(); save(); }
+          renderPreview();
+        });
+        inputRefs[pi] = input;
+        if (HAS_ENGINE) {
+          var tag = document.createElement('span');
+          tag.className = 'rule-tag'; tag.style.display = 'none';
+          plabel.appendChild(tag); tagRefs[pi] = tag;
+        }
         var listenBtn = document.createElement('button');
         listenBtn.type = 'button'; listenBtn.className = 'listen-btn'; listenBtn.title = 'Listen';
         listenBtn.setAttribute('aria-label', 'Listen'); listenBtn.disabled = !ttsSupported;
@@ -703,6 +927,7 @@
         grid.appendChild(field);
       });
       block.appendChild(grid);
+      refreshPattern();
 
       var btnsRow = document.createElement('div');
       btnsRow.className = 'btns-row';
@@ -783,6 +1008,7 @@
         (entry.tense ? ' &mdash; ' + escapeHtml(entry.tense) : '') +
         (entry.irregular ? ' <span class="irregular-tag">IRREGULAR</span>' : '') + '</div>' +
       '<table>' + rows + '</table>' +
+      (filled && entry.generated ? '<div class="gen-note">Filled by pattern &middot; not yet checked by a language teacher</div>' : '') +
     '</div>';
   }
 
@@ -833,7 +1059,13 @@
   /** 'correct' | 'close' (right but for accents) | 'wrong'. Blank input is
    * always 'wrong', never a false "close" match against a blank-normalizing
    * comparison. */
-  function answerMatch(typed, correct) {
+  function answerMatch(typed, correct, entry) {
+    if (HAS_ENGINE) {
+      /* The engine's check: ñ and ç are letters, not accents; ü typed as u is accepted (Devon,
+         2026-10-21) and the ü form is shown beside it; a missing pronoun or elision is close. */
+      var r = Conjugate.match(typed, correct, { lang: (entry && entry.lang) || '' });
+      return r.verdict === 'correct' && r.reason ? r.reason : r.verdict === 'close' ? 'close:' + r.reason : r.verdict;
+    }
     var t = String(typed || '').trim().toLowerCase();
     var c = String(correct || '').trim().toLowerCase();
     if (!t) return 'wrong';
@@ -850,7 +1082,8 @@
     state.persons.forEach(function (person, pi) {
       var typed = quizAnswers[pi] || '';
       var correct = entry.forms[pi] || '';
-      if (answerMatch(typed, correct) === 'correct') correctCount++;
+      var verdict = answerMatch(typed, correct, entry);
+      if (verdict === 'correct' || verdict === 'diaeresis') correctCount++;
     });
     quizScore.correct += correctCount;
     quizScore.total += state.persons.length;
@@ -882,12 +1115,16 @@
     var rows = state.persons.map(function (person, pi) {
       var typed = quizAnswers[pi] || '';
       var correctAnswer = entry.forms[pi] || '';
-      var match = quizChecked ? answerMatch(typed, correctAnswer) : null;
-      var rowClass = quizChecked ? (' ' + (match === 'correct' ? 'correct' : match === 'close' ? 'close' : 'incorrect')) : '';
+      var match = quizChecked ? answerMatch(typed, correctAnswer, entry) : null;
+      var isRight = match === 'correct' || match === 'diaeresis';
+      var isClose = match && match.indexOf('close') === 0;
+      var rowClass = quizChecked ? (' ' + (isRight ? 'correct' : isClose ? 'close' : 'incorrect')) : '';
       var markHtml = '';
       if (quizChecked) {
+        var closeHow = { accent: 'check your accent', pronoun: 'check the pronoun', elision: 'check the apostrophe' }[match && match.slice(6)] || (match === 'close' ? 'check your accent' : 'check your spelling');
         markHtml = match === 'correct' ? '&#10003;'
-          : match === 'close' ? '&#8776; close &mdash; check your accent (' + escapeHtml(correctAnswer) + ')'
+          : match === 'diaeresis' ? '&#10003; accepted &mdash; spelled with &uuml;: ' + escapeHtml(correctAnswer)
+          : isClose ? '&#8776; close &mdash; ' + closeHow + ' (' + escapeHtml(correctAnswer) + ')'
           : '&#10007; ' + escapeHtml(correctAnswer);
       }
       return '<div class="quiz-row' + rowClass + '">' +
@@ -1038,7 +1275,7 @@
   /* ---------- lifecycle ---------- */
   function newSet(name) {
     state = {
-      name: name, mode: 'vocab', vocabText: '', persons: DEFAULT_PERSONS.slice(), conjugations: [],
+      name: name, mode: 'vocab', vocabText: '', persons: DEFAULT_PERSONS.slice(), personSlots: [0, 1, 2, 3, 4, 5], conjugations: [],
       shuffleVocab: false, shuffleConjugation: false, ttsLang: 'es-ES', printCombined: false,
       langPreset: 'spanish', vocabDirection: 'target2en', vocabLimit: 0, printVersions: 1
     };
@@ -1053,6 +1290,7 @@
     if (!state.persons || !state.persons.length) state.persons = DEFAULT_PERSONS.slice();
     if (!state.conjugations) state.conjugations = [];
     state.conjugations.forEach(function (c) { if (typeof c.irregular !== 'boolean') c.irregular = false; });
+    sanitizePattern();
     if (!state.mode) state.mode = 'vocab';
     if (typeof state.shuffleVocab !== 'boolean') state.shuffleVocab = false;
     if (typeof state.shuffleConjugation !== 'boolean') state.shuffleConjugation = false;
@@ -1163,6 +1401,8 @@
   });
 
   els.addPersonBtn.addEventListener('click', function () {
+    ensurePersonSlots();
+    state.personSlots.push(null);
     state.persons.push('New row');
     state.conjugations.forEach(function (c) { c.forms.push(''); });
     renderConjugationEditor(); renderPreview();
@@ -1171,6 +1411,7 @@
   els.addConjBtn.addEventListener('click', function () {
     state.conjugations.push({
       id: nextId(), infinitive: '', tense: '',
+      lang: HAS_ENGINE ? (LANG_FOR_PRESET[state.langPreset] || '') : '', tenseId: '',
       forms: state.persons.map(function () { return ''; })
     });
     renderConjList(); renderPreview();

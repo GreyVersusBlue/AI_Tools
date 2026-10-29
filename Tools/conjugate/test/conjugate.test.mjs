@@ -360,7 +360,7 @@ function suite(win) {
   const verdicts = [
     ['hablo', 'hablo', 'correct', ''], ['Hablo', 'hablo', 'correct', ''], ['hablo ', 'hablo', 'correct', ''], ['  hablo   ', 'hablo', 'correct', ''],
     ['hable', 'hablé', 'close', 'accent'], ['tenia', 'tenía', 'close', 'accent'],
-    ['ano', 'año', 'wrong', ''], ['pinguino', 'pingüino', 'close', 'accent'], ['pingüino', 'pingüino', 'correct', ''],
+    ['ano', 'año', 'wrong', ''], ['pinguino', 'pingüino', 'correct', 'diaeresis'], ['pinguino', 'pingüinó', 'close', 'accent'], ['pingüino', 'pinguino', 'close', 'accent'], ['pingüino', 'pingüino', 'correct', ''],
     ['levanto', 'me levanto', 'close', 'pronoun'], ['me levanto', 'levanto', 'close', 'pronoun'], ['yo hablo', 'hablo', 'close', 'pronoun'],
     ['', 'hablo', 'wrong', ''], ['   ', 'hablo', 'wrong', ''], ['hablas', 'hablo', 'wrong', '']
   ];
@@ -375,7 +375,8 @@ function suite(win) {
   eq(m('paye', ['paie', 'paye'], 'fr').verdict, 'correct', 'payer: the second form is correct');
   eq(m('paie', 'paie / paye', 'fr').verdict, 'correct', 'payer: a pair string splits');
   eq(m('pâie', ['paie', 'paye'], 'fr').expected, 'paie', 'match reports the form it matched');
-  eq(m('pingüino', 'pingüino').expected, 'pingüino', 'match reports the expected form for a close answer to show beside it');
+  eq(m('pinguino', 'pingüino').expected, 'pingüino', 'match reports the expected form, so the ü form can be shown beside an answer typed with u');
+  eq(m('Pinguino', 'pingüino', 'es').verdict, 'correct', 'ü lenient: capitals do not matter either');
   eq(C.normalize('  J’HABITE  '), "j'habite", 'normalize');
   eq(C.stripAccents('piñata'), 'piñata', 'stripAccents keeps ñ');
   eq(C.stripAccents('garçon é ü'), 'garçon e u', 'stripAccents keeps ç and strips vowels');
@@ -542,6 +543,7 @@ const BROKEN = [
   ['the c>ç rule is gone', '_shared/conjugate-fr.js', "stemRepl: [/c$/, 'ç']", "stemRepl: [/c$/, 'c']"],
   ['the ge>g rule is gone', '_shared/conjugate-fr.js', "stemRepl: [/e$/, '']", "stemRepl: [/x$/, '']"],
   ['haïr elides', '_shared/conjugate-fr.js', "aspirateH: ['haïr']", "aspirateH: []"],
+  ['ü is no longer accepted as u', '_shared/conjugate.js', "t === e.replace(/\\u00fc/g, 'u')", "false"],
   ['ñ is treated as an accent', '_shared/conjugate.js', "if (/[\\u0300-\\u036f]/.test(ch) && /[aeiou]/i.test(prev)) continue;", "if (/[\\u0300-\\u036f]/.test(ch)) continue;"],
   ['the answer check ignores pronouns', '_shared/conjugate.js', "if (st === se) return { verdict: 'close', reason: 'pronoun' };", ''],
   ['the module says reviewed', '_shared/conjugate.js', "var STATUS = 'unreviewed';", "var STATUS = 'reviewed';"],

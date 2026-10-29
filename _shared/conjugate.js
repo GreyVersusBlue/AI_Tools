@@ -181,7 +181,8 @@
     var cl = (rec && rec['class']) || (classEnding(p, inf) || {}).id || null;
     var cdef = cl ? p.classes[cl] : null;
     var cut = cdef ? (cdef.cut || 2) : 0;
-    var known = !!rec || has(p.regulars, inf);
+    var known = typeof verb === 'string' ? (!!rec || has(p.regulars, inf))
+      : !!(lookupBase(p, inf) || has(p.regulars, inf) || (rec && rec.teacher && Object.keys(rec.teacher).length));
     return {
       lang: lang, p: p, rec: rec || null, base: inf, reflexive: reflexive, cls: cl, 'class': cdef,
       stem: cdef ? inf.slice(0, inf.length - cut) : '', known: known, cutLen: cut,
@@ -470,6 +471,8 @@
 
   function matchOne(p, t, e) {
     if (t === e) return { verdict: 'correct', reason: '' };
+    // ü is accepted as u (Devon, 2026-10-21: "Lenient (u accepted)"), and the caller shows the ü form beside it
+    if (e.indexOf('\u00fc') >= 0 && t === e.replace(/\u00fc/g, 'u')) return { verdict: 'correct', reason: 'diaeresis' };
     if (stripAccents(t) === stripAccents(e)) return { verdict: 'close', reason: 'accent' };
     if (undoElision(p, t) === undoElision(p, e)) return { verdict: 'close', reason: 'elision' };
     var st = stripPronouns(p, t), se = stripPronouns(p, e);
