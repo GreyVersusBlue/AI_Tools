@@ -62,6 +62,7 @@
     "Tools/sub-plan-builder/test/smoke-seating-pull.mjs",
     "Tools/sub-plan-builder/test/smoke-do-now-pull.mjs",
     "Tools/sub-plan-builder/test/smoke-one-renderer.mjs",
+    "Tools/sub-plan-builder/test/smoke-sub-said.mjs",
     "Tools/classroom-timer/test/smoke-strip.mjs",
     "Tools/classroom-timer/test/smoke-remote.mjs",
     "Tools/classroom-timer/test/smoke-board-core.mjs",

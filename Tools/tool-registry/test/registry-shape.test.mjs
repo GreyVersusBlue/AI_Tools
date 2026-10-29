@@ -257,7 +257,8 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
      crh_flags_v1: Path 3 P5's flags (v305), absent today and do not cold call
      by student id. Marks on named students, so the rollover deletes it whole. */
   const SINCE_THE_MIGRATION = ['pcl_idnames_v1', 'conf-who', 'conf-receipts', 'conf-demo-state', 'crh_flags_v1',
-    'escape-room-builder:monitor-record' /* 019's teacher-monitor play record, v396 (Path 18 P4): team names, so student data */];
+    'escape-room-builder:monitor-record' /* 019's teacher-monitor play record, v396 (Path 18 P4): team names, so student data */,
+    'subPlanBuilder.subSaid.v1' /* 044's "what the sub said", one typed note per date out, v446 (Path 10 P5): can name a student, so student data */];
 
   /* Keys the old list DID have a chance to cover and did not, which a later
      session has deliberately reclassified. This is a different excuse from the

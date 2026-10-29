@@ -438,6 +438,9 @@
         { k: 'subPlanBuilder.history.v1', rollover: 'ask' },
         { k: 'subPlanBuilder.lastAbsence.v1' },
         { k: 'subPlanBuilder.standingDetails.v1', rollover: 'reduce' },
+        /* What the sub said, one typed note per date out. Not in the share link, history, .docx or text copy.
+           The teacher types it, so it can name a student: student data, deleted at the year-end rollover. */
+        { k: 'subPlanBuilder.subSaid.v1', student: true },
       ],
     },
     {

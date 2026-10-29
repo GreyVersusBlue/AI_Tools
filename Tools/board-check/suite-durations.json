@@ -54,6 +54,7 @@
     "Tools/sub-plan-builder/test/smoke-seating-pull.mjs": 25,
     "Tools/sub-plan-builder/test/smoke-do-now-pull.mjs": 25,
     "Tools/sub-plan-builder/test/smoke-one-renderer.mjs": 25,
+    "Tools/sub-plan-builder/test/smoke-sub-said.mjs": 20,
     "Tools/classroom-timer/test/smoke-strip.mjs": 12,
     "Tools/classroom-timer/test/smoke-remote.mjs": 14,
     "Tools/classroom-timer/test/smoke-board-core.mjs": 1,

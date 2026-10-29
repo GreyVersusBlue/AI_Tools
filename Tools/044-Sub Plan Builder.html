@@ -438,6 +438,18 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   <p class="hint" id="shareNote">&nbsp;</p>
 </div>
 
+<details class="card" id="subSaidCard">
+  <summary>What the sub said <span class="opt">— a note for each day out, written after you're back</span></summary>
+  <div class="inner">
+    <p class="hint">Type what the sub told you, or what their feedback page said. It stays on this device only: it is not in the share link, the saved history, the Word file or the text copy, and it is never sent anywhere. A day with a note is marked ✓.</p>
+    <label for="subSaidDay">Day</label>
+    <select id="subSaidDay"></select>
+    <label for="subSaidText">What the sub said <span class="opt">(up to 2,000 characters)</span></label>
+    <textarea id="subSaidText" rows="4" maxlength="2000" placeholder="e.g. Period 3 finished early; the video link did not load; Sam was out of the room twice."></textarea>
+    <p class="hint" id="subSaidNote">&nbsp;</p>
+  </div>
+</details>
+
 <div id="generateArea">
   <button class="primary" id="btnGenerate">Generate Word document</button>
   <button id="btnQuickCopy">📋 Quick text copy / print</button>
@@ -1347,6 +1359,57 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     setSeatingChartUI();
   });
 
+  // ---------- What the sub said (Path 10 P5) ----------
+  // One typed note per date out, kept in this browser only. It is deliberately outside the share payload, the saved
+  // history, the .docx and the text copy: it can name a student, and nothing here leaves the device. The key is
+  // { v: 1, notes: { '<iso date>': text } }; only the newest SUB_SAID_KEEP dates are kept.
+  const SUB_SAID_KEY = 'subPlanBuilder.subSaid.v1';
+  const SUB_SAID_KEEP = 60, SUB_SAID_MAX = 2000;
+  function readSubSaid() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(SUB_SAID_KEY));
+      const notes = raw && typeof raw === 'object' && raw.notes && typeof raw.notes === 'object' && !Array.isArray(raw.notes) ? raw.notes : {};
+      const out = {};
+      Object.keys(notes).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d) && typeof notes[d] === 'string' && notes[d].trim()).forEach(d => { out[d] = notes[d].slice(0, SUB_SAID_MAX); });
+      return out;
+    } catch (e) { return {}; }
+  }
+  function writeSubSaid(notes) {
+    const keep = Object.keys(notes).sort().slice(-SUB_SAID_KEEP);
+    const out = {};
+    keep.forEach(d => { out[d] = notes[d]; });
+    try { localStorage.setItem(SUB_SAID_KEY, JSON.stringify({ v: 1, notes: out })); return true; } catch (e) { return false; }
+  }
+  function renderSubSaidDays() {
+    const sel = el('subSaidDay');
+    const notes = readSubSaid();
+    const keep = sel.value;
+    const dates = computeDateList();
+    sel.textContent = '';
+    dates.forEach(d => {
+      const o = document.createElement('option');
+      o.value = d;
+      o.textContent = dayLabelLong(d) + (notes[d] ? ' ✓' : '');
+      sel.appendChild(o);
+    });
+    if (dates.includes(keep)) sel.value = keep;
+    el('subSaidText').value = notes[sel.value] || '';
+  }
+  el('subSaidDay').addEventListener('change', () => { el('subSaidText').value = readSubSaid()[el('subSaidDay').value] || ''; });
+  el('subSaidText').addEventListener('input', () => {
+    const d = el('subSaidDay').value;
+    if (!d) return;
+    const notes = readSubSaid();
+    const text = el('subSaidText').value.slice(0, SUB_SAID_MAX);
+    if (text.trim()) notes[d] = text; else delete notes[d];
+    el('subSaidNote').textContent = writeSubSaid(notes) ? 'Saved on this device.' : 'Could not save: this browser refused the storage.';
+    const o = el('subSaidDay').selectedOptions[0];
+    if (o) o.textContent = dayLabelLong(d) + (text.trim() ? ' ✓' : '');
+  });
+  el('subSaidCard').addEventListener('toggle', () => { if (el('subSaidCard').open) renderSubSaidDays(); });
+  ['planDate', 'numDays'].forEach(id => el(id).addEventListener('input', renderSubSaidDays));
+  renderSubSaidDays();
+
   // Path 10 P4: a do-now from the question bank. The Packet Builder's do-now provider (packet-builder/providers.js)
   // reads the bank and hands back the prompts of the questions tagged "do-now"; this page names no key of the
   // bank. The chosen prompt becomes the first line of the schedule, replacing an earlier do-now line, and the
@@ -1898,6 +1961,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
           return false;
         }
         applySharePayload(decoded);
+        renderSubSaidDays();
         setShareNote('Opened a shared plan from ' + who + '. It is a copy — nothing goes back to them.', 'saved');
         return true;
       }
