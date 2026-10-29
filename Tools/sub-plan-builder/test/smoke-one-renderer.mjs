@@ -14,6 +14,7 @@
 //     to disagree: attendance, rooms, phones and keys were printed with the asterisks)
 //   - a change made in the shared model shows up in both outputs (the Quick checklist's "Keys" line)
 //
+// Line endings are normalised on both sides: the XML declaration ends in CRLF and git may rewrite the golden files.
 // --update rewrites test/golden/ from the page as it is: use it only for a change the design says to make, and
 // put the diff of the golden files in the same commit. Nothing here opens the .docx in Word. Exits 1 on any failure.
 
@@ -112,7 +113,7 @@ function check(name, got) {
   for (const [f, body] of Object.entries(files)) {
     const p = path.join(GOLDEN, f);
     if (UPDATE) { fs.writeFileSync(p, body); continue; }
-    ok(fs.existsSync(p) && fs.readFileSync(p, 'utf8') === body, `${name}: ${f} equals the golden file`);
+    ok(fs.existsSync(p) && fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n') === body.replace(/\r\n/g, '\n'), `${name}: ${f} equals the golden file`);
   }
 }
 
