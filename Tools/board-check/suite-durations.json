@@ -170,6 +170,7 @@
     "Tools/school-calendar/test/smoke-week.mjs": 9,
     "Tools/school-calendar/test/smoke-weeks-core.mjs": 1,
     "Tools/school-calendar/test/smoke-weeks.mjs": 32,
+    "Tools/packet-builder/test/sections.test.mjs": 2,
     "Tools/school-calendar/test/school-day.test.mjs": 14,
     "Tools/school-calendar/test/smoke-bell.mjs": 11,
     "Tools/schedule-visualizer/test/smoke-bell-from-calendar.mjs": 10,
