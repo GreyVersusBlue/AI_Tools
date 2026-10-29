@@ -12,6 +12,8 @@
 // project rather than discarded, so nobody's in-progress map is lost by
 // this upgrade.
 
+import { cleanSlices } from "./bmg-slices.js";
+
 const WORKSPACE_KEY = "bmg_workspace_v1";
 const LEGACY_KEY = "bmg_project_v1";
 export const VERSION = 1;
@@ -60,6 +62,7 @@ function isValidProjectData(p) {
 
 /** Backfills project-data fields added after a project was first saved (e.g. legend, calibration, regions, lines). */
 function normalizeProjectData(p) {
+  if (p.slices !== undefined) { const c = cleanSlices(p.slices); if (c) p.slices = c; else delete p.slices; }
   if (!p.legendText || typeof p.legendText !== "object") p.legendText = {};
   if (!p.labelLegendText || typeof p.labelLegendText !== "object") p.labelLegendText = {};
   // Give-each-new-label-its-own-colour defaults ON, including for projects

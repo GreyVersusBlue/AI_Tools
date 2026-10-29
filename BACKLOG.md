@@ -8245,6 +8245,30 @@ runtime, the one content fetch that leaves the browser.
 - **P4 — Time slices for annotations.** Per-slice labels/lines/regions with a
   scrubber; small-multiple print; a two-way, selective handoff with 015 (send
   selected labels *and* markers; come back from a timeline into a map project).
+  *Design (AI-28, 2026-10-29, written before the build; there was none).*
+  - *Model.* A project may hold `slices: { list, active, next }`; a slice is `{ id, name, year, content }` and its content is the
+    annotation set: labels, markers, regions, lines and the key text/order (`CONTENT_FIELDS` in `bmg-slices.js`). The map, the view,
+    calibration, grid, compass and page format are the project's, shared by every slice (a border that moves is annotated on the same
+    base map; a different base map is a different project). **The active slice's content is the project's own fields**, so every editor,
+    export and undo reads and writes what it always did; switching writes them into the active slice and loads the target's. A project
+    without `slices` is byte-for-byte what it was, and nothing is added to it until a teacher presses "Start time slices". No new storage
+    key (it rides in `bmg_workspace_v1`, so the registry and 009 are unchanged); share links and files carry it, and `cleanSlices()` bounds
+    what arrives (12 slices, 5,000 items a list, an `s<digits>` id, an integer year within +-100,000).
+  - *Screen.* A "Time slices" card: a slider and previous/next over the slices in list order (the order is the teacher's; "Sort by year"
+    reorders), the current slice's name and year as two fields, "Add blank slice", "Copy this slice to a new one" (a border that moves a
+    little starts from the last one), "Delete slice". The slider is a native range with a text value ("2 of 4: Roman Empire, 117"). Switching
+    is a keyboard action like any other control. Undo history is reset on a switch (a slice change is not an undo step; edits inside a slice
+    are). Nothing here fetches, and nothing runs at load.
+  - *Print.* "Print the slices" is a small-multiple sheet, one panel per slice (name and year above each), every panel the same
+    view of the same map, drawn with `drawMapContent` after the slice's content is swapped in and put back after, on one page through the
+    existing export path (`printExportStage`, Save PDF through jsPDF), at most 12 panels, legend of the active slice below.
+  - *Handoff with 015.* The existing 046 to 015 route (`Handoffs`, `to: 'timeline-builder'`) sends the labels as year-0 events. With
+    slices, **the places of every slice go, each dated by its slice's year**, and that is the "selective" part: the send chooses a
+    slice (all slices, or just the one on the map). Markers with a caption go as places too. A change to `handoffs.js`'s entry and 046's
+    `timelinePlaces()` only; 015 already accepts the payload (`events[].yearStart`). **Coming back (015 to a map project) is not built**:
+    it needs a new route 015 does not accept and a decision about where an event's year goes on a map; listed for Devon below.
+  - *Not decided here, and so not built:* a slice-specific base map or view; animation or auto-play of the scrubber; slice-level legends
+    (the key text is per slice because it is part of the content, which is the only cheap way to keep it from showing another date's words).
 - **P5 — Quiz memory and the network question.** Persist which labels a class
   missed across sessions (the reteaching signal); make the Wikimedia lookup an
   explicit, disclosed, online-only action with its cache shown, or drop it.
