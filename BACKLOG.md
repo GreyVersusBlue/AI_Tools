@@ -6814,6 +6814,35 @@ day; the cross-week, cross-period view teachers actually want does not.
 - **P3 — Equity dashboard.** Who hasn't been called on in three weeks, distribution
   by seat position, per period and across periods, printed as a one-page artifact.
   A "Data" front door with an erase button, matching the site's privacy posture.
+  **Design (AI-23, 2026-10-29; written before any code, read against 007 at v455).** *What exists.* The Equity tab
+  answers one window for one roster (`np-equity.js` `report()` by name, a list, a seat table) and prints a table through
+  the page's own `#printReportArea`. It cannot show weeks, cannot compare periods and, reading `np_history` alone, knows
+  nothing older than the 500-entry window. P2's `np-rollup.js` `view()` is the whole record by day and by key; this is its
+  first reader. *Periods are the saved rosters.* A history entry carries no roster, and adding one would put a new
+  fact about a student on disk, so a period is read off `np_rosters` at view time: a student counts in every saved roster
+  whose list holds the name (a name in two periods counts in both; the sheet says so). *A pure module,*
+  `np-dashboard.js` (no DOM, no clock, no storage): `weekStart(day)` (Monday, local), `weekList(today, n)`, `build(view,
+  { rosters, today, weeks, idOf, threshold })` returning, per period, `weeks` (labels), `rows` (one per rostered student:
+  key, name, a count per week, total, last day, days since), `quiet` (no pick in `threshold` days, default 21, never-picked
+  first), `stats` (students, picks, called, coverage, least, most, spread) and a `weekly` series for the chart; plus
+  `compare(periods)` (the cross-period table: coverage and spread side by side) and `lines(period)` (the plain sentences
+  the sheet prints). Dates before the first record are unknown, not zero: `build` reports `since` (the oldest dated day in
+  the view) and the sheet says "records start {day}" when a window reaches past it. Undated picks count in no week and are
+  reported. *The page.* A "Dashboard" card at the top of the Equity tab (the existing window list and seat tables stay
+  as they are): a period picker (one roster or all), 4/8/12 weeks, then the picks-per-week chart through
+  `ChartSvg.bar` (grayscale-safe, `<title>/<desc>` and a polite announcement through its own baseline), the student by
+  week table as real `<table>` with counts in the cells (no colour-only encoding), the "not called in 3 weeks" list, and
+  the period comparison. Built as elements with `textContent` in `np-dashboard-view.js` (no new inline sink). One page
+  on paper: `#dashSheet.pk-page.pk-paper` under `body.printing-dash` (037's `printing-reteach` pattern, `PrintKit.setPage`
+  letter portrait, Preview and Print buttons, `PrintKit.preview` count held to Chromium's PDF in the smoke); the table
+  caps at what one page holds and says "and N more" rather than spill. *Data front door.* A line under the card says what
+  the dashboard reads (`np_history`, `np_daily`, the saved rosters; nothing else is stored) and carries a
+  button to the Data tab, where the erase buttons already are, and a "Clear pick history" shortcut that is the
+  existing button's own handler (one erase, so nothing hidden is left). *Stored: nothing.* No key, no setting (the
+  period and window are page variables), no student fact; `np-seat-equity.js` and `np-equity.js` are untouched and the
+  `unmatched` fix stays with the seat join (it reads names; moving it to ids is its own change, not in P3). *Defaults
+  taken, none of them Devon's open questions:* three weeks is the "quiet" line; Monday starts a week; eight weeks is
+  the opening window.
 - **P4 — Question-attached picks.** A pick is `{student, question}` when a prompt
   bank is loaded (Exit Ticket, Number Talks, the question bank of Path 12), logged
   together.
