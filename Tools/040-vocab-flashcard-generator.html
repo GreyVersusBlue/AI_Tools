@@ -41,6 +41,9 @@
      read-only seed sets, as on 030. vfg-bank.js is the mapping, both ways. -->
 <script src="vocab-flashcard-generator/vfg-bank.js"></script>
 <script src="../_shared/store.js"></script>
+<!-- The Word Lists hub (Path 19 P1): word-list.js is the shared store of named word lists; paste-table.js reads a pasted table for it. -->
+<script src="../_shared/paste-table.js"></script>
+<script src="../_shared/word-list.js"></script>
 <script src="../_shared/question-bank.js"></script>
 <script src="cultural-trivia-card-generator/ctcg-bank.js"></script>
 <script src="geography-bee-quiz-generator/gbq-bank.js"></script>
@@ -101,6 +104,12 @@
   .bank-row.refused { cursor: default; }
   .bank-empty { color: var(--muted); font-size: .85rem; margin: .4rem 0; }
   .bank-status { font-size: .82rem; margin: .2rem 0 .6rem; }
+  [hidden] { display: none !important; }
+  .hub-lists { list-style: none; margin: 0 0 .6rem; padding: 0; max-height: 12rem; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+  .hub-lists li { display: flex; gap: .5rem; align-items: center; padding: .3rem .5rem; border-bottom: 1px solid var(--line); }
+  .hub-lists li:last-child { border-bottom: 0; }
+  .hub-lists .hub-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .hub-lists button { width: auto; margin: 0; padding: .25rem .6rem; }
   .bank-status.error { color: var(--err); }
   .bank-review { font-size: .85rem; }
   .bank-review ul { margin: .3rem 0 .7rem; padding-left: 1.2rem; }
@@ -403,6 +412,37 @@
         <button type="button" id="printBtn">Print</button>
       </div>
 
+      <div class="card" id="hubCard">
+        <h2>Word Lists</h2>
+        <p class="hint" style="margin-top:0;">Every list on this page is also kept in the site&rsquo;s shared word-list store, in this browser only, with the gender and tags you give a word. Bring words in from a file or a pasted spreadsheet, or take them out as a file.</p>
+        <ul class="hub-lists" id="hubList" aria-label="Saved word lists"></ul>
+        <label for="hubPaste">Paste a table (term, definition, example, pronunciation, part of speech, gender, tags)</label>
+        <textarea id="hubPaste" rows="3" placeholder="casa&#9;house&#9;Mi casa es grande"></textarea>
+        <label for="hubPasteName">Name for pasted or CSV words</label>
+        <input type="text" id="hubPasteName" value="Pasted words">
+        <div class="row2">
+          <button type="button" class="secondary" id="hubReadBtn">Read the pasted table</button>
+          <button type="button" class="secondary" id="hubFileBtn">Open a file&hellip;</button>
+        </div>
+        <input type="file" id="hubFile" accept=".json,.csv,.tsv,.txt,application/json,text/csv,text/plain" hidden aria-label="Word list file">
+        <div class="bank-review" id="hubReview" hidden>
+          <p id="hubReviewText" style="margin:.2rem 0;"></p>
+          <ul id="hubReviewList"></ul>
+          <div class="row2">
+            <button type="button" id="hubConfirmBtn">Add to Word Lists</button>
+            <button type="button" class="secondary" id="hubCancelBtn">Cancel</button>
+          </div>
+        </div>
+        <p class="bank-status" id="hubStatus" role="status"></p>
+        <div class="import-bridge">
+          <div class="row2">
+            <button type="button" class="secondary" id="hubJsonBtn">Download all lists (.json)</button>
+            <button type="button" class="secondary" id="hubCsvBtn">Download this list (.csv)</button>
+          </div>
+          <button type="button" class="secondary" id="hubTemplateBtn">Download a blank template (.csv)</button>
+        </div>
+      </div>
+
       <div class="card" id="bankCard">
         <h2>Question bank</h2>
         <p class="hint" style="margin-top:0;">The site&rsquo;s shared question bank is kept on <a href="030-review-game-board.html">Quiz / Review Game Board</a>. A question is a card: the question on the front, its answer on the back. Nothing is added to this list or to the bank until you press a button. A question&rsquo;s picture stays in the bank: a card has its words only.</p>
@@ -462,7 +502,9 @@
    'printBtn','previewBtn','alignTestBtn','previewAlignTestBtn','alignTestHint','previewArea','previewNote','printNote','sheetView','printArea',
    'shareBtn','shareNote',
    'bankCard','bankSource','bankSourceNote','bankUnit','bankList','bankRefused','bankAllBtn','bankAddBtn','bankStatus',
-   'bankSendBtn','bankReview','bankReviewText','bankReviewList','bankConfirmBtn','bankCancelBtn','bankSendStatus'
+   'bankSendBtn','bankReview','bankReviewText','bankReviewList','bankConfirmBtn','bankCancelBtn','bankSendStatus',
+   'hubList','hubPaste','hubPasteName','hubReadBtn','hubFileBtn','hubFile','hubReview','hubReviewText','hubReviewList',
+   'hubConfirmBtn','hubCancelBtn','hubStatus','hubJsonBtn','hubCsvBtn','hubTemplateBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   // state: { name, words: "raw textarea text", mode, flashCols, flashRows, wallPerPage, wallShowDef,
@@ -490,7 +532,14 @@
     });
   }
 
-  function save() { if (state) VocabStore.saveSet(state.name, state); }
+  /* The Word Lists hub (Path 19 P1) keeps every list beside the page's own record: saving,
+     renaming and deleting here write through to it, and a failure there never stops a save. */
+  function hubDo(fn) { try { return fn(); } catch (e) { return undefined; } }
+  function save() {
+    if (!state) return;
+    VocabStore.saveSet(state.name, state);
+    hubDo(function () { WordList.putText(state.name, state.words); });
+  }
 
   function refreshSwitcher() {
     var names = VocabStore.listSets();
@@ -501,6 +550,7 @@
       if (state && n === state.name) opt.selected = true;
       els.listSwitch.appendChild(opt);
     });
+    renderHub();
   }
 
   function readFormIntoState() {
@@ -1235,7 +1285,10 @@
     if (!state) return;
     var oldName = state.name;
     var newName = els.listName.value.trim() || oldName;
-    if (newName !== oldName) { VocabStore.deleteSet(oldName); state.name = newName; }
+    if (newName !== oldName) {
+      VocabStore.deleteSet(oldName); state.name = newName;
+      hubDo(function () { WordList.rename(oldName, newName); });
+    }
     renderPreview(); refreshSwitcher();
   });
 
@@ -1289,6 +1342,7 @@
     if (!state) return;
     if (!confirm('Delete "' + state.name + '" completely? This can’t be undone.')) return;
     VocabStore.deleteSet(state.name);
+    hubDo(function () { WordList.remove(state.name); });
     var remaining = VocabStore.listSets();
     if (remaining.length) loadListByName(remaining[0]);
     else newList('New List');
@@ -1397,7 +1451,9 @@
   function adoptList(decoded, suffix) {
     var base = (typeof decoded.name === 'string' && decoded.name.trim()) ? decoded.name.trim() : 'Shared list';
     var name = uniqueListName(base + ' (' + suffix + ')');
-    VocabStore.saveSet(name, normalizeIncomingList(decoded, name));
+    var adopted = normalizeIncomingList(decoded, name);
+    VocabStore.saveSet(name, adopted);
+    hubDo(function () { WordList.putText(name, adopted.words); });
     loadListByName(name);
     els.toolbar.style.display = '';
     return name;
@@ -1668,10 +1724,139 @@
     });
   }
 
+
+  /* ---------- the Word Lists hub (Path 19 P1) ----------
+     _shared/word-list.js holds the lists; this card shows them, brings words in from a file or a
+     pasted table (shown first, stored on Add) and takes them out. A hub list and a list on this
+     page are one list by name: a list opened or imported here is made on both sides. */
+  var hubPending = null;   // { lists: [{ name, words }] } waiting for Add
+  function hubSay(text, isError) {
+    els.hubStatus.textContent = text || '';
+    els.hubStatus.className = 'bank-status' + (isError ? ' error' : '');
+  }
+  function renderHub() {
+    if (!els.hubList) return;
+    var lists = hubDo(function () { return WordList.load().lists; }) || [];
+    els.hubList.innerHTML = '';
+    if (!lists.length) {
+      var none = document.createElement('li');
+      none.textContent = 'No lists yet. Type words above, or bring some in below.';
+      els.hubList.appendChild(none);
+      return;
+    }
+    lists.forEach(function (l) {
+      var li = document.createElement('li');
+      var nm = document.createElement('span');
+      nm.className = 'hub-name';
+      nm.textContent = l.name + ' (' + l.words.length + (l.words.length === 1 ? ' word)' : ' words)');
+      var open = document.createElement('button');
+      open.type = 'button'; open.className = 'secondary';
+      open.textContent = 'Open';
+      open.setAttribute('aria-label', 'Open ' + l.name + ' in the editor');
+      open.addEventListener('click', function () { openHubList(l.name); });
+      li.appendChild(nm); li.appendChild(open);
+      els.hubList.appendChild(li);
+    });
+  }
+  /* Writes a hub list's words into this page's record of the same name (settings kept), making the
+     record when there is none. */
+  function syncSetFromHub(name) {
+    var hl = hubDo(function () { return WordList.get(name); });
+    if (!hl) return false;
+    var rec = VocabStore.loadSet(name);
+    var text = WordList.toText(hl.words);
+    var open = state ? state.name : null;
+    var wasCurrent = VocabStore.getCurrentName();
+    rec = rec ? Object.assign(rec, { words: text }) : normalizeIncomingList({ words: text }, name);
+    VocabStore.saveSet(name, rec);
+    VocabStore.setCurrentName(wasCurrent);
+    return open === name;
+  }
+  function openHubList(name) {
+    syncSetFromHub(name);
+    loadListByName(name);
+    hubSay('Opened "' + name + '".');
+  }
+  function hubShowPlan(lists, notes) {
+    var plan = WordList.importPlan(lists);
+    hubPending = { lists: lists };
+    els.hubReviewText.textContent = lists.length + (lists.length === 1 ? ' list' : ' lists') + ' read. Nothing is stored until you press Add.';
+    els.hubReviewList.innerHTML = '';
+    plan.forEach(function (p) {
+      var li = document.createElement('li');
+      li.textContent = p.kind === 'new'
+        ? p.name + ': a new list of ' + p.add + (p.add === 1 ? ' word' : ' words')
+        : p.name + ': joins the list you have; ' + p.add + ' new, ' + p.fill + ' filled in, none changed';
+      els.hubReviewList.appendChild(li);
+    });
+    (notes || []).forEach(function (n) {
+      var li = document.createElement('li');
+      li.textContent = n;
+      els.hubReviewList.appendChild(li);
+    });
+    els.hubReview.hidden = false;
+    hubSay('');
+  }
+  function hubReadTable(text, name) {
+    var t = WordList.parseTable(text);
+    if (!t.words.length) { hubSay('No words found. A row needs a term in its first column.', true); return; }
+    var notes = t.unreadable.map(function (u) { return 'Line ' + u.line + ' has no term and was left out.'; });
+    hubShowPlan([{ name: (name || '').trim() || 'Pasted words', words: t.words }], notes);
+  }
+  els.hubReadBtn.addEventListener('click', function () {
+    hubReadTable(els.hubPaste.value, els.hubPasteName.value);
+  });
+  els.hubFileBtn.addEventListener('click', function () { els.hubFile.click(); });
+  els.hubFile.addEventListener('change', function () {
+    var file = els.hubFile.files && els.hubFile.files[0];
+    els.hubFile.value = '';
+    if (!file) return;
+    file.text().then(function (text) {
+      if (/\.json$/i.test(file.name) || /^\s*[{\[]/.test(text)) {
+        var j = WordList.fromJSON(text);
+        if (!j.lists.length) { hubSay(j.problems[0] || 'No lists in that file.', true); return; }
+        hubShowPlan(j.lists, j.problems);
+      } else {
+        hubReadTable(text, els.hubPasteName.value === 'Pasted words' ? file.name.replace(/\.[^.]*$/, '') : els.hubPasteName.value);
+      }
+    }, function () { hubSay('That file could not be read.', true); });
+  });
+  els.hubConfirmBtn.addEventListener('click', function () {
+    if (!hubPending) return;
+    var lists = hubPending.lists, reload = false;
+    hubPending = null;
+    els.hubReview.hidden = true;
+    WordList.applyImport(lists);
+    lists.forEach(function (l) { if (syncSetFromHub(l.name)) reload = true; });
+    if (reload && state) loadListByName(state.name);
+    refreshSwitcher();
+    hubSay('Added ' + lists.length + (lists.length === 1 ? ' list.' : ' lists.'));
+  });
+  els.hubCancelBtn.addEventListener('click', function () {
+    hubPending = null; els.hubReview.hidden = true; hubSay('Nothing was stored.');
+  });
+  els.hubJsonBtn.addEventListener('click', function () {
+    if (state) { readFormIntoState(); save(); }
+    var lists = WordList.load().lists;
+    if (!lists.length) { hubSay('There is nothing to download yet.', true); return; }
+    ExportKit.download(WordList.toJSON(lists), 'word-lists.json', 'application/json');
+  });
+  els.hubCsvBtn.addEventListener('click', function () {
+    if (!state) return;
+    readFormIntoState(); save();
+    var hl = WordList.get(state.name);
+    if (!hl || !hl.words.length) { hubSay('This list has no words yet.', true); return; }
+    ExportKit.download(WordList.toCsv(hl.words), ExportKit.filename(state.name, 'csv'), 'text/csv');
+  });
+  els.hubTemplateBtn.addEventListener('click', function () {
+    ExportKit.download(WordList.templateCsv(), 'word-list-template.csv', 'text/csv');
+  });
+
   /* ---------- boot ---------- */
   // A shared link wins over whatever list was last open: following one is an
   // explicit "show me this deck". If the link is unreadable, importSharedList
   // says so and boot carries on normally.
+  hubDo(function () { WordList.importLegacy(window.localStorage); });
   if (!importSharedList()) {
     var current = VocabStore.getCurrentName();
     if (current && VocabStore.loadSet(current)) {

@@ -128,6 +128,7 @@ function suite(label, src) {
   // ---- CSV out and back ----
   const csv = WL.toCsv([T('-ing', { definition: 'suffix', tags: ['x', 'y'] }), T('a,b', { definition: 'comma "q"' })]);
   ok(csv.startsWith('﻿term,definition,example,pronunciation,partOfSpeech,gender,tags'), 'the CSV has the header and the byte order mark');
+  eq(WL.parseTable(csv).words.map(x => x.term), ['-ing', 'a,b'], 'a CSV that keeps its byte order mark reads the same (trim takes it off the first cell)');
   const csvBack = WL.parseTable(csv.slice(1));
   eq(csvBack.words.map(x => [x.term, x.definition, x.tags]), [['-ing', 'suffix', ['x', 'y']], ['a,b', 'comma "q"', []]], 'CSV out and back: the formula apostrophe comes off, quotes and commas survive');
   ok(WL.templateCsv().includes('la biblioteca') && WL.parseTable(WL.templateCsv().slice(1)).words.length === 2, 'the template downloads two example rows that read back');

@@ -325,6 +325,7 @@
     "test:stations-legacy": "node Tools/stations/test/smoke-legacy-codes.mjs",
     "test:stations-bank": "node Tools/stations/test/stations-bank.test.mjs",
     "test:word-list": "node Tools/word-list/test/word-list.test.mjs",
+    "test:word-list-hub": "node Tools/word-list/test/smoke-hub.mjs",
     "test:stations-bank-smoke": "node Tools/stations/test/smoke-bank-stations.mjs",
     "test:export": "node Tools/export/test/export.test.mjs && node Tools/export/test/smoke-export.mjs",
     "test:trading-card-pdf": "node Tools/historical-trading-card-maker/test/smoke-pdf-export.mjs",
