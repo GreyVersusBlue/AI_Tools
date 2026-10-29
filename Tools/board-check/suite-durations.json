@@ -397,6 +397,7 @@
     "Tools/word-list/test/smoke-adopter-051.mjs": 30,
     "Tools/word-list/test/smoke-adopter-052.mjs": 30,
     "Tools/word-list/test/smoke-adopter-014.mjs": 30,
+    "Tools/conjugate/test/conjugate.test.mjs": 2,
     "Tools/stations/test/smoke-bank-stations.mjs": 30,
     "Tools/qr-scavenger-hunt-builder/test/smoke-images.mjs": 15,
     "Tools/qr-scavenger-hunt-builder/test/smoke-required.mjs": 12,

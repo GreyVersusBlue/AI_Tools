@@ -64,6 +64,7 @@ const SITE_GLOBALS = {
   Rotation: 'readonly',
   QuestionBank: 'readonly',
   WordList: 'readonly',
+  Conjugate: 'readonly',
   RestoreKit: 'readonly',
   BrCrypto: 'readonly',
   // _shared/vendor/
