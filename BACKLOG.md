@@ -6772,6 +6772,33 @@ day; the cross-week, cross-period view teachers actually want does not.
 - **P2 — History.** Replace the flat 500-entry cap with a per-day rollup that
   survives trimming; key history on student ids (Path 3) so nickname/preferred-name
   matching stops under-reporting via `unmatched`.
+  **Design (AI-23, 2026-10-29; written before any code, read against 007 at v454).** *What exists.* `np_history` is an
+  array of `{name, time, date?, prompt?}`; `np-store` slices it to the last 500 on every write (`MAX_HISTORY`), and the
+  page appends in two places only (`np-ui.js`'s `selectWinner`/`selectTournamentWinner` and `np-mode-multi.js`), so a pick
+  older than the 500th is gone from disk. `np_stats` keeps lifetime counts by name, undated. `np-equity.js` and
+  `np-seat-equity.js` read history by name; the seat join reports `unmatched` when a seated name is not a history name.
+  *The rollup is what trimming throws away.* A new key `np_daily` (records group, `student: true`, deleted by the year
+  rollover like `np_history`; `#36` forbids renaming a key, not adding one) holds
+  `{ days: { 'YYYY-MM-DD': { <key>: count } }, who: { <key>: last name seen } }`, where `<key>` is the student's id from
+  the Class Roster Hub sidecar (`lookupId`, `_shared/student-details.js`, the way 002/022/027 key `groupHistory`) and, for a
+  name with no id, `n:` plus the normalised name. **`np_history` is untouched** (same shape, same cap, same readers), so
+  the rollup is exactly the entries that left the window: no entry is ever in both, there is nothing to migrate, and an
+  undo (which cuts `history` back to its length at the pick) cannot double count. The write is at the three places an
+  entry can leave: the page's `saveHistory()` folds `history[folded .. length-500)` into the rollup (the page counts what it
+  folded since load, so an unsaved overflow in memory is folded once), `restore()` folds what its `.slice(-500)` drops, and
+  "Clear pick history" clears both (one erase, so nothing hidden is left behind). An undated entry folds into day `''`.
+  *A pure module.* `np-rollup.js`: `fold(doc, entries, idOf)` (returns a new document), `merge(a, b)` (cells add, which is
+  how `np_stats` already merges a backup), `prune(doc, maxDays)`, `view(doc, history, idOf)` (the rollup plus the live
+  window as one `{ day: { key: count } }`, for P3's dashboard), `fix(doc)` (the store's repair). Held by
+  `test:name-picker-rollup`: a fixture of 600 picks over three weeks gives the same totals as counting all 600 directly,
+  an id keeps its count across a rename (the `who` name moves, the key does not), and old `np_history` fixtures read
+  unchanged. *Defaults taken, none of them Devon's open questions:* the rollup keeps the last 400 days (older days are
+  pruned; the year rollover empties it anyway); a name with no id is kept under its normalised name and gains the id later
+  only in `view()`, never by rewriting stored keys; a restored backup's `np_daily` adds into the teacher's (the same policy
+  as stats, with the same double-count if one file is imported twice, and the same reason). *Not in P2:* `np-equity.js` and
+  `np-seat-equity.js` keep reading names (the prompt for this step holds them unchanged); P3's dashboard is the first
+  reader of `view()`, and the `unmatched` fix lands there. Adding a key moves `smoke.mjs`'s `KEYS.length === 14` to 15 and
+  `census()` gains nothing (a rollup is not a count the erase dialog shows).
 - **P3 — Equity dashboard.** Who hasn't been called on in three weeks, distribution
   by seat position, per period and across periods, printed as a one-page artifact.
   A "Data" front door with an erase button, matching the site's privacy posture.
