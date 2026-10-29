@@ -789,7 +789,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 11 | Path 8 P4 — device-to-device project transfer through the share sheet | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
-| 16 | Path 10 P1 — Packet Builder `087` with the section-provider registry | 087 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
+| 16 | Path 10 P1 — Packet Builder `090` with the section-provider registry | 090 | 2+ | AI-19 | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 17 | Path 10 P2 — 045 re-based on the providers; its raw key reads go away (the calendar's has gone through `SchoolDay` since v316). **Then give 045 the share sheet** — the last tool Path 6 P3 left, held back only so its payload is not re-shaped the week after it ships; follow the P3 working notes in the Path 6 section | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 18 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
@@ -3581,7 +3581,7 @@ data; 032 is the better public owner). This plan says 032 owns, 035 imports/expo
 
 ### Path 10 — Packet Builder and the sub-day product
 
-**Why.** [Track P](#track-p--printable-cheat-sheet-bundle-export-packet-builder) (the Packet Builder, a new tool `087`) is the
+**Why.** [Track P](#track-p--printable-cheat-sheet-bundle-export-packet-builder) (the Packet Builder, a new tool, `090` after the renumbering) is the
 general engine; separately, Sub Plan Builder (044) and Sub Binder (045) are two
 tools for one job, joined by six literal key reads and no shared code, and 045's own
 notes say the handoff interface question is "due, not deferred". The "evergreen
@@ -3591,10 +3591,34 @@ the sub wrote back.
 
 **Phases.**
 
-- **P1 — Packet Builder `087` with the section-provider registry**, exactly per
+- **P1 — Packet Builder `090` with the section-provider registry**, exactly per
   [Track P](#track-p--printable-cheat-sheet-bundle-export-packet-builder) P1/P2 (`Tools/packet-builder/sections.js`, evaluate/render
   providers, presets, live preview, seating section via `seating.mjs`), but with
   providers declared in the tool registry (Path 4) instead of a private list.
+  **Renumbered (AI-19, 2026-10-29): the tool is `090`, not `087` (Path 10) or `082` (Track P)** — 087 is Class Screen and
+  082 was taken long ago; `Tools/090-packet-builder.html`, slug `packet-builder`.
+  **P1 design (AI-19, 2026-10-29), so the increments below have one thing to follow.**
+  *A provider is data plus two pure functions, not DOM code.* `{ id, title, sourceSlug, setupHint, storageKeys,
+  evaluate(ctx) → { available, status }, build(ctx, opts) → { pages: [{ title, blocks }] } }`, where a block is one of
+  `h`, `p`, `kv`, `table`, `list`, `note`, and `html` for markup a tool already builds and escapes itself (a small closed set) and `ctx = { read(key), todayISO, SchoolDay }`. A provider
+  never touches storage or the DOM: the page hands it `read(key)` (parsed JSON, or `undefined` on a missing or broken
+  key), so every provider runs in plain Node under the suite and a bad key is `available: false`, never a throw. One
+  pure `toHtml(pages)` turns blocks into escaped markup (the only place text becomes HTML, so there is no `innerHTML`
+  of source data anywhere), and the page prints that markup through the print kit. *Declared in the registry:* each
+  provider lists the keys it reads in `storageKeys`; `packet-builder`'s row in `_shared/tool-registry.js` carries the
+  union as `reads`, and `Tools/packet-builder/test/` fails when the two disagree or when a key is not one its
+  `sourceSlug` row declares. A provider is added in `sections.js` and its keys in that row, in the same commit.
+  *Presets:* `gvb-packet:presets.v1 = { v: 1, presets: [{ name, ids: [...] }] }` (the order of `ids` is the packet's order;
+  Track P's separate `order` array is dropped as redundant) and the open layout in `gvb-packet:layout.v1 = { v: 1, ids }`.
+  Two presets ship, read-only and built in, because choosing them is a product call (Devon can rename or drop them):
+  **Sub day** and **Emergency binder** (the second is Path 10 P3's seed; it lists only date-independent sections).
+  Ids that no provider answers to are dropped on load and said so. *What is stored:* the layout and the presets, ids
+  only; no student data is copied, every section reads live from its source tool's key at open, as 045 does, and the
+  rollover has nothing of the packet's to delete. *The page:* checkbox list with each status line, unavailable sections
+  greyed with a link to the source tool, move up/down buttons (keyboard-first; drag is optional later), a live preview,
+  Print and Preview pages through `PrintKit`. *First providers* (step 3): hall pass log, sub plan standing details,
+  school calendar (through `SchoolDay`) and class rosters; seating is P1's last step (`seating.mjs`'s
+  `buildPrintPage` returns markup, so it is an `html` block, the one block that carries trusted markup).
 - **P2 — 045 re-based on the providers.** Sub Binder keeps its one-button UX but
   sources every section from `sections.js`; its raw key reads go away (the calendar's goes through `SchoolDay` since v316, Path 9 P3). Add the
   076 feedback prompts as the binder's feedback page.
@@ -8959,7 +8983,7 @@ handlers can tell the two apart.
 
 ### Track P — Printable Cheat-Sheet Bundle Export ("Packet Builder")
 
-**Decision: a new tool `Tools/082-packet-builder.html` with a central section-provider
+**Decision: a new tool `Tools/090-packet-builder.html` (written 082; renumbered by AI-19, 2026-10-29) with a central section-provider
 registry in `Tools/packet-builder/sections.js`; 045 stays untouched.**
 
 - *Why a new tool, not extending 045*: Sub Binder is a curated product ("everything a sub
