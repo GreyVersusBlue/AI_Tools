@@ -2,7 +2,7 @@
 //
 //   node Tools/name-picker/test/smoke-modes.mjs
 //
-// Path 15 P1 steps 3 and 4 lifted jump, disappear, slot and multi into np-mode-*.js behind a host object the
+// Path 15 P1 steps 3 to 5 lifted jump, disappear, slot, multi and tournament into np-mode-*.js behind a host object the
 // page builds. test:name-picker-modes holds the logic to the old code; this drives the real
 // page: for each mode, with Let's Go Crazy off and on, one pick ends on the winner dialog
 // with a name from the roster, and the rolling state is released again.
@@ -64,6 +64,29 @@ for (const crazy of [false, true]) {
     await settle(page, 400);
     ok(await page.evaluate(() => !document.getElementById('pickBtn').disabled), `${label}: the pick button is free again`);
   } catch (e) { failed++; console.log('  FAIL ' + label + ': no dialog (' + String(e.message).split('\n')[0] + ')'); }
+  await page.context().close();
+}
+/* Tournament grid (np-mode-tournament.js): the spotlight sweep ends on the winner dialog. */
+{
+  const page = await prepPage(browser, BASE, { width: 1280, height: 900 });
+  await page.goto(BASE + '/Tools/007-Name Picker.html', { waitUntil: 'networkidle' });
+  await page.click('#settingsBtn');
+  await settle(page, 300);
+  await page.fill('#namesInput', ROSTER.join('\n'));
+  await page.click('#loadNames');
+  await settle(page, 300);
+  await page.keyboard.press('Escape');
+  await settle(page, 300);
+  await page.evaluate(() => document.getElementById('tournamentBtn').click());
+  await settle(page, 300);
+  ok(await page.$$eval('.tournament-tile', t => t.length) === ROSTER.length, 'tournament: the grid shows every student');
+  await page.evaluate(() => document.getElementById('pickBtn').click());
+  try {
+    await page.waitForSelector('.modal-overlay .winner-name', { timeout: 20000 });
+    const winner = (await page.textContent('.modal-overlay .winner-name')).trim();
+    ok(ROSTER.includes(winner), `tournament: the dialog names someone on the roster (${winner})`);
+    ok(await page.$$eval('.tournament-tile.winner-tile', t => t.length) === 1, 'tournament: exactly one tile is marked the winner');
+  } catch (e) { failed++; console.log('  FAIL tournament: no winner dialog (' + String(e.message).split('\n')[0] + ')'); }
   await page.context().close();
 }
 await browser.close();

@@ -738,6 +738,7 @@ import { jumpPick as runJump } from './name-picker/np-mode-jump.js';
 import { disappearPick as runDisappear } from './name-picker/np-mode-disappear.js';
 import { slotPick as runSlot } from './name-picker/np-mode-slot.js';
 import { multiPick as runMulti } from './name-picker/np-mode-multi.js';
+import { tournamentPick as runTournament } from './name-picker/np-mode-tournament.js';
 
 /* _shared/store.js is linked in the head but nothing on this page calls it
    directly: np-store's thirteen slots keep their boxing wrapper. It is here so
@@ -1069,7 +1070,7 @@ function pickName(){
   else jumpPick();
 }
 
-/* The jump, disappear, slot and multi modes live in name-picker/np-mode-*.js. Each is handed this host
+/* The jump, disappear, slot, multi and tournament modes live in name-picker/np-mode-*.js. Each is handed this host
    rather than reaching for page globals; every member is looked up when called, because the page
    reassigns nameCards and speed and defines some of these helpers further down. */
 const modeHost={
@@ -1093,6 +1094,8 @@ Object.assign(modeHost,{
   bumpCombo:()=>bumpCombo(),todayKey:()=>todayKey(),showMultiWinnerModal:(w)=>showMultiWinnerModal(w)
 });
 const multiPick=(count)=>runMulti(modeHost,count);
+modeHost.selectTournamentWinner=(card)=>selectTournamentWinner(card);
+const tournamentPick=()=>runTournament(modeHost);
 const jumpPick=()=>runJump(modeHost);
 const disappearPick=()=>runDisappear(modeHost);
 const slotPick=()=>runSlot(modeHost);
@@ -1793,38 +1796,6 @@ function renderTournamentGrid(){
   });
   board.appendChild(grid);
   updateCountDisplay();
-}
-async function tournamentPick(){
-  isRolling=true;setRollingState(true);
-  const activeCards=nameCards.filter(c=>c.active&&!isSkipped(c.name));
-  if(activeCards.length===0){finishRolling();return;}
-  const winnerCard=chooseWinner(activeCards);
-  if(!winnerCard){finishRolling();return;}
-  if(activeCards.length===1){selectTournamentWinner(winnerCard);return;}
-  const winnerIdx=activeCards.indexOf(winnerCard);
-  const dramatic=document.getElementById('dramaticPause').checked;
-  const baseJumps=dramatic?18:12;
-  const totalJumps=baseJumps+Math.floor(Math.random()*6);
-  let lastIdx=-1,currentDelay=Math.max(speed,90);
-  for(let i=0;i<totalJumps;i++){
-    let idx;
-    if(i===totalJumps-1)idx=winnerIdx;
-    else{
-      const avoidWinner=i===totalJumps-2&&activeCards.length>2;
-      let guard=0;
-      do{idx=Math.floor(Math.random()*activeCards.length);guard++;}
-      while(guard<40&&((idx===lastIdx&&activeCards.length>1)||(avoidWinner&&idx===winnerIdx)));
-    }
-    activeCards.forEach(c=>c.el.classList.remove('spotlight'));
-    activeCards[idx].el.classList.add('spotlight');
-    playBeep(600+Math.random()*350,55,'square',0.08);
-    if(crazyMode)shake(1);
-    lastIdx=idx;
-    if(dramatic&&i>totalJumps*0.55)currentDelay=currentDelay*1.16;
-    await sleep(currentDelay);
-  }
-  activeCards.forEach(c=>c.el.classList.remove('spotlight'));
-  selectTournamentWinner(winnerCard);
 }
 function selectTournamentWinner(winnerCard){
   winnerCard.el.classList.add('winner-tile');
