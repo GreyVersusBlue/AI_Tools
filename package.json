@@ -8,6 +8,7 @@
     "test:conference-signup": "node conference-signup/test/core.test.mjs && node conference-signup/test/worker.test.mjs && node conference-signup/test/smoke-flow.mjs",
     "test:name-picker": "node Tools/name-picker/test/smoke.mjs && node Tools/name-picker/test/drive-weighting.mjs",
     "test:name-picker-share": "node Tools/name-picker/test/smoke-share.mjs",
+    "test:name-picker-lightning": "node Tools/name-picker/test/smoke-lightning.mjs",
     "test:seating": "node Tools/seating-chart/test/solver.test.mjs && node Tools/seating-chart/test/migration.test.mjs && node Tools/seating-chart/test/explain.test.mjs && node Tools/seating-chart/test/rules.test.mjs && node Tools/seating-chart/test/room.test.mjs && node Tools/seating-chart/test/smoke-room.mjs && node Tools/seating-chart/test/smoke-room-marks.mjs && node Tools/seating-chart/test/smoke-seating.mjs && node Tools/seating-chart/test/smoke-sub-packet.mjs && node Tools/seating-chart/test/smoke-zoom-pan.mjs && node Tools/seating-chart/test/drive-seating.mjs && node Tools/seating-chart/test/smoke-share.mjs && node Tools/seating-chart/test/smoke-photos.mjs",
     "test:schedule": "node Tools/schedule-visualizer/test/smoke.mjs",
     "test:schedule-visualizer": "node Tools/schedule-visualizer/test/smoke-recovery.mjs && node Tools/schedule-visualizer/test/smoke-evacuation.mjs",

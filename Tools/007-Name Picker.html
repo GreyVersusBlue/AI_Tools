@@ -937,8 +937,13 @@ function drawLightning(fromEl,toEl){
   if(motionOff())return;
   const svg=document.getElementById('lightningSvg');
   const r1=fromEl.getBoundingClientRect(),r2=toEl.getBoundingClientRect();
-  const x1=r1.left+r1.width/2,y1=r1.top+r1.height/2;
-  const x2=r2.left+r2.width/2,y2=r2.top+r2.height/2;
+  /* The Crazy-mode pulse puts a filter on <body>, and a filtered ancestor becomes the
+     containing block of a position:fixed child: the svg then starts wherever the body
+     does (it sat ~320px off to the left), so the bolt must be placed from the svg's own
+     origin and not from the viewport's. */
+  const o=svg.getBoundingClientRect();
+  const x1=r1.left+r1.width/2-o.left,y1=r1.top+r1.height/2-o.top;
+  const x2=r2.left+r2.width/2-o.left,y2=r2.top+r2.height/2-o.top;
   let path=`M ${x1} ${y1}`;
   for(let i=1;i<6;i++){
     const t=i/6;

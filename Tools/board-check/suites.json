@@ -58,6 +58,7 @@
     "Tools/seating-chart/test/smoke-zoom-pan.mjs",
     "Tools/name-picker/test/drive-weighting.mjs",
     "Tools/name-picker/test/smoke-share.mjs",
+    "Tools/name-picker/test/smoke-lightning.mjs",
     "Tools/sub-plan-builder/test/smoke-share.mjs",
     "Tools/sub-plan-builder/test/smoke-seating-pull.mjs",
     "Tools/sub-plan-builder/test/smoke-do-now-pull.mjs",
