@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="../manifest.json">
+<title>Packet Builder</title>
+<meta name="description" content="Choose which pages go in one printed packet — substitute information, emergency information and more — put them in order, preview the pages and print. Everything is read from the tools you already use; nothing is copied.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/090-packet-builder.html">
+<meta property="og:title" content="Packet Builder — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Choose which pages go in one printed packet — substitute information, emergency information and more — put them in order, preview the pages and print. Everything is read from the tools you already use; nothing is copied.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Packet Builder — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Choose which pages go in one printed packet — substitute information, emergency information and more — put them in order, preview the pages and print. Everything is read from the tools you already use; nothing is copied.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M9 8h11l4 4v12H9z' fill='none' stroke='%231f3a5f' stroke-width='2'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The printed packet is built into #printArea, which is paper.
+
+     Printing is the shared kit's: _shared/print-area.css puts #printArea alone
+     on the paper, print-kit.css lays each page out (.pk-page), and
+     PrintKit.preview shows the pages. This page has no print block of its own.
+
+     What a section holds comes from Tools/packet-builder/sections.js (the
+     registry and the pure markup builder) and providers.js (the sections). A
+     provider returns data, never markup; sections.js's toHtml() is the one place
+     text becomes HTML, so nothing a source tool saved reaches innerHTML raw. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
+<script src="../_shared/a11y.js"></script>
+<script src="../_shared/tool-registry.js"></script>
+<script src="../_shared/print-kit.js"></script>
+<script src="packet-builder/sections.js"></script>
+<script src="packet-builder/providers.js"></script>
+<link rel="stylesheet" href="../_shared/ink-paper.css">
+<link rel="stylesheet" href="../_shared/a11y.css">
+<link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/print-area.css">
+<link rel="stylesheet" href="../_shared/print-kit.css">
+<style>
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  label { font-weight: 600; font-size: .82rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: .2rem 0 .6rem; }
+  input[type="text"], select {
+    font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .4rem .55rem;
+  }
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
+  button.small { padding: .2rem .55rem; font-size: .8rem; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .btnrow, .row { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+  .msg { font-size: .82rem; color: var(--muted); margin: .5rem 0 0; min-height: 1.1em; }
+
+  .sec-list { list-style: none; margin: 0; padding: 0; }
+  .sec { display: flex; gap: .7rem; align-items: center; padding: .55rem .3rem; border-top: 1px solid var(--line); }
+  .sec:first-child { border-top: 0; }
+  .sec .pick { display: flex; gap: .55rem; align-items: center; flex: 1 1 auto; min-width: 0; }
+  .sec .pick input { width: 1.1rem; height: 1.1rem; margin: 0; flex: none; }
+  .sec .name { font-weight: 600; }
+  .sec .status { display: block; font-size: .8rem; color: var(--muted); font-weight: 400; }
+  .sec.off .name { color: var(--muted); }
+  .sec .order { display: flex; gap: .3rem; flex: none; }
+  .sec .setup { font-size: .8rem; flex: none; }
+  .num { font-variant-numeric: tabular-nums; color: var(--muted); width: 1.4rem; text-align: right; flex: none; }
+
+  /* The live preview is the same markup the printer gets, on screen as paper. */
+  .live { background: var(--card-2); border-radius: 8px; padding: .8rem; }
+  .live .pb-page { background: #fff; color: #111; border: 1px solid var(--line-strong); border-radius: 4px; padding: 1rem 1.2rem; margin: 0 auto .8rem; max-width: 8.5in; }
+  .live .pb-page:last-child { margin-bottom: 0; }
+  .live-empty { color: var(--muted); margin: 0; padding: .4rem; }
+
+  /* What a packet page looks like, on screen and on paper. */
+  .pb-page { font-size: 11pt; }
+  .pb-title { font-size: 1.35rem; margin: 0 0 .6rem; border-bottom: 2px solid currentColor; padding-bottom: .2rem; }
+  .pb-h { margin: .9rem 0 .3rem; font-size: 1rem; }
+  .pb-p { margin: .3rem 0; }
+  .pb-note { margin: .3rem 0; font-style: italic; }
+  .pb-list { margin: .3rem 0 .3rem 1.2rem; padding: 0; }
+  .pb-kv { display: grid; grid-template-columns: 10.5rem 1fr; gap: .25rem .8rem; margin: .4rem 0; }
+  .pb-kv dt { font-weight: 700; }
+  .pb-kv dd { margin: 0; overflow-wrap: anywhere; }
+  .pb-table { border-collapse: collapse; width: 100%; margin: .4rem 0; }
+  .pb-table th, .pb-table td { border: 1px solid #888; padding: .25rem .5rem; text-align: left; vertical-align: top; }
+  .pb-table th { background: #eee; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Packet Builder</h1>
+      <p class="sub">Pick the pages, put them in order, preview and print one packet. Each page is read live from the tool that holds it, so nothing here goes stale.</p>
+    </div>
+    <div class="btnrow">
+      <button type="button" class="secondary" id="previewBtn">Preview pages</button>
+      <button type="button" id="printBtn">Print packet</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <label for="presetSelect">Preset</label>
+      <select id="presetSelect"></select>
+      <button type="button" class="secondary" id="applyPresetBtn">Use this preset</button>
+      <button type="button" class="danger" id="deletePresetBtn">Delete</button>
+    </div>
+    <div class="row" style="margin-top:.5rem;">
+      <label for="presetName">Save the pages ticked below as</label>
+      <input type="text" id="presetName" maxlength="60" autocomplete="off">
+      <button type="button" class="secondary" id="savePresetBtn">Save preset</button>
+    </div>
+    <p class="msg" id="presetMsg" role="status" aria-live="polite"></p>
+  </div>
+
+  <div class="card">
+    <h2>Pages</h2>
+    <p class="hint">Tick the pages you want. A greyed page has nothing saved yet; its link takes you to the tool that fills it in. Ticked pages print in the order shown, top first.</p>
+    <ul class="sec-list" id="secList"></ul>
+    <p class="msg" id="layoutMsg" role="status" aria-live="polite"></p>
+  </div>
+
+  <div class="card">
+    <h2>Preview</h2>
+    <div class="live" id="live" aria-live="polite"></div>
+    <p class="msg" id="skipMsg" role="status" aria-live="polite"></p>
+  </div>
+</div>
+
+<div id="printArea" class="pk-ink-safe pk-paper"></div>
+
+<script>
+(function () {
+  'use strict';
+  var PS = window.PacketSections;
+  var byId = function (id) { return document.getElementById(id); };
+
+  /* ---- storage: the layout and the presets, ids only ---- */
+  function readKey(k) {
+    try {
+      var raw = localStorage.getItem(k);
+      return raw === null ? undefined : JSON.parse(raw);
+    } catch (e) { return undefined; }
+  }
+  function writeKey(k, v) {
+    try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; }
+  }
+  function localISO(d) {
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function context() {
+    return { read: readKey, todayISO: localISO(new Date()), SchoolDay: window.SchoolDay || null };
+  }
+
+  /* Two presets ship, built in and read-only; ids no section answers to are left out. */
+  var BUILT_IN = [
+    { name: 'Sub day', ids: ['sub-plan', 'emergency-info'] },
+    { name: 'Emergency binder', ids: ['emergency-info', 'sub-plan'] }
+  ];
+  function builtIns() {
+    var known = PS.ids();
+    return BUILT_IN.map(function (p) { return { name: p.name, ids: PS.cleanIds(p.ids, known).ids }; });
+  }
+
+  var known = PS.ids();
+  var layout = PS.parseLayout(readKey(PS.LAYOUT_KEY), known);
+  var chosen = layout.ids;
+  var saved = PS.parsePresets(readKey(PS.PRESETS_KEY));
+  var status = [];
+
+  function say(el, text) { el.textContent = text; }
+  if (layout.dropped.length) say(byId('layoutMsg'), 'Left out of your saved layout, because this tool no longer has them: ' + layout.dropped.join(', ') + '.');
+
+  function saveLayout() { writeKey(PS.LAYOUT_KEY, PS.layoutRecord(chosen)); }
+  function savePresets() { return writeKey(PS.PRESETS_KEY, PS.presetsRecord(saved)); }
+
+  /* ---- the list ---- */
+  function statusOf(id) { for (var i = 0; i < status.length; i++) if (status[i].id === id) return status[i]; return null; }
+
+  function sourceHref(slug) { try { return window.ToolRegistry.href(slug); } catch (e) { return ''; } }
+
+  function renderList() {
+    var list = byId('secList');
+    list.textContent = '';
+    var order = chosen.concat(known.filter(function (id) { return chosen.indexOf(id) < 0; }));
+    order.forEach(function (id) {
+      var st = statusOf(id);
+      if (!st) return;
+      var on = chosen.indexOf(id) >= 0;
+      var li = document.createElement('li');
+      li.className = 'sec' + (st.available ? '' : ' off');
+
+      var num = document.createElement('span');
+      num.className = 'num';
+      num.textContent = on ? String(chosen.indexOf(id) + 1) : '';
+      num.setAttribute('aria-hidden', 'true');
+      li.appendChild(num);
+
+      var pick = document.createElement('label');
+      pick.className = 'pick';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = on && st.available;
+      cb.disabled = !st.available;
+      cb.addEventListener('change', function () { toggle(id, cb.checked); });
+      pick.appendChild(cb);
+      var text = document.createElement('span');
+      var name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = st.title;
+      var sub = document.createElement('span');
+      sub.className = 'status';
+      sub.textContent = st.available ? st.status : st.status + ' ' + st.setupHint;
+      text.appendChild(name);
+      text.appendChild(sub);
+      pick.appendChild(text);
+      li.appendChild(pick);
+
+      if (!st.available) {
+        var href = sourceHref(st.sourceSlug);
+        if (href) {
+          var a = document.createElement('a');
+          a.className = 'setup';
+          a.href = href;
+          a.textContent = 'Set this up';
+          li.appendChild(a);
+        }
+      } else if (on) {
+        var box = document.createElement('span');
+        box.className = 'order';
+        [['Up', -1, '↑'], ['Down', 1, '↓']].forEach(function (d) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'secondary small';
+          b.textContent = d[2];
+          b.setAttribute('aria-label', 'Move ' + st.title + ' ' + d[0].toLowerCase());
+          var i = chosen.indexOf(id);
+          b.disabled = (d[1] < 0 && i === 0) || (d[1] > 0 && i === chosen.length - 1);
+          b.addEventListener('click', function () { chosen = PS.move(chosen, chosen.indexOf(id), d[1]); changed(id, d[0]); });
+          box.appendChild(b);
+        });
+        li.appendChild(box);
+      }
+      list.appendChild(li);
+    });
+  }
+
+  function toggle(id, on) {
+    var i = chosen.indexOf(id);
+    if (on && i < 0) chosen = chosen.concat([id]);
+    if (!on && i >= 0) chosen = chosen.filter(function (x) { return x !== id; });
+    changed();
+  }
+
+  /* After a move, keep keyboard focus on the button that was pressed. */
+  function changed(focusId, dir) {
+    saveLayout();
+    renderList();
+    renderPreview();
+    if (focusId) {
+      var rows = byId('secList').children;
+      var at = chosen.indexOf(focusId);
+      var li = rows[at];
+      if (li) {
+        var btns = li.querySelectorAll('.order button');
+        var pick = btns[dir === 'Up' ? 0 : 1];
+        var target = (pick && !pick.disabled) ? pick : (btns[0] && !btns[0].disabled ? btns[0] : btns[1]);
+        if (target) target.focus();
+      }
+    }
+  }
+
+  /* ---- the packet ---- */
+  var built = { sections: [], skipped: [] };
+  function buildPacket() {
+    built = PS.build(chosen, context());
+    return PS.toHtml(built.sections);
+  }
+  function renderPreview() {
+    var html = buildPacket();
+    var live = byId('live');
+    live.innerHTML = html || '';
+    if (!html) {
+      var p = document.createElement('p');
+      p.className = 'live-empty';
+      p.textContent = chosen.length ? 'None of the ticked pages has anything to print yet.' : 'Tick a page above to see it here.';
+      live.appendChild(p);
+    }
+    var names = {};
+    status.forEach(function (s) { names[s.id] = s.title; });
+    say(byId('skipMsg'), built.skipped.length
+      ? 'Left out of this packet: ' + built.skipped.map(function (s) { return (names[s.id] || s.id) + ' (' + s.why + ')'; }).join(', ') + '.'
+      : '');
+    byId('printBtn').disabled = !html;
+    byId('previewBtn').disabled = !html;
+  }
+  function fillPrintArea() {
+    byId('printArea').innerHTML = buildPacket();
+  }
+
+  PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.6in' });
+  function printPacket() { fillPrintArea(); window.print(); }
+  byId('printBtn').addEventListener('click', printPacket);
+  byId('previewBtn').addEventListener('click', function () {
+    fillPrintArea();
+    PrintKit.preview({ trigger: byId('previewBtn'), onPrint: printPacket });
+  });
+  /* Ctrl+P presses no button: build the sheet then. */
+  window.addEventListener('beforeprint', fillPrintArea);
+
+  /* ---- presets ---- */
+  function renderPresets(selectName) {
+    var sel = byId('presetSelect');
+    sel.textContent = '';
+    var add = function (p, group) {
+      var o = document.createElement('option');
+      o.value = group + ':' + p.name;
+      o.textContent = p.name + (group === 'b' ? ' (built in)' : '');
+      sel.appendChild(o);
+    };
+    builtIns().forEach(function (p) { add(p, 'b'); });
+    saved.forEach(function (p) { add(p, 's'); });
+    if (selectName) sel.value = selectName;
+    byId('deletePresetBtn').disabled = sel.value.charAt(0) !== 's';
+  }
+  function presetOf(value) {
+    var group = value.charAt(0), name = value.slice(2), list = group === 'b' ? builtIns() : saved;
+    for (var i = 0; i < list.length; i++) if (list[i].name === name) return list[i];
+    return null;
+  }
+  byId('presetSelect').addEventListener('change', function () { byId('deletePresetBtn').disabled = this.value.charAt(0) !== 's'; });
+  byId('applyPresetBtn').addEventListener('click', function () {
+    var p = presetOf(byId('presetSelect').value);
+    if (!p) return;
+    var r = PS.cleanIds(p.ids, known);
+    var usable = r.ids.filter(function (id) { var s = statusOf(id); return s && s.available; });
+    chosen = usable;
+    changed();
+    var left = r.ids.length - usable.length + r.dropped.length;
+    say(byId('presetMsg'), left
+      ? 'Used “' + p.name + '”; ' + left + ' of its pages ' + (left === 1 ? 'has' : 'have') + ' nothing saved yet and ' + (left === 1 ? 'was' : 'were') + ' left out.'
+      : 'Used “' + p.name + '”.');
+  });
+  byId('savePresetBtn').addEventListener('click', function () {
+    var name = byId('presetName').value.trim();
+    if (!name) { say(byId('presetMsg'), 'Type a name for the preset first.'); return; }
+    if (!chosen.length) { say(byId('presetMsg'), 'Tick at least one page first.'); return; }
+    saved = PS.savePreset(saved, name, chosen);
+    if (!savePresets()) { say(byId('presetMsg'), 'This browser would not save the preset.'); return; }
+    renderPresets('s:' + name.slice(0, 60));
+    say(byId('presetMsg'), 'Saved “' + name.slice(0, 60) + '”.');
+    byId('presetName').value = '';
+  });
+  byId('deletePresetBtn').addEventListener('click', function () {
+    var v = byId('presetSelect').value;
+    if (v.charAt(0) !== 's') return;
+    var name = v.slice(2);
+    if (!window.confirm('Delete the preset “' + name + '”? The pages it lists are not touched.')) return;
+    saved = PS.deletePreset(saved, name);
+    savePresets();
+    renderPresets();
+    say(byId('presetMsg'), 'Deleted “' + name + '”.');
+  });
+
+  /* ---- start ---- */
+  status = PS.evaluate(context());
+  /* A saved layout may name a page that has since lost its data. */
+  chosen = chosen.filter(function (id) { var s = statusOf(id); return s && s.available; });
+  renderPresets();
+  renderList();
+  renderPreview();
+})();
+</script>
+<script src="../_shared/sw-register.js" defer></script>
+</body>
+</html>

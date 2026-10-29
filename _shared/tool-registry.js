@@ -461,6 +461,23 @@
       ],
     },
     {
+      slug: 'packet-builder',
+      title: 'Packet Builder',
+      file: 'Tools/090-packet-builder.html',
+      category: 'scheduling-subs',
+      /* The layout and the presets are section ids only; no section's content
+         is copied here (Path 10 P1). `reads` is the union of the providers'
+         storageKeys in Tools/packet-builder/providers.js, and
+         Tools/packet-builder/test/providers.test.mjs holds the two equal. */
+      keys: [
+        { k: 'gvb-packet:layout.v1' },
+        { k: 'gvb-packet:presets.v1' },
+      ],
+      reads: [
+        'subPlanBuilder.standingDetails.v1',
+      ],
+    },
+    {
       slug: 'sub-note-feedback-slip',
       title: 'Sub Note / Feedback Slip Generator',
       file: 'Tools/076-sub-note-feedback-slip-generator.html',
