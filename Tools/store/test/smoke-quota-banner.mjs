@@ -56,9 +56,12 @@ const browser = await launch();
   const selected = await page.$eval('#setSwitch', el => el.value);
   eq(selected, 'Ancient Egypt', '1: and is the one loaded');
 
-  // still the legacy shape on disk — reading must not rewrite anything
+  // since v379 019 stamps stable ids on load, so the payload is re-enveloped by the read;
+  // what must hold is that the legacy room comes through it intact
   const beforeSave = await page.evaluate(() => JSON.parse(localStorage.getItem('escape-room-builder:rooms')));
-  ok(beforeSave.v === undefined, '1: a read alone does not rewrite the payload');
+  const loadedSets = (beforeSave.v === undefined ? beforeSave : beforeSave.data || {}).sets || {};
+  ok(loadedSets['Ancient Egypt'] && loadedSets['Ancient Egypt'].name === 'Ancient Egypt',
+    '1: the legacy room survives the load: ' + JSON.stringify(Object.keys(loadedSets)));
 
   // now make it write, and check the envelope appears without losing the room
   await page.evaluate(() => {
