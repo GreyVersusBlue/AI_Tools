@@ -635,6 +635,12 @@ files must be added there too.
   older backup working. The module's header has the migration, the ids and the file formats. Its suites are
   `npm run test:question-bank` (pure Node) and `smoke-bank-file.mjs` in `npm run test:review-board`; no file it
   writes has been opened in a spreadsheet.
+- **A page of the Packet Builder (090) is a provider in `Tools/packet-builder/`** (Path 10 P1, v437-v439): `sections.js` is the pure registry and
+  `providers.js` the sections. A provider is data in, blocks out (`evaluate(ctx)`, `build(ctx)`; it reads only through `ctx.read(key)` and never
+  touches storage or the DOM), `toHtml()` is the one place its text becomes markup, and its `storageKeys` must equal 090's `reads` on its row in
+  `_shared/tool-registry.js` and be keys its source tool's row declares (`npm run test:packet-providers` fails otherwise). A new section is a
+  provider, a registry `reads` line and a case in that suite; do not write a page-private list of sections. `npm run test:packet-sections`,
+  `npm run test:packet-builder`. No packet has been printed on paper.
 - **A pasted spreadsheet region is read by `_shared/paste-table.js`** (`PasteTable`, Path 16 P2, v404): `splitLine`,
   `pickDelimiter`, `parse` (rows padded, short rows named in `ragged`), `columnReport` (the cells that stopped a column reading
   as numbers), and 046's name-and-value parsers. 046, 038, 036, 037, 075 and 006 use it; do not write another `split('\t')`. A line a

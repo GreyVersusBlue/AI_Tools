@@ -9,6 +9,41 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-19: Path 10 P1, Packet Builder `090` and the section-provider registry (2026-10-29, v437-v439)
+
+**What shipped.** The design first (committed alone, `21ad6ec`, in the Path 10 P1 bullet), then three steps. (1) `Tools/packet-builder/sections.js`, pure:
+`PacketSections` registers providers (`{ id, title, sourceSlug, setupHint, storageKeys, evaluate(ctx), build(ctx) }`), never lets one throw at the page,
+cleans what they return to seven block types, and `toHtml()` is the only place text becomes markup. Layout and preset records, `move()`. (2) The tool,
+`Tools/090-packet-builder.html`: a checkbox list with each status line, greyed with a setup link when a source has nothing, up/down reorder, a live
+preview of the same markup the printer gets, Preview pages and Print through `PrintKit` (`print-area.css`, `pk-paper`), presets (Sub day and Emergency
+binder built in; saved ones in `gvb-packet:presets.v1`, ids only), a registry row, `index.html` and `README.md` rows. (3) `providers.js`: sub plan
+standing details, emergency information, hall pass procedure (001's settings, never the log), the school calendar through `SchoolDay`, class rosters
+(preferred names from `crh_students_v1`). Tool numbered **090**: 087 is Class Screen (and Track P's old `082` was long taken). Nothing stored holds
+content; no student data is copied.
+
+**Verified.** `test:packet-sections` 50 checks, 28 deliberate breaks caught; `test:packet-providers` 29 checks, 15 breaks caught (it holds the providers'
+keys equal to the registry row's `reads`, each declared by its source tool's row, each source a page that exists); `test:packet-builder` (8594) 59 checks
+in light and dark: empty profile, seeded, reorder saved and reloaded, Print once, Chromium's PDF page count equal to the packet's (2 and 6), markup in a
+saved field printed as text, a broken key, presets; a11y sweep on 090 (empty and seeded), axe inside the suite for all three states; every tracked
+`*.test.mjs` (100, `grouping/test/parity.test.mjs` 122352 passed); lint; `test:registry`; `test:theme`; `test:picker-rollout`; check:tests, precache
+(`--base origin/main`), registry, dedupe, docs-commands, entities, hidden-flex, print-clip, adoption (`--check` after pasting the row);
+`offline:build` and `offline:verify`.
+
+**What was wrong or different.** (1) My first smoke run hung 300 s because `flock` was waiting on another session's `run-suites --only review-game-board`;
+it passed run directly, then under the lock. (2) A mutant survived the calendar check (7 days ahead for 28) until a day three weeks out was added.
+(3) The design said no raw `innerHTML` of source data; the page does `innerHTML = toHtml(...)`, which is escaped by construction and tested with markup in
+every text field, but it is an `innerHTML` and `check:inline-sinks` would count it if the page ever took link input (it does not).
+(4) `test:share-rollout` timed out inside my 590 s window and was not re-run.
+
+**Obliges others.** `Tools/board-check/suite-durations.json` rows for the three new suites are estimates (2 s, 2 s, 30 s). 009's backup reads the registry,
+so Packet Builder's two keys show in a backup with no other change. Source tools 044, 001, 032 and 006 do not yet carry a comment that a packet
+section reads them (left on rank 16).
+
+**Not verified.** No packet has been printed on paper; the seating section is not built; nothing was tried on a phone; the full `npm test`; the real
+calendar on a non-ordinary school year (only a seeded one).
+
+---
+
 ## AI-14: Path 12 P2 increment 6, station questions from the bank for 019 and 018 (2026-10-29, v435-v436)
 
 **What shipped.** A **Question bank** card on 019 (Escape Room Builder, v435) and 018 (QR Scavenger Hunt Builder, v436), both built by one new
