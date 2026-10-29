@@ -646,6 +646,11 @@ files must be added there too.
   `_shared/tool-registry.js` and be keys its source tool's row declares (`npm run test:packet-providers` fails otherwise). A new section is a
   provider, a registry `reads` line and a case in that suite; do not write a page-private list of sections. A page that prints a source tool's data in its own markup (045) reads it with `PacketSections.load(id, ctx)` and names no other tool's key (`test:sub-binder-providers` holds that, and 045's output against a frozen copy). `npm run test:packet-sections`,
   `npm run test:packet-builder`. No packet has been printed on paper.
+- **044's `.docx` and its text copy are one model, `dayModel()`** (Path 10 P4, v445): a line that belongs on the plan is added to the model, and
+  `renderDayText()` / `renderDayDocx()` draw it; do not add a line to one renderer alone. `npm run test:sub-plan-render` holds both outputs to
+  `Tools/sub-plan-builder/test/golden/` (a change you meant is `--update` and the golden diff in the same commit). 044's do-now is read from the
+  question bank's `do-now`-tagged questions through the packet providers (`test:sub-plan-donow`), and its "what the sub said" notes
+  (`subPlanBuilder.subSaid.v1`, this device only, student data) are in no link, history, file or copy (`test:sub-plan-said`).
 - **A pasted spreadsheet region is read by `_shared/paste-table.js`** (`PasteTable`, Path 16 P2, v404): `splitLine`,
   `pickDelimiter`, `parse` (rows padded, short rows named in `ragged`), `columnReport` (the cells that stopped a column reading
   as numbers), and 046's name-and-value parsers. 046, 038, 036, 037, 075 and 006 use it; do not write another `split('\t')`. A line a
