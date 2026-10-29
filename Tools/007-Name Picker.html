@@ -32,6 +32,9 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/chart-svg.js"></script>
+<link rel="stylesheet" href="../_shared/print-kit.css">
+<script src="../_shared/print-kit.js"></script>
 <style>
 /* === VENDORED FONTS =========================================================
    Bungee, Outfit and Press Start 2P used to be hotlinked from Google's font CDN,
@@ -456,6 +459,41 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
   .tournament-tile{min-height:64px;font-size:0.82em;padding:8px 6px;}
 }
 
+/* Equity dashboard (Path 15 P3): a card at the top of the Equity tab, and one printed page, #dashSheet. */
+.dash-card{background:var(--name-bg);border-radius:8px;padding:12px 14px;margin-bottom:16px;border-left:4px solid var(--accent2);}
+.dash-card h3{font-family:'Bungee',sans-serif;color:var(--accent2);font-size:1em;margin:0 0 8px;}
+.dash-card h4{font-size:0.9em;margin:12px 0 4px;color:var(--accent2);}
+.dash-chart{background:#fff;border-radius:6px;padding:6px;margin:8px 0;max-width:640px;}
+.dash-chart svg{display:block;width:100%;height:auto;}
+.dash-lines,.dash-quiet{margin:6px 0 6px 18px;font-size:0.9em;line-height:1.5;}
+.dash-scroll{overflow-x:auto;margin-top:10px;}
+.dash-grid{border-collapse:collapse;font-size:0.84em;min-width:100%;}
+.dash-grid caption{text-align:left;color:var(--muted);padding:2px 0 4px;}
+.dash-grid th,.dash-grid td{padding:4px 7px;border-bottom:1px solid rgba(255,255,255,0.1);text-align:left;white-space:nowrap;}
+.dash-grid .num{text-align:right;font-variant-numeric:tabular-nums;}
+.dash-grid tr.quiet td:last-child{color:var(--accent);font-weight:700;}
+.dash-data{font-size:0.82em;color:var(--muted);line-height:1.5;margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.1);}
+.dash-data .button-row{margin-top:6px;}
+#dashSheet{display:none;}
+@media print{
+  /* the page keeps html and body at overflow:hidden for its own layout; on paper that would cut the sheet to one page */
+  html,body{height:auto;overflow:visible;}
+  body.printing-dash{padding:0 !important;}
+  body.printing-dash>*:not(#dashSheet){display:none !important;}
+  body.printing-dash>#dashSheet{display:block !important;break-after:auto !important;page-break-after:auto !important;}
+  #dashSheet h1{font-size:20px;margin:0 0 2px;}
+  #dashSheet .nd-sub{margin:0 0 8px;font-size:12px;}
+  #dashSheet .nd-chart{max-width:6.2in;}
+  #dashSheet .nd-chart svg{display:block;width:100%;height:auto;}
+  #dashSheet .nd-lines{margin:6px 0 8px 16px;font-size:11.5px;line-height:1.4;}
+  #dashSheet table{width:100%;border-collapse:collapse;margin-top:8px;break-inside:avoid;}
+  #dashSheet caption{text-align:left;font-size:11px;padding-bottom:2px;}
+  #dashSheet th,#dashSheet td{border:1px solid #999;padding:2px 5px;font-size:10.5px;text-align:left;}
+  #dashSheet .num{text-align:right;}
+  #dashSheet tr.quiet td:last-child{font-weight:700;}
+  #dashSheet .nd-foot{margin-top:8px;font-size:10px;color:#333;}
+}
+
 /* Printable "today's picks" report — hidden on screen, the only thing visible
    when the History tab's Print Report button fires window.print(). */
 #printReportArea{display:none;}
@@ -564,6 +602,31 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
     <div id="statsList"></div>
   </div>
   <div class="tab-content" id="tab-equity">
+    <section class="dash-card" id="dashCard" aria-labelledby="dashHeading">
+      <h3 id="dashHeading">Dashboard</h3>
+      <div class="option-row" style="gap:8px;flex-wrap:wrap;">
+        <label class="option-label" for="dashPeriod" style="flex:0 0 auto;">Period:</label>
+        <select id="dashPeriod" style="flex:0 0 auto;"></select>
+        <label class="option-label" for="dashWeeks" style="flex:0 0 auto;">Weeks:</label>
+        <select id="dashWeeks" style="flex:0 0 auto;">
+          <option value="4">Last 4 weeks</option>
+          <option value="8" selected>Last 8 weeks</option>
+          <option value="12">Last 12 weeks</option>
+        </select>
+        <button id="dashPreview" style="flex:0 0 auto;">Preview page</button>
+        <button id="dashPrint" style="flex:0 0 auto;">🖨️ Print the dashboard</button>
+      </div>
+      <p id="dashStatus" class="equity-summary" role="status" aria-live="polite"></p>
+      <div id="dashBody"></div>
+      <div class="dash-data" id="dashData">
+        <strong>Data.</strong> This reads the pick history and its per-day record on this device, and the saved rosters. It stores nothing
+        about a student of its own, and nothing leaves the browser.
+        <div class="button-row">
+          <button id="dashGotoData">Open the Data tab</button>
+          <button id="dashClear" class="btn-danger">🗑 Clear pick history</button>
+        </div>
+      </div>
+    </section>
     <div class="info-banner">Who you have actually been calling on, by date. Lifetime totals on the Stats tab cannot tell you that somebody was called eleven times in September and not since.</div>
     <div class="option-row" style="gap:8px;">
       <span class="option-label" style="flex:0 0 auto;">Window:</span>
@@ -721,6 +784,8 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
   </div>
 </div>
 
+<div id="dashSheet" class="pk-page pk-paper"></div>
+
 <script id="appScript" type="module">
 /* Storage and picking live in name-picker/, imported by relative path so the Node
    suite (name-picker/test/smoke.mjs) resolves the same modules the page does.
@@ -729,6 +794,8 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
    throws outright in a browser configured to block storage. */
 import { MAX_HISTORY, createStore, OPTION_DEFAULTS } from './name-picker/np-store.js';
 import * as rollup from './name-picker/np-rollup.js';
+import * as dashboard from './name-picker/np-dashboard.js';
+import * as dashView from './name-picker/np-dashboard-view.js';
 import { freshRotation, pickOne, pickMany, shuffle, leastPicked, fairnessWeights } from './name-picker/np-pick.js';
 import { report as equityReport, summaryLine as equitySummaryLine, dayKey } from './name-picker/np-equity.js';
 import { loadDetails, lookupDetail, displayName, loadIds, lookupId } from './name-picker/np-details.js';
@@ -1547,7 +1614,61 @@ function renderSeatEquity(rep){
   }
 }
 
+/* The equity dashboard (np-dashboard.js): every pick on record, by week, per saved roster. Reads np_history through
+   np-rollup's view() so the picks the 500-entry window let go are in it; stores nothing of its own. */
+let dashPeriod=null,dashWeeks=8;
+function currentDash(){
+  const view=rollup.view(store.get('daily'),history,rollupId);
+  let rosters=store.get('rosters');
+  if(!Object.keys(rosters).length&&originalNames.length)rosters={'This list':originalNames};
+  return dashboard.build(view,rosters,{today:todayKey(),weeks:dashWeeks,idOf:(n,r)=>lookupId(rosterIds,n,r||currentRosterName)});
+}
+function dashPeriodOf(dash){
+  if(dashPeriod==='')return dash.all;
+  return dash.periods.find(p=>p.name===dashPeriod)||dash.periods.find(p=>p.name===currentRosterName)||(dash.periods.length===1?dash.periods[0]:dash.all);
+}
+function renderDashboard(){
+  const dash=currentDash();
+  const sel=document.getElementById('dashPeriod');
+  const chosen=dashPeriodOf(dash);
+  sel.textContent='';
+  const add=(v,t)=>{const o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o);};
+  dash.periods.forEach(p=>add(p.name,p.name));
+  if(dash.periods.length>1)add('','All periods');
+  sel.value=chosen===dash.all&&dash.periods.length>1?'':chosen.name;
+  if(chosen===dash.all&&dash.periods.length<=1&&sel.options.length===0)add('','All periods');
+  dashView.render(document.getElementById('dashBody'),document.getElementById('dashStatus'),window.ChartSvg,dash,chosen);
+  return {dash,chosen};
+}
+function buildDashSheet(){
+  const {dash,chosen}=renderDashboard();
+  const ok=dashView.buildSheet(document.getElementById('dashSheet'),window.ChartSvg,dash,chosen,{dateText:new Date().toLocaleDateString()});
+  if(!ok)alert('Load or save a roster first — there is nothing to put on the page.');
+  return ok;
+}
+function dashPageOn(){PrintKit.setPage({paper:'letter',orientation:'portrait',margin:'0.4in'});}
+function dashPageOff(){const st=document.getElementById('pk-page-style');if(st)st.remove();}
+function dashPrint(){
+  if(!buildDashSheet())return;
+  dashPageOn();
+  document.body.classList.add('printing-dash');
+  const done=()=>{document.body.classList.remove('printing-dash');dashPageOff();window.removeEventListener('afterprint',done);};
+  window.addEventListener('afterprint',done);
+  window.print();
+}
+function dashPreview(trigger){
+  if(!buildDashSheet())return;
+  dashPageOn();
+  document.body.classList.add('printing-dash');
+  PrintKit.preview({
+    area:document.getElementById('dashSheet'),trigger,title:'Participation dashboard',
+    onClose:()=>{document.body.classList.remove('printing-dash');dashPageOff();},
+    onPrint:dashPrint
+  });
+}
+
 function renderEquity(){
+  renderDashboard();
   const rep=currentEquityReport();
   document.getElementById('equitySummary').textContent=equitySummaryLine(rep);
   const list=document.getElementById('equityList');
@@ -2235,6 +2356,12 @@ document.getElementById('loadDefaults').addEventListener('click',()=>{document.g
 document.getElementById('undoPickBtn').addEventListener('click',undoLastPick);
 document.getElementById('equityWindow').addEventListener('change',(e)=>{equityWindowDays=parseInt(e.target.value,10)||0;renderEquity();});
 document.getElementById('refreshEquity').addEventListener('click',()=>{refreshRosterDetails();renderEquity();});
+document.getElementById('dashPeriod').addEventListener('change',e=>{dashPeriod=e.target.value;renderDashboard();});
+document.getElementById('dashWeeks').addEventListener('change',e=>{dashWeeks=parseInt(e.target.value,10)||8;renderDashboard();});
+document.getElementById('dashPrint').addEventListener('click',dashPrint);
+document.getElementById('dashPreview').addEventListener('click',e=>dashPreview(e.currentTarget));
+document.getElementById('dashGotoData').addEventListener('click',()=>showTab('data'));
+document.getElementById('dashClear').addEventListener('click',()=>{document.getElementById('clearHistory').click();if(document.getElementById('tab-equity').classList.contains('active'))renderEquity();});
 /* A flag pressed in Class Roster Hub in another tab reaches this board without a reload. */
 window.addEventListener('storage',e=>{
   if(e.key!==null&&e.key!=='crh_flags_v1'&&e.key!=='crh_students_v1')return;
