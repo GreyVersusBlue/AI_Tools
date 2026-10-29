@@ -2,7 +2,7 @@
 //
 //   node Tools/name-picker/test/smoke-modes.mjs
 //
-// Path 15 P1 steps 3 to 5 lifted jump, disappear, slot, multi and tournament into np-mode-*.js behind a host object the
+// Path 15 P1 steps 3 to 6 lifted jump, disappear, slot, multi, tournament and Team Draft into np-mode-*.js behind a host object the
 // page builds. test:name-picker-modes holds the logic to the old code; this drives the real
 // page: for each mode, with Let's Go Crazy off and on, one pick ends on the winner dialog
 // with a name from the roster, and the rolling state is released again.
@@ -87,6 +87,38 @@ for (const crazy of [false, true]) {
     ok(ROSTER.includes(winner), `tournament: the dialog names someone on the roster (${winner})`);
     ok(await page.$$eval('.tournament-tile.winner-tile', t => t.length) === 1, 'tournament: exactly one tile is marked the winner');
   } catch (e) { failed++; console.log('  FAIL tournament: no winner dialog (' + String(e.message).split('\n')[0] + ')'); }
+  await page.context().close();
+}
+/* Team Draft (np-mode-draft.js): set up two teams, captains alternate through the roster, the draft ends complete, and a new roster clears it. */
+{
+  const page = await prepPage(browser, BASE, { width: 1280, height: 900 });
+  await page.goto(BASE + '/Tools/007-Name Picker.html', { waitUntil: 'networkidle' });
+  await page.click('#settingsBtn');
+  await settle(page, 300);
+  await page.fill('#namesInput', ROSTER.join('\n'));
+  await page.click('#loadNames');
+  await settle(page, 300);
+  await page.keyboard.press('Escape');
+  await settle(page, 300);
+  await page.selectOption('#mode', 'draft');
+  await settle(page, 300);
+  ok(await page.$$eval('.draft-setup', e => e.length) === 1, 'draft: the setup card shows');
+  await page.fill('.draft-team-name-input >> nth=0', 'Reds');
+  await page.click('#draftStartBtn');
+  await settle(page, 300);
+  ok((await page.textContent('.draft-team-card.active-turn h4')).includes('Reds'), 'draft: Reds is up first');
+  await page.click('[data-draft-pick="Cy"]');
+  await settle(page, 300);
+  ok((await page.textContent('.draft-team-card.active-turn h4')).includes('Team 2'), 'draft: the turn passes to Team 2');
+  ok((await page.textContent('.draft-team-card h4')).includes('(1)'), 'draft: Reds shows one pick');
+  for (const n of ROSTER.filter(r => r !== 'Cy')) { await page.click(`[data-draft-pick="${n}"]`); await settle(page, 100); }
+  ok(await page.$$eval('.draft-complete', e => e.length) === 1, 'draft: complete once everyone is drafted');
+  await page.click('#draftRestartBtn');
+  await settle(page, 300);
+  ok(await page.$$eval('[data-draft-pick]', e => e.length) === ROSTER.length, 'draft: a new draft with the same teams puts everyone back');
+  await page.click('#draftReconfigureBtn');
+  await settle(page, 300);
+  ok(await page.$$eval('.draft-setup', e => e.length) === 1, 'draft: Reconfigure goes back to the setup card');
   await page.context().close();
 }
 await browser.close();

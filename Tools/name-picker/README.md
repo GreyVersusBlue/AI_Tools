@@ -13,6 +13,7 @@ name, would have meant a board change and a broken URL; see the session notes.
 | `np-pick.js` | Who gets called and how fairly. Pure, injectable `rng`. DOM-free. |
 | `np-themes.js` | The eleven skins as plain data (`THEMES`) and `themeVars(name)`, the property map the page writes on `<html>`. DOM-free. |
 | `np-sound.js` | The audio engine (`createSound({ soundOn, isCrazy })`: beeps, noise, win sound, klaxon). DOM-free; a fake `AudioContext` drives it in Node. |
+| `np-mode-draft.js` | Team Draft: `createDraft(host)` owns the teams, the turn and the started flag, draws the setup and draft boards and binds their buttons. The page calls `draft.renderBoard()`, `draft.reset()` and `draft.clear()`. |
 | `np-mode-jump.js`, `np-mode-disappear.js`, `np-mode-slot.js`, `np-mode-multi.js`, `np-mode-tournament.js` | The pick animations (single winner, N at once, the tournament grid's spotlight). Each exports one async function taking a `host` (the cards, settings and effect helpers); no page globals. |
 | `fonts/` | Bungee, Outfit, Press Start 2P, vendored. See its README. |
 | `test/smoke.mjs` | 207 assertions under plain Node. |
