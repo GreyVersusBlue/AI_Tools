@@ -9,6 +9,17 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-27: Path 19 P3 increment 2, 079 on the engine (2026-10-29, v474-v475)
+
+**What shipped.** Two commits on local `main`, a `CACHE_VERSION` bump in each.
+- **v474, the starter posters from the engine.** `TEMPLATES` in 079 is built at load from `STARTERS` (a language, a tense, a title and, per panel, the label printed over it and the verb) by `Conjugate.conjugate()`; the person column comes from the pack. The 29 recorded posters (nine starters at 1, 2 and 3 per row, two with colour off) print string-for-string what `golden-old-posters.json` holds, so nothing moved on paper. `test:conjugate`'s 079 parity case used to cut the typed literal out of the page by text; there is no literal now, so it reads `Tools/conjugate/test/_079-templates-frozen.json` (the old literal, cut from the page at 6c84811) and also fails if the page holds a typed-out starter form again or stops calling `Conjugate.conjugate`.
+- **v475, the Add a verb card.** Language, tense, infinitive and an optional English meaning become an ordinary panel (`panel.name` = infinitive plus meaning, forms from the engine). A verb the pack does not list is accepted, conjugated as regular and flagged `unchecked` (P19-7): the status line says so and the panel in the editor carries a line; **nothing about checking is printed**, and the flag is local (a share link rebuilds panels from their whitelisted fields and drops it). A word the pack cannot read as a verb adds nothing and says why. Every add says "Unreviewed: no language teacher has read these forms yet". A blank poster takes the language's person labels; a poster with forms keeps its own and the status line says so. Suite `test:verb-poster-add-verb` (8618, 29 checks).
+
+**Decided without asking (reverse cheaply).** The unchecked flag stays on the panel after the teacher edits its forms (nothing in the page can tell that someone read them); it is not printed, because a wall poster with "unchecked" on it is worse than one the teacher has read before printing. The status line, not an alert, carries the refusals.
+
+**Not done, and why.** *German, Italian and Latin were not built.* The brief allowed German and Italian "as a line of data each only if they need no new record kind". Neither is a line. Italian is a pack: its future and conditional drop the infinitive's vowel (parlare, parlerò), which the engine's `stemFrom: 'infinitive'` cannot do, and -ire verbs split into plain and -isc- (dormo, finisco) with no way to tell them apart except a per-verb flag (French's `ir2` is the model). German needs separable prefixes, strong-verb vowel changes at du/er and a future built on the infinitive; Latin needs principal parts. All three are listed in rank 56. 079's irregular call-out data (`irregulars.js`) is still typed by hand and held equal to the engine by `test:conjugate`.
+**Not verified.** No language teacher has read any form, on the poster or in the engine. The poster was not printed on paper. The full `npm test` and `test:preview-adopters` were not run.
+
 ## AI-27: Path 19 P3 increment 1, the conjugation engine, Spanish and French, and 039 drilling from it (2026-10-29, v469-v473)
 
 **What shipped.** Five commits on local `main`, a `CACHE_VERSION` bump in each step.
