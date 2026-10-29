@@ -9,6 +9,35 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-28: Path 20 P5, quiz memory across sessions and no Wikimedia search at load (2026-10-29, v434)
+
+**What shipped.** `bmg-quiz-memory.js` (pure, plus `load()`/`save()` on `bmg_quiz_memory_v1`) and its wiring on 046's quiz bar, as written into the P5 bullet before
+it was built. "Class got it" and "Missed" still tally a round as they did, and now also record against the place the class is answering (the last one revealed by
+Reveal next or a click; the bar names it: "Marking: Alps"): per map project and place name, times got and missed, which came last, the date. One mark per place per
+round (the same button twice counts once; the other replaces it); with nothing revealed only the tally counts. "Missed ones first" makes Reveal next take a hidden
+weak place before a random one (weak = missed more than got, or missed last); a "Missed in past rounds (N)" disclosure lists them; "Forget quiz history for this
+map" (asks first) clears one map's. The key is a registry row, not `student: true` (place names and counts, no student), so 009 backs it up and the year rollover
+leaves it; it is not inside the project, so a share link and file never carry it; history of deleted projects is pruned when quiz mode starts; caps 40 projects,
+500 places, counts 9999. **Network:** the one request 046 made unasked, a default "blank world map" search when an empty project opened, is gone (Devon,
+2026-10-07: nothing fetches until he asks); the box keeps the suggestion, and the card's hint and the empty-map line say nothing is fetched until Search.
+**Part A, same session:** the grouping test "rotateRoles: best with many roles stays quick..." (an AI-21 test that failed CI's first run of #375 on a 400 ms wall
+clock) now counts the orderings the exhaustive search visits (held to the module's own 400,000) and keeps only an 8 s clock backstop; its break-on-purpose entry
+still fails it.
+
+**Verified.** `test:blank-map-quiz-memory` (pure Node, 20 mutants all caught; the first draft missed two, because the cases did not exercise "a got replaced by a
+miss" or "another version of the memory", and a third, on an inherited key, is equivalent and was dropped). `test:blank-map-quiz-memory-smoke` (new, port 8592, 33
+checks): a first visit and a reload make no off-site request; Search is what asks; marking, double press, replace, a second round, the list, the project data holding
+nothing, a reload, Missed ones first, pruning, axe, Forget. With the load search put back 3 checks fail; with the Got record removed 1 does. `test:grouping` 96
+passed. `--only blank-map-generator` (22 green), a11y sweep 046, `test:registry`, `test:rollover`, `test:rollover-tools`, lint, offline build and verify,
+check:tests/precache(--base)/registry/dedupe/docs-commands/inline-sinks/entities/hidden-flex/print-clip/adoption(--check).
+
+**Not verified, and what did not work.** A real class: whether "last revealed" is the place a teacher means when two are on screen (a click reveals the one clicked,
+Reveal next the one drawn); the box on a phone; the new key inside a real 009 backup file. Found: `make-offline-copy` stages `git ls-files`, so a new module must be
+committed before `offline:build` can find it. The Tier 1 table already skipped ranks (88 to 91, and later), so "contiguous" was not true before this; all rows after the
+deleted one moved up by one and the gaps were left. Not built: sharing the history between devices; a per-student view (that would be student data).
+
+---
+
 ## AI-28: Path 20 P4, time slices for annotations and the dated send to Timeline Builder (2026-10-29, v433)
 
 **What shipped.** `bmg-slices.js` (pure) and a "Time slices" card on 046, as designed in the P4 bullet: a project may hold named, dated slices, each with its own
