@@ -187,6 +187,11 @@ function checks(PS) {
     return isDeepStrictEqual(plain(PS.parsePresets(plain(PS.presetsRecord(l)))), l);
   });
 
+  // moveTo (drag and drop)
+  t('moveTo puts the dragged id where the target was, in both directions', () => PS.moveTo(['a', 'b', 'c', 'd'], 0, 2).join() === 'b,c,a,d' && PS.moveTo(['a', 'b', 'c', 'd'], 3, 1).join() === 'a,d,b,c');
+  t('moveTo to the same place or out of range changes nothing', () =>
+    PS.moveTo(['a', 'b'], 1, 1).join() === 'a,b' && PS.moveTo(['a', 'b'], 0, 5).join() === 'a,b' && PS.moveTo(['a', 'b'], -1, 0).join() === 'a,b' && PS.moveTo(['a', 'b'], 0, -1).join() === 'a,b');
+  t('moveTo returns a copy', () => { const a = ['a', 'b']; const b = PS.moveTo(a, 0, 1); return a.join() === 'a,b' && b !== a; });
   // move
   t('move swaps with the neighbour', () => PS.move(['a', 'b', 'c'], 1, -1).join() === 'b,a,c' && PS.move(['a', 'b', 'c'], 1, 1).join() === 'a,c,b');
   t('move at an edge or out of range changes nothing', () =>
@@ -217,6 +222,9 @@ const MUTANTS = [
   ['parsePresets allows repeated names', s => s.replace("if (!name || seen[key] ||", "if (!name ||")],
   ['parsePresets ignores the cap', s => s.replace(" || out.length >= MAX_PRESETS", '')],
   ['deletePreset is case-sensitive', s => s.replace("p.name.toLowerCase() !== String(name).trim().toLowerCase()", "p.name !== String(name)")],
+  ['moveTo drops the dragged id', s => s.replace('out.splice(to, 0, one);', '')],
+  ['moveTo inserts one place late', s => s.replace('out.splice(to, 0, one);', 'out.splice(to + 1, 0, one);')],
+  ['moveTo accepts an index past the end', s => s.replace('from >= ids.length || to >= ids.length', 'from >= ids.length')],
   ['move wraps at the edge', s => s.replace("j < 0 || j >= ids.length", 'false')],
   ['storageKeys keeps repeats', s => s.replace("if (!seen[k]) { seen[k] = true; out.push(k); }", 'out.push(k);')],
   ['list leaks the build function', s => s.replace("storageKeys: p.storageKeys.slice() } : null; }", "storageKeys: p.storageKeys.slice(), build: p.build } : null; }")],

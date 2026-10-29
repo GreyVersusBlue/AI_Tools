@@ -20,6 +20,7 @@ import { repairRooms, mirrorDesks } from './seating-room.mjs';
    Changing it abandons every chart already saved on a classroom machine, and a
    chart is the most expensive thing in this tool to rebuild.
 --------------------------------------------------------------------------- */
+// Read by Tools/packet-builder/providers.js (090 Packet Builder): through _shared/seating-read.js (names and desks only, never a note). Keep the shape or bump the key.
 export const STORAGE_KEY = 'seating-chart-v1';
 export const SCHEMA_VERSION = 1;
 

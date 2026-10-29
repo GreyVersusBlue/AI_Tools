@@ -31,6 +31,7 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/tool-registry.js"></script>
 <script src="../_shared/school-day.js"></script>
+<script src="../_shared/seating-read.js"></script>
 <script src="../_shared/print-kit.js"></script>
 <script src="packet-builder/sections.js"></script>
 <script src="packet-builder/providers.js"></script>
@@ -78,6 +79,10 @@
   .sec .name { font-weight: 600; }
   .sec .status { display: block; font-size: .8rem; color: var(--muted); font-weight: 400; }
   .sec.off .name { color: var(--muted); }
+  .sec.drag { cursor: grab; }
+  .sec.dragging { opacity: .45; }
+  .sec.over { box-shadow: inset 0 3px 0 var(--accent); }
+  .sec .grip { color: var(--muted); flex: none; user-select: none; letter-spacing: -.15em; }
   .sec .order { display: flex; gap: .3rem; flex: none; }
   .sec .setup { font-size: .8rem; flex: none; }
   .num { font-variant-numeric: tabular-nums; color: var(--muted); width: 1.4rem; text-align: right; flex: none; }
@@ -169,12 +174,12 @@
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
   }
   function context() {
-    return { read: readKey, todayISO: localISO(new Date()), SchoolDay: window.SchoolDay || null };
+    return { read: readKey, todayISO: localISO(new Date()), SchoolDay: window.SchoolDay || null, SeatingRead: window.SeatingRead || null };
   }
 
   /* Two presets ship, built in and read-only; ids no section answers to are left out. */
   var BUILT_IN = [
-    { name: 'Sub day', ids: ['sub-plan', 'school-calendar', 'class-rosters', 'hall-pass-log', 'emergency-info'] },
+    { name: 'Sub day', ids: ['sub-plan', 'school-calendar', 'class-rosters', 'seating', 'hall-pass-log', 'emergency-info'] },
     { name: 'Emergency binder', ids: ['emergency-info', 'sub-plan', 'hall-pass-log', 'class-rosters'] }
   ];
   function builtIns() {
@@ -246,6 +251,7 @@
           li.appendChild(a);
         }
       } else if (on) {
+        makeDraggable(li, id, st.title);
         var box = document.createElement('span');
         box.className = 'order';
         [['Up', -1, '↑'], ['Down', 1, '↓']].forEach(function (d) {
@@ -263,6 +269,47 @@
       }
       list.appendChild(li);
     });
+  }
+
+  /* Drag a ticked page onto another ticked page to put it there. The Up and Down buttons do the same
+     from the keyboard, so nothing depends on a pointer. */
+  function makeDraggable(li, id, title) {
+    li.classList.add('drag');
+    li.draggable = true;
+    var grip = document.createElement('span');
+    grip.className = 'grip';
+    grip.setAttribute('aria-hidden', 'true');
+    grip.textContent = '⋮⋮';
+    li.insertBefore(grip, li.firstChild.nextSibling);
+    li.addEventListener('dragstart', function (e) {
+      dragId = id;
+      li.classList.add('dragging');
+      if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); }
+    });
+    li.addEventListener('dragend', function () { dragId = null; clearOver(); li.classList.remove('dragging'); });
+    li.addEventListener('dragover', function (e) {
+      if (!dragId || dragId === id) return;
+      e.preventDefault();
+      clearOver();
+      li.classList.add('over');
+    });
+    li.addEventListener('drop', function (e) {
+      if (!dragId) return;
+      e.preventDefault();
+      var from = chosen.indexOf(dragId), to = chosen.indexOf(id);
+      var moved = dragId;
+      dragId = null;
+      if (from < 0 || to < 0 || from === to) { clearOver(); return; }
+      chosen = PS.moveTo(chosen, from, to);
+      changed();
+      var st = statusOf(moved);
+      say(byId('layoutMsg'), 'Moved ' + (st ? st.title : moved) + ' to position ' + (to + 1) + ' of ' + chosen.length + '.');
+    });
+  }
+  var dragId = null;
+  function clearOver() {
+    var over = byId('secList').querySelectorAll('.over');
+    for (var i = 0; i < over.length; i++) over[i].classList.remove('over');
   }
 
   function toggle(id, on) {

@@ -533,6 +533,7 @@
 (function () {
   "use strict";
 
+  // Read by Tools/packet-builder/providers.js (090 Packet Builder): the settings half only ({ sets: { name: { destinations, oneOutAtATime, weeklyBudget } } }), never the pass log. Keep the shape or bump the key.
   var STORAGE_KEY = 'hall-pass-log-sections';
   var HISTORY_LIMIT = 90;
   var LOG_LIMIT = 300;

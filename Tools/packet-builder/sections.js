@@ -160,6 +160,15 @@
     return out;
   }
 
+  /* Take ids[from] and put it where ids[to] was (drag and drop); the others keep their order.
+     Either index out of range, or the same one, is no move. */
+  function moveTo(ids, from, to) {
+    if (from === to || from < 0 || to < 0 || from >= ids.length || to >= ids.length) return ids.slice();
+    var out = ids.slice(), one = out.splice(from, 1)[0];
+    out.splice(to, 0, one);
+    return out;
+  }
+
   /* ---- the registry ---- */
 
   function create() {
@@ -259,5 +268,6 @@
   api.savePreset = savePreset;
   api.deletePreset = deletePreset;
   api.move = move;
+  api.moveTo = moveTo;
   root.PacketSections = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -478,6 +478,7 @@
         'hall-pass-log-sections',
         'np_rosters',
         'scv_calendar_v1',
+        'seating-chart-v1',
         'subPlanBuilder.standingDetails.v1',
       ],
     },

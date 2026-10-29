@@ -17,6 +17,9 @@
        requiresNote }], oneOutAtATime, weeklyBudget } } }, the settings half only; the pass log itself
        (who went where) is never read.
      scv_calendar_v1  032's calendar, read through ctx.SchoolDay (_shared/school-day.js), which owns its shape.
+     seating-chart-v1  005's chart: { sections: [{ name, students: [{ id, name }], desks: [{ id, x, y, rot }],
+       assign: { deskId: studentId } }], mirror, numbered, rooms }, read through ctx.SeatingRead
+       (_shared/seating-read.js), which owns the geometry. Names only: a student's note or flag is never printed.
      np_rosters  { <roster name>: [student names] }, with crh_students_v1's
        { version: 1, rosters: { <name>: { students: [{ name, preferred }] } } } for preferred names. */
 (function (root) {
@@ -224,6 +227,89 @@
             { type: 'table', head: ['#', 'Student'], rows: chunk.map(function (nm, k) { return [String(i + k + 1), nm]; }) }
           ] });
         }
+      });
+      return { pages: pages };
+    }
+  });
+
+  /* ---- seating: one page per class, the room drawn from 005's chart ---- */
+
+  var SEATING_KEY = 'seating-chart-v1';
+  var DESK_W = 106, DESK_H = 70, FRONT_BAND = 62, NAME_PX = 15, NAME_MIN_PX = 8;
+
+  /* 005 saves one chart with a list of sections (classes). Only sections that have a desk count. */
+  function seatingSections(ctx) {
+    var c = ctx.read(SEATING_KEY);
+    if (!isObj(c) || !Array.isArray(c.sections)) return null;
+    var list = c.sections.filter(function (s) { return isObj(s) && Array.isArray(s.desks) && s.desks.length; });
+    return list.length ? { chart: c, sections: list } : null;
+  }
+
+  function num(n) { return String(Math.round(n * 10) / 10); }
+
+  /* A name is fitted to the desk's width by size, never cut; markup in it is escaped here, because
+     this string goes into an `html` block, the one block toHtml() does not escape. */
+  function deskText(name, x, y) {
+    var shown = String(name || '').trim().slice(0, 40);
+    if (!shown) return '';
+    var px = Math.max(NAME_MIN_PX, Math.min(NAME_PX, Math.floor((DESK_W - 8) / (shown.length * 0.56))));
+    return '<text x="' + num(x + DESK_W / 2) + '" y="' + num(y + DESK_H / 2 + px * 0.35) + '" text-anchor="middle" font-size="' + px + '">' + PS.esc(shown) + '</text>';
+  }
+
+  function seatingSvg(SR, chart, section, title) {
+    var mirror = chart.mirror === true, numbered = chart.numbered === true;
+    var placed = SR.placeDesks(section, { mirror: mirror });
+    var marks = SR.marksOf(chart, section, { mirror: mirror });
+    var box = SR.bounds(placed, { frontBand: FRONT_BAND, marks: marks });
+    if (!box) return '';
+    var out = ['<svg class="pb-seating" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="' + PS.esc('Seating chart, ' + title) + '" viewBox="' +
+      [box.vx, box.vy, box.vw, box.vh].map(num).join(' ') + '" width="100%" font-family="sans-serif">'];
+    out.push('<rect x="' + num(box.minX - 4) + '" y="' + num(box.vy + 6) + '" width="' + num(box.maxX - box.minX + 8) + '" height="30" fill="none" stroke="#000" stroke-width="2"/>');
+    out.push('<text x="' + num((box.minX + box.maxX) / 2) + '" y="' + num(box.vy + 27) + '" text-anchor="middle" font-size="16" font-weight="700">FRONT OF ROOM</text>');
+    marks.forEach(function (m) {
+      out.push('<g transform="rotate(' + num(m.rot) + ' ' + num(m.x + m.w / 2) + ' ' + num(m.y + m.h / 2) + ')"><rect x="' + num(m.x) + '" y="' + num(m.y) + '" width="' + num(m.w) + '" height="' + num(m.h) +
+        '" fill="none" stroke="#000" stroke-width="1.5" stroke-dasharray="6 4"/>' +
+        (m.label || m.kind ? '<text x="' + num(m.x + m.w / 2) + '" y="' + num(m.y + m.h / 2 + 4) + '" text-anchor="middle" font-size="12">' + PS.esc(m.label || m.kind) + '</text>' : '') + '</g>');
+    });
+    placed.forEach(function (d) {
+      out.push('<g transform="rotate(' + num(d.rot) + ' ' + num(d.x + DESK_W / 2) + ' ' + num(d.y + DESK_H / 2) + ')">' +
+        '<rect x="' + num(d.x) + '" y="' + num(d.y) + '" width="' + DESK_W + '" height="' + DESK_H + '" rx="6" fill="#fff" stroke="#000" stroke-width="2"/>' +
+        (numbered ? '<text x="' + num(d.x + 6) + '" y="' + num(d.y + 14) + '" font-size="11">' + (d.index + 1) + '</text>' : '') +
+        deskText(d.student ? d.student.name : '', d.x, d.y) + '</g>');
+    });
+    out.push('</svg>');
+    return out.join('');
+  }
+
+  PS.register({
+    id: 'seating',
+    title: 'Seating charts',
+    sourceSlug: 'seating-chart',
+    setupHint: 'Build a seating chart in Seating Chart Generator.',
+    storageKeys: [SEATING_KEY],
+    evaluate: function (ctx) {
+      var s = seatingSections(ctx);
+      if (!s) return { available: false, status: 'No seating chart saved yet.' };
+      if (!ctx.SeatingRead) return { available: false, status: 'The seating reader did not load.' };
+      var n = s.sections.length;
+      return { available: true, status: 'Saved (' + n + (n === 1 ? ' class' : ' classes') + ').' };
+    },
+    build: function (ctx) {
+      var s = seatingSections(ctx), pages = [];
+      if (!s || !ctx.SeatingRead) return { pages: pages };
+      s.sections.forEach(function (sec) {
+        var title = typeof sec.name === 'string' && sec.name.trim() ? sec.name.trim() : 'Class';
+        var svg = seatingSvg(ctx.SeatingRead, s.chart, sec, title);
+        if (!svg) return;
+        var students = Array.isArray(sec.students) ? sec.students : [];
+        var by = {};
+        students.forEach(function (st) { if (isObj(st) && st.id) by[st.id] = st; });
+        var assign = isObj(sec.assign) ? sec.assign : {};
+        var seated = Object.keys(assign).filter(function (d) { return by[assign[d]] && has(by[assign[d]].name); }).length;
+        pages.push({ title: 'Seating: ' + title, blocks: [
+          { type: 'html', html: svg },
+          { type: 'note', text: seated + ' of ' + students.length + ' students seated. Drawn from the front of the room.' }
+        ] });
       });
       return { pages: pages };
     }

@@ -9,6 +9,28 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-19: Path 10 P1 finished, the seating section, source-tool comments and drag-to-reorder (2026-10-29, v440)
+
+**What shipped.** (1) A `seating` section in `Tools/packet-builder/providers.js`: it reads `seating-chart-v1` and draws each class that has a desk as
+one inline SVG built from `SeatingRead.placeDesks`, `bounds` and `marksOf` (the page hands the reader to providers in `ctx.SeatingRead`), with the
+chart's own `mirror` and `numbered` flags, turned desks, doors and windows, and names fitted to the desk by size. Every name is escaped in the one
+`html` block; a student's note and flag are never read. The Sub day preset lists it after the rosters. (2) A one-line "Read by
+Tools/packet-builder/providers.js ... keep the shape or bump the key" comment beside the key in 044, 001, 032, 006 and `seating.mjs`. (3) Drag to
+reorder: `PacketSections.moveTo` (pure) and a draggable row for each ticked page, announced in the layout status line; Up and Down stay as the keyboard way.
+Rank 16 is deleted (a gap, as AI-14 did).
+
+**Verified.** `test:packet-sections` 53 checks, 31 breaks caught; `test:packet-providers` 42 checks, 24 breaks caught; `test:packet-builder` 66 checks
+(including a real drag, and the PDF page count equal to the packet's at seven pages); a11y sweep on 090; lint; check:registry, precache
+(`--base origin/main`), inline-sinks, entities, hidden-flex, print-clip, dedupe. A deliberate break of the drop handler turns three drag checks red.
+
+**What was wrong or different.** The earlier text said the seating section would be `seating.mjs`'s `buildPrintPage`. That function is 005's own, inline in
+the page, and returns a DOM node styled by 005's CSS; nothing in `seating.mjs` prints. The section draws its own SVG through `SeatingRead`, the
+reader every other tool already shares, so it cannot drift from 005's geometry. It is not 005's print page: no rule conflicts, no photos.
+
+**Not verified.** No packet has been printed on paper; the SVG was not compared against 005's own print by eye.
+
+---
+
 ## AI-19: Path 10 P1, Packet Builder `090` and the section-provider registry (2026-10-29, v437-v439)
 
 **What shipped.** The design first (committed alone, `21ad6ec`, in the Path 10 P1 bullet), then three steps. (1) `Tools/packet-builder/sections.js`, pure:

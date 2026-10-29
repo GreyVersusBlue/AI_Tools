@@ -686,6 +686,7 @@ import { writeIcs, readIcs, planIcsImport, readTable } from './school-calendar/s
 Store.configure({ toolName: 'School Calendar Visualizer' });
 
 const store = createStore(seedCalendar2026);
+// Read by Tools/packet-builder/providers.js (090 Packet Builder): through SchoolDay (_shared/school-day.js), which owns the shape. Keep the shape or bump the key.
 const CAL_KEY = "scv_calendar_v1";
 /** The bytes on disk, for Undo (null when nothing is stored, or storage is blocked). */
 function storedBytes() { try { return localStorage.getItem(CAL_KEY); } catch (e) { return null; } }

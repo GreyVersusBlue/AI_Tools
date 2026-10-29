@@ -21,6 +21,7 @@ const rd = f => fs.readFileSync(path.join(site, f), 'utf8');
 const SECTIONS = rd('Tools/packet-builder/sections.js');
 const PROVIDERS = rd('Tools/packet-builder/providers.js');
 const SCHOOLDAY = rd('_shared/school-day.js');
+const SEATREAD = rd('_shared/seating-read.js');
 const REGISTRY = rd('_shared/tool-registry.js');
 
 function load(providersSrc) {
@@ -28,6 +29,7 @@ function load(providersSrc) {
   vm.createContext(ctx);
   vm.runInContext(SECTIONS, ctx);
   vm.runInContext(SCHOOLDAY, ctx);
+  vm.runInContext(SEATREAD, ctx);
   vm.runInContext(providersSrc, ctx);
   return ctx.window;
 }
@@ -51,8 +53,18 @@ const CAL = {
 const ROSTERS = { 'Period 1': ['Ann Lee', 'Bo Ray', ''], 'Period 2': ['Cy Day'], 'Bad': 'x' };
 const RECORDS = { version: 1, rosters: { 'Period 1': { students: [{ name: 'Ann Lee', preferred: 'Annie' }, { name: 'Bo Ray', preferred: '' }] } } };
 
+const CHART = {
+  active: 's1', mirror: false, numbered: true,
+  sections: [
+    { id: 's1', name: 'Period 1', students: [{ id: 'a', name: 'Ann Lee', note: 'SECRET NOTE', flag: 'x' }, { id: 'b', name: 'Bo Ray' }],
+      desks: [{ id: 'd1', x: 100, y: 100, rot: 0 }, { id: 'd2', x: 300, y: 100, rot: 0 }, { id: 'd3', x: 500, y: 100, rot: 90 }], assign: { d1: 'a', d2: 'b' } },
+    { id: 's2', name: 'Empty room', students: [], desks: [], assign: {} },
+    { id: 's3', name: 'Period 3', students: [], desks: [{ id: 'e1', x: 0, y: 0, rot: 0 }], assign: {} }
+  ]
+};
+
 const plain = v => JSON.parse(JSON.stringify(v));
-const ctxOf = (W, data) => ({ read: k => (k in data ? plain(data[k]) : undefined), todayISO: '2026-10-29', SchoolDay: W.SchoolDay });
+const ctxOf = (W, data) => ({ read: k => (k in data ? plain(data[k]) : undefined), todayISO: '2026-10-29', SchoolDay: W.SchoolDay, SeatingRead: W.SeatingRead });
 
 function checks(W, REG) {
   const PS = W.PacketSections;
@@ -61,7 +73,7 @@ function checks(W, REG) {
   const html = (id, data) => { const b = PS.build([id], ctxOf(W, data)); return PS.toHtml(b.sections); };
   const ev = (id, data) => PS.evaluate(ctxOf(W, data)).find(e => e.id === id);
 
-  t('the five sections are registered, in this order', () => PS.ids().join() === 'sub-plan,emergency-info,hall-pass-log,school-calendar,class-rosters');
+  t('the six sections are registered, in this order', () => PS.ids().join() === 'sub-plan,emergency-info,hall-pass-log,school-calendar,class-rosters,seating');
   t('nothing saved: every section is unavailable', () => PS.evaluate(ctxOf(W, {})).every(e => !e.available && e.status.length > 0));
   t('a broken value reads as nothing saved', () => PS.evaluate(ctxOf(W, {
     'subPlanBuilder.standingDetails.v1': 'x', 'hall-pass-log-sections': [], 'scv_calendar_v1': { meta: 1 }, 'np_rosters': 7, 'crh_students_v1': 'x'
@@ -140,6 +152,42 @@ function checks(W, REG) {
   t('rosters: works without the preferred-name sidecar', () => html('class-rosters', { np_rosters: ROSTERS }).includes('Ann Lee'));
   t('rosters: all-empty rosters are unavailable', () => !ev('class-rosters', { np_rosters: { A: [], B: ['  '] } }).available);
 
+  // seating
+  t('seating: a chart with desks is available and the status counts classes with desks', () => { const e = ev('seating', { 'seating-chart-v1': CHART }); return e.available && e.status.includes('2 classes'); });
+  t('seating: no chart, no sections and a broken chart are unavailable', () => [undefined, {}, { sections: [] }, { sections: [{ desks: [] }] }, 'x', { sections: 4 }].every(v => !ev('seating', v === undefined ? {} : { 'seating-chart-v1': v }).available));
+  t('seating: without the reader the section is unavailable', () => !PS.evaluate({ read: k => (k === 'seating-chart-v1' ? plain(CHART) : undefined), todayISO: '2026-10-29' }).find(e => e.id === 'seating').available);
+  t('seating: one page per class that has a desk, named for the class', () => {
+    const pages = PS.build(['seating'], ctxOf(W, { 'seating-chart-v1': CHART })).sections[0].pages;
+    return pages.length === 2 && pages[0].title === 'Seating: Period 1' && pages[1].title === 'Seating: Period 3';
+  });
+  t('seating: the page draws every desk, the seated names and FRONT OF ROOM', () => {
+    const h = html('seating', { 'seating-chart-v1': CHART });
+    return (h.match(/<rect [^>]*rx="6"/g) || []).length === 4 && h.includes('>Ann Lee<') && h.includes('>Bo Ray<') && h.includes('FRONT OF ROOM') && h.includes('viewBox="');
+  });
+  t('seating: a turned desk is rotated about its centre', () => html('seating', { 'seating-chart-v1': CHART }).includes('rotate(90 553 135)'));
+  t('seating: the count line says how many are seated', () => html('seating', { 'seating-chart-v1': CHART }).includes('2 of 2 students seated'));
+  t("seating: a student's note and flag are never printed", () => !/SECRET NOTE/.test(html('seating', { 'seating-chart-v1': CHART })));
+  t('seating: numbered desks show their number, unnumbered do not', () => {
+    const off = html('seating', { 'seating-chart-v1': { ...CHART, numbered: false } });
+    return html('seating', { 'seating-chart-v1': CHART }).includes('font-size="11">3<') && !off.includes('font-size="11">3<');
+  });
+  t('seating: mirroring moves Ann (left) to the right of Bo', () => {
+    const xOf = (h, n) => +h.match(new RegExp('<text x="([\\d.]+)"[^>]*>' + n + '<'))[1];
+    const at = h => xOf(h, 'Ann Lee') < xOf(h, 'Bo Ray');
+    return at(html('seating', { 'seating-chart-v1': CHART })) && !at(html('seating', { 'seating-chart-v1': { ...CHART, mirror: true } }));
+  });
+  t('seating: a long name is made smaller, not cut', () => {
+    const long = { ...CHART, sections: [{ ...CHART.sections[0], students: [{ id: 'a', name: 'Maximiliano Bartholomew Smith' }], assign: { d1: 'a' } }] };
+    const h = html('seating', { 'seating-chart-v1': long });
+    const m = h.match(/font-size="(\d+)">Maximiliano/);
+    return !!m && +m[1] < 15 && +m[1] >= 8;
+  });
+  t('seating: a name with markup is text, in the drawing too', () => {
+    const bad = { ...CHART, sections: [{ ...CHART.sections[0], name: '<b>x</b>', students: [{ id: 'a', name: '<img src=x onerror=1>' }] }] };
+    return !/<img|<b>/i.test(html('seating', { 'seating-chart-v1': bad }));
+  });
+  t('seating: the drawing is ink-safe (black on white, no colour)', () => !/#[0-9a-f]{3,6}/i.test(html('seating', { 'seating-chart-v1': CHART }).replace(/#(000|fff)\b/gi, '')));
+
   // text, never markup
   t('a saved field with markup is printed as text', () => {
     const bad = '<img src=x onerror=1>';
@@ -163,6 +211,15 @@ const MUTANTS = [
   ['rosters never split a page', s => s.replace('var PER_PAGE = 40;', 'var PER_PAGE = 4000;')],
   ['rosters number each page from 1', s => s.replace('String(i + k + 1)', 'String(k + 1)')],
   ['rosters drop a bad entry badly', s => s.replace("filter(function (n) { return Array.isArray(raw[n]); })", 'filter(function () { return true; })')],
+  ['seating prints a student note', s => s.replace("deskText(d.student ? d.student.name : '', d.x, d.y)", "deskText(d.student ? d.student.name + ' ' + d.student.note : '', d.x, d.y)")],
+  ['seating draws no desk numbers', s => s.replace('(numbered ?', '(false ?')],
+  ['seating ignores the mirror flag', s => s.replace('chart.mirror === true', 'false')],
+  ['seating does not escape a name', s => s.replace("PS.esc(shown)", 'shown')],
+  ['seating does not escape the class name', s => s.replace("PS.esc('Seating chart, ' + title)", "'Seating chart, ' + title")],
+  ['seating never shrinks a name', s => s.replace('Math.min(NAME_PX, Math.floor((DESK_W - 8) / (shown.length * 0.56)))', 'NAME_PX')],
+  ['seating keeps classes with no desks', s => s.replace('Array.isArray(s.desks) && s.desks.length;', 'true;')],
+  ['seating drops the turn of a desk', s => s.replace("rotate(' + num(d.rot)", "rotate(' + 0")],
+  ['seating reads the reader-less chart as available', s => s.replace("if (!ctx.SeatingRead) return { available: false, status: 'The seating reader did not load.' };", '')],
   ['a provider is registered twice', s => s.replace("id: 'class-rosters',", "id: 'sub-plan',")],
   ['sub plan needs no details at all', s => s.replace("if (!standingBlocks(s).length) return { available: false, status: 'Standing details exist but are empty.' };", '')]
 ];
