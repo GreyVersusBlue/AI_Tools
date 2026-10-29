@@ -1522,7 +1522,9 @@
       prefixes: [
         { p: 'gvb-roleplay:', legacy: true },
       ],
+      /* The shared word lists (Path 19 P2): a list fills a scenario's empty cards; read-only. */
       reads: [
+        'gvb-word-lists',
         'np_rosters',
       ],
     },
