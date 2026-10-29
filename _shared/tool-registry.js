@@ -1015,6 +1015,9 @@
       keys: [
         { k: 'gvb-vocab-flashcards:current' },
         { k: 'gvb-vocab-flashcards:list' },
+        /* The shared word lists (Path 19 P1, _shared/word-list.js): 040's Word
+           Lists hub owns them; 039, 014, 027, 051 and 052 read them in P2. */
+        { k: 'gvb-word-lists' },
       ],
       prefixes: [
         { p: 'gvb-vocab-flashcards:', legacy: true },
