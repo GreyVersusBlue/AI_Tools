@@ -21,6 +21,8 @@
     "test:name-picker-qsource": "node Tools/name-picker/test/qsource.test.mjs",
     "test:name-picker-qsource-smoke": "node Tools/name-picker/test/smoke-qsource.mjs",
     "test:name-picker-handoff-smoke": "node Tools/name-picker/test/smoke-handoff.mjs",
+    "test:name-picker-theme-packs": "node Tools/name-picker/test/theme-packs.test.mjs",
+    "test:name-picker-theme-packs-smoke": "node Tools/name-picker/test/smoke-theme-packs.mjs",
     "test:name-picker-rollup-smoke": "node Tools/name-picker/test/smoke-rollup.mjs",
     "test:name-picker-modes-smoke": "node Tools/name-picker/test/smoke-modes.mjs",
     "test:name-picker-lightning": "node Tools/name-picker/test/smoke-lightning.mjs",

@@ -116,7 +116,7 @@ console.log("name-picker smoke\n");
   assert(store.get("luckyEnabled") === true, "np_lucky_enabled '1' decodes to true");
   assert(store.get("retroActive") === false, "np_retro_active '0' decodes to false");
   assert(store.get("retroUnlocked") === true, "the retro unlock survives — it is an earned thing");
-  assert(KEYS.length === 15, "twelve original keys plus np_options, np_absent and np_daily");
+  assert(KEYS.length === 16, "twelve original keys plus np_options, np_absent, np_daily and np_theme_packs");
   assert(KEYS.filter(d => LEGACY_DISK[d.key] !== undefined).length === 12,
          "all twelve original keys are covered by a descriptor");
 }

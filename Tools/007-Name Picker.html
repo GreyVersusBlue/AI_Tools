@@ -206,6 +206,8 @@ textarea:focus{outline:none;border-color:var(--accent2);}
 .group-card h4{font-family:'Bungee',sans-serif;color:var(--accent2);font-size:0.95em;margin-bottom:6px;}
 .group-card-names{font-size:0.92em;line-height:1.5;}
 .muted-text{color:var(--muted);font-size:0.88em;padding:10px;text-align:center;}
+.pack-list{list-style:none;padding:0;margin:8px 0;}
+.pack-list li{padding:6px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .info-banner{background:var(--name-bg);padding:8px 12px;border-radius:6px;font-size:0.85em;color:var(--muted);margin-bottom:10px;border-left:3px solid var(--accent2);}
 .notice-banner{background:var(--name-bg);padding:10px 12px;border-radius:6px;font-size:0.86em;margin-bottom:10px;border-left:3px solid var(--accent);}
 .notice-banner .button-row{margin-top:8px;}
@@ -708,6 +710,11 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
     <div class="option-row"><input type="checkbox" id="suddenDeath"><label for="suddenDeath" class="option-label">🔥 Sudden Death Chaos Mode<small>Upgraded Crazy. Particles stream across screen, picks cause MEGA screen-shake explosion + shockwave</small></label></div>
     <div class="option-row"><input type="checkbox" id="hofEnabled" checked><label for="hofEnabled" class="option-label">🏆 Hall of Fame ticker<small>Scrolling marquee at bottom shows recent Rare/Epic/Legendary/Mythic winners</small></label></div>
     <div class="option-row"><input type="checkbox" id="luckyStudent"><label for="luckyStudent" class="option-label">⭐ Lucky Student of the Day<small>One random student gets a hidden bonus to rare-tier rolls. Resets each day or when you reshuffle.</small></label></div>
+    <h3 style="margin-top:20px;">Theme packs</h3>
+    <p class="muted-text" style="font-size:0.85em;">A theme pack is a small file of colours, so a unit-themed board can be handed round. It holds colours and names only, nothing that runs. An imported pack's themes appear in the Theme list under "Theme packs".</p>
+    <div class="button-row"><button id="importPackBtn">⬆️ Import a theme pack</button></div>
+    <p id="packStatus" class="muted-text" role="status" aria-live="polite"></p>
+    <ul id="packList" class="pack-list"></ul>
     <h3 style="margin-top:20px;">Multi-Pick</h3>
     <div class="option-row"><span class="option-label">Pick N names at once:</span><input type="number" id="multiPickCount" value="1" min="1" max="10" style="width:70px;"></div>
     <p style="font-size:0.85em;color:var(--muted);margin-top:-5px;">Set to 1 for normal. Set 2+ for partners/groups.</p>
@@ -810,6 +817,7 @@ import { report as equityReport, summaryLine as equitySummaryLine, dayKey } from
 import { loadDetails, lookupDetail, displayName, loadIds, lookupId } from './name-picker/np-details.js';
 import { loadSeatingState, seatEquityReport, seatSummaryLine } from './name-picker/np-seat-equity.js';
 import { themeVars, hasTheme } from './name-picker/np-themes.js';
+import * as tpacks from './name-picker/np-theme-packs.js';
 import { createSound } from './name-picker/np-sound.js';
 import { jumpPick as runJump } from './name-picker/np-mode-jump.js';
 import { disappearPick as runDisappear } from './name-picker/np-mode-disappear.js';
@@ -912,8 +920,23 @@ function renderRosterFlagNotice(){
 }
 const KONAMI=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
 
+/* Imported theme packs (np-theme-packs.js): colours and names only, picked in the Theme list under "Theme packs". */
+let packThemes={};
+function loadPacks(){
+  packThemes=tpacks.resolve(store.get('themePacks'));
+  const sel=document.getElementById('theme');
+  const old=document.getElementById('packThemeGroup');if(old)old.remove();
+  const ids=Object.keys(packThemes);
+  if(ids.length){
+    const g=document.createElement('optgroup');g.id='packThemeGroup';g.label='Theme packs';
+    ids.forEach(id=>{const o=document.createElement('option');o.value=id;o.textContent=packThemes[id].label+' — '+packThemes[id].pack;g.appendChild(o);});
+    sel.appendChild(g);
+  }
+}
+function hasAnyTheme(n){return hasTheme(n)||Object.prototype.hasOwnProperty.call(packThemes,n);}
 function applyTheme(n){
-  for(const[k,v]of Object.entries(themeVars(n)))document.documentElement.style.setProperty(k,v);
+  const vars=Object.prototype.hasOwnProperty.call(packThemes,n)?packThemes[n].vars:themeVars(n);
+  for(const[k,v]of Object.entries(vars))document.documentElement.style.setProperty(k,v);
   /* Set body class for theme-specific readability overrides */
   document.body.className=document.body.className.split(' ').filter(c=>!c.startsWith('theme-')).join(' ').trim();
   document.body.classList.add('theme-'+n);
@@ -2392,6 +2415,53 @@ document.getElementById('luckyStudent').addEventListener('change',(e)=>{
 document.getElementById('clearHof').addEventListener('click',()=>{
   if(confirm('Clear the Hall of Fame ticker? Recent high-rarity picks will be erased.')){hallOfFame=[];saveHof();updateHofTicker();updateDataTab();}
 });
+/* Theme packs: Import reads a file through np-theme-packs.js (whitelisted properties, hex colours only) and stores
+   it only if every theme in it passes; Export writes the same file back out; Remove forgets one pack. */
+function packSay(text){const el=document.getElementById('packStatus');if(el)el.textContent=text;}
+function renderPackList(){
+  const ul=document.getElementById('packList');if(!ul)return;
+  ul.textContent='';
+  const doc=store.get('themePacks');
+  Object.entries(tpacks.fix(doc).packs).forEach(([id,p])=>{
+    const li=document.createElement('li');
+    const label=document.createElement('span');
+    label.textContent=p.name+' ('+Object.keys(p.themes).length+' theme'+(Object.keys(p.themes).length===1?'':'s')+') ';
+    const ex=document.createElement('button');ex.type='button';ex.textContent='⬇️ Export';ex.setAttribute('aria-label','Export the pack '+p.name);
+    ex.addEventListener('click',()=>{
+      const pack=tpacks.exportPack(store.get('themePacks'),id);if(!pack)return;
+      const url=URL.createObjectURL(new Blob([JSON.stringify(pack,null,2)],{type:'application/json'}));
+      const a=document.createElement('a');a.href=url;a.download='theme-pack-'+id+'.json';
+      document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      packSay('Saved theme-pack-'+id+'.json.');
+    });
+    const rm=document.createElement('button');rm.type='button';rm.textContent='🗑 Remove';rm.className='btn-danger';rm.setAttribute('aria-label','Remove the pack '+p.name);
+    rm.addEventListener('click',()=>{
+      if(!confirm('Remove the theme pack "'+p.name+'" from this device?'))return;
+      store.set('themePacks',tpacks.removePack(store.get('themePacks'),id));
+      loadPacks();renderPackList();
+      const sel=document.getElementById('theme');
+      if(!hasAnyTheme(store.get('theme'))){sel.value='default';applyTheme('default');}
+      packSay('Removed '+p.name+'.');
+    });
+    li.append(label,ex,' ',rm);ul.appendChild(li);
+  });
+}
+function importPackFile(file){
+  return file.text().then(text=>{
+    const r=tpacks.parsePackText(text);
+    if(!r.ok){packSay('Nothing was imported. '+r.errors.slice(0,6).join(' ')+(r.errors.length>6?' (and '+(r.errors.length-6)+' more)':''));return;}
+    const added=tpacks.addPack(store.get('themePacks'),r.pack);
+    if(added.error){packSay(added.error);return;}
+    store.set('themePacks',added.doc);
+    loadPacks();renderPackList();
+    packSay((added.replaced?'Replaced the pack ':'Imported the pack ')+r.pack.name+' ('+Object.keys(r.pack.themes).length+' theme'+(Object.keys(r.pack.themes).length===1?'':'s')+').'+(r.warnings.length?' Careful: '+r.warnings.slice(0,3).join(' '):''));
+  },()=>packSay('Could not read that file.'));
+}
+document.getElementById('importPackBtn').addEventListener('click',()=>{
+  const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.hidden=true;
+  input.addEventListener('change',()=>{const f=input.files&&input.files[0];input.remove();if(f)importPackFile(f);});
+  document.body.appendChild(input);input.click();
+});
 document.getElementById('exportRosters').addEventListener('click',exportAllData);
 /* The file picker comes from promptImportFile() above, so there is no hidden
    <input type="file"> in the markup. */
@@ -2524,8 +2594,10 @@ window.addEventListener('load',()=>{
   opts=store.get('options');
   applyOptionsToUI();
 
+  loadPacks();
+  renderPackList();
   const savedTheme=store.get('theme');
-  if(hasTheme(savedTheme)){document.getElementById('theme').value=savedTheme;applyTheme(savedTheme);}
+  if(hasAnyTheme(savedTheme)){document.getElementById('theme').value=savedTheme;applyTheme(savedTheme);}
   else applyTheme('default');
 
   /* Reflected, not forced: the OS setting already wins inside motionOff(), and

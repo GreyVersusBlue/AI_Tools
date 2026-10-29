@@ -190,6 +190,7 @@
         { k: 'np_rosters', student: true, rollover: 'reduce' },
         { k: 'np_stats', student: true },
         { k: 'np_theme' },
+        { k: 'np_theme_packs' },
       ],
       /* Path 15 P4: the Prompts tab can draw its task from the teacher's question bank. Read with peek(), never written. */
       reads: [

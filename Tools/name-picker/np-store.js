@@ -37,6 +37,7 @@
 
 import { createSaveSlot, defaultStorage } from "../../_shared/gvb-save.js";
 import * as rollup from "./np-rollup.js";
+import * as themePacks from "./np-theme-packs.js";
 
 const GAME = "name-picker";
 const SLOT_VERSION = 1;   // per-key slots. Unversioned data on disk reads as 0.
@@ -289,6 +290,14 @@ export const KEYS = [
     name: "theme", key: "np_theme", group: "prefs", wire: "raw",
     label: "Theme", blank: () => "default",
     ok: isStr, fix: v => trimmed(v).slice(0, 40) || "default"
+  },
+  {
+    // Imported theme packs (np-theme-packs.js, Path 15 P5): colours and names, validated against a whitelist on the way in
+    // and again here. `prefs`: no student data.
+    name: "themePacks", key: "np_theme_packs", group: "prefs", wire: "json",
+    label: "Theme packs", blank: themePacks.blank,
+    ok: isObj,
+    fix: themePacks.fix
   },
   { ...FLAG, name: "crazy", key: "np_crazy", label: "Let's Go Crazy" },
   { ...FLAG, name: "luckyEnabled", key: "np_lucky_enabled", label: "Lucky student enabled" },
