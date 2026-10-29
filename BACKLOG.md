@@ -5339,6 +5339,48 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
   - *Not verified.* No person used the mode, and no class played a match. No screen reader was run (axe, names, keys
     and focus only). Nothing was printed on paper: the page count is Chromium's PDF. A bank of thousands in the
     chooser was not tried (every render reads the source once). Not run: the full `npm test`.
+  **Increment 6 (AI-14, 2026-10-29): 019's and 018's station questions. Designed here first; the build notes follow in the
+  same bullet when each page lands.**
+  - *Where it lives.* One new shared file, `_shared/stations-bank.js` (`StationsBank`), so the two pages do not each paste
+    040's chooser: pure `toStation(q, kind)` and `plan(set, questions)`, and `mount(host, { kind, getSet, onAdd })`, a
+    **Question bank** card built into a host element (Questions from, Unit, ticked list, Tick all shown, Add ticked as
+    stations). It reads with `QuestionBank.peek()` / `sources({ peek: true })` / `sourceLabel()` and **writes nothing**, not
+    the bank and not a key of its own; a page without `question-bank.js` shows no card. Nothing is stored until the teacher
+    presses Add, and then by the page's own save.
+  - *What is copied, and what `bankId` keeps.* The station is the teacher's copy: the words are copied onto it and it works
+    with the bank gone. `bankId` (the field Path 18 P3 reserved, already carried by `Stations.read/write` and the share
+    state) holds the question's id, a seed's included (`seed:053:b3`), and nothing else: no wording, no ids of choices. It is
+    used for one thing, **not adding a question twice**: a question whose id is a station's `bankId` in the set being edited
+    is listed as "already a station" and skipped. Editing the station does not touch the bank or the tie; deleting the
+    station loses the tie; a `bankId` the bank no longer holds is harmless.
+  - *019 (a room).* `prompt` → clue, `answer` → the accepted answers of a **text** station (the room's two other types, digit
+    lock and cipher, are not a bank question). A comma in an answer is a separator on 019, so it is written as a space,
+    which the answer matcher reads the same (punctuation is ignored; a case in the suite proves it) and the status line
+    counts them. `choices`, a picture, points, unit and tags are not copied (the count is said, as 040 does). A question with
+    no answer cannot be a station (its box is disabled and says why).
+  - *018 (a hunt).* `prompt` → the station's content (clue text). **Typed versus multiple choice:** a question with two to six
+    choices and an answer that is one of them (case and spacing aside) becomes a **choice** station, the choices copied and
+    `correctChoice` the answer's place; any other question becomes a **text** station and its answer goes in the station's
+    "for your eyes only" note, so it is on the answer key. More than six choices, or an answer that is none of them, is the
+    text station. No numeric station is made from a number-looking answer (guessing the tolerance is the teacher's).
+  - *Answer types.* No new type: P18-2 (Devon, 2026-10-21) says the record has two, `'none'` and `'text'`, and the hunt's
+    existing choice type is the one place a choice list already lives. A bank question is a `text` station on 019 and a
+    `text` or `choice` station on 018.
+  - *Where the stations go.* At the end of the list in the bank's order. If the set's only station is empty it is replaced,
+    so a new room or hunt does not start with a blank one. No branch, hint, picture or required flag is set.
+  - *Student-facing: nothing.* Devon, 2026-10-05, "nothing is student-facing right now": the player page, `lock.html`, the
+    monitor, the QR payloads and the printed cards are the code they were; a bank station prints and encodes as a station
+    typed by hand does. **Answers stay readable inside the code** (Devon, 2026-10-07), so a copied answer rides the QR as a
+    typed one does, and a long question meets the same payload-budget message.
+  - *Old rooms and hunts are unchanged.* Nothing is added to a saved set until Add is pressed; the new field is absent
+    otherwise; `test:stations` stays green; a fixture room and hunt from before this increment load, print and encode
+    byte for byte (named cases in each page's suite).
+  - *Questions for Devon (each has a default taken, said here, and is cheap to reverse).*
+    66. A question's **choices on a 019 station**: not copied (taken), or put at the end of the clue as a list?
+    67. A comma in an answer on 019: **written as a space** (taken), or the question refused?
+    68. A multiple-choice question on 018 whose answer is none of its choices: **a text station** (taken) or refused?
+    69. May a station be **updated from its question** later (a button that copies the bank's current wording)? Not built;
+        `bankId` is what it would need.
 - **P3 — Play modes in 030.** Every-team-answers mode, quiz-bowl, spin-the-wheel,
   the final wager round, and a printed practice quiz/study guide with an answer key
   — all reading the same bank.
