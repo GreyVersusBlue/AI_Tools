@@ -6749,6 +6749,21 @@ day; the cross-week, cross-period view teachers actually want does not.
 - **P1 — Split.** `np-themes.js` (themes as JSON data, not code), `np-sound.js`,
   one module per pick mode, `np-ui.js`. No behavior change; `test:name-picker`
   green.
+  **Design (AI-23, 2026-10-29; written before any code, read against 007 at v447).** 007's script is one
+  `type="module"` block that already imports `np-store/pick/equity/details/seat-equity`; its page globals are module
+  scope, so no suite or other page reaches a function in it (grepped repo-wide: only `smoke-share.mjs`,
+  `smoke-lightning.mjs` and the offline-copy tooling name the page, none cut code out of it by text). Each step moves
+  one block out as an ES module the page imports, in this order, each a port alone with a `CACHE_VERSION` bump and a
+  new `np-*.js` in both `PRECACHE_URLS` and `SHELL_URLS`: (1) `np-themes.js`: the `themes` object as plain data
+  (`THEMES`) and a `themeVars(name)` that returns what `applyTheme()` writes (the `--accent-fill` fallback included);
+  the page keeps the DOM writes and `store.set('theme')`; held by `test:name-picker-themes`, a frozen copy of the
+  eleven palettes plus the fallback rule. (2) `np-sound.js`: `createSound({ soundOn, isCrazy })` returning
+  `ensureAudio`, `playBeep`, `playBeepForced`, `playNoise`, `playWinSound`, `playKlaxon`; it owns `audioCtx`; held by a
+  fake `AudioContext` recording the node graph against a frozen copy of the old functions. (3) one module per pick
+  mode (`jump`, `slot`, `disappear`, `tournament`, `multi`, Team Draft), then `np-ui.js` for what is left: each takes
+  its page collaborators as an argument object (no page globals), and is held by a pick on a seeded roster compared
+  with the old inline code. A step is only done when 007's suites (`test:name-picker`, `-share`, `-lightning`) are
+  green; the rest of P1 is rank 38 until it is whole. No open question of Devon's is touched.
 - **P2 — History.** Replace the flat 500-entry cap with a per-day rollup that
   survives trimming; key history on student ids (Path 3) so nickname/preferred-name
   matching stops under-reporting via `unmatched`.
