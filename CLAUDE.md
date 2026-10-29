@@ -651,6 +651,13 @@ files must be added there too.
   `Tools/sub-plan-builder/test/golden/` (a change you meant is `--update` and the golden diff in the same commit). 044's do-now is read from the
   question bank's `do-now`-tagged questions through the packet providers (`test:sub-plan-donow`), and its "what the sub said" notes
   (`subPlanBuilder.subSaid.v1`, this device only, student data) are in no link, history, file or copy (`test:sub-plan-said`).
+- **Verb forms come from `_shared/conjugate.js`** (`Conjugate`, Path 19 P3, v469-v473): the engine and a pack a language
+  (`conjugate-es.js`, `conjugate-fr.js`), six tenses each, pure functions, no storage. A tool that needs a conjugated form calls
+  `Conjugate.conjugate()` and does not type a table. A teacher's correction is a verb record merged over the pack's (`merge`), and it
+  lives on the word (`WordList.setVerb`, `lang` on a list), for its list only. **No table it makes is called reviewed until a language
+  teacher has read it** (Devon, 2026-10-21): every result says `unreviewed` and a page that shows one says so. 039 drills from it and
+  079's forms are held equal to it by `npm run test:conjugate`, which reads 079's page by text. `node Tools/conjugate/print-corpus.mjs
+  es|fr` writes the teacher's check sheet. The suite also runs the page-driven `npm run test:conjugate-039`.
 - **A pasted spreadsheet region is read by `_shared/paste-table.js`** (`PasteTable`, Path 16 P2, v404): `splitLine`,
   `pickDelimiter`, `parse` (rows padded, short rows named in `ragged`), `columnReport` (the cells that stopped a column reading
   as numbers), and 046's name-and-value parsers. 046, 038, 036, 037, 075 and 006 use it; do not write another `split('\t')`. A line a

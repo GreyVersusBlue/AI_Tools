@@ -9,6 +9,25 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-27: Path 19 P3 increment 1, the conjugation engine, Spanish and French, and 039 drilling from it (2026-10-29, v469-v473)
+
+**What shipped.** Five commits on local `main`, a `CACHE_VERSION` bump in each step.
+- **v469, `_shared/conjugate.js` (`window.Conjugate`), `conjugate-es.js`, `conjugate-fr.js`.** Six tenses a language (Devon: "the six"), regular patterns by verb class, spelling changes derived and never declared (`c>qu g>gu z>c c>zc g>j gu>g i>y u>uy i>í`; French `c>ç g>ge ç>c ge>g y>i`, with `-ayer` giving both), stem changes as one token on the record, irregular records (sparse `forms` and `stems`), prefix derivation by an explicit prefix list (mantener from tener; `mover` is not derived from `ver`), reflexives and French elision, the answer check `match`, teacher records `merge`/`validate`. Every result carries `reviewed:false`. `test:conjugate`: 132 template forms from 079's page and all 41 tables in `irregulars.js` are reproduced (read by text from the files), 197 named verb-and-tense rows and the six regular paradigms in every tense, the second derivation, pack integrity, 20 broken copies.
+- **v470, storage on the word.** `WordList` keeps a `verb` record on a word (shape checked by `cleanVerb`, not the language) and a `lang` on a list, in the JSON file; a merge fills and never overwrites. 140 pure checks, 6 more broken copies.
+- **v471, 039.** Language and tense selects beside the free-text label (kept), **Fill from pattern** through `personSlots`, a tag per non-regular cell, teacher edits kept on the entry and on the word, the quiz marked by the engine. `test:conjugate-039` (8617). Next free port **8618**.
+- **v472, 079's callout status line** says "Unreviewed: no language teacher has read these forms yet."
+- **v473, `Tools/conjugate/print-corpus.mjs`**, the check sheet for the teacher Devon has arranged.
+
+**Decisions taken (reversible).** Spanish and French first because the prompt asked; Devon's order (Spanish, German, Italian, Latin, French) puts French last, so German, Italian and Latin are the ones left, and they need engine work (separable prefixes, principal parts). 079 does not call the engine yet; only parity holds them together. The "unreviewed" note is on the answer key and the status lines, not on a blank student sheet. A correction is stored on the entry and, only if the infinitive is already a word of the set's list, on that word: editing a conjugation never adds a vocabulary word. The irregular box is set by a fill (irregular, stem change or the teacher's cell) and never cleared by one. Unknown verbs are conjugated as regular and every cell is noted `assumed` (P19-7). `u` for `ü` is accepted *and scores* (P19-8, "Lenient"), with the ü form shown beside it; any other accent difference is close and does not score, as before.
+
+**Behaviour that moved.** 039's quiz used NFD stripping, which made `ano` and `año` one answer ("close"); `ñ` and `ç` are letters now and `ano` is **wrong**, for sets with no language as well. A typed pronoun or a missing one is close. This is the design's finding made real, not a regression, but a teacher who relied on it will see it.
+
+**Found.** The 079 parity case caught nothing the engine got wrong, which is not proof: a form is held equal to a form that was itself typed by a session, never read by a teacher. The design said 108 forms; the page has 108 in its regular templates plus 24 in the two irregular templates (132). `classEnding('devoir')` matched `-ir` because `-oir` ends in `ir`; the class now carries `not: /oir$/`. A `Write` of a regex written with `\u0300` landed as the raw combining characters in the file (rewritten with escapes by hand). The French subjonctif and imparfait needed no table of their own: both come out of the présent's ils and nous cells, which is why a typed présent must be right.
+
+**Not verified.** Every form in the packs and the suite was written from the session's knowledge of the two languages and held against itself and against 079; no language teacher has read any of it, and nothing says otherwise anywhere on the site. The check sheet was not printed or opened by anyone. The full `npm test` was not run (site-wide for `_shared/` and `sw.js`). 079 and 039's printed pages were not checked on paper.
+
+---
+
 ## AI-27: Path 19 P1 and P2, the shared word lists and their six adopters (2026-10-29, v461-v468)
 
 **What shipped.** Ten commits on local `main`, a `CACHE_VERSION` bump in each step.
