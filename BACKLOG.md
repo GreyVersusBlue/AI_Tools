@@ -8270,9 +8270,33 @@ runtime, the one content fetch that leaves the browser.
     it needs a new route 015 does not accept and a decision about where an event's year goes on a map; listed for Devon below.
   - *Not decided here, and so not built:* a slice-specific base map or view; animation or auto-play of the scrubber; slice-level legends
     (the key text is per slice because it is part of the content, which is the only cheap way to keep it from showing another date's words).
-- **P5 — Quiz memory and the network question.** Persist which labels a class
+- **P5 — Quiz memory and the network question. Designed (AI-28, 2026-10-29); both halves answered by Devon.** Persist which labels a class
   missed across sessions (the reteaching signal); make the Wikimedia lookup an
   explicit, disclosed, online-only action with its cache shown, or drop it.
+  - *Devon's answers.* Quiz memory across sessions: "yes" (2026-10-05). The Wikimedia lookup: "nothing fetches until I request it as the
+    user -- keep load time minimal" (2026-10-07). So the lookup stays, as an action the teacher starts; nothing is fetched on load or in the
+    background. **Decided, not open.**
+  - *What is remembered.* Per map project and place name: times the class got it, times it missed it, which came last, and the date. Place
+    names and counts only: no student, no name typed by a student, so the key is **not** `student: true` and the year rollover leaves it. It
+    is a class signal, shown with its date so a September teacher can see how old it is, and cleared by the button below. Reversible: flip
+    the registry row to `student: true` and the rollover deletes it.
+  - *Where.* Its own key, `bmg_quiz_memory_v1`, written by `Tools/blank-map-generator/bmg-quiz-memory.js` (pure functions plus a
+    `load()`/`save()` over localStorage; `ToolRegistry` row `blank-map-generator` gets the key, so 009 backs it up and `check:registry` sees
+    it). Not inside the project: a project travels by share link and file, memory must not. History of map projects that are gone is dropped
+    when quiz mode starts. Caps: 40 projects, 500 places a project, counts to 9999; junk in storage reads as empty.
+  - *How it is recorded.* The quiz bar's "Class got it" / "Missed" already tally a round. They now also record against **the place the class
+    is answering: the last one revealed** by Reveal next or a click, named on the bar ("Marking: Alps"). One mark per place per round: the same
+    button twice counts once, the other button replaces the first. With nothing revealed the tally counts and the memory does not. The tally
+    keeps counting presses exactly as before.
+  - *How it is used.* A "Missed ones first" box on the bar makes Reveal next take a hidden weak place before a random one (weak = missed more
+    than got, or missed last time); a "Missed in past rounds (N)" disclosure lists them worst first; "Forget quiz history for this map" (asks
+    first) clears this map's history and no other.
+  - *The network half.* The one request 046 made on its own, a default "blank world map" search when an empty project opened, is removed:
+    the box holds the suggestion and the Search button is the only thing that asks. The card's hint and the empty-map line say so. The cache
+    ("Recently used") is unchanged. **A check that nothing fetches on load** is in `test:blank-map-quiz-memory-smoke`: no off-site request on a
+    first visit or a reload, and a Search press does ask.
+  - *Tests.* `test:blank-map-quiz-memory` (pure Node, 20 mutants), `test:blank-map-quiz-memory-smoke` (port 8592). Not decided and not built:
+    sharing the history between devices; a per-student view (would make it student data).
 
 **Model.** Fable for P3; Opus otherwise.
 
