@@ -383,6 +383,10 @@
   <textarea id="scheduleText" rows="5" placeholder="**Setup (5 min):** students get into groups from yesterday
 **Activity (36 min):** 6 minutes per station, rotate clockwise
 **Wrap-up (5-10 min):** submit worksheets, quiet seat time"></textarea>
+  <div class="toggle-row" id="doNowPullRow" style="gap:10px; flex-wrap:wrap; margin-top:6px;" hidden>
+    <select id="doNowPick" aria-label="Do-now prompt from your question bank"></select>
+    <button type="button" class="small" id="doNowPullBtn">Put this at the top as the do-now</button>
+  </div>
 
   <div class="toggle-row">
     <input type="checkbox" id="samePeriods" checked>
@@ -1302,6 +1306,42 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     seatingChartImage = null;
     setSeatingChartUI();
   });
+
+  // Path 10 P4: a do-now from the question bank. The Packet Builder's do-now provider (packet-builder/providers.js)
+  // reads the bank and hands back the prompts of the questions tagged "do-now"; this page names no key of the
+  // bank. The chosen prompt becomes the first line of the schedule, replacing an earlier do-now line, and the
+  // field stays ordinary text: typing a do-now by hand works as it always did.
+  const DO_NOW_LEAD = '**Do now (5 min):** ';
+  let doNowList = [];
+  function doNowPrompts() {
+    if (!window.PacketSections) return [];
+    try { return PacketSections.load('do-now', { read: PacketSections.readerFor(localStorage), todayISO: '' }) || []; } catch (e) { return []; }
+  }
+  function doNowLine(prompt) { return DO_NOW_LEAD + String(prompt || '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim(); }
+  function putDoNow(text, prompt) {
+    const rest = String(text || '').split('\n').filter(l => !/^\s*\*\*do now\b/i.test(l));
+    return [doNowLine(prompt)].concat(rest).join('\n').replace(/\n+$/, '');
+  }
+  function renderDoNowPull() {
+    doNowList = doNowPrompts();
+    const pick = el('doNowPick');
+    pick.textContent = '';
+    doNowList.forEach((d, i) => {
+      const o = document.createElement('option');
+      o.value = String(i);
+      o.textContent = d.prompt.length > 80 ? d.prompt.slice(0, 79) + '…' : d.prompt;
+      pick.appendChild(o);
+    });
+    el('doNowPullRow').hidden = !doNowList.length;
+  }
+  el('doNowPullBtn').addEventListener('click', () => {
+    const d = doNowList[+el('doNowPick').value];
+    if (!d) return;
+    const f = el('scheduleText');
+    f.value = putDoNow(f.value, d.prompt);
+    f.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  renderDoNowPull();
 
   // Path 10 P4: draw the room from the seating chart saved in the Seating Chart Generator instead of
   // asking for an image. The Packet Builder's seating section (packet-builder/providers.js) reads the

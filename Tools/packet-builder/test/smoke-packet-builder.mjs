@@ -76,7 +76,7 @@ try {
     const s = await secs(page);
     ok(s.length >= 2, 'the sections are listed');
     ok(s.every(x => x.off && x.disabled && !x.checked), 'empty profile: every section greyed, disabled and unticked');
-    ok(s.length === 10 && s.every(x => x.link && /^\d{3}-/.test(x.link)), 'empty profile: each links the tool that fills it in');
+    ok(s.length === 11 && s.every(x => x.link && /^\d{3}-/.test(x.link)), 'empty profile: each links the tool that fills it in');
     eq(await page.$eval('#printBtn', b => b.disabled), true, 'empty profile: Print is off');
     eq(await page.$eval('#previewBtn', b => b.disabled), true, 'empty profile: Preview is off');
     ok(/Tick a page/.test(await page.$eval('#live', e => e.textContent)), 'empty profile: the preview says what to do');
@@ -90,7 +90,7 @@ try {
     const page = await open(browser, { seed: { [STANDING]: FULL }, dark });
     const what = dark ? 'dark' : 'light';
     const s = await secs(page);
-    ok(s.slice(0, 2).every(x => !x.off && !x.disabled && !x.checked) && s.slice(2).every(x => x.off), `${what}: the two sub plan sections are on and unticked at first, the other eight greyed`);
+    ok(s.slice(0, 2).every(x => !x.off && !x.disabled && !x.checked) && s.slice(2).every(x => x.off), `${what}: the two sub plan sections are on and unticked at first, the other nine greyed`);
     await page.check('#secList .sec:nth-child(1) input');
     await page.check('#secList .sec:nth-child(2) input');
     ok((await livePages(page)).length === 2, `${what}: ticking both fills the preview with two pages`);
@@ -126,7 +126,7 @@ try {
   {
     const page = await open(browser, { seed: { [STANDING]: FULL, 'gvb-packet:layout.v1': { v: 1, ids: ['sub-plan', 'emergency-info'] } } });
     eq((await livePages(page)).join(), 'sub-plan,emergency-info', 'drag: the saved order starts the page');
-    eq(await page.evaluate(() => [...document.querySelectorAll('#secList .sec')].map(li => li.draggable).join()), 'true,true,false,false,false,false,false,false,false,false', 'drag: only ticked pages can be dragged');
+    eq(await page.evaluate(() => [...document.querySelectorAll('#secList .sec')].map(li => li.draggable).join()), 'true,true,false,false,false,false,false,false,false,false,false', 'drag: only ticked pages can be dragged');
     await page.dragAndDrop('#secList .sec:nth-child(1) .name', '#secList .sec:nth-child(2) .name');
     eq((await livePages(page)).join(), 'emergency-info,sub-plan', 'drag: dropping the first on the second swaps them');
     eq(await page.evaluate(() => JSON.parse(localStorage.getItem('gvb-packet:layout.v1')).ids.join()), 'emergency-info,sub-plan', 'drag: the new order is saved');
@@ -146,12 +146,13 @@ try {
       'behavior-points-tracker-sections': { sets: { A: { tags: [{ label: 'On task', delta: 1 }] } } },
       'gvb-exit-ticket:customPrompts': [{ text: 'What surprised you?' }],
       snfs_slip_v1: { prompts: [{ text: 'What worked?' }] },
+      'gvb-question-bank': { v: 1, data: { schema: 1, questions: [{ id: 'q1', prompt: 'Name two causes.', answer: 'a', tags: ['do-now'] }] } },
       'subPlanBuilder.lastAbsence.v1': { dates: ['2026-10-29'] },
       'subPlanBuilder.history.v1': [{ date: '2026-10-29', lessonTitle: 'Fall of Rome' }],
       'seating-chart-v1': { active: 's1', sections: [{ id: 's1', name: 'Period 1', students: [{ id: 'a', name: 'Ann Lee' }], desks: [{ id: 'd1', x: 100, y: 100, rot: 0 }, { id: 'd2', x: 260, y: 100, rot: 0 }], assign: { d1: 'a' } }] }
     };
     const page = await open(browser, { seed });
-    ok((await secs(page)).every(x => !x.off), 'all ten sections are on with everything saved');
+    ok((await secs(page)).every(x => !x.off), 'all eleven sections are on with everything saved');
     await page.selectOption('#presetSelect', 'b:Sub day');
     await page.click('#applyPresetBtn');
     eq((await livePages(page)).join(), 'sub-plan,school-calendar,class-rosters,class-rosters,seating,hall-pass-log,emergency-info', 'Sub day: the pages are in the preset order, one per class for the rosters and the chart');
@@ -162,7 +163,7 @@ try {
     await page.emulateMedia({ media: null });
     eq(pdfPageCount(await page.pdf({ preferCSSPageSize: true, printBackground: false })), 7, "Sub day: Chromium's PDF holds seven pages");
     const bad = await a11yScan(page);
-    ok(bad.length === 0, 'ten sections: axe finds nothing serious ' + JSON.stringify(bad));
+    ok(bad.length === 0, 'eleven sections: axe finds nothing serious ' + JSON.stringify(bad));
     await page.close();
   }
 

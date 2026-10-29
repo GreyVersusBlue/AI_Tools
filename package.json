@@ -156,6 +156,7 @@
     "test:packet-builder": "node Tools/packet-builder/test/smoke-packet-builder.mjs",
     "test:packet-providers": "node Tools/packet-builder/test/providers.test.mjs",
     "test:sub-plan-seating": "node Tools/sub-plan-builder/test/smoke-seating-pull.mjs",
+    "test:sub-plan-donow": "node Tools/sub-plan-builder/test/smoke-do-now-pull.mjs",
     "test:binder-stale": "node Tools/packet-builder/test/binder-stale.test.mjs",
     "test:binder-stale-smoke": "node Tools/packet-builder/test/smoke-binder-stale.mjs",
     "test:packet-sections": "node Tools/packet-builder/test/sections.test.mjs",

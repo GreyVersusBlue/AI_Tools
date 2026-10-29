@@ -22,6 +22,8 @@
        (_shared/seating-read.js), which owns the geometry. Names only: a student's note or flag is never printed.
      behavior-points-tracker-sections  008's { sets: { <section>: { tags: [{ label, delta }] } } }, the chip lists only.
      gvb-exit-ticket:customPrompts  023's saved bank: [{ text }].
+     gvb-question-bank  the teacher's question bank ({ v, data: { questions: [{ id, prompt, tags }] } }); only the prompts of
+       questions tagged do-now are read, never an answer.
      subPlanBuilder.lastAbsence.v1 { dates: [iso] } and subPlanBuilder.history.v1 [{ date, lessonTitle, overviewText,
        scheduleText, materialsNote, ... }]  044's dated plans.
      snfs_slip_v1  076's feedback slips: { v: 2, sets: [{ id, name, prompts: [{ text }] }], currentId } or the older bare { prompts }.
@@ -435,6 +437,46 @@
         if (facts.length) blocks.push({ type: 'kv', rows: facts });
         return { title: 'Lesson: ' + h.date, blocks: blocks };
       }) };
+    }
+  });
+
+  /* ---- do-now prompts: the teacher's own bank, the questions tagged do-now ---- */
+
+  var BANK_KEY = 'gvb-question-bank';
+  var DONOW_MAX = 40, DONOW_TEXT = 300;
+
+  function isDoNowTag(t) { return typeof t === 'string' && t.trim().toLowerCase().replace(/[\s_-]+/g, '-') === 'do-now'; }
+
+  /* The bank is stored by _shared/question-bank.js as { v, data: { questions } } (Store's envelope) or, before that,
+     the bare { questions }. A do-now is a question whose tags include "do-now"; its `prompt` is what the class sees,
+     and the answer is never read. Seed sets live in memory only and are not here. Returns [{ id, prompt }], or [] . */
+  function doNows(ctx) {
+    var raw = ctx.read(BANK_KEY);
+    var bank = isObj(raw) && isObj(raw.data) ? raw.data : raw;
+    if (!isObj(bank) || !Array.isArray(bank.questions)) return [];
+    var out = [];
+    bank.questions.forEach(function (q, i) {
+      if (out.length >= DONOW_MAX || !isObj(q) || !has(q.prompt) || !Array.isArray(q.tags) || !q.tags.some(isDoNowTag)) return;
+      out.push({ id: has(q.id) ? q.id : 'q-noid-' + i, prompt: q.prompt.trim().slice(0, DONOW_TEXT) });
+    });
+    return out;
+  }
+
+  PS.register({
+    id: 'do-now',
+    title: 'Do-now prompts',
+    sourceSlug: 'review-game-board',
+    setupHint: 'Tag questions “do-now” in the Review Game Board’s question bank.',
+    storageKeys: [BANK_KEY],
+    load: doNows,
+    evaluate: function (ctx) {
+      var n = doNows(ctx).length;
+      if (!n) return { available: false, status: 'No question tagged “do-now” in your bank yet.' };
+      return { available: true, status: 'Saved (' + n + (n === 1 ? ' prompt' : ' prompts') + ').' };
+    },
+    build: function (ctx) {
+      var d = doNows(ctx);
+      return { pages: d.length ? [{ title: 'Do-now prompts', blocks: [{ type: 'list', items: d.map(function (x) { return x.prompt; }) }] }] : [] };
     }
   });
 

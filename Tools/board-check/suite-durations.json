@@ -52,6 +52,7 @@
     "Tools/name-picker/test/smoke-share.mjs": 9,
     "Tools/sub-plan-builder/test/smoke-share.mjs": 14,
     "Tools/sub-plan-builder/test/smoke-seating-pull.mjs": 25,
+    "Tools/sub-plan-builder/test/smoke-do-now-pull.mjs": 25,
     "Tools/classroom-timer/test/smoke-strip.mjs": 12,
     "Tools/classroom-timer/test/smoke-remote.mjs": 14,
     "Tools/classroom-timer/test/smoke-board-core.mjs": 1,

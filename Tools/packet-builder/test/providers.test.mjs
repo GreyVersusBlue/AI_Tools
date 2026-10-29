@@ -80,7 +80,7 @@ function checks(W, REG) {
   const html = (id, data) => { const b = PS.build([id], ctxOf(W, data)); return PS.toHtml(b.sections); };
   const ev = (id, data) => PS.evaluate(ctxOf(W, data)).find(e => e.id === id);
 
-  t('the ten sections are registered, in this order', () => PS.ids().join() === 'sub-plan,emergency-info,hall-pass-log,school-calendar,class-rosters,seating,behavior-plan,exit-ticket,sub-plan-days,sub-feedback');
+  t('the eleven sections are registered, in this order', () => PS.ids().join() === 'sub-plan,emergency-info,hall-pass-log,school-calendar,class-rosters,seating,behavior-plan,exit-ticket,sub-plan-days,do-now,sub-feedback');
   t('nothing saved: every section is unavailable', () => PS.evaluate(ctxOf(W, {})).every(e => !e.available && e.status.length > 0));
   t('a broken value reads as nothing saved', () => PS.evaluate(ctxOf(W, {
     'subPlanBuilder.standingDetails.v1': 'x', 'hall-pass-log-sections': [], 'scv_calendar_v1': { meta: 1 }, 'np_rosters': 7, 'crh_students_v1': 'x',
@@ -207,6 +207,16 @@ function checks(W, REG) {
   });
   t('behavior: a section with no behaviors says so', () => html('behavior-plan', { 'behavior-points-tracker-sections': { sets: { A: { tags: [] } } } }).includes('No behaviors configured.'));
 
+  // do-now prompts from the question bank
+  const Q = (id, prompt, tags, answer) => ({ id, prompt, answer: answer || 'SECRET', tags });
+  const BANK = { v: 1, data: { schema: 1, questions: [Q('a', 'Name two causes of the war.', ['do-now']), Q('b', 'Not for the opener', ['unit 3']), Q('c', 'List three things you know about <fractions>.', ['Unit 2', ' Do Now ']), Q('d', 'Snake', ['do_now']), Q('e', '  ', ['do-now'])] } };
+  t('do-now: only questions tagged do-now, any case, space or underscore', () => PS.load('do-now', ctxOf(W, { 'gvb-question-bank': BANK })).map(x => x.id).join() === 'a,c,d');
+  t('do-now: a bare bank (no envelope) is read too', () => PS.load('do-now', ctxOf(W, { 'gvb-question-bank': BANK.data })).length === 3);
+  t('do-now: nothing tagged, no bank or a broken bank is unavailable', () => [undefined, 7, { questions: 'x' }, { data: { questions: [Q('b', 'x', ['unit'])] } }, { questions: [{ prompt: 'x', tags: 'do-now' }] }].every(v => !ev('do-now', v === undefined ? {} : { 'gvb-question-bank': v }).available));
+  t('do-now: the page lists the prompts, escaped, and never an answer', () => { const h = html('do-now', { 'gvb-question-bank': BANK }); return h.includes('Name two causes') && h.includes('&lt;fractions&gt;') && !h.includes('<fractions>') && !h.includes('SECRET') && !h.includes('Not for the opener'); });
+  t('do-now: at most forty prompts, each clipped to 300 characters', () => { const many = { questions: Array.from({ length: 60 }, (_, i) => Q('q' + i, 'x'.repeat(500), ['do-now'])) }; const l = PS.load('do-now', ctxOf(W, { 'gvb-question-bank': many })); return l.length === 40 && l[0].prompt.length === 300; });
+  t('do-now: status counts the prompts', () => ev('do-now', { 'gvb-question-bank': BANK }).status.includes('3 prompts'));
+
   // exit ticket prompts
   t('exit ticket: the first twelve prompts print and the rest do not', () => {
     const h = html('exit-ticket', { 'gvb-exit-ticket:customPrompts': PROMPTS });
@@ -294,6 +304,13 @@ const MUTANTS = [
   ['seating reads the reader-less chart as available', s => s.replace("if (!ctx.SeatingRead) return { available: false, status: 'The seating reader did not load.' };", '')],
   ['behavior drops the plus sign', s => s.replace("(t.delta > 0 ? '+' : '') + t.delta", 't.delta')],
   ['behavior reads the tracker\'s points too', s => s.replace('storageKeys: [BEHAVIOR_KEY],', "storageKeys: [BEHAVIOR_KEY, 'behavior-points-tracker-points'],")],
+  ['do-now takes every question', s => s.replace('!q.tags.some(isDoNowTag)', 'false')],
+  ['do-now is case sensitive', s => s.replace('t.trim().toLowerCase().replace', 't.trim().replace')],
+  ['do-now prints the answer', s => s.replace("prompt: q.prompt.trim().slice(0, DONOW_TEXT) });", "prompt: q.prompt.trim().slice(0, DONOW_TEXT) + ' ' + q.answer });")],
+  ['do-now has no cap', s => s.replace('out.length >= DONOW_MAX || ', '')],
+  ['do-now does not clip', s => s.replace('.slice(0, DONOW_TEXT)', '')],
+  ['do-now ignores the envelope', s => s.replace('isObj(raw.data) ? raw.data : raw', 'raw')],
+  ['do-now keeps a blank prompt', s => s.replace('!has(q.prompt) || ', '')],
   ['exit ticket shows every prompt', s => s.replace('.slice(0, PROMPTS_SHOWN)', '')],
   ['exit ticket counts blank prompts', s => s.replace("filter(function (p) { return isObj(p) && has(p.text); })", 'filter(function (p) { return true; })')],
   ['lessons include a day with an empty plan', s => s.replace('return h && (has(h.lessonTitle) || has(h.overviewText) || has(h.scheduleText) || has(h.materialsNote));', 'return !!h;')],

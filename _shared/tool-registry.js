@@ -482,6 +482,7 @@
         'behavior-points-tracker-sections',
         'crh_students_v1',
         'gvb-exit-ticket:customPrompts',
+        'gvb-question-bank',
         'hall-pass-log-sections',
         'np_rosters',
         'scv_calendar_v1',
