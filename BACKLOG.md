@@ -655,7 +655,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 92 rows, **234 keys and 32 prefixes across 132 files** (`check:registry`); **55** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 90) | `sw-register.js` 88 · `a11y.css` 87 · `a11y.js` 87 · `ink-paper.css` 79 · `base.css` 73 · `qr-draw.js` 61 · `share.js` 56 · `state-link.js` 56 · `store.js` 42 · `roster.js` 35 · `print-area.css` 32 · `print-kit.css` 18 · `print-kit.js` 18 · `media-db.js` 16 · `stage.js` 16 · `export.js` 15 · `tool-registry.js` 12 · `qr-scan.js` 10 · `school-day.js` 9 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `grouping.js` 6 · `question-bank.js` 6 · `student-flags.js` 6 · `undo.js` 6 · `theme.css` 5 · `chart-svg.js` 4 · `paste-table.js` 4 (+2 via a module) · `seating-read.js` 4 · `countdown.js` 3 · `restore-kit.js` 3 · `binder-stale.js` 2 · `rotation.js` 2 · `stations-bank.js` 2 · `stations.js` 2 · `backup-crypto.js` 1 · `bracket.js` 1 · `gvb-save.js` 1 (+1 via a module) · `stations-debrief.css` 1 · `stations-debrief.js` 1 · `student-details.js` 1 (+1 via a module) · `geo-project.js` 0 (+2 via a module) |
+| Shared-file adoption (of 90) | `sw-register.js` 88 · `a11y.css` 87 · `a11y.js` 87 · `ink-paper.css` 79 · `base.css` 73 · `qr-draw.js` 61 · `share.js` 56 · `state-link.js` 56 · `store.js` 42 · `roster.js` 35 · `print-area.css` 32 · `print-kit.css` 18 · `print-kit.js` 18 · `media-db.js` 16 · `stage.js` 16 · `export.js` 15 · `tool-registry.js` 13 · `qr-scan.js` 10 · `school-day.js` 9 · `webrtc-pair.js` 8 · `handoffs.js` 8 · `grouping.js` 6 · `question-bank.js` 6 · `student-flags.js` 6 · `undo.js` 6 · `theme.css` 5 · `chart-svg.js` 4 · `paste-table.js` 4 (+2 via a module) · `seating-read.js` 4 · `countdown.js` 3 · `restore-kit.js` 3 · `binder-stale.js` 2 · `rotation.js` 2 · `stations-bank.js` 2 · `stations.js` 2 · `backup-crypto.js` 1 · `bracket.js` 2 · `gvb-save.js` 1 (+1 via a module) · `stations-debrief.css` 1 · `stations-debrief.js` 1 · `student-details.js` 1 (+1 via a module) · `geo-project.js` 0 (+2 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **105 ranked rows, ranks to 164** (ranks 19 and 20 shipped on 2026-10-29 and leave gaps, as the earlier deletions did; rank 43 shipped three times on 2026-10-28, Path 16 P1 and then P2, and the ranks after it moved up one each time; the ranks before it keep the gaps earlier deletions left). Path 21 is finished; per-tool rows start at rank **75**; 156–164 are Path 22 P6–P14 |
@@ -795,7 +795,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 32 | Path 13 P2 — the rest. **All six splitters call `_shared/grouping.js` (v336–v341); 002, 022 and 027 keep their memory in a `groupHistory` field with the old fields written from it (v341–v343) and key it by roster id (v344–v346); the five improvements are in (002's floater fix v347, `keepStrategy` v348, `together: 'units'` v349, `restarts` for 002 and 022 v350, `method: 'best'` for 022 and 027 v351); the P2 bullet's increments 1–6.** Seating-aware grouping on 002 is in (v352, increment 6). Left: project teams on 002, parked on Devon's six questions (the P2 bullet, increment 6). Hold the twelve golden classes (`golden-old-groupings.json` now carries six re-recorded scenarios, each with an `amended` note), `smoke-rename-follow.mjs`, `test:grouping-parity` and `test:grouping-adopters` | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 36 | Path 14 P4 — the room, not the grid. **Everything buildable is built (AI-22, v365-v370): `seating-room.mjs`; the Room card on 005 (one room shared by periods); marks dragged, moved by arrow keys, resized, turned and relabelled, printed on the live page, Print all and the sub packet; marks in 010's and 008's pictures; a zone rule "desks near a mark" that follows its mark.** Waits on Devon: marks in 007's and 045's pictures (if wanted; those readers do not ask for marks yet); his two open questions (a: does the room live in 005's storage or a shared store; b: layouts per room or per section), built on their defaults | 005 | ¼ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 37 | Path 14 P5 — what is left: `_shared/undo.js` for 003 (no undo today, so a new feature); and "a point in 008" / "a pass in 001" from live mode, which needs Devon to pick a route (a `Handoffs` entry plus a receiver in each tool, or 005 writing their storage as 003 writes 037's); neither tool takes anything in today (live mode, absent today, 018 and 043 decided out: v377) | 005 | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
-| 42 | Path 15 P5 — artifacts and remotes: Team Draft's teams to 002 (`?groups=`, one `Handoffs` entry) and to 020 (a built bracket through `Bracket.buildBracket`); theme packs as JSON. Read and designed in the bullet (AI-23, 2026-10-29), nothing built; phone remote waits on Path 8 | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
+| 42 | Path 15 P5 — the phone remote, the one piece of P5 left (Team Draft's teams to 002 and 020 and the theme packs are built, v459-v460); it needs `_shared/remote.js`, which waits on Path 8 P1, so nothing to build until that lands | 007 | ½ | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
 | 43 | Path 16 P4, what is left — 036's triage lists to 085/068 (neither accepts a share link yet: a `Share.receive` + registry `share` row on each, then a `_shared/handoffs.js` entry), and Devon's persistence question | 036, 068, 085 | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
 | 44 | Path 16 P5, what is left — 038's chart sheet (several charts to a printed page through the print kit with Preview); the 065/073 handoffs have no route to use (listed in the bullet) | 038, 065, 073 | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
 | 45 | Path 17 P1 — thumbnail-grid reordering, crop/straighten, real-photo validation of the retry presets | 011 | 1 | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
@@ -2282,8 +2282,8 @@ download-as-file as the third option.
   **Rollout increment 2 (#259, v183), the roster chain:** 002 → 022 is a sheet row (the grouping
   002 already shares; 022 files it as a new lab class through `?labgroups=` and hands out roles);
   022 → 005 is `sheet: false`, from 022's "Seat these groups" button (a new section, one pod per
-  group); **006/007 → 002 is not a link**, because 002 already reads the saved roster through
-  `roster.js` on the same device. Left: trivia → review board (053 → 030), which waited on Path 12 P1 (shipped, v265).
+  group); **006/007 → 002 is not a link** (the roster), because 002 already reads the saved roster through
+  `roster.js` on the same device; 007's finished Team Draft is the one entry to 002 (v459, a result, not the roster). Left: trivia → review board (053 → 030), which waited on Path 12 P1 (shipped, v265).
   **Rollout increment 3 (AI-14, v269), the last: 053 → 030, and P4 is finished.** A sheet row on 053 sends the
   teacher's own questions (what its sheet already shares; the built-in thirty are on 030 as a seed set) in the
   bank's link shape, `{ v, from, name, questions: [{ prompt, answer, unit }] }`. 030 declares `share: { param:
@@ -6733,6 +6733,8 @@ a known-infeasible one asserting the explanation.
 
 ### Path 15 — Name Picker: split, equity dashboard, themes as data
 
+**Where it stands (AI-23, 2026-10-29, v460).** P1 to P5 are built. The one thing left is P5's phone remote, which waits on Path 8 P1 (`_shared/remote.js` does not exist).
+
 **Why.** 2,830 lines with 100+ top-level functions and five modules already
 extracted; the picker UI, the 11-theme skin system, sound engine, and each pick
 mode are still inline. The 500-entry participation history cap now underpins an
@@ -6891,23 +6893,27 @@ day; the cross-week, cross-period view teachers actually want does not.
   cases, port 8608, next free 8609) drives the real page: all three questions asked before any repeats, no answer on the board or in
   the log, `qid` on each entry, "Same question, next student" keeps it, the bank left byte-identical, a deleted question leaves the old
   entry's words, an emptied bank falls back to typed prompts. Default taken: the chosen source is not remembered across reloads.
-- **P5 — Artifacts and remotes.** Team Draft hands off to Group Generator and the
+- **P5 — Artifacts and remotes. Built except the phone remote (AI-23, 2026-10-29, v459-v460).** Team Draft hands off to Group Generator and the
   bracket (Path 13) instead of ending in a board; phone remote via Path 8; theme
   packs importable as JSON so a unit-themed board is a file.
-  **Read, not built (AI-23, 2026-10-29, v458).** *To 002:* it already opens `?groups=` (`share: { param: 'groups' }`,
-  `looksLikeSharePayload`: `{ v, title, groups: [{ label, members }] }`), so the hand-off is one `_shared/handoffs.js` entry
-  (`from: 'name-picker'`, `to: 'group-team-generator'`, `sheet: false`, a button on Team Draft's finished board calling
-  `Handoffs.open()`), a transform from `np-mode-draft.js`'s `draftTeams` (names only: no pick count, absence or flag travels), and
-  the receiver unchanged. *To 020:* it opens `?bracket=` and wants a whole state, `looksLikeBracket` (`slots`, or `type:
-  'roundrobin'` with `players` and `rounds`); `Bracket.buildBracket(name, names, seedMode)` in `_shared/bracket.js` builds one, so
-  the transform can be a call to it rather than a second builder (the sender then loads `bracket.js`, or the entry's transform is
-  handed it). Either needs 007 to load `handoffs.js` and `tool-registry.js` (007 is not a sender today), `Tools/share/test/handoffs.test.mjs`
-  gets the new `from`, and 007's `inline-sinks` line must not rise. *Theme packs:* `np-themes.js` already holds the eleven palettes as
-  data (`THEMES`, `themeVars`); a pack is `{ v: 1, name, themes: { <id>: { <var>: <colour> } } }` with the variable names whitelisted
-  to the ones `themeVars` writes and every value tested as a hex colour (a pack is a file a colleague sent: it must not carry a
-  `url()` or an expression), stored in one new `np_theme_packs` key (not student data; a registry row, a `br-rollover` line, a backup
-  entry). *Phone remote* waits on Path 8 P1 (`_shared/remote.js` does not exist). Suggested order: the two hand-offs (one step, with the
-  receiver suites), then theme packs (one step).
+  **As built.** *Step 1, v459:* two `Handoffs` entries, `name-picker` → `group-team-generator` (the draft's teams as `?groups=`; 002 and its
+  grouping untouched) and `name-picker` → `bracket-tournament-generator` (a bracket from `Bracket.buildBracket(…, 'asEntered')`, so the link is
+  the same every time, with the members in the `members` field 020 already reads; a repeated team name gets " (2)"; fewer than two teams is
+  refused with a sentence). Both `sheet: false`; the finished Team Draft board has two buttons (`np-mode-draft.js` gained two optional host
+  members, `doneButtons()` and `bindDone()`, so `parity-draft.mjs` is untouched and green). 007 now loads `tool-registry.js`, `bracket.js` and
+  `handoffs.js` (all already in `SHELL_URLS`); its `inline-sinks` line did not move. `handoffs.test.mjs` had asserted that nothing sends to 002; it now
+  says nothing sends the roster and that 007's Team Draft is the only other sender (a roster is a thing 002 already reads on the same device; a finished draft is a result).
+  Held by those cases (with three break-on-purpose mutants) and `test:name-picker-handoff-smoke` (port 8609), which drives a draft to the end and opens
+  both links in 002 and 020. *Step 2, v460:* `np-theme-packs.js`. A pack is `{ v: 1, name, themes: { <id>: { <var>: <hex> } } }`; a theme must set
+  all eleven properties `applyTheme()` writes (`--accent-fill` optional), nothing else, every value a 3- or 6-digit hex colour, a theme id of at most 20
+  lower-case letters, digits and dashes that is not a built-in id; a failing file stores nothing and names every problem. Low contrast is a warning.
+  Stored in `np_theme_packs` (group `prefs`, no student data; a registry row, no rollover rule), at most twelve packs; a theme is chosen by
+  `pk-<pack>-<theme>` (40 characters at most, which is what `np_theme` keeps). The Options tab has Import, and per pack Export and Remove; the Theme list
+  shows an "Theme packs" group. Held by `test:name-picker-theme-packs` (66 cases, four mutants killed) and `test:name-picker-theme-packs-smoke`
+  (port 8610). *Defaults taken, none of Devon's open questions:* a pack with the same name replaces the earlier import; the picked theme falls back to the default
+  when its pack is removed; Team Draft hands over names only (no absence, flag, pick count or preferred name).
+  **Left: the phone remote.** `_shared/remote.js` does not exist; it waits on Path 8 P1. Nothing else in P5 is open.
+  **Not verified:** a pack authored by a second person; a bracket sent from a real draft of thirty students opened on a phone; the theme-pack file picker on a tablet.
 
 **Model.** Opus.
 

@@ -9,6 +9,20 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-23 (fourth session): Path 15 P5 built except the phone remote (2026-10-29, v459-v460)
+
+**What shipped.**
+- **v459.** Team Draft's finished teams go to 002 (`?groups=`) and to 020 (a bracket built by `Bracket.buildBracket(…, 'asEntered')`, members in 020's own `members` field) through two `Handoffs` entries in `_shared/handoffs.js`; two buttons on the finished board via optional `doneButtons()`/`bindDone()` on `np-mode-draft.js` (`parity-draft.mjs` untouched). `handoffs.test.mjs` gained the cases and its "nothing sends to 002" assertion was narrowed to "no roster does; Team Draft is the one result that does". `test:name-picker-handoff-smoke` (8609) opens both links in 002 and 020.
+- **v460.** Theme packs as JSON: `np-theme-packs.js` (whitelist of the eleven properties plus `--accent-fill`, hex colours only, ids checked, twelve packs at most), `np_theme_packs` in `np-store.js` and the registry, Import/Export/Remove in the Options tab, a "Theme packs" group in the Theme list. `test:name-picker-theme-packs` (pure, 66 cases, four mutants killed) and `-smoke` (8610).
+
+**Decisions taken (reversible).** The same pack name replaces the earlier import. Removing a pack in use puts the board on the default theme. Team Draft sends names and team names only. Low contrast in a pack is a warning, not a refusal. A pack theme id is `pk-<pack>-<theme>` so `np_theme`'s 40-character cap holds.
+
+**Found.** Removing the selected `<option>` makes a `<select>` report the first option, so "is the chosen theme still valid" must read the stored theme, not the select; the smoke suite caught it.
+
+**Left.** The phone remote (Path 15 P5, rank 42), which needs `_shared/remote.js` from Path 8 P1.
+
+**Not verified.** The full `npm test`; a pack written by another person; a bracket from a 30-student draft opened on a phone.
+
 ## AI-23 (third session): Path 15 P3 and P4 built (2026-10-29, v456-v458)
 
 **What shipped.**
