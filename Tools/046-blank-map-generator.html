@@ -888,7 +888,7 @@ import { createLocatorInset } from './blank-map-generator/bmg-locator.js';
 import { isCalibrated, toLatLon, fromLatLon, formatLatLon, computeGraticule, computeScaleBar } from './blank-map-generator/bmg-latlong.js';
 import * as cache from './blank-map-generator/bmg-map-cache.js';
 import {
-  BASE_MAP_PRESETS, BASE_MAP_STYLES, findPreset, baseMapId, buildBaseMapRecord, hasRelief,
+  BASE_MAP_PRESETS, BASE_MAP_STYLES, findPreset, baseMapId, buildBaseMapRecord, buildBaseMapMeta, hasRelief,
   listRegionNames, sameBaseMap, presetFromBaseMapId, loadDividedGeoJson,
   renderBaseMapCanvas, NATURAL_EARTH_ATTRIBUTION,
 } from './blank-map-generator/bmg-vector.js';
@@ -961,7 +961,7 @@ const liveBase = (() => {
     const mine = ++token;
     el('locatorCanvas').hidden = true; el('locatorImg').hidden = false;   // the old map's inset must not outlive it
     const p = parseBaseMapId(id);
-    if (!p || !p.preset) { hide(); return; }
+    if (!p || !p.preset) { hide(); return false; }
     let src;
     try {
       // A shaded map needs its colours: the caller that just built them passes them; a project opened from
@@ -969,16 +969,17 @@ const liveBase = (() => {
       if (p.choroKey && !fills) {
         const again = await buildActiveChoropleth(p.preset);
         fills = again && again.ok && again.key === p.choroKey ? again.fills : null;
-        if (!fills) { if (mine === token) hide(); return; }
+        if (!fills) { if (mine === token) hide(); return false; }
       }
       src = await loadLiveSource({ preset: p.preset, style: p.style, borders: p.borders, relief: p.relief, fills: p.choroKey ? fills : null });
-    } catch (e) { if (mine === token) hide(); return; }
-    if (mine !== token || src.width !== record.width || src.height !== record.height) { if (mine === token) hide(); return; }
+    } catch (e) { if (mine === token) hide(); return false; }
+    if (mine !== token || src.width !== record.width || src.height !== record.height) { if (mine === token) hide(); return false; }
     source = src;
     canvas.hidden = false;
     draw();
     drawLocator();
     mapImg.style.visibility = 'hidden';
+    return true;
   }
   new ResizeObserver(schedule).observe(viewport);
   /** Draws the base map into an export's context in place of drawImage(mapImg): same view, same projection, the context's own scale as dpr. */
@@ -2704,15 +2705,12 @@ async function rebuildBuiltInRecord(id) {
   try {
     const p = parseBaseMapId(id);
     if (!p || !p.preset) return null;
-    let fills = null;
     if (p.choroKey) {
       const again = await buildActiveChoropleth(p.preset);
       if (!(again && again.ok && again.key === p.choroKey)) return null;
-      fills = again.fills;
     }
-    const record = await buildBaseMapRecord(p.preset, { style: p.style, borders: p.borders, fills, choroKey: p.choroKey, relief: p.relief });
+    const record = buildBaseMapMeta(p.preset, { style: p.style, borders: p.borders, choroKey: p.choroKey, relief: p.relief });
     if (record.id !== id) return null;
-    await cache.putCachedMap(record).catch(() => {});
     return record;
   } catch (e) { return null; }
 }
@@ -2745,11 +2743,11 @@ async function useBuiltInBaseMap() {
     syncReliefControl();               // the shading state may have just changed
     const relief = !el('baseMapRelief').disabled && el('baseMapRelief').checked && !shaded;
     const id = baseMapId(preset, style, borders, choroKey, relief);
-    let record = await cache.getCachedMap(id).catch(() => null);
-    if (!record) {
-      record = await buildBaseMapRecord(preset, { style, borders, fills: shaded ? choro.fills : null, choroKey, relief });
-      await cache.putCachedMap(record).catch(() => {});
-    }
+    // A built-in map is drawn from the vectors, so nothing is rendered or stored for it here: a record
+    // from an older visit is used as it is, otherwise the record is its size and calibration, no picture
+    // (displayMap() draws the picture only if the live drawing cannot run).
+    const record = (await cache.getCachedMap(id).catch(() => null))
+      || buildBaseMapMeta(preset, { style, borders, choroKey, relief });
     // Re-shading (or un-shading) a map the project is already on is the same
     // piece of paper with different ink: same preset, same crop, same pixel
     // size, same calibration. Labels and markers a teacher has already placed
@@ -3251,10 +3249,10 @@ el('uploadMapInput').addEventListener('change', () => {
 function displayMap(record, opts = {}) {
   const isSameMap = project.mapId === record.id || !!opts.keepAnnotations;
   if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
-  currentObjectUrl = URL.createObjectURL(record.blob);
+  currentObjectUrl = record.blob ? URL.createObjectURL(record.blob) : null;
   currentSize = { width: record.width, height: record.height };
 
-  mapImg.onload = () => {
+  const sized = () => {
     const w = record.width || mapImg.naturalWidth;
     const h = record.height || mapImg.naturalHeight;
     mapImg.width = w;
@@ -3275,12 +3273,33 @@ function displayMap(record, opts = {}) {
     renderGrid();
     locator.updateRect();
   };
-  mapImg.src = currentObjectUrl;
+  mapImg.onload = sized;
   mapImg.hidden = false;
   currentRecord = record;
-  liveBase.show(record.id, record, opts.liveFills);
   el('viewerEmpty').hidden = true;
-  locator.setImage(currentObjectUrl, record.width, record.height);
+  if (currentObjectUrl) {
+    mapImg.src = currentObjectUrl;
+    locator.setImage(currentObjectUrl, record.width, record.height);
+    liveBase.show(record.id, record, opts.liveFills);
+  } else {
+    // No picture: the stage takes its size from the record, the locator its box from the same numbers, and
+    // the vectors draw the map. If they cannot (a missing data file), the picture is rendered then.
+    mapImg.removeAttribute('src');
+    locator.setImage(null, record.width, record.height);
+    sized();
+    liveBase.show(record.id, record, opts.liveFills).then(async drawn => {
+      if (drawn || currentRecord !== record) return;
+      try {
+        const p = parseBaseMapId(record.id);
+        const full = await buildBaseMapRecord(p.preset, { style: p.style, borders: p.borders, fills: opts.liveFills || null, choroKey: p.choroKey, relief: p.relief });
+        if (currentRecord !== record) return;
+        currentRecord = full;
+        currentObjectUrl = URL.createObjectURL(full.blob);
+        mapImg.src = currentObjectUrl;
+        locator.setImage(currentObjectUrl, full.width, full.height);
+      } catch (e) { setStatus('Couldn’t draw that base map.', true); }
+    });
+  }
 
   project.mapId = record.id;
   // Every caller of displayMap() is a user action that loads/selects a map —

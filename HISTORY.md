@@ -9,6 +9,25 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-28: Path 20 P3 increment 5, step 7: a built-in map writes no raster (2026-10-29, v432)
+
+**What shipped.** Path 20 P3's last step. Choosing a built-in base map (or opening a project that names one, or a shared link) no longer renders the
+4000 px PNG and writes it to `bmg-maps`. `bmg-vector.js` gained `buildBaseMapMeta`, the record with its size, title, attribution and calibration and
+`blob: null`; `buildBaseMapRecord` now spreads it and adds the blob, so the two cannot differ. In `046`, `displayMap()` with no blob takes the stage size
+and the locator box from the record, and builds the picture only if the vector draw cannot run. A record cached by an earlier version is still used;
+"Clear cached maps" is unchanged (Devon's default). `renderBaseMapCanvas` is untouched.
+
+**Verified.** `test:blank-map-live-noraster` (new, port 8590): no `vector:` record in `bmg-maps` after choosing, reloading, or restoring; the `<img>` has no
+source; the stage and locator are sized; the project stores the id; `buildBaseMapMeta` equals `buildBaseMapRecord` minus the blob for three presets; an old
+cached record loads and appears in Recently used; nothing off-site. With the old write restored 5 of its 15 checks fail. Six existing suites had read the
+raster and were changed on purpose: `smoke-relief` and `smoke-choropleth` sample the live canvas, `smoke-hittest` and `smoke-dropped` read the stage's size,
+`smoke-live-viewer` and `smoke-dropped` assert there is no raster. `--only blank-map-generator` (18 green), `--only timeline-builder` (7 green), the a11y
+sweep for 046, lint, and the guards CLAUDE.md names.
+
+**Not verified.** Paper, dpr 2, a Chromebook's frame time, the fallback render when the vector data is missing (written, not exercised).
+
+---
+
 ## AI-28: Path 20 P3 increment 4, step 6: the locator inset drawn from the vectors (2026-10-29, v431)
 
 **What shipped.** One step. The locator inset ("Locator Map") is a second canvas, `#locatorCanvas`, drawn by one `drawBaseMap` call at the fit

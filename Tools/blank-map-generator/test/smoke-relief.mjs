@@ -84,14 +84,13 @@ const waitForMapId = (test, not = null) => page.waitForFunction(({ test, not }) 
 
 /** Mean luminance of a 9×9 block of the raster the viewer shows, at a lat/lon on the World preset. */
 const sample = (lat, lon) => page.evaluate(({ lat, lon, b }) => {
-  const img = document.getElementById('mapImg');
-  const w = img.naturalWidth, h = img.naturalHeight;
-  const x = Math.round(((lon - b.west) / (b.east - b.west)) * w);
-  const y = Math.round(((b.north - lat) / (b.north - b.south)) * h);
-  const c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  c.getContext('2d').drawImage(img, 0, 0);
-  const d = c.getContext('2d').getImageData(x - 4, y - 4, 9, 9).data;
+  // The map is drawn from the vectors (v432: no raster exists), so sample the live canvas where the stage box says the point is.
+  const img = document.getElementById('mapImg'), cv = document.getElementById('baseCanvas'), vp = document.getElementById('viewport').getBoundingClientRect();
+  const r = img.getBoundingClientRect();
+  const k = cv.width / vp.width;
+  const x = Math.round((r.left - vp.left + ((lon - b.west) / (b.east - b.west)) * r.width) * k);
+  const y = Math.round((r.top - vp.top + ((b.north - lat) / (b.north - b.south)) * r.height) * k);
+  const d = cv.getContext('2d').getImageData(x - 4, y - 4, 9, 9).data;
   let sum = 0;
   for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
   return sum / (d.length / 4);

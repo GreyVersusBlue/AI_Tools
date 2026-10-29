@@ -302,7 +302,7 @@ ok(mdShape, 'a multi-ring region renders as an SVG path rather than a single pol
 eq(mdShape.rule, 'evenodd', 'filled evenodd, so an enclosed ring punches a hole instead of being painted over');
 const mdExpected = await page.evaluate(({ b }) => {
   const img = document.getElementById('mapImg');
-  const w = img.naturalWidth, h = img.naturalHeight;
+  const w = img.width, h = img.height;   // the stage's size: a built-in map has no picture since v432
   return {
     x: ((-76.8 - b.west) / (b.east - b.west)) * w,
     y: ((b.north - 39.2) / (b.north - b.south)) * h,

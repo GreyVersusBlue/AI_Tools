@@ -45,7 +45,7 @@ const state = () => page.evaluate(() => {
 let st = await state();
 eq(st.canvasHidden, false, 'the live canvas is showing');
 eq(st.imgVis, 'hidden', 'the raster picture is hidden behind it');
-ok(st.imgW >= 3000, 'the raster is still loaded (exports read it): ' + st.imgW);
+ok(st.imgW === 0, 'no raster is loaded for a built-in map since v432 (the stage takes its size from the record): ' + st.imgW);
 
 const inkRuns = () => page.evaluate(() => {
   const c = document.getElementById('baseCanvas'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
