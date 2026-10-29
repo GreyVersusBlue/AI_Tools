@@ -1226,6 +1226,9 @@
         { k: '__bmg_probe__', transient: true },
         { k: 'bmg_project_v1', legacy: true },
         { k: 'bmg_workspace_v1' },
+        /* Quiz memory (Path 20 P5): per map project, which place names the class got or missed. Place names and counts
+           only, no student: not student data, so the year rollover leaves it. Never inside a project or a share link. */
+        { k: 'bmg_quiz_memory_v1' },
       ],
       idb: [
         { name: 'bmg-maps', cache: true, note: 'Cached map images for the Blank Map Generator. Safe to leave out — they download again when needed.' },

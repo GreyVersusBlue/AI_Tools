@@ -259,6 +259,8 @@
     "Tools/blank-map-generator/test/smoke-live-noraster.mjs": 20,
     "Tools/blank-map-generator/test/slices.test.mjs": 2,
     "Tools/blank-map-generator/test/smoke-slices.mjs": 30,
+    "Tools/blank-map-generator/test/quiz-memory.test.mjs": 2,
+    "Tools/blank-map-generator/test/smoke-quiz-memory.mjs": 40,
     "Tools/geography-bee-quiz-generator/test/geo-bee-parity.test.mjs": 1,
     "Tools/grade-distribution-visualizer/test/chart-svg.test.mjs": 1,
     "Tools/grade-distribution-visualizer/test/chart-svg-parity.test.mjs": 1,

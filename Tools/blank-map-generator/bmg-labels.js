@@ -52,6 +52,8 @@ export function createLabelLayer(layerEl, viewer, { onChange, onQuizChange } = {
   // far this round — session-only, never saved with the project.
   let quizMode = false;
   const revealed = new Set();
+  // The place the class is answering now: the last one revealed by 'Reveal next' or a click. Quiz memory marks this one.
+  let lastRevealed = null;
 
   function newId() {
     return crypto.randomUUID ? crypto.randomUUID() : `lbl_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -61,6 +63,7 @@ export function createLabelLayer(layerEl, viewer, { onChange, onQuizChange } = {
     labels = list;
     selectedId = null;
     revealed.clear();
+    lastRevealed = null;
     reconcile();
   }
 
@@ -68,6 +71,7 @@ export function createLabelLayer(layerEl, viewer, { onChange, onQuizChange } = {
   function setQuizMode(on) {
     quizMode = !!on;
     revealed.clear();
+    lastRevealed = null;
     if (quizMode) deselect();
     nodes.forEach((node, id) => applyQuizState(node, id));
     onQuizChange?.(getQuizProgress());
@@ -77,8 +81,8 @@ export function createLabelLayer(layerEl, viewer, { onChange, onQuizChange } = {
 
   /** Shows/re-hides one label's text — called when its node is clicked in quiz mode. */
   function toggleReveal(id) {
-    if (revealed.has(id)) revealed.delete(id);
-    else revealed.add(id);
+    if (revealed.has(id)) { revealed.delete(id); if (lastRevealed === id) lastRevealed = null; }
+    else { revealed.add(id); lastRevealed = id; }
     const node = nodes.get(id);
     if (node) applyQuizState(node, id);
     onQuizChange?.(getQuizProgress());
@@ -87,6 +91,11 @@ export function createLabelLayer(layerEl, viewer, { onChange, onQuizChange } = {
   /** Labels that can actually be quizzed on — an empty label has nothing to hide or guess. */
   function quizzableLabels() {
     return labels.filter(l => l.text);
+  }
+
+  /** The label the class is answering now (see lastRevealed), or null. */
+  function getCurrentQuizLabel() {
+    return lastRevealed ? (labels.find(l => l.id === lastRevealed && l.text) || null) : null;
   }
 
   function getQuizProgress() {
@@ -101,11 +110,14 @@ export function createLabelLayer(layerEl, viewer, { onChange, onQuizChange } = {
    * instead of hunting for the next unrevealed label on screen, and the
    * random pick means the same map gives a different sequence every time.
    */
-  function revealNext() {
+  function revealNext(prefer) {
     const hidden = quizzableLabels().filter(l => !revealed.has(l.id));
     if (!hidden.length) return null;
-    const pick = hidden[Math.floor(Math.random() * hidden.length)];
+    // `prefer(hidden)` may name one of them (quiz memory's "missed ones first"); anything else is a random pick.
+    const wanted = prefer ? prefer(hidden) : null;
+    const pick = wanted && hidden.includes(wanted) ? wanted : hidden[Math.floor(Math.random() * hidden.length)];
     revealed.add(pick.id);
+    lastRevealed = pick.id;
     const node = nodes.get(pick.id);
     if (node) applyQuizState(node, pick.id);
     onQuizChange?.(getQuizProgress());
@@ -121,6 +133,7 @@ export function createLabelLayer(layerEl, viewer, { onChange, onQuizChange } = {
   /** Re-hides everything — a fresh round on the same map. */
   function hideAll() {
     revealed.clear();
+    lastRevealed = null;
     nodes.forEach((node, id) => applyQuizState(node, id));
     onQuizChange?.(getQuizProgress());
   }
@@ -523,6 +536,6 @@ export function createLabelLayer(layerEl, viewer, { onChange, onQuizChange } = {
 
   return {
     setLabels, getLabels, addAt, remove, reposition, startEditing, select, deselect, getSelectedId, nudge,
-    setQuizMode, isQuizMode, revealNext, revealAll, hideAll, getQuizProgress, tidyOverlaps, shrinkToFit,
+    setQuizMode, isQuizMode, revealNext, getCurrentQuizLabel, revealAll, hideAll, getQuizProgress, tidyOverlaps, shrinkToFit,
   };
 }

@@ -48,6 +48,8 @@
     "test:blank-map-live-noraster": "node Tools/blank-map-generator/test/smoke-live-noraster.mjs",
     "test:blank-map-slices": "node Tools/blank-map-generator/test/slices.test.mjs",
     "test:blank-map-slices-smoke": "node Tools/blank-map-generator/test/smoke-slices.mjs",
+    "test:blank-map-quiz-memory": "node Tools/blank-map-generator/test/quiz-memory.test.mjs",
+    "test:blank-map-quiz-memory-smoke": "node Tools/blank-map-generator/test/smoke-quiz-memory.mjs",
     "test:blank-map-live-parity": "node Tools/blank-map-generator/test/smoke-live-parity.mjs",
     "test:geo-bee-parity": "node Tools/geography-bee-quiz-generator/test/geo-bee-parity.test.mjs",
     "test:chart-svg": "node Tools/grade-distribution-visualizer/test/chart-svg.test.mjs",

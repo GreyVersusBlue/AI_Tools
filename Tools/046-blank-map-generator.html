@@ -343,6 +343,10 @@
   .panelRow input[type=text] { min-width: 180px; }
 
   .quizCount { font-size: 0.82rem; font-weight: 600; color: var(--accent); }
+  .quizMemory { margin: 4px 0 8px; font-size: 0.85rem; }
+  .quizMemory summary { cursor: pointer; font-weight: 600; }
+  .quizMemoryList { margin: 4px 0 6px 1.2em; padding: 0; }
+  .quizMemory[hidden] { display: none !important; }
 
   /* Projector mode for the self-check quiz: bumps on-screen label text to a
      size that reads from the back of the room. !important because a colored
@@ -548,7 +552,7 @@
       </select>
       <select id="countrySelect" class="styleSelect" data-no-pan hidden></select>
     </div>
-    <p class="hint">Searches Commons' public map images. Once you pick one, it's downloaded and kept in this browser so it works offline afterward.</p>
+    <p class="hint">Searches Commons' public map images. Nothing is fetched from Wikimedia until you press Search. Once you pick a map, it's downloaded and kept in this browser (see Recently used) so it works offline afterward.</p>
     <label class="licenseFilterRow"><input type="checkbox" id="licenseFilter" data-no-pan> Public domain / CC0 only (safe to hand out to students)</label>
     <div id="searchStatus" class="status" hidden></div>
     <div id="resultsGrid" class="grid"></div>
@@ -675,10 +679,18 @@
       <button id="btnQuizGot" class="small" title="Tally one for the class — the running score is for a projected whole-class review">Class got it &#10003;</button>
       <button id="btnQuizMissed" class="small" title="Tally a miss — worth coming back to before the test">Missed &#10007;</button>
       <span id="quizScore" class="quizCount"></span>
+      <span id="quizCurrent" class="quizCount" aria-live="polite"></span>
       <button id="btnQuizRevealAll" class="small">Reveal all</button>
       <button id="btnQuizNewRound" class="small">New round</button>
       <label class="lineArrowLabel" title="Bump label text up to a size that reads from the back of the room"><input type="checkbox" id="quizBigText" data-no-pan> Projector text</label>
+      <label class="lineArrowLabel" title="Reveal the places this class has missed before first, using the quiz history kept in this browser"><input type="checkbox" id="quizMissedFirst" data-no-pan> Missed ones first</label>
     </div>
+    <details id="quizMemory" class="quizMemory no-print" hidden>
+      <summary id="quizMemorySummary">Missed in past rounds</summary>
+      <p class="hint" id="quizMemoryNote">Kept in this browser for this map project only: place names and counts, never students. It is not in a shared link.</p>
+      <ul id="quizMemoryList" class="quizMemoryList"></ul>
+      <button id="btnQuizForget" class="small" title="Delete the quiz history this browser keeps for this map project">Forget quiz history for this map</button>
+    </details>
     <div class="viewerToolbar no-print">
       <label class="pageFormatLabel" for="pageFormatSelect">Page shape</label>
       <select id="pageFormatSelect" class="styleSelect">
@@ -898,6 +910,7 @@ import { searchMaps, searchByRegion, fetchMapImage } from './blank-map-generator
 import { CONTINENTS } from './blank-map-generator/bmg-geography.js';
 import { createViewer } from './blank-map-generator/bmg-viewer.js';
 import * as Slices from './blank-map-generator/bmg-slices.js';
+import * as QuizMemory from './blank-map-generator/bmg-quiz-memory.js';
 import { loadSource as loadLiveSource, drawBaseMap, drawExtent, parseBaseMapId } from './blank-map-generator/bmg-live.js';
 import { createLabelLayer, labelColorHex, labelFontSizePx, labelSwatchSvg, LABEL_COLORS } from './blank-map-generator/bmg-labels.js';
 import {
@@ -1422,13 +1435,54 @@ function setStudentModeEnabled(on) {
 // labels are revealed are session-only — a new round starts clean.
 let quizScore = { got: 0, missed: 0 };
 
+// Quiz memory (Path 20 P5): "Class got it" / "Missed" also record against the place the class is answering (the last
+// one revealed), in this browser, for this map project: which places keep getting missed. Place names and counts only.
+// One mark per place per round: the same button twice counts once, the other button replaces it.
+let quizMemory = QuizMemory.load();
+const roundMarks = new Map(); // label id -> 'got' | 'missed', this round
+const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
+function markCurrent(result) {
+  const cur = labelLayer.getCurrentQuizLabel();
+  if (!cur) return;
+  quizMemory = QuizMemory.record(quizMemory, store.getActiveId(), cur.text, result, todayStr(), roundMarks.get(cur.id) || null);
+  roundMarks.set(cur.id, result);
+  QuizMemory.save(quizMemory);
+}
+
+function renderQuizMemory() {
+  const box = el('quizMemory');
+  box.hidden = el('quizBar').hidden;
+  if (box.hidden) return;
+  const weak = QuizMemory.weakList(quizMemory, store.getActiveId());
+  el('quizMemorySummary').textContent = weak.length ? `Missed in past rounds (${weak.length})` : 'Missed in past rounds (none yet)';
+  const ul = el('quizMemoryList');
+  ul.textContent = '';
+  weak.slice(0, 20).forEach(w => {
+    const li = document.createElement('li');
+    li.textContent = `${w.text}: missed ${w.missed}, got ${w.got}${w.at ? ` (last ${w.last} ${w.at})` : ''}`;
+    ul.appendChild(li);
+  });
+  if (weak.length > 20) { const li = document.createElement('li'); li.textContent = `and ${weak.length - 20} more`; ul.appendChild(li); }
+  el('btnQuizForget').disabled = !Object.prototype.hasOwnProperty.call(quizMemory.projects, store.getActiveId());
+}
+
 function setQuizModeEnabled(on) {
   labelLayer.setQuizMode(on);
   el('btnQuizMode').classList.toggle('active', on);
   el('quizBar').hidden = !on;
   quizScore = { got: 0, missed: 0 };
+  roundMarks.clear();
+  if (on) {
+    // Read afresh (another tab may have marked) and drop history of map projects deleted since.
+    const live = store.listProjects().map(p => p.id);
+    const fresh = QuizMemory.load();
+    quizMemory = QuizMemory.prune(fresh, live);
+    if (Object.keys(quizMemory.projects).length !== Object.keys(fresh.projects).length) QuizMemory.save(quizMemory);
+  }
   if (!on) {
     el('quizBigText').checked = false;
+    el('quizMissedFirst').checked = false;
     document.body.classList.remove('quiz-projector');
   }
   renderQuizBar(labelLayer.getQuizProgress());
@@ -1440,16 +1494,27 @@ function renderQuizBar({ revealed, total } = { revealed: 0, total: 0 }) {
     ? `Score: ${quizScore.got} ✓ / ${quizScore.missed} ✗`
     : '';
   el('btnQuizReveal').disabled = revealed >= total;
+  const cur = labelLayer.getCurrentQuizLabel();
+  el('quizCurrent').textContent = cur ? `Marking: ${cur.text}` : '';
+  renderQuizMemory();
 }
 
-el('btnQuizReveal').addEventListener('click', () => labelLayer.revealNext());
+el('btnQuizReveal').addEventListener('click', () => labelLayer.revealNext(
+  el('quizMissedFirst').checked ? hidden => QuizMemory.pickWeak(hidden, quizMemory, store.getActiveId()) : null));
+el('btnQuizForget').addEventListener('click', () => {
+  if (!confirm('Forget the quiz history this browser keeps for this map project? Other maps are not touched.')) return;
+  quizMemory = QuizMemory.forget(quizMemory, store.getActiveId());
+  QuizMemory.save(quizMemory);
+  renderQuizBar(labelLayer.getQuizProgress());
+});
 el('btnQuizRevealAll').addEventListener('click', () => labelLayer.revealAll());
 el('btnQuizNewRound').addEventListener('click', () => {
   quizScore = { got: 0, missed: 0 };
+  roundMarks.clear();
   labelLayer.hideAll();
 });
-el('btnQuizGot').addEventListener('click', () => { quizScore.got++; renderQuizBar(labelLayer.getQuizProgress()); });
-el('btnQuizMissed').addEventListener('click', () => { quizScore.missed++; renderQuizBar(labelLayer.getQuizProgress()); });
+el('btnQuizGot').addEventListener('click', () => { quizScore.got++; markCurrent('got'); renderQuizBar(labelLayer.getQuizProgress()); });
+el('btnQuizMissed').addEventListener('click', () => { quizScore.missed++; markCurrent('missed'); renderQuizBar(labelLayer.getQuizProgress()); });
 el('quizBigText').addEventListener('change', () => {
   document.body.classList.toggle('quiz-projector', el('quizBigText').checked);
   labelLayer.reposition();
@@ -4805,7 +4870,7 @@ function showEmptyMapState(mapMissing) {
   el('viewerEmpty').hidden = false;
   el('viewerEmpty').textContent = mapMissing
     ? "This project's map isn't cached in this browser anymore — search above and re-download it to keep annotating."
-    : 'Search above and pick a map to get started.';
+    : 'Pick a built-in map above, or press Search Wikimedia Commons (nothing is fetched until you do).';
   setPlaceMode('none');
   updateShadeButton();
   labelLayer.setLabels([]);
@@ -5046,9 +5111,9 @@ async function loadActiveProjectIntoUI(opts) {
   // to set the base map itself (the starter projects). Kicking off a Wikimedia
   // search and then immediately throwing the results away is a network request
   // on a school network for nothing.
-  if (opts && opts.skipSearch) return;
+  // Devon, 2026-10-07: nothing goes to Wikimedia until the teacher presses Search. The box holds a suggested
+  // query and nothing more (Path 20 P5; test:blank-map-quiz-memory-smoke holds the page to no request at load).
   el('searchInput').value = 'blank world map';
-  runSearch('blank world map');
 }
 
 el('projectSwitcher').addEventListener('change', () => {
