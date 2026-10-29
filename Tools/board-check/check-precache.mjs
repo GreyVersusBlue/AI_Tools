@@ -15,7 +15,6 @@
 //   Tools/certificate-award-maker/cam-logo.js            (042 — logo upload)
 //   Tools/number-talks-board/dot-images.js               (024)
 //   Tools/seating-chart/scg-photo.js                     (005 — the known one)
-//   Tools/vocab-flashcard-generator/vfg-conjdrill-link.js(040)
 //   Tools/writing-prompt-generator/wpg-rubric-link.js    (025)
 //   ideas-backlog.html, v1-inbox.html, v2-subplans.html,
 //   v3-bellboard.html, v4-riso.html                      (linked pages, 404 offline)

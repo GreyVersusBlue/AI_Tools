@@ -34,7 +34,6 @@
 <script src="vocab-flashcard-generator/vfg-layout.js"></script>
 <script src="vocab-flashcard-generator/vfg-printables.js"></script>
 <script src="vocab-flashcard-generator/vfg-store.js"></script>
-<script src="vocab-flashcard-generator/vfg-conjdrill-link.js"></script>
 <!-- The site's question bank (Path 12 P2): a question is a card. This page reads
      it with QuestionBank.peek(), which writes nothing, and stores a question
      only from the Send review's Add button. The two data files are the
@@ -296,11 +295,11 @@
         <textarea id="wordInput" placeholder="Photosynthesis: process plants use to make food | Plants use photosynthesis to grow&#10;Mitosis: cell division"></textarea>
 
         <div class="import-bridge" id="importBridgeRow" style="display:none;">
-          <label for="conjDrillSetSelect">Import from Vocab &amp; Conjugation Drill Generator</label>
-          <p class="hint">Reads that tool's saved drill sets straight from this browser &mdash; nothing is uploaded or shared between tools beyond this one-time copy.</p>
+          <label for="addFromListSelect">Add words from another saved list</label>
+          <p class="hint">Any list in Word Lists below, including the sets saved in Vocab &amp; Conjugation Drill Generator, whose words are kept there. Copies the words, with their example, pronunciation and part of speech, into this list &mdash; nothing is uploaded.</p>
           <div class="row2">
-            <select id="conjDrillSetSelect"></select>
-            <button type="button" class="secondary" id="importConjDrillBtn" style="width:100%;margin:0;">Add words to this list</button>
+            <select id="addFromListSelect"></select>
+            <button type="button" class="secondary" id="addFromListBtn" style="width:100%;margin:0;">Add words to this list</button>
           </div>
         </div>
       </div>
@@ -495,7 +494,7 @@
 
   var els = {};
   ['toolbar','listSwitch','newListBtn','deleteListBtn','exportListBtn','importListBtn','importListFile','listName','wordInput',
-   'importBridgeRow','conjDrillSetSelect','importConjDrillBtn',
+   'importBridgeRow','addFromListSelect','addFromListBtn',
    'flashOptions','wallOptions','quizOptions','wsOptions','cwOptions','bingoOptions','matchOptions',
    'flashCols','flashRows','cardSizePreset','flashLayout','wallPerPage','wallShowDef',
    'sortOrder','shuffleOrder','showGuides','bingoCount','bingoField',
@@ -551,6 +550,7 @@
       els.listSwitch.appendChild(opt);
     });
     renderHub();
+    refreshImportBridge();
   }
 
   function readFormIntoState() {
@@ -1253,30 +1253,33 @@
     syncAlignTestVisibility();
   }
 
-  /* ---------- read-only cross-tool bridge: import from Vocab & Conjugation Drill ---------- */
+  /* ---------- add the words of another saved list (Path 19 P2) ----------
+     This was a read-only bridge to Vocab & Conjugation Drill Generator's own keys
+     (vfg-conjdrill-link.js, deleted). 039's sets are word lists now, so the bridge is every
+     other list in Word Lists, and what is copied is the whole word, not just term and definition. */
   function refreshImportBridge() {
-    if (!window.VfgConjDrillLink) { els.importBridgeRow.style.display = 'none'; return; }
-    var names = VfgConjDrillLink.listConjDrillSets();
+    var open = state ? state.name : '';
+    var names = (hubDo(function () { return WordList.names(); }) || []).filter(function (n) { return n !== open; });
     if (!names.length) { els.importBridgeRow.style.display = 'none'; return; }
     els.importBridgeRow.style.display = '';
-    var current = els.conjDrillSetSelect.value;
-    els.conjDrillSetSelect.innerHTML = '';
+    var current = els.addFromListSelect.value;
+    els.addFromListSelect.innerHTML = '';
     names.forEach(function (n) {
       var opt = document.createElement('option');
       opt.value = n; opt.textContent = n;
-      els.conjDrillSetSelect.appendChild(opt);
+      els.addFromListSelect.appendChild(opt);
     });
-    if (current && names.indexOf(current) !== -1) els.conjDrillSetSelect.value = current;
+    if (current && names.indexOf(current) !== -1) els.addFromListSelect.value = current;
   }
 
-  els.importConjDrillBtn.addEventListener('click', function () {
-    if (!state || !window.VfgConjDrillLink) return;
-    var name = els.conjDrillSetSelect.value;
-    var items = VfgConjDrillLink.getConjDrillItems(name);
-    if (!items.length) { alert('That drill set has no vocabulary words saved yet.'); return; }
-    var lines = items.map(function (it) { return it.definition ? (it.term + ': ' + it.definition) : it.term; });
-    els.wordInput.value = (els.wordInput.value.trim() ? els.wordInput.value.replace(/\n*$/, '\n') : '') + lines.join('\n');
-    alert('Added ' + items.length + ' word(s) from "' + name + '".');
+  els.addFromListBtn.addEventListener('click', function () {
+    if (!state) return;
+    var name = els.addFromListSelect.value;
+    var list = hubDo(function () { return WordList.get(name); });
+    if (!list || !list.words.length) { alert('That list has no words saved yet.'); return; }
+    var text = WordList.toText(list.words);
+    els.wordInput.value = (els.wordInput.value.trim() ? els.wordInput.value.replace(/\n*$/, '\n') : '') + text;
+    alert('Added ' + list.words.length + ' word(s) from "' + name + '".');
     renderPreview();
   });
 
@@ -1856,7 +1859,7 @@
   // A shared link wins over whatever list was last open: following one is an
   // explicit "show me this deck". If the link is unreadable, importSharedList
   // says so and boot carries on normally.
-  hubDo(function () { WordList.importLegacy(window.localStorage); });
+  hubDo(function () { WordList.importLegacy(window.localStorage); WordList.importLegacyDrill(window.localStorage); });
   if (!importSharedList()) {
     var current = VocabStore.getCurrentName();
     if (current && VocabStore.loadSet(current)) {

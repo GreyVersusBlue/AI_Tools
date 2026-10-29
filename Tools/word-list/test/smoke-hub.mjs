@@ -34,6 +34,10 @@ const OLD = {
   'gvb-vocab-flashcards:data:Made-up Unit 1': JSON.stringify({ name: 'Made-up Unit 1', words: 'casa: house | Mi casa | KAH-sah | noun\nperro\tdog\nnot a word line\nluz, light', mode: 'wordwall', flashCols: 3, flashRows: 2 }),
   'gvb-vocab-flashcards:data:Made-up Unit 2': JSON.stringify({ name: 'Made-up Unit 2', words: 'cell: unit of life\nmitosis: division', mode: 'flashcards' }),
   'gvb-vocab-flashcards:current': 'Made-up Unit 2',
+  // a set 039 saved before the hub (its keys, read here, never written)
+  'gvb-vocab-conj:list': JSON.stringify(['Drill set', 'Conj only']),
+  'gvb-vocab-conj:data:Drill set': JSON.stringify({ name: 'Drill set', mode: 'vocab', vocabText: 'hablar: to speak\ncomer', conjugations: [] }),
+  'gvb-vocab-conj:data:Conj only': JSON.stringify({ name: 'Conj only', mode: 'conjugation', vocabText: '', conjugations: [] }),
 };
 
 const server = await serve(PORT);
@@ -61,16 +65,24 @@ const rows = page => page.$$eval('#hubList li .hub-name', els => els.map(e => e.
 console.log('040 — Word Lists: lists saved before the hub');
 let page = await open(OLD);
 let h = await hub(page);
-eq(h.lists.map(l => l.name), ['Made-up Unit 1', 'Made-up Unit 2'], 'the old lists are in the hub under their names, in order');
+eq(h.lists.map(l => l.name), ['Made-up Unit 1', 'Made-up Unit 2', 'Drill set'], '040\'s old lists and 039\'s set with vocabulary are in the hub under their names, in order; a conjugation-only set is not');
 eq(h.lists[0].words.map(w => [w.term, w.definition, w.example, w.pronunciation, w.partOfSpeech]),
   [['casa', 'house', 'Mi casa', 'KAH-sah', 'noun'], ['perro', 'dog', '', '', ''], ['luz', 'light', '', '', '']], 'a list\'s words are what 040 read from the same text');
-eq(await rows(page), ['Made-up Unit 1 (3 words)', 'Made-up Unit 2 (2 words)'], 'the card lists them with their counts');
+eq(await rows(page), ['Made-up Unit 1 (3 words)', 'Made-up Unit 2 (2 words)', 'Drill set (2 words)'], 'the card lists them with their counts');
 const ownAfter = await own(page);
+const await_keys = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter(k => /^gvb-vocab-/.test(k)).map(k => [k, localStorage.getItem(k)])));
 const oldKeys = Object.keys(OLD).sort();
-eq(Object.keys(ownAfter).sort(), oldKeys, 'the page keeps 040\'s keys and adds none');
-eq(oldKeys.filter(k => k !== 'gvb-vocab-flashcards:data:Made-up Unit 2' && ownAfter[k] !== OLD[k]), [], 'every key the page did not open is byte for byte as it was');
+eq(Object.keys(ownAfter).sort(), oldKeys.filter(k => /^gvb-vocab-flashcards:/.test(k)), 'the page keeps 040\'s keys and adds none');
+eq(oldKeys.filter(k => /^gvb-vocab-/.test(k) && k !== 'gvb-vocab-flashcards:data:Made-up Unit 2' && (await_keys[k] ?? null) !== OLD[k]), [], 'every key the page did not open is byte for byte as it was, 039\'s included');
 eq(JSON.parse(ownAfter['gvb-vocab-flashcards:data:Made-up Unit 2']).words, 'cell: unit of life\nmitosis: division', 'the list it opened keeps its words (the page fills in its settings defaults, as it always did)');
 eq(await page.inputValue('#listName'), 'Made-up Unit 2', 'the list that was current opens, as before');
+
+/* the add-from-another-list row (what vfg-conjdrill-link.js used to be) */
+eq(await page.$$eval('#addFromListSelect option', o => o.map(x => x.value)), ['Made-up Unit 1', 'Drill set'], 'the add row offers every other list, 039\'s set among them');
+await page.selectOption('#addFromListSelect', 'Drill set');
+await page.click('#addFromListBtn'); await settle(page, 100);
+ok((await page.inputValue('#wordInput')).endsWith('hablar: to speak\ncomer: '), 'a 039 set\'s words are added to the open list');
+await page.fill('#wordInput', 'cell: unit of life\nmitosis: division'); await settle(page, 50);
 
 /* ── 2. write-through ───────────────────────────────────────────────────── */
 console.log('040 — Word Lists: the page writes through');
@@ -88,14 +100,14 @@ eq(u2.words.map(w => [w.term, w.definition, w.gender, w.tags]), [['mitosis', 'ce
 await page.fill('#listName', 'Renamed unit'); await page.press('#listName', 'Tab'); await settle(page, 200);
 await page.fill('#wordInput', 'mitosis: cell division\ncell: smallest unit\nnucleus: the control centre\nrib: bone'); await settle(page, 200);
 h = await hub(page);
-eq(h.lists.map(l => l.name), ['Made-up Unit 1', 'Renamed unit'], 'a rename goes to the hub and leaves one list, not two');
+eq(h.lists.map(l => l.name), ['Made-up Unit 1', 'Renamed unit', 'Drill set'], 'a rename goes to the hub and leaves one list, not two');
 eq(h.lists[1].words.find(w => w.term === 'cell').gender, 'f', 'and the renamed list keeps its gender');
 await page.click('#deleteListBtn'); await settle(page, 200);
 h = await hub(page);
-eq(h.lists.map(l => l.name), ['Made-up Unit 1'], 'a delete goes to the hub');
+eq(h.lists.map(l => l.name), ['Made-up Unit 1', 'Drill set'], 'a delete goes to the hub');
 await page.reload({ waitUntil: 'networkidle' }); await settle(page, 300);
-eq((await hub(page)).lists.map(l => l.name), ['Made-up Unit 1'], 'a deleted list does not come back on the next load');
-eq((await hub(page)).legacy, ['Made-up Unit 1', 'Made-up Unit 2'], 'the migrated names are remembered');
+eq((await hub(page)).lists.map(l => l.name), ['Made-up Unit 1', 'Drill set'], 'a deleted list does not come back on the next load');
+eq([(await hub(page)).legacy, (await hub(page)).legacyDrill], [['Made-up Unit 1', 'Made-up Unit 2'], ['Drill set', 'Conj only']], 'the migrated names are remembered, 040\'s and 039\'s apart');
 
 /* ── 3. a pasted table and a file, reviewed before they are stored ──────── */
 console.log('040 — Word Lists: import is shown first');
@@ -133,7 +145,7 @@ ok(/not a word-lists file/.test(await page.textContent('#hubStatus')), 'a file t
 /* ── 4. downloads ───────────────────────────────────────────────────────── */
 console.log('040 — Word Lists: downloads');
 const json = JSON.parse(await downloadText(page, '#hubJsonBtn'));
-eq([json.app, json.v, json.lists.map(l => l.name)], ['word-lists', 1, ['Made-up Unit 1', 'Numbers', 'From a file']], 'all lists download as JSON');
+eq([json.app, json.v, json.lists.map(l => l.name)], ['word-lists', 1, ['Made-up Unit 1', 'Drill set', 'Numbers', 'From a file']], 'all lists download as JSON');
 const csv = await downloadText(page, '#hubCsvBtn');
 ok(csv.replace(/^\uFEFF/, '').startsWith('term,definition,example,pronunciation,partOfSpeech,gender,tags') && csv.includes('mesa,table'), 'this list downloads as CSV');
 const back = await page.evaluate(t => WordList.parseTable(t).words.map(w => [w.term, w.definition, w.gender]), csv);
