@@ -10,6 +10,8 @@
     "test:name-picker-share": "node Tools/name-picker/test/smoke-share.mjs",
     "test:name-picker-themes": "node Tools/name-picker/test/parity-themes.mjs",
     "test:name-picker-themes-smoke": "node Tools/name-picker/test/smoke-themes.mjs",
+    "test:name-picker-sound": "node Tools/name-picker/test/parity-sound.mjs",
+    "test:name-picker-sound-smoke": "node Tools/name-picker/test/smoke-sound.mjs",
     "test:name-picker-lightning": "node Tools/name-picker/test/smoke-lightning.mjs",
     "test:seating": "node Tools/seating-chart/test/solver.test.mjs && node Tools/seating-chart/test/migration.test.mjs && node Tools/seating-chart/test/explain.test.mjs && node Tools/seating-chart/test/rules.test.mjs && node Tools/seating-chart/test/room.test.mjs && node Tools/seating-chart/test/smoke-room.mjs && node Tools/seating-chart/test/smoke-room-marks.mjs && node Tools/seating-chart/test/smoke-seating.mjs && node Tools/seating-chart/test/smoke-sub-packet.mjs && node Tools/seating-chart/test/smoke-zoom-pan.mjs && node Tools/seating-chart/test/drive-seating.mjs && node Tools/seating-chart/test/smoke-share.mjs && node Tools/seating-chart/test/smoke-photos.mjs",
     "test:schedule": "node Tools/schedule-visualizer/test/smoke.mjs",

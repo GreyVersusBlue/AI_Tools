@@ -733,6 +733,7 @@ import { report as equityReport, summaryLine as equitySummaryLine, dayKey } from
 import { loadDetails, lookupDetail, displayName, loadIds, lookupId } from './name-picker/np-details.js';
 import { loadSeatingState, seatEquityReport, seatSummaryLine } from './name-picker/np-seat-equity.js';
 import { themeVars, hasTheme } from './name-picker/np-themes.js';
+import { createSound } from './name-picker/np-sound.js';
 
 /* _shared/store.js is linked in the head but nothing on this page calls it
    directly: np-store's thirteen slots keep their boxing wrapper. It is here so
@@ -745,7 +746,7 @@ const store = createStore();
 let opts = { ...OPTION_DEFAULTS };
 let rotation = freshRotation();
 
-let names=[],originalNames=[],history=[],nameCards=[],isRolling=false,mode='jump',speed=130,crazyMode=false,audioCtx=null,prompts=[],statsCache={},lastPickTime=0,comboCount=0,comboTimer=null,currentStatsSort='most';
+let names=[],originalNames=[],history=[],nameCards=[],isRolling=false,mode='jump',speed=130,crazyMode=false,prompts=[],statsCache={},lastPickTime=0,comboCount=0,comboTimer=null,currentStatsSort='most';
 
 /* === New feature state === */
 let absentSet=new Set(),hallOfFame=[],retroUnlocked=false,retroActive=false,tournamentMode=false,suddenDeath=false,luckyStudent=null,luckyDate=null,konamiBuffer=[],achievementsShown=new Set(),chaosParticleTimer=null,sessionMythicCount=0;
@@ -943,107 +944,8 @@ function drawLightning(fromEl,toEl){
   setTimeout(()=>bolt.remove(),300);
 }
 
-function ensureAudio(){if(!audioCtx){try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){audioCtx=null;}}return audioCtx;}
-
-/* === ENHANCED AUDIO ENGINE: smooth attack + release envelope eliminates clicks/pops on rapid playback === */
-function playBeep(freq=800,duration=80,type='square',volume=0.1){
-  if(!document.getElementById('soundToggle').checked)return;
-  const ctx=ensureAudio();
-  if(!ctx)return;
-  try{
-    const osc=ctx.createOscillator(),gain=ctx.createGain();
-    osc.connect(gain);gain.connect(ctx.destination);
-    osc.type=type;osc.frequency.value=freq;
-    const now=ctx.currentTime;
-    const dur=Math.max(0.02,duration/1000);
-    const attack=Math.min(0.006,dur*0.25);
-    const release=Math.min(0.04,dur*0.55);
-    const sustainEnd=Math.max(attack+0.001,dur-release);
-    gain.gain.setValueAtTime(0.00001,now);
-    gain.gain.linearRampToValueAtTime(volume,now+attack);
-    gain.gain.setValueAtTime(volume,now+sustainEnd);
-    gain.gain.exponentialRampToValueAtTime(0.00001,now+dur);
-    osc.start(now);
-    osc.stop(now+dur+0.015);
-  }catch(e){}
-}
-
-/* Bypass the soundToggle check for soundboard sounds (manual = always play if user clicked) */
-function playBeepForced(freq=800,duration=80,type='square',volume=0.1){
-  const ctx=ensureAudio();
-  if(!ctx)return;
-  try{
-    const osc=ctx.createOscillator(),gain=ctx.createGain();
-    osc.connect(gain);gain.connect(ctx.destination);
-    osc.type=type;osc.frequency.value=freq;
-    const now=ctx.currentTime;
-    const dur=Math.max(0.02,duration/1000);
-    const attack=Math.min(0.006,dur*0.25);
-    const release=Math.min(0.04,dur*0.55);
-    const sustainEnd=Math.max(attack+0.001,dur-release);
-    gain.gain.setValueAtTime(0.00001,now);
-    gain.gain.linearRampToValueAtTime(volume,now+attack);
-    gain.gain.setValueAtTime(volume,now+sustainEnd);
-    gain.gain.exponentialRampToValueAtTime(0.00001,now+dur);
-    osc.start(now);
-    osc.stop(now+dur+0.015);
-  }catch(e){}
-}
-
-/* Noise burst utility for percussive sounds (applause, drumroll, crickets, etc.) */
-function playNoise(duration=200,volume=0.1,filterFreq=null,filterQ=1){
-  const ctx=ensureAudio();
-  if(!ctx)return;
-  try{
-    const bufferSize=ctx.sampleRate*Math.max(0.05,duration/1000);
-    const buffer=ctx.createBuffer(1,bufferSize,ctx.sampleRate);
-    const data=buffer.getChannelData(0);
-    for(let i=0;i<bufferSize;i++)data[i]=Math.random()*2-1;
-    const src=ctx.createBufferSource();
-    src.buffer=buffer;
-    const gain=ctx.createGain();
-    const now=ctx.currentTime;
-    const dur=duration/1000;
-    if(filterFreq){
-      const filter=ctx.createBiquadFilter();
-      filter.type='bandpass';
-      filter.frequency.value=filterFreq;
-      filter.Q.value=filterQ;
-      src.connect(filter);filter.connect(gain);
-    }else{
-      src.connect(gain);
-    }
-    gain.connect(ctx.destination);
-    gain.gain.setValueAtTime(0.00001,now);
-    gain.gain.linearRampToValueAtTime(volume,now+0.005);
-    gain.gain.exponentialRampToValueAtTime(0.00001,now+dur);
-    src.start(now);
-    src.stop(now+dur+0.02);
-  }catch(e){}
-}
-
-function playWinSound(rarity){
-  if(!document.getElementById('soundToggle').checked)return;
-  const v=crazyMode?0.15:0.12;
-  playBeep(523,130,'square',v);
-  setTimeout(()=>playBeep(659,130,'square',v),140);
-  setTimeout(()=>playBeep(784,130,'square',v),280);
-  setTimeout(()=>playBeep(1047,400,'square',v+0.02),420);
-  if(rarity&&rarity.name!=='COMMON'){
-    setTimeout(()=>playBeep(rarity.sound,200,'sawtooth',0.1),600);
-    setTimeout(()=>playBeep(rarity.sound*1.5,300,'triangle',0.1),800);
-    if(rarity.name==='MYTHIC'||rarity.name==='LEGENDARY'){
-      setTimeout(()=>playBeep(rarity.sound*2,500,'sawtooth',0.12),1100);
-    }
-  }
-}
-
-function playKlaxon(){
-  if(!document.getElementById('soundToggle').checked)return;
-  playBeep(440,120,'sawtooth',0.12);
-  setTimeout(()=>playBeep(330,120,'sawtooth',0.12),130);
-  setTimeout(()=>playBeep(440,120,'sawtooth',0.12),260);
-}
+/* The audio engine lives in name-picker/np-sound.js; it reads the Sound checkbox and Crazy mode through these two readers. */
+const {ensureAudio,playBeep,playBeepForced,playNoise,playWinSound,playKlaxon}=createSound({soundOn:()=>document.getElementById('soundToggle').checked,isCrazy:()=>crazyMode});
 
 /* The still stand-in for every moving celebration. Deliberately not an
    animation: prefers-reduced-motion means "do not move things", and a fade is

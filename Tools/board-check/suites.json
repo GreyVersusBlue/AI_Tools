@@ -58,6 +58,8 @@
     "Tools/seating-chart/test/smoke-zoom-pan.mjs",
     "Tools/name-picker/test/drive-weighting.mjs",
     "Tools/name-picker/test/parity-themes.mjs",
+    "Tools/name-picker/test/parity-sound.mjs",
+    "Tools/name-picker/test/smoke-sound.mjs",
     "Tools/name-picker/test/smoke-themes.mjs",
     "Tools/name-picker/test/smoke-share.mjs",
     "Tools/name-picker/test/smoke-lightning.mjs",
