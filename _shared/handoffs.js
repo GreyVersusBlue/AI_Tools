@@ -181,6 +181,8 @@
          own size. Every event lands at year 0: dates are the one thing a
          map does not know, a teacher can see that 0 is a placeholder, and
          015 stacks same-year labels into rows so twenty arrive readable.
+         Since Path 20 P4 a place may carry a whole-number `year` (the year of the time slice
+         it was placed on); it becomes the event's yearStart, and a place with none stays at 0.
          Only a label's text and position travel — never the map image, its
          markers, regions or worksheet settings. */
       transform: function (state) {
@@ -193,7 +195,7 @@
           events: places.map(function (p, i) {
             var name = clip(p.name, 200);
             return {
-              id: i + 1, track: 0, title: name, yearStart: 0, yearEnd: null, category: null,
+              id: i + 1, track: 0, title: name, yearStart: Number.isInteger(p.year) && Math.abs(p.year) <= 100000 ? p.year : 0, yearEnd: null, category: null,
               place: { name: name, lat: Number(p.lat), lon: Number(p.lon) },
               displayDate: null, description: '', photo: null
             };

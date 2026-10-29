@@ -158,6 +158,11 @@
   #viewerStatus { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   #baseCanvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   #stage { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  .sliceRow { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+  .sliceRow input[type=range] { flex: 1; min-width: 0; }
+  .sliceFields { display: flex; gap: 12px; flex-wrap: wrap; margin: 6px 0; }
+  .sliceFields label { display: flex; flex-direction: column; font-size: 12px; gap: 2px; }
+  .sliceFields input { padding: 4px 6px; }
   #stage img { display: block; max-width: none; user-select: none; -webkit-user-drag: none; }
   #viewerEmpty:not([hidden]) {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -567,6 +572,33 @@
     <div id="recentRow" class="recentRow"></div>
   </div>
 
+  <div id="sliceCard" class="card recent-card no-print">
+    <h2>Time slices</h2>
+    <p class="hint" style="margin:0 0 8px;">Annotate the same map as it was at different dates: each slice keeps its own labels, markers, shaded regions, lines and key, and the base map and view stay put. Nothing changes on a project until you start slices.</p>
+    <button id="btnSliceStart" class="small" title="Makes what is on the map now the first slice">Start time slices</button>
+    <div id="sliceControls" hidden>
+      <div class="sliceRow">
+        <button id="btnSlicePrev" class="small" aria-label="Previous slice">&lsaquo;</button>
+        <input type="range" id="sliceRange" min="0" max="0" step="1" value="0" aria-label="Time slice">
+        <button id="btnSliceNext" class="small" aria-label="Next slice">&rsaquo;</button>
+      </div>
+      <p id="sliceReadout" class="hint" aria-live="polite" style="margin:0 0 6px;"></p>
+      <div class="sliceFields">
+        <label>Slice name <input id="sliceName" type="text" maxlength="80" data-no-pan></label>
+        <label>Year (negative for BCE) <input id="sliceYear" type="text" inputmode="numeric" maxlength="8" placeholder="e.g. 1803" data-no-pan></label>
+      </div>
+      <div class="toolbar-row" style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button id="btnSliceAdd" class="small" title="A new slice with nothing on it">Add blank slice</button>
+        <button id="btnSliceCopy" class="small" title="A new slice that starts as a copy of this one, for a border that moved a little">Copy this slice</button>
+        <button id="btnSliceSort" class="small" title="Puts the slices in order of year">Sort by year</button>
+        <button id="btnSliceDelete" class="small" title="Deletes this slice and what it holds">Delete slice</button>
+        <button id="btnSlicePrint" class="small primary" title="One small map per slice on a single sheet">Print the slices</button>
+        <button id="btnSlicePdf" class="small primary" title="The same sheet as a PDF">Save the slices as PDF</button>
+      </div>
+      <p id="sliceNote" class="hint" aria-live="polite" style="margin:6px 0 0;"></p>
+    </div>
+  </div>
+
   <div class="card viewer-card">
     <div class="viewerToolbar no-print">
       <button id="btnZoomOut" class="icon" title="Zoom out">&minus;</button>
@@ -718,6 +750,7 @@
         <button id="btnExportLabelSet" class="small" title="Download this set as a small JSON file — hand it to a colleague, who can Import it into their own copy of this tool">Export set&hellip;</button>
         <button id="btnToTimeline" class="small" title="Open these places as events in the Timeline Builder, ready for you to add dates — this map covers where, the timeline covers when">Send places to Timeline Builder &rarr;</button>
         <button id="btnImportLabelSet" class="small" title="Load a label-set JSON file exported from this tool">Import set&hellip;</button>
+        <label id="timelineAllSlicesWrap" class="checkLabel" hidden title="Sends the places of every time slice, each event dated by its slice's year"><input type="checkbox" id="timelineAllSlices" checked data-no-pan> Send every time slice, dated by year</label>
         <input type="file" id="importLabelSetInput" accept="application/json,.json" hidden data-no-pan>
         <button id="btnDeleteLabelSet" class="small" hidden>Delete this saved set</button>
         <button id="btnLabelSetClose" class="small">Close</button>
@@ -864,6 +897,7 @@ import { createStore } from './blank-map-generator/bmg-store.js';
 import { searchMaps, searchByRegion, fetchMapImage } from './blank-map-generator/bmg-commons.js';
 import { CONTINENTS } from './blank-map-generator/bmg-geography.js';
 import { createViewer } from './blank-map-generator/bmg-viewer.js';
+import * as Slices from './blank-map-generator/bmg-slices.js';
 import { loadSource as loadLiveSource, drawBaseMap, drawExtent, parseBaseMapId } from './blank-map-generator/bmg-live.js';
 import { createLabelLayer, labelColorHex, labelFontSizePx, labelSwatchSvg, LABEL_COLORS } from './blank-map-generator/bmg-labels.js';
 import {
@@ -911,7 +945,9 @@ const viewport = el('viewport');
 const stage = el('stage');
 const mapImg = el('mapImg');
 
+let sliceSheetBuilding = false; // while the slices sheet swaps each slice's annotations in, nothing may be saved
 function save() {
+  if (sliceSheetBuilding) return;
   store.setActiveProject(project);
   recordHistoryPoint();
 }
@@ -1837,12 +1873,20 @@ function timelinePlaces() {
   if (!isCalibrated(project.calibration) || !currentSize.width) {
     throw new Error('Set this map’s latitude and longitude first (Calibrate), so each label has real coordinates to send.');
   }
-  const places = project.labels
+  // With time slices the places of every slice go, each carrying its slice's year, unless the box is cleared
+  // (then only the slice on the map goes, undated as before).
+  const everySlice = Slices.hasSlices(project) && el('timelineAllSlices').checked;
+  const sources = everySlice
+    ? project.slices.list.map(s => ({ year: s.year, labels: Slices.contentOf(project, s.id).labels }))
+    : [{ year: null, labels: project.labels }];
+  const places = sources.flatMap(src => src.labels
     .filter(l => l.text)
     .map(l => {
       const { lat, lon } = toLatLon(project.calibration, currentSize.width, currentSize.height, l.x, l.y);
-      return { name: l.text, lat: Math.round(lat * 1e4) / 1e4, lon: Math.round(lon * 1e4) / 1e4 };
-    })
+      const place = { name: l.text, lat: Math.round(lat * 1e4) / 1e4, lon: Math.round(lon * 1e4) / 1e4 };
+      if (src.year !== null) place.year = src.year;
+      return place;
+    }))
     .filter(p => isFinite(p.lat) && isFinite(p.lon));
   if (!places.length) {
     throw new Error('This map has no text labels to send yet. Add labels for the places you want on the timeline first.');
@@ -1860,8 +1904,9 @@ el('btnToTimeline').addEventListener('click', () => {
   let state;
   try { state = timelinePlaces(); } catch (e) { setLabelSetStatus(e.message, true); return; }
   const r = Handoffs.open(TIMELINE_HANDOFF, state);
+  const dated = state.places.filter(p => p.year !== undefined).length;
   setLabelSetStatus(r.ok
-    ? `Sent ${state.places.length} place${state.places.length === 1 ? '' : 's'} to the Timeline Builder in a new tab, as events dated year 0 — set each event's real year there. It saves as its own timeline; editing it does not change this map.`
+    ? `Sent ${state.places.length} place${state.places.length === 1 ? '' : 's'} to the Timeline Builder in a new tab, ${dated ? `${dated} dated by their slice's year and ${state.places.length - dated ? 'the rest' : 'none'} at year 0` : 'as events dated year 0'} — set each event's real year there. It saves as its own timeline; editing it does not change this map.`
     : r.message, !r.ok);
 });
 
@@ -4790,9 +4835,191 @@ function showEmptyMapState(mapMissing) {
 }
 
 /** Loads whichever project is now active (after init, switch, create, or delete) into the viewer. */
+
+// --- Time slices (Path 20 P4; bmg-slices.js) ----------------------------------
+// The active slice's annotations are the project's own fields, so nothing else on this page knows slices exist:
+// switching writes them into the slice and loads another's, then redraws the four layers and the key.
+function showSliceContent() {
+  labelLayer.setLabels(project.labels);
+  markerLayer.setMarkers(project.markers);
+  regionLayer.setRegions(project.regions);
+  lineLayer.setLines(project.lines);
+  renderLegend();
+}
+
+function sliceLabel(s, i, n) {
+  const y = Slices.yearText(s.year);
+  return `Slice ${i + 1} of ${n}: ${s.name}${y ? ', ' + y : ''}`;
+}
+
+function refreshSliceUI() {
+  const on = Slices.hasSlices(project);
+  el('btnSliceStart').hidden = on;
+  el('timelineAllSlicesWrap').hidden = !on;
+  el('sliceControls').hidden = !on;
+  if (!on) return;
+  const list = project.slices.list;
+  const i = Math.max(0, list.findIndex(s => s.id === project.slices.active));
+  const range = el('sliceRange');
+  range.max = String(list.length - 1);
+  range.value = String(i);
+  const text = sliceLabel(list[i], i, list.length);
+  range.setAttribute('aria-valuetext', text);
+  el('sliceReadout').textContent = text;
+  el('sliceName').value = list[i].name;
+  el('sliceYear').value = list[i].year === null ? '' : String(list[i].year);
+  el('btnSlicePrev').disabled = i === 0;
+  el('btnSliceNext').disabled = i === list.length - 1;
+  el('btnSliceDelete').disabled = list.length < 2;
+  el('btnSliceAdd').disabled = el('btnSliceCopy').disabled = list.length >= Slices.MAX_SLICES;
+  el('btnSlicePrint').disabled = el('btnSlicePdf').disabled = list.length < 2;
+}
+
+function goToSlice(id) {
+  if (!Slices.switchTo(project, id)) return;
+  setPlaceMode('none');
+  showSliceContent();
+  resetHistory();
+  save();
+  refreshSliceUI();
+}
+
+function sliceStep(d) {
+  const list = project.slices.list;
+  const i = list.findIndex(s => s.id === project.slices.active) + d;
+  if (list[i]) goToSlice(list[i].id);
+}
+
+el('btnSliceStart').addEventListener('click', () => {
+  Slices.enableSlices(project);
+  save();
+  refreshSliceUI();
+  el('sliceNote').textContent = 'Slices started: what is on the map is “Slice 1”. Add a slice, give each a name and a year, and move between them with the slider.';
+});
+el('sliceRange').addEventListener('input', () => {
+  const s = project.slices.list[Number(el('sliceRange').value)];
+  if (s) goToSlice(s.id);
+});
+el('btnSlicePrev').addEventListener('click', () => sliceStep(-1));
+el('btnSliceNext').addEventListener('click', () => sliceStep(1));
+function addSliceAndShow(copy) {
+  const id = Slices.addSlice(project, { copy });
+  if (!id) { el('sliceNote').textContent = `Up to ${Slices.MAX_SLICES} slices fit on a sheet.`; return; }
+  goToSlice(id);
+  el('sliceNote').textContent = copy ? 'Copied: this slice starts as the one before it. Change what differs and set its year.' : 'A new, empty slice. Place the labels, markers, shapes and lines for this date.';
+  el('sliceName').focus();
+}
+el('btnSliceAdd').addEventListener('click', () => addSliceAndShow(false));
+el('btnSliceCopy').addEventListener('click', () => addSliceAndShow(true));
+el('btnSliceSort').addEventListener('click', () => { Slices.sortByYear(project); save(); refreshSliceUI(); el('sliceNote').textContent = 'Sorted oldest first; undated slices are last.'; });
+el('btnSliceDelete').addEventListener('click', () => {
+  const s = Slices.activeSlice(project);
+  if (!s || project.slices.list.length < 2) return;
+  if (!confirm(`Delete “${s.name}” and everything placed on it?`)) return;
+  Slices.removeSlice(project, s.id);
+  showSliceContent();
+  resetHistory();
+  save();
+  refreshSliceUI();
+  el('sliceNote').textContent = 'Deleted.';
+});
+function commitSliceMeta() {
+  const s = Slices.activeSlice(project);
+  if (!s) return;
+  const yearText = el('sliceYear').value.trim();
+  Slices.setSliceMeta(project, s.id, { name: el('sliceName').value, year: yearText });
+  el('sliceNote').textContent = yearText && Slices.parseYear(yearText) === null ? '“' + yearText + '” is not a year; it was left blank. Use a whole number such as 1803 or -44.' : '';
+  save();
+  refreshSliceUI();
+}
+el('sliceName').addEventListener('change', commitSliceMeta);
+el('sliceYear').addEventListener('change', commitSliceMeta);
+
+/** One panel per slice, the same view of the same map, each with its name and year; drawn by the worksheet's own map renderer. */
+async function buildSlicesCanvas(pageWIn, pageHIn, dpi) {
+  Slices.captureLive(project);
+  const list = project.slices.list.slice();
+  const U = SERIES_UNITS_PER_IN;
+  const pageW = pageWIn * U, pageH = pageHIn * U;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(pageWIn * dpi);
+  canvas.height = Math.round(pageHIn * dpi);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(canvas.width / pageW, canvas.height / pageH);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, pageW, pageH);
+  const margin = 40, gap = 18, labelH = 22, headingH = 34;
+  const vp = viewport.getBoundingClientRect();
+  const aspect = vp.width / vp.height;
+  drawSeriesText(ctx, el('wsTitle').value.trim() || 'Time slices', margin, margin + 16, 17, { weight: '700', color: '#1f3550' });
+  const top = margin + headingH, boxW0 = pageW - margin * 2, boxH0 = pageH - top - margin;
+  let best = null;
+  for (let cols = 1; cols <= list.length; cols++) {
+    const rows = Math.ceil(list.length / cols);
+    const cw = (boxW0 - gap * (cols - 1)) / cols, ch = (boxH0 - gap * (rows - 1)) / rows - labelH;
+    const w = Math.min(cw, ch * aspect);
+    if (!best || w > best.w) best = { cols, rows, w, h: w / aspect, cw, ch: ch + labelH };
+  }
+  const gridW = best.cols * best.w + (best.cols - 1) * gap;
+  const x0 = margin + (boxW0 - gridW) / 2;
+  const live = Slices.liveContent(project);
+  sliceSheetBuilding = true;
+  const dpr = dpi / U; // canvas pixels per panel unit: the sheet is U units to an inch
+  try {
+    for (let i = 0; i < list.length; i++) {
+      const c = Slices.contentOf(project, list[i].id);
+      for (const f of Slices.CONTENT_FIELDS) project[f] = c[f];
+      const cx = x0 + (i % best.cols) * (best.w + gap), cy = top + Math.floor(i / best.cols) * (best.ch + gap);
+      const y = Slices.yearText(list[i].year);
+      drawSeriesText(ctx, list[i].name + (y ? ' — ' + y : ''), cx + best.w / 2, cy + 14, 12, { align: 'center', weight: '700' });
+      const panel = await renderWorksheetMapCanvas(Math.round(best.w), Math.round(best.h), dpr, {});
+      ctx.drawImage(panel, cx, cy + labelH, best.w, best.h);
+      ctx.strokeStyle = '#9aa4b2'; ctx.lineWidth = 1;
+      ctx.strokeRect(cx, cy + labelH, best.w, best.h);
+    }
+  } finally {
+    for (const f of Slices.CONTENT_FIELDS) project[f] = live[f];
+    sliceSheetBuilding = false;
+    save();
+  }
+  drawSeriesText(ctx, `${list.length} slices of one map`, margin, pageH - margin + 14, 9);
+  return canvas;
+}
+
+async function withSlices(btn, busy, fn) {
+  if (!Slices.hasSlices(project) || project.slices.list.length < 2 || !currentSize.width) return;
+  await withBusyButton(btn, busy, async () => {
+    try {
+      const { w, h } = getPhysicalPageInches();
+      await fn(await buildSlicesCanvas(w, h, PRINT_DPI), w, h);
+    } catch (err) { alert(`Couldn't build the slices sheet (${err.message}).`); }
+  });
+}
+el('btnSlicePrint').addEventListener('click', () => withSlices(el('btnSlicePrint'), 'Preparing…', async (canvas, wIn, hIn) => {
+  const stage = el('printExportStage');
+  stage.innerHTML = '';
+  const img = document.createElement('img');
+  img.alt = '';
+  const loaded = new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+  img.src = canvas.toDataURL('image/png');
+  stage.appendChild(img);
+  setPrintPageSize(wIn, hIn);
+  await loaded;
+  document.body.classList.add('printing-map-export');
+  window.print();
+}));
+el('btnSlicePdf').addEventListener('click', () => withSlices(el('btnSlicePdf'), 'Building PDF…', async (canvas, wIn, hIn) => {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: wIn >= hIn ? 'l' : 'p', unit: 'in', format: [wIn, hIn], compress: true });
+  pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, wIn, hIn);
+  pdf.save('map-slices.pdf');
+}));
+
+
 async function loadActiveProjectIntoUI(opts) {
   project = store.getActiveProject();
   refreshProjectSwitcher();
+  refreshSliceUI();
   syncPageFormatControls();
   applyViewportSize();
   el('grayscaleSafeCheck').checked = project.grayscaleSafePrint !== false;

@@ -278,6 +278,8 @@
     "Tools/blank-map-generator/test/smoke-live-arrival.mjs",
     "Tools/blank-map-generator/test/smoke-live-locator.mjs",
     "Tools/blank-map-generator/test/smoke-live-noraster.mjs",
+    "Tools/blank-map-generator/test/slices.test.mjs",
+    "Tools/blank-map-generator/test/smoke-slices.mjs",
     "Tools/geography-bee-quiz-generator/test/geo-bee-parity.test.mjs",
     "Tools/grade-distribution-visualizer/test/chart-svg.test.mjs",
     "Tools/grade-distribution-visualizer/test/chart-svg-parity.test.mjs",

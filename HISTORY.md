@@ -9,6 +9,32 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-28: Path 20 P4, time slices for annotations and the dated send to Timeline Builder (2026-10-29, v433)
+
+**What shipped.** `bmg-slices.js` (pure) and a "Time slices" card on 046, as designed in the P4 bullet: a project may hold named, dated slices, each with its own
+labels, markers, shaded regions, lines and key; the active slice's annotations are the project's own fields, so no editor, export or undo changed. Slider and
+previous/next, name and year fields, Add blank / Copy / Sort by year / Delete (asks first), and "Print the slices" / "Save the slices as PDF": one panel per
+slice (name and year above each, same view of the same map, drawn by the worksheet's own map renderer with the slice swapped in and put back). A project with
+no slices stores no `slices` field. Slices ride in the project data, so share links and files carry them, and `cleanSlices()` bounds what arrives. The send to
+Timeline Builder (`handoffs.js` entry and 046's `timelinePlaces()`) now sends every slice's labels dated by that slice's year (a box turns it off, and then
+only the slice on the map goes, at year 0 as before). Choices taken without asking: slice content includes the key text; the view and map are shared;
+undo resets on a switch; 12 slices at most.
+
+**Verified.** `test:blank-map-slices` (pure Node; 14 mutants all caught; a 15th, a copy sharing its source's object, is an equivalent mutant and was removed).
+`test:blank-map-slices-smoke` (new, port 8591, 44 checks): no field on a plain project; Start; blank slice; name/year; bad year said and left blank; reload
+keeps the active slice; slider/Next/Previous bring each slice's labels; copy goes after its source; names numbered; sort; delete asks; the PDF sheet draws one
+panel per slice and the panels differ by slice; the map and saved data are unchanged after building the sheet; a link's slices arrive cleaned; the dated send
+(7 events at 1803/1804/1850) and the undated one; axe clean; nothing off-site. Panels not swapped in and the handoff's year dropped each fail the suite.
+`--only blank-map-generator` (20 green), `timeline-builder` (7), `share` (22), a11y sweep 046, lint and the guards in CLAUDE.md, offline build and verify.
+
+**Not verified, and what did not work.** The `sliceSheetBuilding` guard in `save()` (no save while a slice is swapped in) is not proven by a test: with it off the
+suite still passes, because the final `save()` after the sheet repairs the stored data; it only matters if the tab closes mid-build. The sheet on paper, in
+the print preview (not wired), at dpr 2, with 12 slices, on a Chromebook. **Not built, needs Devon:** the way back (a timeline into a map project) needs a route
+015 does not accept and a decision about where an event's year goes on a map; markers are not sent to 015 (a marker has no name of its own, only a caption in the
+key). Legends are per slice.
+
+---
+
 ## AI-28: Path 20 P3 increment 5, step 7: a built-in map writes no raster (2026-10-29, v432)
 
 **What shipped.** Path 20 P3's last step. Choosing a built-in base map (or opening a project that names one, or a shared link) no longer renders the
