@@ -191,6 +191,10 @@
         { k: 'np_stats', student: true },
         { k: 'np_theme' },
       ],
+      /* Path 15 P4: the Prompts tab can draw its task from the teacher's question bank. Read with peek(), never written. */
+      reads: [
+        'gvb-question-bank',
+      ],
     },
     {
       slug: 'seating-chart',

@@ -32,6 +32,7 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/question-bank.js"></script>
 <script src="../_shared/chart-svg.js"></script>
 <link rel="stylesheet" href="../_shared/print-kit.css">
 <script src="../_shared/print-kit.js"></script>
@@ -662,6 +663,10 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
       <input type="checkbox" id="promptsEnabled">
       <label for="promptsEnabled" class="option-label">Enable random task prompts<small>Pulls one task from your list with each pick</small></label>
     </div>
+    <div class="option-row" id="promptSourceRow">
+      <label for="promptSource" class="option-label">Questions from<small id="promptSourceNote">Your typed prompts below, or the questions in your question bank (write them on Review Game Board). Only the question is shown, never its answer.</small></label>
+      <select id="promptSource" style="flex:0 0 auto;max-width:55%;"></select>
+    </div>
     <textarea id="promptsInput" placeholder="Read the next paragraph aloud&#10;Define this vocab word&#10;Give an example from the reading&#10;Make a connection to today's theme" style="min-height:120px;margin-top:10px;"></textarea>
     <div class="button-row">
       <button id="savePrompts" style="background:var(--accent);">✓ Save Prompts</button>
@@ -796,6 +801,7 @@ import { MAX_HISTORY, createStore, OPTION_DEFAULTS } from './name-picker/np-stor
 import * as rollup from './name-picker/np-rollup.js';
 import * as dashboard from './name-picker/np-dashboard.js';
 import * as dashView from './name-picker/np-dashboard-view.js';
+import * as qsource from './name-picker/np-question-source.js';
 import { freshRotation, pickOne, pickMany, shuffle, leastPicked, fairnessWeights } from './name-picker/np-pick.js';
 import { report as equityReport, summaryLine as equitySummaryLine, dayKey } from './name-picker/np-equity.js';
 import { loadDetails, lookupDetail, displayName, loadIds, lookupId } from './name-picker/np-details.js';
@@ -1178,11 +1184,44 @@ const jumpPick=()=>runJump(modeHost);
 const disappearPick=()=>runDisappear(modeHost);
 const slotPick=()=>runSlot(modeHost);
 
+/* The question bank as a second source of task prompts (np-question-source.js, Path 15 P4). null = the typed prompts.
+   Read with peek(): this page never writes the bank. The chosen source is a page variable; nothing is stored about it. */
+let promptSourceId=null,promptItems=[],promptBag=null;
+function bankPromptSources(){
+  if(!window.QuestionBank)return [];
+  try{return QuestionBank.sources({peek:true,named:true}).filter(src=>!src.readOnly&&src.count>0);}catch(e){return [];}
+}
+function loadPromptItems(){
+  if(promptSourceId===null||!window.QuestionBank){promptItems=[];promptBag=null;return;}
+  try{promptItems=qsource.usable(QuestionBank.questionsOf(promptSourceId,{peek:true}));}catch(e){promptItems=[];}
+  if(promptBag)promptBag.reset(promptItems);else promptBag=qsource.createBag(promptItems);
+}
+function refreshPromptSources(){
+  const sel=document.getElementById('promptSource');
+  const srcs=bankPromptSources();
+  const want=promptSourceId===null?'typed':'src:'+promptSourceId;
+  sel.textContent='';
+  const add=(v,t)=>{const o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o);};
+  add('typed','My typed prompts');
+  srcs.forEach(src=>add('src:'+src.id,QuestionBank.sourceLabel(src)));
+  if(!srcs.some(src=>'src:'+src.id===want))promptSourceId=null;
+  sel.value=promptSourceId===null?'typed':want;
+  document.getElementById('promptSourceRow').style.display=window.QuestionBank?'':'none';
+  loadPromptItems();
+}
+function drawQuestion(){
+  if(promptSourceId===null||!promptBag||!promptBag.size())return null;
+  const it=promptBag.next();
+  return it?it.text:null;
+}
+function qidFor(text){return promptSourceId===null?'':qsource.idFor(promptItems,text);}
+
 /* The winner step and its dialogs are np-ui.js. Values are read at call time, so reassigned page variables are seen. */
 const winnerUi=createWinnerUi({
   document,
   names:()=>names,setNames:(list)=>{names=list;},mode:()=>mode,crazy:()=>crazyMode,suddenDeath:()=>suddenDeath,
   luckyStudent:()=>luckyStudent,prompts:()=>prompts,history:()=>history,nameCards:()=>nameCards,
+  drawQuestion:()=>drawQuestion(),qidFor:(t)=>qidFor(t),
   setRolling:(v)=>{isRolling=v;},bumpMythic:()=>{sessionMythicCount++;},
   rollRarity:(l)=>rollRarity(l),playWinSound:(r)=>playWinSound(r),showConfetti:(x)=>showConfetti(x),fireworkShow:()=>fireworkShow(),
   shake:(n)=>shake(n),triggerSuddenDeathExplosion:()=>triggerSuddenDeathExplosion(),bumpCombo:()=>bumpCombo(),
@@ -1417,7 +1456,7 @@ function loadNamesFromInput(){
 
 const defaultPrompts=['Read the next paragraph aloud','Define the next vocab word','Give one example from the reading','Summarize the last section in one sentence','Make a connection to today\'s theme','Ask a question about the material','Share what surprised you most','Predict what happens next','Compare this to something modern','Identify the cause AND the effect'];
 
-function loadPrompts(){prompts=store.get('prompts');document.getElementById('promptsInput').value=prompts.join('\n');updatePromptsList();}
+function loadPrompts(){prompts=store.get('prompts');document.getElementById('promptsInput').value=prompts.join('\n');updatePromptsList();refreshPromptSources();}
 
 function savePrompts(){
   const text=document.getElementById('promptsInput').value;
@@ -2356,6 +2395,7 @@ document.getElementById('loadDefaults').addEventListener('click',()=>{document.g
 document.getElementById('undoPickBtn').addEventListener('click',undoLastPick);
 document.getElementById('equityWindow').addEventListener('change',(e)=>{equityWindowDays=parseInt(e.target.value,10)||0;renderEquity();});
 document.getElementById('refreshEquity').addEventListener('click',()=>{refreshRosterDetails();renderEquity();});
+document.getElementById('promptSource').addEventListener('change',e=>{promptSourceId=e.target.value==='typed'?null:e.target.value.slice(4);promptBag=null;loadPromptItems();});
 document.getElementById('dashPeriod').addEventListener('change',e=>{dashPeriod=e.target.value;renderDashboard();});
 document.getElementById('dashWeeks').addEventListener('change',e=>{dashWeeks=parseInt(e.target.value,10)||8;renderDashboard();});
 document.getElementById('dashPrint').addEventListener('click',dashPrint);
@@ -2364,6 +2404,7 @@ document.getElementById('dashGotoData').addEventListener('click',()=>showTab('da
 document.getElementById('dashClear').addEventListener('click',()=>{document.getElementById('clearHistory').click();if(document.getElementById('tab-equity').classList.contains('active'))renderEquity();});
 /* A flag pressed in Class Roster Hub in another tab reaches this board without a reload. */
 window.addEventListener('storage',e=>{
+  if(e.key==='gvb-question-bank'&&promptSourceId!==null){refreshPromptSources();return;}
   if(e.key!==null&&e.key!=='crh_flags_v1'&&e.key!=='crh_students_v1')return;
   refreshRosterDetails();
   if(!isRolling)scatterNames();
@@ -2409,6 +2450,7 @@ function showTab(tab){
   document.querySelectorAll('.tab-content').forEach(c=>c.classList.toggle('active',c.id==='tab-'+tab));
   if(tab==='stats'){updateStatsUI();renderAbsentNotice();}
   if(tab==='equity'){refreshRosterDetails();renderEquity();}
+  if(tab==='prompts')refreshPromptSources();
   if(tab==='data')updateDataTab();
 }
 document.querySelectorAll('.tab-buttons button').forEach(btn=>{

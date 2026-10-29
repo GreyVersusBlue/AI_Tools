@@ -203,6 +203,9 @@ export const KEYS = [
         if (/^\d{4}-\d{2}-\d{2}$/.test(h.date)) out.date = h.date;
         const prompt = trimmed(h.prompt).slice(0, 300);
         if (prompt) out.prompt = prompt;
+        // `qid` (Path 15 P4): the teacher's own bank id of the question that was the prompt. Never a `seed:` id.
+        const qid = trimmed(h.qid);
+        if (prompt && qid && qid.length <= 80 && !/^seed:/i.test(qid)) out.qid = qid;
         return out;
       })
       .filter(h => h.name)

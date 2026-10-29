@@ -18,6 +18,8 @@
     "test:name-picker-rollup": "node Tools/name-picker/test/rollup.test.mjs",
     "test:name-picker-dashboard": "node Tools/name-picker/test/dashboard.test.mjs",
     "test:name-picker-dashboard-smoke": "node Tools/name-picker/test/smoke-dashboard.mjs",
+    "test:name-picker-qsource": "node Tools/name-picker/test/qsource.test.mjs",
+    "test:name-picker-qsource-smoke": "node Tools/name-picker/test/smoke-qsource.mjs",
     "test:name-picker-rollup-smoke": "node Tools/name-picker/test/smoke-rollup.mjs",
     "test:name-picker-modes-smoke": "node Tools/name-picker/test/smoke-modes.mjs",
     "test:name-picker-lightning": "node Tools/name-picker/test/smoke-lightning.mjs",

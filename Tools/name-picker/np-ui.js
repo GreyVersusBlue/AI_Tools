@@ -7,7 +7,9 @@
    setRolling(bool) and bumpMythic(); the rest are the page's functions of the same name (rollRarity, playWinSound,
    showConfetti, fireworkShow, shake, triggerSuddenDeathExplosion, bumpCombo, markUndoPoint, todayKey, incrementStats,
    addToHof, checkAchievements, saveHistory, updateHistoryUI, displayName, detailFor, escapeHtml, noteBoardRemoval,
-   scatterNames, finishRolling, pickName). Held to the inline code it replaced by test/parity-ui.mjs. */
+   scatterNames, finishRolling, pickName). Two optional hooks (Path 15 P4): drawQuestion() gives the words of the next bank
+   question or null, and qidFor(text) the bank id to log with a prompt; a host without them gets the code that was here before.
+   Held to the inline code it replaced by test/parity-ui.mjs. */
 
 export function createWinnerUi(host){
   let stickyPrompt=null;
@@ -52,6 +54,7 @@ export function createWinnerUi(host){
     markUndoPoint([winnerCard.name]);
     const entry={name:winnerCard.name,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),date:todayKey()};
     if(promptText)entry.prompt=promptText;
+    if(promptText&&host.qidFor){const qid=host.qidFor(promptText);if(qid)entry.qid=qid;}
     host.history().push(entry);
     incrementStats(winnerCard.name);
     if(rarity&&['RARE','EPIC','LEGENDARY','MYTHIC'].includes(rarity.name)){addToHof(winnerCard.name,rarity);}
@@ -65,7 +68,11 @@ export function createWinnerUi(host){
   /* Set by "Same question, next student" and spent by the very next pick. */
   function pickRandomPrompt(){
     if(stickyPrompt){const held=stickyPrompt;stickyPrompt=null;return held;}
-    if(!document.getElementById('promptsEnabled').checked||!host.prompts().length)return null;
+    if(!document.getElementById('promptsEnabled').checked)return null;
+    /* A page that offers the question bank as a source (Path 15 P4) passes drawQuestion(), which gives the next question's
+       words or null when typed prompts are the source; without the hook this is the code it always was. */
+    if(host.drawQuestion){const q=host.drawQuestion();if(q)return q;}
+    if(!host.prompts().length)return null;
     return host.prompts()[Math.floor(Math.random()*host.prompts().length)];
   }
 
@@ -167,6 +174,7 @@ export function createWinnerUi(host){
     markUndoPoint([winnerCard.name]);
     const entry={name:winnerCard.name,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),date:todayKey()};
     if(promptText)entry.prompt=promptText;
+    if(promptText&&host.qidFor){const qid=host.qidFor(promptText);if(qid)entry.qid=qid;}
     host.history().push(entry);
     incrementStats(winnerCard.name);
     if(rarity&&['RARE','EPIC','LEGENDARY','MYTHIC'].includes(rarity.name)){addToHof(winnerCard.name,rarity);}
