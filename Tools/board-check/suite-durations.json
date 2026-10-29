@@ -393,6 +393,7 @@
     "Tools/word-list/test/word-list.test.mjs": 2,
     "Tools/word-list/test/smoke-hub.mjs": 40,
     "Tools/word-list/test/smoke-adopter-039.mjs": 30,
+    "Tools/word-list/test/smoke-adopter-027.mjs": 30,
     "Tools/stations/test/smoke-bank-stations.mjs": 30,
     "Tools/qr-scavenger-hunt-builder/test/smoke-images.mjs": 15,
     "Tools/qr-scavenger-hunt-builder/test/smoke-required.mjs": 12,

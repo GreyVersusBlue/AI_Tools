@@ -1096,16 +1096,17 @@
         { k: 'novel-study-units', rollover: 'reduce' },
         { k: 'novel-study-units-current' },
       ],
+      /* The vocabulary export writes a list into the shared word lists (Path 19 P2) and
+         reads 040's old list names to keep the new one's name clear of them. */
       writes: [
         'gvb-review-board:current',
         'gvb-review-board:data:',
         'gvb-review-board:list',
-        'gvb-vocab-flashcards:current',
-        'gvb-vocab-flashcards:data:',
-        'gvb-vocab-flashcards:list',
+        'gvb-word-lists',
       ],
       reads: [
         'crh_students_v1',
+        'gvb-vocab-flashcards:list',
         'np_rosters',
       ],
     },

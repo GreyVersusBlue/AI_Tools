@@ -1861,7 +1861,14 @@
   // says so and boot carries on normally.
   hubDo(function () { WordList.importLegacy(window.localStorage); WordList.importLegacyDrill(window.localStorage); });
   if (!importSharedList()) {
-    var current = VocabStore.getCurrentName();
+    // A tool that hands a list over (027's vocabulary export) names it in the hub's `current`: make this
+    // page's list of that name, open it, and clear the pointer so it is opened once.
+    var handed = hubDo(function () { return WordList.load().current; });
+    if (handed && hubDo(function () { return WordList.get(handed); })) {
+      syncSetFromHub(handed);
+      hubDo(function () { WordList.setCurrent(''); });
+    }
+    var current = handed && VocabStore.loadSet(handed) ? handed : VocabStore.getCurrentName();
     if (current && VocabStore.loadSet(current)) {
       loadListByName(current);
     } else {
