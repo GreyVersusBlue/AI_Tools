@@ -660,6 +660,12 @@
       file: 'Tools/018-qr-scavenger-hunt-builder.html',
       category: 'games-rewards',
       share: { param: 'hunt' },
+      /* The site's question bank (Path 12 P2, increment 6): the Question bank card lists it through
+         _shared/question-bank.js's peek(), which writes nothing. The bank is OWNED by Review Game Board's row. */
+      reads: [
+        'gvb-question-bank',
+        'gvb-review-board-bank:entries',
+      ],
       keys: [
         { k: 'qr-scavenger-hunt-sets', rollover: 'reduce' },
         { k: 'qr-scavenger-hunt-settings' },

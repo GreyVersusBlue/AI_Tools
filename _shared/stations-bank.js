@@ -176,8 +176,8 @@
     var list = el('div', 'sb-list'); list.setAttribute('role', 'group'); list.setAttribute('aria-label', 'Questions to add as stations');
     var refusedNote = el('p', 'hint'); refusedNote.hidden = true;
     var btns = el('div', 'sb-btns');
-    var allBtn = el('button', 'secondary', 'Tick all shown'); allBtn.type = 'button';
-    var addBtn = el('button', '', 'Add ticked as stations'); addBtn.type = 'button';
+    var allBtn = el('button', 'secondary btn-secondary', 'Tick all shown'); allBtn.type = 'button';
+    var addBtn = el('button', 'btn-primary', 'Add ticked as stations'); addBtn.type = 'button';
     btns.appendChild(allBtn); btns.appendChild(addBtn);
     var status = el('p', 'sb-status'); status.setAttribute('role', 'status');
     [lblSrc, selSrc, note, lblUnit, selUnit, list, refusedNote, btns, status].forEach(function (n) { host.appendChild(n); });

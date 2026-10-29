@@ -41,7 +41,8 @@ const server = await serve(PORT);
 const browser = await launch();
 
 const PAGES = [
-  { n: '019', kind: 'room', url: '/Tools/019-escape-room-builder.html', key: 'escape-room-builder:rooms', plain: true, seed: F.R2, name: 'Crypt of Ammon', card: '#bankCard', src: '#sbroomSource', unit: '#sbroomUnit', rows: '#stationsList .station-card', newBtn: '#newSetBtn' },
+  { n: '019', kind: 'room', url: '/Tools/019-escape-room-builder.html', key: 'escape-room-builder:rooms', plain: true, seed: F.R2, name: 'Crypt of Ammon', card: '#bankCard', src: '#sbroomSource', unit: '#sbroomUnit', rows: '#stationsList .station-card', remove: '#stationsList [data-remove]' },
+  { n: '018', kind: 'hunt', url: '/Tools/018-qr-scavenger-hunt-builder.html', key: 'qr-scavenger-hunt-sets', plain: false, seed: F.H2, name: 'Rock cycle hunt', card: '#bankCard', src: '#sbhuntSource', unit: '#sbhuntUnit', rows: '#stations-body tr[data-idx]', remove: '#stations-body button[data-remove]' },
 ].filter(P => !ONLY || P.n === ONLY);
 
 const storedStore = (page, P) => page.evaluate(([k, plain]) => {
@@ -95,12 +96,18 @@ for (const P of PAGES) {
   let sts = store.sets[P.name].stations;
   const added = sts.slice(-2);
   eq(added.map(s => s.bankId), ['madeup-1', 'madeup-2'], `${P.n}: the new stations carry the questions' ids as bankId`);
-  eq(added.map(s => s.clue), ['What is the made-up capital of Madeupia?', 'Name the made-up river that runs through Madeupville.'], `${P.n}: the question is the clue`);
-  eq(added.map(s => s.answers), ['Madeupville', 'Madeup the Great'], `${P.n}: the answer is the accepted answer (a comma becomes a space)`);
-  ok(added.every(s => s.type === 'text' && s.next === null), `${P.n}: text stations with no branch`);
-  ok(sts.slice(0, before).every((s, i) => s.bankId === undefined && s.clue === seed.stations[i].clue), `${P.n}: the stations that were there are as they were`);
+  const ROOM = P.kind === 'room';
+  eq(added.map(s => ROOM ? s.clue : s.content), ['What is the made-up capital of Madeupia?', 'Name the made-up river that runs through Madeupville.'], `${P.n}: the question is the clue`);
+  if (ROOM) {
+    eq(added.map(s => s.answers), ['Madeupville', 'Madeup the Great'], `${P.n}: the answer is the accepted answer (a comma becomes a space)`);
+    ok(added.every(s => s.type === 'text' && s.next === null), `${P.n}: text stations with no branch`);
+  } else {
+    eq(added.map(s => s.note), ['Answer: Madeupville', 'Answer: Madeup, the Great'], `${P.n}: a typed answer is written in the station's note, for the answer key`);
+    ok(added.every(s => s.qType === 'text' && s.choices.length === 0), `${P.n}: text stations`);
+  }
+  ok(sts.slice(0, before).every((s, i) => s.bankId === undefined && (ROOM ? s.clue === seed.stations[i].clue : s.content === seed.stations[i].content)), `${P.n}: the stations that were there are as they were`);
   const status = await page.textContent(P.card + ' .sb-status');
-  ok(/Added 2 stations/.test(status) && /had a comma/.test(status) && /bank itself was not changed/.test(status), `${P.n}: the status says what happened (${status})`);
+  ok(/Added 2 stations/.test(status) && (!ROOM || /had a comma/.test(status)) && /bank itself was not changed/.test(status), `${P.n}: the status says what happened (${status})`);
   eq(await bankKey(page), bank0, `${P.n}: adding stations does not change the bank`);
 
   // 3. already a station
@@ -115,26 +122,31 @@ for (const P of PAGES) {
   eq(sts.slice(before + 2).map(s => s.bankId), ['madeup-3', 'madeup-4', 'madeup-5'], `${P.n}: Tick all adds the rest, not the two held, not the one with no answer`);
   ok(/cannot be added/.test(await page.textContent(P.card)) && /no answer/.test(await page.textContent(P.card + ' .sb-list')), `${P.n}: the question with no answer says why it cannot be added`);
   ok(/had answer choices/.test(await page.textContent(P.card + ' .sb-status')), `${P.n}: choices that did not come are said`);
-  ok(sts.slice(-3).every(s => s.answers.indexOf(',') === -1), `${P.n}: no added answer holds a comma`);
+  if (ROOM) ok(sts.slice(-3).every(s => s.answers.indexOf(',') === -1), `${P.n}: no added answer holds a comma`);
+  else {
+    const [mc, none] = sts.slice(-3, -1);
+    ok(mc.qType === 'choice' && JSON.stringify(mc.choices) === '["Teal","Mauve","Ochre"]' && mc.correctChoice === 0 && mc.note === '', `${P.n}: a multiple-choice question is a choice station, Teal marked`);
+    ok(none.qType === 'text' && none.note === 'Answer: Heron', `${P.n}: an answer that is none of the choices is a text station`);
+  }
 
   // 6. text is text
   ok((await page.evaluate(() => window.__xss)) === undefined, `${P.n}: a question with markup in it ran nothing`);
-  const clueBox = await page.$$eval(P.rows + ' .f-clue', xs => xs.map(x => x.value));
+  const clueBox = await page.$$eval(P.rows + (ROOM ? ' .f-clue' : ' .f-content'), xs => xs.map(x => x.value));
   ok(clueBox.includes(HOSTILE), `${P.n}: the markup is the clue's text, as typed`);
 
   // 5. the payload is the one a hand-typed station gives
-  const payloads = await page.evaluate((name) => {
-    const raw = JSON.parse(localStorage.getItem('escape-room-builder:rooms'));
-    const room = (raw.data || raw).sets[name];
-    const a = Stations.playPayload(Stations.read(JSON.parse(JSON.stringify(room))), { station: null });
-    const typed = JSON.parse(JSON.stringify(room)); typed.stations.forEach(s => { delete s.bankId; });
-    const b = Stations.playPayload(Stations.read(typed), { station: null });
-    return [JSON.stringify(a), JSON.stringify(b), JSON.stringify(a).length];
-  }, P.name);
-  ok(payloads[0] === payloads[1] && payloads[2] > 50, `${P.n}: the player payload is the same with or without bankId`);
+  const payloads = await page.evaluate(([name, room, key]) => {
+    const raw = JSON.parse(localStorage.getItem(key));
+    const saved = (raw.data && raw.v ? raw.data : raw).sets[name];
+    const typed = JSON.parse(JSON.stringify(saved)); typed.stations.forEach(s => { delete s.bankId; });
+    const mk = (o) => Stations.read(JSON.parse(JSON.stringify(o)));
+    const one = (o) => { const set = mk(o); return room ? JSON.stringify(Stations.playPayload(set, { station: null })) : JSON.stringify(set.stations.map(st => Stations.codeText(set, st))); };
+    return [one(saved), one(typed), one(saved).length];
+  }, [P.name, ROOM, P.key]);
+  ok(payloads[0] === payloads[1] && payloads[2] > 50, `${P.n}: the ${ROOM ? 'player payload' : 'station codes are'} the same with or without bankId`);
 
   // 3b. deleting a station frees its question
-  await page.click(P.rows + ':last-child [data-remove]'); await settle(page, 300);
+  await page.locator(P.remove).last().click(); await settle(page, 300);
   store = await storedStore(page, P);
   ok(store.sets[P.name].stations.every(s => s.bankId !== 'madeup-5'), `${P.n}: the removed station is gone`);
   await page.selectOption(P.unit, 'Made-up Unit 3'); await settle(page, 100);
@@ -147,7 +159,7 @@ for (const P of PAGES) {
   await page.close();
 
   // 4. a lone empty station is replaced; a typed one is kept
-  const empty = P.seed(); empty.stations = [P.kind === 'room' ? F.rSt({}) : F.hSt('', '')];
+  const empty = P.seed(); empty.stations = [ROOM ? F.rSt({}) : F.hSt('', '')];
   delete empty.run;
   page = await open(P, empty, true);
   await page.selectOption(P.unit, 'Made-up Unit 1'); await settle(page, 100);
