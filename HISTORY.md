@@ -9,6 +9,21 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-23 (second session): Path 15 P1 finished, Path 15 P2 built (2026-10-29, v453-v455)
+
+**What shipped.**
+- **P1 step 6, v453.** `np-mode-draft.js`: Team Draft as `createDraft(host)`, the four page variables becoming its state. `test:name-picker-draft` runs the module and a byte copy of the old block over 19 scenarios (state, drawn HTML and an event log after every step; the export's blob URL pinned); a mutant on the turn rotation, the 12-team clamp, Crazy fireworks, absent students and `clear()` keeping the team count were each caught (the last needed a scenario added).
+- **P1 step 7, v454.** `np-ui.js`: `createWinnerUi(host)` with `selectWinner`, `selectTournamentWinner`, `showMultiWinnerModal`, the dialogs' buttons and the sticky prompt. The module was generated from the page's own text by mechanical substitution (reads become host getters, `names=names.filter(...)` becomes `host.setNames(...)`), so the port is exact; `test:name-picker-ui` holds it to a byte copy over 219 cases and caught mutants on the sticky prompt, the rolling flag, the Mythic count and the Legendary/Mythic shake (the first two needed the suite to observe `isRolling` and a second pick).
+- **P2, v455.** `np_daily`: the picks `np_history`'s 500-entry window lets go, as per-day counts keyed on the Class Roster Hub id (else the normalised name). The design is in the Path 15 P2 bullet, written before the code. The choice that shaped it: the rollup is *only* what trimming throws away, so no entry is in both stores, nothing needs migrating, `np_history` and every reader of it (`np-equity.js`, `np-seat-equity.js`) are untouched, and an undo cannot double count.
+
+**Decisions taken (reversible).** The rollup keeps 400 days. A backup's `np_daily` adds into the teacher's (the way `np_stats` does, so importing one file twice counts twice, as for stats). "Clear pick history" clears both stores, so nothing hidden is left behind. `np_daily` is a `records` key, deleted at the year rollover like `np_history`. None of Devon's open questions is touched.
+
+**Found.** `np-store` cuts `np_history` to 500 on *read*, not write: localStorage holds the overflow until the page next reloads. The design assumed the write cut it; the fold is on the page's in-memory overflow instead, and `smoke-rollup.mjs` holds "rollup + last 500 = every pick". Adding a key moved three assertions that count keys (`smoke.mjs` 14 to 15 and 7 to 8 student keys, `registry-shape` section 9's excuse list); each is named in the diff. The `inline-sinks` ratchet for 007 fell 23 to 17 when the sinks left with `np-ui.js` and was lowered in the P2 commit, not the v454 one.
+
+**Left.** Path 15 P3 (rank 40) is the first reader of `view()` and the place the `unmatched` fix lands. Rank numbers 38 and 39 are left as gaps, like the other rows deleted today.
+
+**Not verified.** The full `npm test`. Nothing was heard or felt by a person: Team Draft and the winner dialogs were driven in Chromium only. No real backup file with an `np_daily` has been round-tripped through 009 in a browser (the store's own restore is tested; 009's restore is `RestoreKit`, which reads the registry).
+
 ## AI-23: 007's "Let's go crazy" lightning fixed; Path 15 P1 steps 1 to 5, themes, sound and five pick modes out of the page (2026-10-29, v447-v452)
 
 **What shipped.**

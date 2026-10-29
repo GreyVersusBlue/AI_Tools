@@ -795,8 +795,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 32 | Path 13 P2 — the rest. **All six splitters call `_shared/grouping.js` (v336–v341); 002, 022 and 027 keep their memory in a `groupHistory` field with the old fields written from it (v341–v343) and key it by roster id (v344–v346); the five improvements are in (002's floater fix v347, `keepStrategy` v348, `together: 'units'` v349, `restarts` for 002 and 022 v350, `method: 'best'` for 022 and 027 v351); the P2 bullet's increments 1–6.** Seating-aware grouping on 002 is in (v352, increment 6). Left: project teams on 002, parked on Devon's six questions (the P2 bullet, increment 6). Hold the twelve golden classes (`golden-old-groupings.json` now carries six re-recorded scenarios, each with an `amended` note), `smoke-rename-follow.mjs`, `test:grouping-parity` and `test:grouping-adopters` | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 36 | Path 14 P4 — the room, not the grid. **Everything buildable is built (AI-22, v365-v370): `seating-room.mjs`; the Room card on 005 (one room shared by periods); marks dragged, moved by arrow keys, resized, turned and relabelled, printed on the live page, Print all and the sub packet; marks in 010's and 008's pictures; a zone rule "desks near a mark" that follows its mark.** Waits on Devon: marks in 007's and 045's pictures (if wanted; those readers do not ask for marks yet); his two open questions (a: does the room live in 005's storage or a shared store; b: layouts per room or per section), built on their defaults | 005 | ¼ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 37 | Path 14 P5 — what is left: `_shared/undo.js` for 003 (no undo today, so a new feature); and "a point in 008" / "a pass in 001" from live mode, which needs Devon to pick a route (a `Handoffs` entry plus a receiver in each tool, or 005 writing their storage as 003 writes 037's); neither tool takes anything in today (live mode, absent today, 018 and 043 decided out: v377) | 005 | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
-| 38 | Path 15 P1, what is left — 007's Team Draft mode and `np-ui.js` (the winner dialogs and what they record); themes, sound and the five single/multi/tournament modes are out (v448-v452) | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
-| 39 | Path 15 P2 — per-day history rollup keyed on student ids | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
 | 40 | Path 15 P3 — equity dashboard across weeks and periods, printed as one page | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
 | 41 | Path 15 P4 — question-attached picks | 007 | ½ | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
 | 42 | Path 15 P5 — artifacts and remotes: hand off to grouping and the bracket; theme packs as JSON | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
@@ -6746,7 +6744,7 @@ day; the cross-week, cross-period view teachers actually want does not.
 
 **Phases.**
 
-- **P1 — Split.** `np-themes.js` (themes as JSON data, not code), `np-sound.js`,
+- **P1 — Split. Built (AI-23, 2026-10-29, v448-v454); nothing left in it.** `np-themes.js` (themes as JSON data, not code), `np-sound.js`,
   one module per pick mode, `np-ui.js`. No behavior change; `test:name-picker`
   green.
   **Design (AI-23, 2026-10-29; written before any code, read against 007 at v447).** 007's script is one
@@ -6765,11 +6763,17 @@ day; the cross-week, cross-period view teachers actually want does not.
   with the old inline code. A step is only done when 007's suites (`test:name-picker`, `-share`, `-lightning`) are
   green. **Done (AI-23, v448-v452):** steps 1 and 2 as designed, and step 3 for `jump`, `disappear`, `slot`, `multi` and
   `tournament` (`np-mode-<name>.js`, one `host` object, `test:name-picker-modes` against a byte copy of the old code).
-  **Left:** the Team Draft mode (`draftTeams`, `draftTurnIndex`, `draftStarted`, its own board) and `np-ui.js`
-  (`selectWinner`, `selectTournamentWinner` and the dialogs, which write history, stats, the Hall of Fame and
-  achievements), each by the same recipe: lift a block into a module taking a host, keep a byte copy of the old code in a
-  parity suite, drive the real page. No open question of Devon's is touched.
-- **P2 — History.** Replace the flat 500-entry cap with a per-day rollup that
+  **As built (v453-v454, the rest).** Team Draft is `np-mode-draft.js`: `createDraft(host)` owns the four variables it
+  used to keep in the page (`draftTeams`, `draftTurnIndex`, `draftStarted`, `draftTeamCount`) and draws and binds both of
+  its boards; the page calls `draft.renderBoard()`, `draft.reset()` and `draft.clear()`. `np-ui.js` is
+  `createWinnerUi(host)`: `selectWinner`, `selectTournamentWinner`, `showMultiWinnerModal`, the three dialogs' buttons and
+  the sticky "same question" prompt, with the page's reads as getters (`names()`, `mode()`, `crazy()` ...) and its three
+  writes as `setNames`, `setRolling` and `bumpMythic`. Both are ports alone, text-for-text, held by `test:name-picker-draft`
+  (19 scenarios, state, HTML and event log after every step) and `test:name-picker-ui` (219 cases, 5,033 events) against
+  byte copies of the old code, each with mutants checked, and by `smoke-modes.mjs` through the real page. 007's inline
+  script lost 17 dynamic markup sinks to the two modules (the `inline-sinks` baseline went 23 to 17). No open question of
+  Devon's is touched.
+- **P2 — History. Built (AI-23, 2026-10-29, v455); nothing left in it.** Replace the flat 500-entry cap with a per-day rollup that
   survives trimming; key history on student ids (Path 3) so nickname/preferred-name
   matching stops under-reporting via `unmatched`.
   **Design (AI-23, 2026-10-29; written before any code, read against 007 at v454).** *What exists.* `np_history` is an
@@ -6799,6 +6803,14 @@ day; the cross-week, cross-period view teachers actually want does not.
   `np-seat-equity.js` keep reading names (the prompt for this step holds them unchanged); P3's dashboard is the first
   reader of `view()`, and the `unmatched` fix lands there. Adding a key moves `smoke.mjs`'s `KEYS.length === 14` to 15 and
   `census()` gains nothing (a rollup is not a count the erase dialog shows).
+  **As built.** As designed. `np-rollup.js` (pure), the `np_daily` key in `np-store.js` (records group; `restore()` merges it
+  and folds what its 500-trim drops), the page's `saveHistory()` through `foldOverflow()`, "Clear pick history" clearing both,
+  the registry row, a `br-rollover.js` delete rule, and `registry-shape`'s since-the-migration excuse. `test:name-picker-rollup`
+  (35 cases, mutants checked) and `test:name-picker-rollup-smoke` (port 8606, next free 8607). One thing the design had wrong: np-store
+  cuts `np_history` to 500 *when it reads*, not when it writes, so localStorage can hold a few more than 500 until the page
+  reloads; the fold is on the page's in-memory overflow and the invariant the smoke holds is rollup + last 500 = every pick.
+  Not done, on purpose: no reader uses `view()` yet (P3); the ids come from the sidecar the page already loads, so a name
+  with no id is keyed on its name until P3 reads it through `view()`.
 - **P3 — Equity dashboard.** Who hasn't been called on in three weeks, distribution
   by seat position, per period and across periods, printed as a one-page artifact.
   A "Data" front door with an erase button, matching the site's privacy posture.
