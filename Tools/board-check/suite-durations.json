@@ -53,7 +53,7 @@
     "Tools/name-picker/test/parity-themes.mjs": 1,
     "Tools/name-picker/test/parity-sound.mjs": 1,
     "Tools/name-picker/test/parity-modes.mjs": 2,
-    "Tools/name-picker/test/smoke-modes.mjs": 90,
+    "Tools/name-picker/test/smoke-modes.mjs": 120,
     "Tools/name-picker/test/smoke-sound.mjs": 12,
     "Tools/name-picker/test/smoke-themes.mjs": 15,
     "Tools/name-picker/test/smoke-lightning.mjs": 20,

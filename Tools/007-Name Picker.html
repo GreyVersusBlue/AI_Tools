@@ -737,6 +737,7 @@ import { createSound } from './name-picker/np-sound.js';
 import { jumpPick as runJump } from './name-picker/np-mode-jump.js';
 import { disappearPick as runDisappear } from './name-picker/np-mode-disappear.js';
 import { slotPick as runSlot } from './name-picker/np-mode-slot.js';
+import { multiPick as runMulti } from './name-picker/np-mode-multi.js';
 
 /* _shared/store.js is linked in the head but nothing on this page calls it
    directly: np-store's thirteen slots keep their boxing wrapper. It is here so
@@ -1068,7 +1069,7 @@ function pickName(){
   else jumpPick();
 }
 
-/* The jump, disappear and slot modes live in name-picker/np-mode-*.js. Each is handed this host
+/* The jump, disappear, slot and multi modes live in name-picker/np-mode-*.js. Each is handed this host
    rather than reaching for page globals; every member is looked up when called, because the page
    reassigns nameCards and speed and defines some of these helpers further down. */
 const modeHost={
@@ -1083,42 +1084,18 @@ const modeHost={
   shuffle:(list)=>shuffle(list),
   requestAnimationFrame:(fn)=>requestAnimationFrame(fn)
 };
+Object.assign(modeHost,{
+  isSkipped:(n)=>isSkipped(n),rotation:()=>rotation,setRotation:(r)=>{rotation=r;},options:()=>opts,
+  drawWeights:(list)=>drawWeights(list),history:()=>history,suddenDeath:()=>suddenDeath,
+  playWinSound:(r)=>playWinSound(r),showConfetti:(x)=>showConfetti(x),fireworkShow:()=>fireworkShow(),
+  triggerSuddenDeathExplosion:()=>triggerSuddenDeathExplosion(),markUndoPoint:(w)=>markUndoPoint(w),
+  incrementStats:(n)=>incrementStats(n),saveHistory:()=>saveHistory(),updateHistoryUI:()=>updateHistoryUI(),
+  bumpCombo:()=>bumpCombo(),todayKey:()=>todayKey(),showMultiWinnerModal:(w)=>showMultiWinnerModal(w)
+});
+const multiPick=(count)=>runMulti(modeHost,count);
 const jumpPick=()=>runJump(modeHost);
 const disappearPick=()=>runDisappear(modeHost);
 const slotPick=()=>runSlot(modeHost);
-
-async function multiPick(count){
-  isRolling=true;setRollingState(true);
-  const activeNames=nameCards.filter(c=>c.active).map(c=>c.name).filter(n=>!isSkipped(n));
-  /* Draws through the same rotation, so picking four partners spends four turns
-     rather than sidestepping the round. */
-  const drawn=pickMany(rotation,activeNames,count,{fair:opts.fair,weights:drawWeights(activeNames)});
-  rotation=drawn.state;
-  const winners=drawn.names;
-  if(!winners.length){finishRolling();return;}
-  const activeCards=nameCards.filter(c=>c.active&&!isSkipped(c.name));
-  const sweepCount=Math.min(18,Math.floor(20/(speed/100))+8);
-  for(let i=0;i<sweepCount;i++){
-    activeCards.forEach(c=>c.el.classList.remove('highlighted'));
-    if(activeCards.length){const c=activeCards[Math.floor(Math.random()*activeCards.length)];c.el.classList.add('highlighted');}
-    playBeep(550+Math.random()*350,50);
-    if(crazyMode)shake(1);
-    await sleep(speed*0.7);
-  }
-  activeCards.forEach(c=>c.el.classList.remove('highlighted'));
-  winners.forEach(name=>{const card=nameCards.find(c=>c.name===name);if(card)card.el.classList.add('winner');});
-  playWinSound(null);
-  showConfetti(crazyMode);
-  if(crazyMode){fireworkShow();shake(3);}
-  if(suddenDeath){triggerSuddenDeathExplosion();}
-  markUndoPoint(winners);
-  winners.forEach(name=>{
-    history.push({name,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),date:todayKey()});
-    incrementStats(name);
-  });
-  saveHistory();updateHistoryUI();bumpCombo();
-  setTimeout(()=>showMultiWinnerModal(winners),700);
-}
 
 function selectWinner(winnerCard){
   winnerCard.el.classList.add('winner');

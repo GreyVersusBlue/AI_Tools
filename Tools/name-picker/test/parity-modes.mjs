@@ -1,9 +1,9 @@
-// parity-modes.mjs — Name Picker: np-mode-jump / -disappear / -slot against the code they replaced.
+// parity-modes.mjs — Name Picker: np-mode-jump / -disappear / -slot / -multi against the code they replaced.
 //
 //   node Tools/name-picker/test/parity-modes.mjs
 //
-// Path 15 P1 step 3 moved 007's jumpPick, disappearPick and slotPick into one module each.
-// oldModes() below is that code, copied byte for byte from 007 at v449 inside a function that
+// Path 15 P1 step 3 moved 007's jumpPick, disappearPick and slotPick into one module each, and
+// step 4 multiPick. oldModes() below is that code, copied byte for byte from 007 at v449 and v450 inside a function that
 // supplies the page globals it read. Both versions run against the same recording host and a
 // recording fake DOM, with Math.random pinned to one seed and timers run in order; for every
 // roster shape, Crazy on and off, the event logs must be identical. Pure Node.
@@ -11,6 +11,8 @@
 import { jumpPick } from '../np-mode-jump.js';
 import { disappearPick } from '../np-mode-disappear.js';
 import { slotPick } from '../np-mode-slot.js';
+import { multiPick } from '../np-mode-multi.js';
+import { pickMany } from '../np-pick.js';
 
 let passed = 0, failed = 0;
 const eq = (a, b, label) => {
@@ -20,6 +22,8 @@ const eq = (a, b, label) => {
 
 /* frozen: 007 at v449; every name it read from the page is a parameter of the wrapper */
 function oldModes(g) {
+  const { isSkipped, opts, drawWeights, playWinSound, showConfetti, fireworkShow, triggerSuddenDeathExplosion, markUndoPoint, history, todayKey, incrementStats, saveHistory, updateHistoryUI, bumpCombo, showMultiWinnerModal, suddenDeath } = g;
+  let rotation = g.rotation;
   const { document, speed, setRollingState, finishRolling, chooseWinner, selectWinner, playBeep, shake, sleep, drawLightning, launchFirework, shuffle, requestAnimationFrame } = g;
   const nameCards = g.nameCards, crazyMode = g.crazyMode;
   let isRolling = false;
@@ -128,10 +132,43 @@ async function slotPick(){
 }
 
 
-  return { jumpPick, disappearPick, slotPick };
+
+async function multiPick(count){
+  isRolling=true;setRollingState(true);
+  const activeNames=nameCards.filter(c=>c.active).map(c=>c.name).filter(n=>!isSkipped(n));
+  /* Draws through the same rotation, so picking four partners spends four turns
+     rather than sidestepping the round. */
+  const drawn=pickMany(rotation,activeNames,count,{fair:opts.fair,weights:drawWeights(activeNames)});
+  rotation=drawn.state;
+  const winners=drawn.names;
+  if(!winners.length){finishRolling();return;}
+  const activeCards=nameCards.filter(c=>c.active&&!isSkipped(c.name));
+  const sweepCount=Math.min(18,Math.floor(20/(speed/100))+8);
+  for(let i=0;i<sweepCount;i++){
+    activeCards.forEach(c=>c.el.classList.remove('highlighted'));
+    if(activeCards.length){const c=activeCards[Math.floor(Math.random()*activeCards.length)];c.el.classList.add('highlighted');}
+    playBeep(550+Math.random()*350,50);
+    if(crazyMode)shake(1);
+    await sleep(speed*0.7);
+  }
+  activeCards.forEach(c=>c.el.classList.remove('highlighted'));
+  winners.forEach(name=>{const card=nameCards.find(c=>c.name===name);if(card)card.el.classList.add('winner');});
+  playWinSound(null);
+  showConfetti(crazyMode);
+  if(crazyMode){fireworkShow();shake(3);}
+  if(suddenDeath){triggerSuddenDeathExplosion();}
+  markUndoPoint(winners);
+  winners.forEach(name=>{
+    history.push({name,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),date:todayKey()});
+    incrementStats(name);
+  });
+  saveHistory();updateHistoryUI();bumpCombo();
+  setTimeout(()=>showMultiWinnerModal(winners),700);
+}
+  return { jumpPick, disappearPick, slotPick, multiPick, rotation: () => rotation };
 }
 
-function makeWorld({ n, crazy, dramatic, winner, speed }) {
+function makeWorld({ n, crazy, dramatic, winner, speed, skip = [], fair = true, sudden = false, count = 3 }) {
   const log = [];
   const cards = Array.from({ length: n }, (_, i) => {
     const name = 'S' + i;
@@ -148,6 +185,9 @@ function makeWorld({ n, crazy, dramatic, winner, speed }) {
       remove() { log.push(['el:' + tag, 'remove']); } };
     return new Proxy(el, { set: (t, k, v) => { if (k === 'className' || k === 'innerHTML' || k === 'textContent') log.push(['el:' + tag, k, v]); t[k] = v; return true; } });
   };
+  let rotation = { seed: 1, round: 0 };   /* np-pick treats the state as opaque input; a fresh one is enough */
+  const hist = [];
+  const pass = (name) => (...a) => { log.push([name, ...a]); };
   const document = { createElement: (tag) => makeEl(tag), body: { appendChild: (c) => log.push(['body', 'append', c.className]) } };
   const timers = [], frames = [];
   const w = cards[winner] || null;
@@ -162,6 +202,13 @@ function makeWorld({ n, crazy, dramatic, winner, speed }) {
     launchFirework: (x, y, c) => log.push(['firework', x, y, c]),
     shuffle: (l) => { log.push(['shuffle', l.length]); return l.slice().reverse(); },
     requestAnimationFrame: (fn) => { frames.push(fn); },
+    isSkipped: (nm) => skip.includes(nm), rotation: () => rotation, setRotation: (r) => { rotation = r; },
+    options: () => ({ fair }), drawWeights: (list) => { log.push(['weights', list.length]); return null; },
+    history: () => hist, suddenDeath: () => sudden,
+    playWinSound: pass('winSound'), showConfetti: pass('confetti'), fireworkShow: pass('fireworks'),
+    triggerSuddenDeathExplosion: pass('explosion'), markUndoPoint: pass('undo'), incrementStats: pass('stats'),
+    saveHistory: pass('save'), updateHistoryUI: pass('historyUI'), bumpCombo: pass('combo'),
+    todayKey: () => '2026-10-29', showMultiWinnerModal: pass('modal'),
   };
   const old = oldModes({
     document, speed: speed, nameCards: cards, crazyMode: crazy, dramatic,
@@ -169,8 +216,14 @@ function makeWorld({ n, crazy, dramatic, winner, speed }) {
     selectWinner: host.selectWinner, playBeep: host.playBeep, shake: host.shake, sleep: host.sleep,
     drawLightning: host.drawLightning, launchFirework: host.launchFirework, shuffle: host.shuffle,
     requestAnimationFrame: host.requestAnimationFrame,
+    isSkipped: host.isSkipped, opts: { fair }, rotation, drawWeights: host.drawWeights,
+    playWinSound: host.playWinSound, showConfetti: host.showConfetti, fireworkShow: host.fireworkShow,
+    triggerSuddenDeathExplosion: host.triggerSuddenDeathExplosion, markUndoPoint: host.markUndoPoint,
+    history: hist, todayKey: host.todayKey, incrementStats: host.incrementStats, saveHistory: host.saveHistory,
+    updateHistoryUI: host.updateHistoryUI, bumpCombo: host.bumpCombo, showMultiWinnerModal: host.showMultiWinnerModal,
+    suddenDeath: sudden,
   });
-  return { log, host, old, timers, frames, cards };
+  return { log, host, old, timers, frames, cards, hist, count, getRotation: () => rotation };
 }
 
 async function drive(which, fn, world) {
@@ -178,8 +231,11 @@ async function drive(which, fn, world) {
   let seed = 11;
   Math.random = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
   globalThis.setTimeout = (f, ms) => { world.timers.push([ms, f]); return world.timers.length; };
+  const RealDate = globalThis.Date;
+  globalThis.Date = class extends RealDate { constructor(...a) { super(...(a.length ? a : ['2026-10-29T15:04:00Z'])); } };
   try {
-    const p = which === 'old' ? world.old[fn]() : ({ jumpPick, disappearPick, slotPick })[fn](world.host);
+    const args = fn === 'multiPick' ? [world.count] : [];
+    const p = which === 'old' ? world.old[fn](...args) : ({ jumpPick, disappearPick, slotPick, multiPick })[fn](world.host, ...args);
     let t = 0;
     /* run animation frames and timers until the mode resolves */
     let done = false; p.then(() => { done = true; });
@@ -191,7 +247,10 @@ async function drive(which, fn, world) {
     }
     while (world.timers.length) { const [ms, f] = world.timers.shift(); world.log.push(['timer', ms]); f(); }
     await p;
-  } finally { globalThis.setTimeout = realST; Math.random = realRand; }
+  } finally { globalThis.setTimeout = realST; Math.random = realRand; globalThis.Date = RealDate; }
+  world.log.push(['history', JSON.stringify(world.hist)]);
+  if (which === 'old') world.log.push(['rotation-end', JSON.stringify(world.old.rotation())]);
+  else world.log.push(['rotation-end', JSON.stringify(world.getRotation())]);
   return world.log;
 }
 
@@ -203,9 +262,14 @@ for (const crazy of [false, true]) for (const dramatic of [false, true]) {
   shapes.push({ n: 6, crazy, dramatic, winner: -1, speed: 130 });   /* the draw finds nobody */
   shapes.push({ n: 5, crazy, dramatic, winner: 2, speed: 40 });
 }
-for (const fn of ['jumpPick', 'disappearPick', 'slotPick']) {
+for (const crazy of [false, true]) for (const sudden of [false, true]) {
+  for (const n of [0, 1, 4, 8]) for (const count of [1, 3, 9]) shapes.push({ fn: 'multiPick', n, crazy, dramatic: false, winner: 0, speed: 130, count, sudden });
+  shapes.push({ fn: 'multiPick', n: 5, crazy, dramatic: false, winner: 0, speed: 400, count: 2, sudden });   /* a slow speed is under the 18-sweep cap */
+  shapes.push({ fn: 'multiPick', n: 6, crazy, dramatic: false, winner: 0, speed: 60, count: 2, sudden, skip: ['S1', 'S4'], fair: false });
+}
+for (const fn of ['jumpPick', 'disappearPick', 'slotPick', 'multiPick']) {
   let events = 0;
-  for (const shape of shapes) {
+  for (const shape of shapes.filter((x) => (x.fn || (fn === 'multiPick' ? '' : fn)) === fn || (!x.fn && fn !== 'multiPick'))) {
     const a = await drive('old', fn, makeWorld(shape));
     const b = await drive('new', fn, makeWorld(shape));
     events += a.length;

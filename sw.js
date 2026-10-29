@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v450';
+const CACHE_VERSION = 'v451';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -136,6 +136,7 @@ const SHELL_URLS = [
   "Tools/name-picker/np-equity.js",
   "Tools/name-picker/np-mode-disappear.js",
   "Tools/name-picker/np-mode-jump.js",
+  "Tools/name-picker/np-mode-multi.js",
   "Tools/name-picker/np-mode-slot.js",
   "Tools/name-picker/np-pick.js",
   "Tools/name-picker/np-seat-equity.js",
@@ -394,6 +395,7 @@ const PRECACHE_URLS = [
   "Tools/name-picker/np-equity.js",
   "Tools/name-picker/np-mode-disappear.js",
   "Tools/name-picker/np-mode-jump.js",
+  "Tools/name-picker/np-mode-multi.js",
   "Tools/name-picker/np-mode-slot.js",
   "Tools/name-picker/np-pick.js",
   "Tools/name-picker/np-seat-equity.js",
