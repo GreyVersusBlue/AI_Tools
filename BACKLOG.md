@@ -795,7 +795,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 32 | Path 13 P2 — the rest. **All six splitters call `_shared/grouping.js` (v336–v341); 002, 022 and 027 keep their memory in a `groupHistory` field with the old fields written from it (v341–v343) and key it by roster id (v344–v346); the five improvements are in (002's floater fix v347, `keepStrategy` v348, `together: 'units'` v349, `restarts` for 002 and 022 v350, `method: 'best'` for 022 and 027 v351); the P2 bullet's increments 1–6.** Seating-aware grouping on 002 is in (v352, increment 6). Left: project teams on 002, parked on Devon's six questions (the P2 bullet, increment 6). Hold the twelve golden classes (`golden-old-groupings.json` now carries six re-recorded scenarios, each with an `amended` note), `smoke-rename-follow.mjs`, `test:grouping-parity` and `test:grouping-adopters` | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 36 | Path 14 P4 — the room, not the grid. **Everything buildable is built (AI-22, v365-v370): `seating-room.mjs`; the Room card on 005 (one room shared by periods); marks dragged, moved by arrow keys, resized, turned and relabelled, printed on the live page, Print all and the sub packet; marks in 010's and 008's pictures; a zone rule "desks near a mark" that follows its mark.** Waits on Devon: marks in 007's and 045's pictures (if wanted; those readers do not ask for marks yet); his two open questions (a: does the room live in 005's storage or a shared store; b: layouts per room or per section), built on their defaults | 005 | ¼ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 37 | Path 14 P5 — what is left: `_shared/undo.js` for 003 (no undo today, so a new feature); and "a point in 008" / "a pass in 001" from live mode, which needs Devon to pick a route (a `Handoffs` entry plus a receiver in each tool, or 005 writing their storage as 003 writes 037's); neither tool takes anything in today (live mode, absent today, 018 and 043 decided out: v377) | 005 | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
-| 38 | Path 15 P1 — split Name Picker: themes as data, sound, one module per pick mode | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
+| 38 | Path 15 P1, what is left — 007's Team Draft mode and `np-ui.js` (the winner dialogs and what they record); themes, sound and the five single/multi/tournament modes are out (v448-v452) | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
 | 39 | Path 15 P2 — per-day history rollup keyed on student ids | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
 | 40 | Path 15 P3 — equity dashboard across weeks and periods, printed as one page | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
 | 41 | Path 15 P4 — question-attached picks | 007 | ½ | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
@@ -6763,7 +6763,12 @@ day; the cross-week, cross-period view teachers actually want does not.
   mode (`jump`, `slot`, `disappear`, `tournament`, `multi`, Team Draft), then `np-ui.js` for what is left: each takes
   its page collaborators as an argument object (no page globals), and is held by a pick on a seeded roster compared
   with the old inline code. A step is only done when 007's suites (`test:name-picker`, `-share`, `-lightning`) are
-  green; the rest of P1 is rank 38 until it is whole. No open question of Devon's is touched.
+  green. **Done (AI-23, v448-v452):** steps 1 and 2 as designed, and step 3 for `jump`, `disappear`, `slot`, `multi` and
+  `tournament` (`np-mode-<name>.js`, one `host` object, `test:name-picker-modes` against a byte copy of the old code).
+  **Left:** the Team Draft mode (`draftTeams`, `draftTurnIndex`, `draftStarted`, its own board) and `np-ui.js`
+  (`selectWinner`, `selectTournamentWinner` and the dialogs, which write history, stats, the Hall of Fame and
+  achievements), each by the same recipe: lift a block into a module taking a host, keep a byte copy of the old code in a
+  parity suite, drive the real page. No open question of Devon's is touched.
 - **P2 — History.** Replace the flat 500-entry cap with a per-day rollup that
   survives trimming; key history on student ids (Path 3) so nickname/preferred-name
   matching stops under-reporting via `unmatched`.

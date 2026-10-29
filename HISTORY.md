@@ -9,6 +9,22 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-23: 007's "Let's go crazy" lightning fixed; Path 15 P1 steps 1 to 5, themes, sound and five pick modes out of the page (2026-10-29, v447-v452)
+
+**What shipped.**
+- **v447, the bug Devon reported on 2026-10-07 ("the lightning effect for let's go crazy doesn't work").** It was reproduced, not guessed: the bolts were drawn, but `drawLightning` placed them from viewport coordinates inside `#lightningSvg`, a `position: fixed` element. Crazy mode pulses a `filter` on `<body>` (`bgPulse`), and a filtered ancestor becomes the containing block of its fixed children, so the svg started where the body does (measured at x = -324 at 1280 px, in Chromium) and every bolt landed that far from the cards it joins. The fix subtracts the svg's own origin. `test:name-picker-lightning` (port 8602) holds each bolt's two ends on name-card centres in viewport terms (it fails on the old code) and holds Calm mode and `prefers-reduced-motion` to drawing none. Not reproduced on Devon's machine itself: his reduced-motion setting would also turn the bolts off by design (Calm turns itself on from the OS setting), which is the other reading of "doesn't work" and is unchanged.
+- **P1 step 1, v448.** `np-themes.js`: the eleven themes as data (`THEMES`) and `themeVars(name)`. `test:name-picker-themes` holds it to a byte copy of the old object and rule; `test:name-picker-themes-smoke` selects every theme in the page.
+- **P1 step 2, v449.** `np-sound.js`: `createSound({ soundOn, isCrazy })` for `ensureAudio`, `playBeep`, `playBeepForced`, `playNoise`, `playWinSound`, `playKlaxon`. `test:name-picker-sound` runs the new module and a byte copy of the old code against a recording fake `AudioContext`; `test:name-picker-sound-smoke` reaches it through the page.
+- **P1 steps 3 to 5, v450-v452.** `np-mode-jump.js`, `-disappear.js`, `-slot.js`, `-multi.js`, `-tournament.js`: each an async function taking a `host` object (cards, speed, Crazy, rotation, options, effect and log helpers, every member looked up when called). `test:name-picker-modes` (pure Node, 185 comparisons) runs each against a byte copy of the old code on a recording host and fake DOM, Crazy on and off, with `Math.random`, timers and `Date` pinned, mutants on a constant in each module caught; `test:name-picker-modes-smoke` drives every mode through the page.
+
+**Ports alone, and the one difference.** Nothing a teacher sees, hears or has saved changed. The one behavioural edge: the saved-theme check was `themes[saved]`, which an inherited name such as `constructor` satisfied; it is `hasTheme()` (own keys only) now, so such a value falls back to the default theme.
+
+**Left in P1 (rank 38).** The Team Draft mode (its state is `draftTeams`/`draftTurnIndex`/`draftStarted` and it renders its own board) and `np-ui.js` (`selectWinner`, `selectTournamentWinner`, the winner dialogs, which write history, stats, the Hall of Fame and achievements). Both read many page globals; they want the same host-object treatment, one at a time.
+
+**Found.** `page.click('#crazyBtn')` times out once Crazy is on (the button wobbles and is never "stable"), so the suites click through `evaluate`. A Playwright run of `--only name-picker` takes about 2.6 minutes with the new suites. 007's script is a module, so nothing in it is a `window` global; nothing outside 007 slices its text.
+
+**Not verified.** Nothing was heard: the sound parity compares call logs against a fake `AudioContext`. The lightning was measured and asserted in Chromium only, not in Devon's browser. The full `npm test` was not run; the suites run were the name-picker ones, `test:theme`, the registry/precache/tests/inline-sinks guards and lint.
+
 ## AI-19: Path 10 P4 increments 2 and 3 and P5, 044 pulls a do-now, has one renderer and keeps what the sub said (2026-10-29, v444-v446)
 
 **What shipped.**
