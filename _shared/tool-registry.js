@@ -671,6 +671,12 @@
       file: 'Tools/019-escape-room-builder.html',
       category: 'games-rewards',
       share: { param: 'room' },
+      /* The site's question bank (Path 12 P2, increment 6): the Question bank card lists it through
+         _shared/question-bank.js's peek(), which writes nothing. The bank is OWNED by Review Game Board's row. */
+      reads: [
+        'gvb-question-bank',
+        'gvb-review-board-bank:entries',
+      ],
       /* Station clue images are not in this key since Path 4 P4: each station
          holds an `idb:` reference and the images are in `gvb-media` (declared
          on the site row above) under the `escape-room/` namespace. Rooms and

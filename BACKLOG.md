@@ -5348,8 +5348,8 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
     the bank and not a key of its own; a page without `question-bank.js` shows no card. Nothing is stored until the teacher
     presses Add, and then by the page's own save.
   - *What is copied, and what `bankId` keeps.* The station is the teacher's copy: the words are copied onto it and it works
-    with the bank gone. `bankId` (the field Path 18 P3 reserved, already carried by `Stations.read/write` and the share
-    state) holds the question's id, a seed's included (`seed:053:b3`), and nothing else: no wording, no ids of choices. It is
+    with the bank gone. `bankId` (the field Path 18 P3 reserved, already carried by `Stations.read/write` and `toDisk`, and
+    **not** by the share link, whose bytes stay what they were: a tie to one teacher's bank means nothing on another's) holds the question's id, a seed's included (`seed:053:b3`), and nothing else: no wording, no ids of choices. It is
     used for one thing, **not adding a question twice**: a question whose id is a station's `bankId` in the set being edited
     is listed as "already a station" and skipped. Editing the station does not touch the bank or the tie; deleting the
     station loses the tie; a `bankId` the bank no longer holds is harmless.

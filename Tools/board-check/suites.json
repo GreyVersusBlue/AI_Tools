@@ -368,6 +368,8 @@
     "Tools/stations/test/stations.test.mjs",
     "Tools/stations/test/smoke-ids.mjs",
     "Tools/stations/test/smoke-legacy-codes.mjs",
+    "Tools/stations/test/stations-bank.test.mjs",
+    "Tools/stations/test/smoke-bank-stations.mjs",
     "Tools/qr-scavenger-hunt-builder/test/smoke-images.mjs",
     "Tools/qr-scavenger-hunt-builder/test/smoke-required.mjs",
     "Tools/qr-scavenger-hunt-builder/test/smoke-branches.mjs",

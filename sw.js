@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v434';
+const CACHE_VERSION = 'v435';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -177,6 +177,7 @@ const SHELL_URLS = [
   "_shared/share.js",
   "_shared/stage.js",
   "_shared/state-link.js",
+  "_shared/stations-bank.js",
   "_shared/stations-debrief.css",
   "_shared/stations-debrief.js",
   "_shared/stations.js",
@@ -553,6 +554,7 @@ const PRECACHE_URLS = [
   "_shared/share.js",
   "_shared/stage.js",
   "_shared/state-link.js",
+  "_shared/stations-bank.js",
   "_shared/stations-debrief.css",
   "_shared/stations-debrief.js",
   "_shared/stations.js",
