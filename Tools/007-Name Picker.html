@@ -734,6 +734,9 @@ import { loadDetails, lookupDetail, displayName, loadIds, lookupId } from './nam
 import { loadSeatingState, seatEquityReport, seatSummaryLine } from './name-picker/np-seat-equity.js';
 import { themeVars, hasTheme } from './name-picker/np-themes.js';
 import { createSound } from './name-picker/np-sound.js';
+import { jumpPick as runJump } from './name-picker/np-mode-jump.js';
+import { disappearPick as runDisappear } from './name-picker/np-mode-disappear.js';
+import { slotPick as runSlot } from './name-picker/np-mode-slot.js';
 
 /* _shared/store.js is linked in the head but nothing on this page calls it
    directly: np-store's thirteen slots keep their boxing wrapper. It is here so
@@ -1065,108 +1068,24 @@ function pickName(){
   else jumpPick();
 }
 
-async function jumpPick(){
-  isRolling=true;setRollingState(true);
-  const activeCards=nameCards.filter(c=>c.active);
-  if(activeCards.length===0){finishRolling();return;}
-  const winnerCard=chooseWinner(activeCards);
-  if(!winnerCard){finishRolling();return;}
-  if(activeCards.length===1){selectWinner(winnerCard);return;}
-  const winnerIdx=activeCards.indexOf(winnerCard);
-  const dramatic=document.getElementById('dramaticPause').checked;
-  const baseJumps=dramatic?16:10;
-  const totalJumps=baseJumps+Math.floor(Math.random()*6);
-  let lastIdx=-1,lastEl=null,currentDelay=speed;
-  for(let i=0;i<totalJumps;i++){
-    let idx;
-    if(i===totalJumps-1)idx=winnerIdx;                 /* land on the chosen name */
-    else{
-      /* On the penultimate jump, stay off the winner so the last hop is a visible
-         move rather than the same card lighting twice. */
-      const avoidWinner=i===totalJumps-2&&activeCards.length>2;
-      let guard=0;
-      do{idx=Math.floor(Math.random()*activeCards.length);guard++;}
-      while(guard<40&&((idx===lastIdx&&activeCards.length>1)||(avoidWinner&&idx===winnerIdx)));
-    }
-    activeCards.forEach(c=>c.el.classList.remove('highlighted'));
-    activeCards[idx].el.classList.add('highlighted');
-    playBeep(550+Math.random()*350,60);
-    if(crazyMode){shake(1);if(lastEl)drawLightning(lastEl,activeCards[idx].el);}
-    lastIdx=idx;lastEl=activeCards[idx].el;
-    if(dramatic&&i>totalJumps*0.55)currentDelay=currentDelay*1.18;
-    await sleep(currentDelay);
-  }
-  activeCards.forEach(c=>c.el.classList.remove('highlighted'));
-  selectWinner(winnerCard);
-}
-
-async function disappearPick(){
-  isRolling=true;setRollingState(true);
-  const active=nameCards.filter(c=>c.active);
-  if(active.length===0){finishRolling();return;}
-  const winnerCard=chooseWinner(active);
-  if(!winnerCard){finishRolling();return;}
-  if(active.length===1){selectWinner(winnerCard);return;}
-  /* Everyone but the winner goes, in a uniformly shuffled order. */
-  for(const card of shuffle(active.filter(c=>c!==winnerCard))){
-    if(crazyMode){
-      const r=card.el.getBoundingClientRect();
-      launchFirework(r.left+r.width/2,r.top+r.height/2,'#ffffff');
-      shake(1);
-    }
-    card.el.classList.add('fading');
-    card.active=false;
-    playBeep(350+Math.random()*250,80,'sine',0.07);
-    await sleep(speed);
-    setTimeout(()=>{if(card.el)card.el.style.display='none';},450);
-  }
-  selectWinner(winnerCard);
-}
-
-async function slotPick(){
-  isRolling=true;setRollingState(true);
-  const activeCards=nameCards.filter(c=>c.active);
-  if(activeCards.length===0){finishRolling();return;}
-  const winnerCard=chooseWinner(activeCards);
-  if(!winnerCard){finishRolling();return;}
-  if(activeCards.length===1){selectWinner(winnerCard);return;}
-  const overlay=document.createElement('div');
-  overlay.className='slot-overlay';
-  overlay.innerHTML=`<div class="slot-machine"><div class="slot-title">🎰 SPINNING... 🎰</div><div class="slot-reel"><div class="slot-strip" id="slotStrip"></div><div class="slot-line"></div></div></div>`;
-  document.body.appendChild(overlay);
-  const strip=overlay.querySelector('#slotStrip');
-  const itemHeight=120,totalItems=60;
-  const stripNames=[];
-  for(let i=0;i<totalItems-1;i++)stripNames.push(activeCards[Math.floor(Math.random()*activeCards.length)].name);
-  stripNames.push(winnerCard.name);
-  stripNames.forEach(n=>{const item=document.createElement('div');item.className='slot-name';item.textContent=n;strip.appendChild(item);});
-  const finalY=-((totalItems-1)*itemHeight);
-  const duration=Math.max(1800,Math.min(4500,30000/Math.max(40,speed)*100));
-  let startTime=null,lastTick=-1;
-  return new Promise(resolve=>{
-    function animate(t){
-      if(!startTime)startTime=t;
-      const elapsed=t-startTime;
-      const progress=Math.min(elapsed/duration,1);
-      const eased=1-Math.pow(1-progress,3);
-      const y=finalY*eased;
-      strip.style.transform=`translateY(${y}px)`;
-      const itemIdx=Math.floor(Math.abs(y)/itemHeight);
-      if(itemIdx!==lastTick&&progress<0.98){
-        playBeep(900,30,'square',0.05);
-        if(crazyMode&&itemIdx%3===0)shake(1);
-        lastTick=itemIdx;
-      }
-      if(progress<1){requestAnimationFrame(animate);}
-      else{
-        playBeep(150,200,'sawtooth',0.15);
-        shake(crazyMode?3:2);
-        setTimeout(()=>{overlay.remove();selectWinner(winnerCard);resolve();},600);
-      }
-    }
-    requestAnimationFrame(animate);
-  });
-}
+/* The jump, disappear and slot modes live in name-picker/np-mode-*.js. Each is handed this host
+   rather than reaching for page globals; every member is looked up when called, because the page
+   reassigns nameCards and speed and defines some of these helpers further down. */
+const modeHost={
+  document,
+  cards:()=>nameCards,speed:()=>speed,crazy:()=>crazyMode,
+  dramatic:()=>document.getElementById('dramaticPause').checked,
+  begin:()=>{isRolling=true;setRollingState(true);},
+  finishRolling:()=>finishRolling(),
+  chooseWinner:(cards)=>chooseWinner(cards),selectWinner:(card)=>selectWinner(card),
+  playBeep:(...a)=>playBeep(...a),shake:(n)=>shake(n),sleep:(ms)=>sleep(ms),
+  drawLightning:(a,b)=>drawLightning(a,b),launchFirework:(x,y,c)=>launchFirework(x,y,c),
+  shuffle:(list)=>shuffle(list),
+  requestAnimationFrame:(fn)=>requestAnimationFrame(fn)
+};
+const jumpPick=()=>runJump(modeHost);
+const disappearPick=()=>runDisappear(modeHost);
+const slotPick=()=>runSlot(modeHost);
 
 async function multiPick(count){
   isRolling=true;setRollingState(true);
