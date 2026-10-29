@@ -254,6 +254,55 @@ function suite(label, src) {
   p.WL.applyImport([{ name: 'Unit 1', words: [T('luz')] }, { name: 'New', words: [T('x')] }], 2);
   eq(p.WL.names(), ['Unit 1', 'New'], 'applying stores the planned lists');
 
+  // ---- a verb record on a word, a language on a list (Path 19 P3 step 2) ----
+  const vb = mk(); const VW = vb.WL;
+  VW.put('Verbos', [T('tener', { definition: 'to have', gender: 'm', tags: ['u1'] }), T('casa')], 1);
+  eq(VW.setVerb('Verbos', 'tener', { infinitive: 'tener', forms: { present: { 0: ' tengo ', 7: 'x', 2: '' } }, stems: { preterite: 'tuv' }, gloss: 'to have' }, 2),
+    { infinitive: 'tener', forms: { present: { 0: 'tengo' } }, stems: { preterite: 'tuv' }, gloss: 'to have' }, 'setVerb stores a cleaned record and returns it');
+  eq(VW.getVerb('Verbos', 'tener').forms.present[0], 'tengo', 'getVerb reads it back');
+  eq(VW.getVerb('Verbos', 'TENER') !== null && VW.getVerb('Verbos', VW.get('Verbos').words[0].id) !== null, true, 'a word is found by term (any case) or by id');
+  eq(VW.getVerb('Verbos', 'casa'), null, 'a word with no record has none');
+  ok(VW.setVerb('Verbos', 'nada', { infinitive: 'x' }) === undefined, 'no such word: undefined, nothing written');
+  ok(VW.setVerb('Nope', 'tener', { infinitive: 'x' }) === undefined, 'no such list: undefined');
+  eq(VW.get('Verbos').words[0].definition + '/' + VW.get('Verbos').words[0].gender + '/' + VW.get('Verbos').words[0].tags, 'to have/m/u1', 'the record changes nothing else on the word');
+  VW.putText('Verbos', 'tener: to have\ncasa: house');
+  eq(VW.getVerb('Verbos', 'tener').stems, { preterite: 'tuv' }, '040\'s write-through keeps the verb record with the word');
+  eq(VW.getVerb('Verbos', 'tener').forms.present[0], 'tengo', 'and its forms');
+  VW.putPairs('Verbos', 'tener: to hold\ncasa: house');
+  eq(VW.getVerb('Verbos', 'tener') !== null, true, '039\'s write-through keeps it too');
+  const VP = VW.cleanVerb;
+  eq(VP(null), null, 'cleanVerb: not an object'); eq(VP([]), null, 'cleanVerb: an array'); eq(VP({}), null, 'cleanVerb: empty is no record');
+  eq(VP({ forms: { present: { 6: 'x' } } }), null, 'cleanVerb: slot 6 is dropped, and an empty record with it');
+  eq(VP({ forms: { 'Bad Key': { 0: 'x' } } }), null, 'cleanVerb: a tense id must be a plain id');
+  eq(VP({ infinitive: 'x', teacher: { present: { 0: true } } }), { infinitive: 'x' }, 'cleanVerb: the merged "teacher" map is never stored');
+  eq(VP({ infinitive: 'x', future: 'kept', fn: function () {} }), { infinitive: 'x', future: 'kept' }, 'cleanVerb: an unknown JSON key is kept, a function is not');
+  eq(VP({ stems: { future: ['a', 'b'], preterite: { cut: 'cir', add: 'j' }, bad: 4 } }), { stems: { future: ['a', 'b'], preterite: { cut: 'cir', add: 'j' } } }, 'cleanVerb: stems in three shapes');
+  eq(VP({ defective: { slots: [2, 9, 'x'], tenses: ['future'] } }), { defective: { slots: [2], tenses: ['future'] } }, 'cleanVerb: defective');
+  eq(VP({ infinitive: 'x'.repeat(5000) }) !== null && JSON.stringify(VP({ infinitive: 'x'.repeat(5000) })).length < 200, true, 'cleanVerb: a long text is cut to 80');
+  eq(VP({ unknown: 'y'.repeat(5000) }), null, 'cleanVerb: a record past 4000 characters is refused');
+  eq(VP({ reflexive: true, spelling: false, prefixes: ['re', ''] }), { reflexive: true, spelling: false, prefixes: ['re'] }, 'cleanVerb: flags and prefixes');
+  eq(VW.setVerb('Verbos', 'tener', null), null, 'setVerb with null removes the record');
+  eq(VW.getVerb('Verbos', 'tener'), null, 'and it is gone');
+  eq('verb' in VW.get('Verbos').words[0], false, 'a removed record leaves no key');
+  eq(VW.setLang('Verbos', 'ES'), true, 'setLang takes a pack id in any case'); eq(VW.getLang('Verbos'), 'es', 'and stores it lower case');
+  eq(VW.setLang('Verbos', 'español'), false, 'setLang refuses a word that is not a pack id'); eq(VW.getLang('Verbos'), 'es', 'and changes nothing');
+  eq(VW.setLang('Nope', 'es'), false, 'setLang on no list is false');
+  VW.setVerb('Verbos', 'tener', { infinitive: 'tener', participle: 'tenido' });
+  const jf = VW.fromJSON(VW.toJSON(VW.load().lists));
+  eq(jf.lists[0].lang, 'es', 'the JSON file carries the language'); eq(jf.lists[0].words[0].verb, { infinitive: 'tener', participle: 'tenido' }, 'and the verb record');
+  const vb2 = mk(); vb2.WL.applyImport(jf.lists, 5);
+  eq(vb2.WL.getLang('Verbos'), 'es', 'a new list from a file has its language'); eq(vb2.WL.getVerb('Verbos', 'tener').participle, 'tenido', 'and its verb record');
+  vb2.WL.put('Mine', [T('tener')], 6);
+  vb2.WL.applyImport([{ name: 'Mine', lang: 'es', words: [T('tener', { verb: { infinitive: 'tener', participle: 'tenido' } })] }], 7);
+  eq(vb2.WL.getVerb('Mine', 'tener').participle, 'tenido', 'a merge gives a word a verb record it lacks');
+  vb2.WL.setVerb('Mine', 'tener', { infinitive: 'tener', participle: 'mine' });
+  vb2.WL.applyImport([{ name: 'Mine', words: [T('tener', { verb: { infinitive: 'tener', participle: 'theirs' } })] }], 8);
+  eq(vb2.WL.getVerb('Mine', 'tener').participle, 'mine', 'and never over one it has');
+  eq(vb2.WL.getLang('Mine'), 'es', 'a merge gives a list a language it lacks');
+  ok(JSON.parse(vb2.WL.toJSON([{ name: 'X', words: [T('a')] }])).lists[0].lang === undefined, 'a list with no language writes none');
+  ok(!/verb/.test(vb2.WL.toCsv(vb2.WL.get('Mine').words)) , 'no CSV column carries the verb');
+  eq(mk({}).WL.cleanVerb({ infinitive: 'a' }).infinitive, 'a', 'cleanVerb works on a bare page');
+
   // ---- needs ----
   const bare = page(fakeStorage(), src, { noStore: true }).WordList;
   let threw = false; try { bare.names(); } catch (e) { threw = /store\.js/.test(e.message); }
@@ -283,6 +332,12 @@ const mutants = [
   ['fromPairs drops a bare word', s => s.replace("out.push({ term: trimmed, definition: '' }); return;", "return;")],
   ['a dangling current is kept', s => s.replace("if (s.current && !seenName[s.current]) s.current = '';", "")],
   ['toText never uses the tab form', s => s.replace("if (t.indexOf(':') !== -1 ||", "if (false &&")],
+  ['cleanVerb keeps slot 6', s => s.replace("/^[0-5]$/.test(slot) && f", "f")],
+  ['the JSON file drops the language', s => s.replace("if (lang) o.lang = lang;", "")],
+  ['a merge overwrites a verb', s => s.replace("if (!hit.verb && w.verb)", "if (w.verb)")],
+  ['setVerb ignores a missing word', s => s.replace("if (!w) return undefined;", "if (!w) w = l.words[0];")],
+  ['the merged teacher map is stored', s => s.replace("&& k !== 'teacher'", "")],
+  ['the size cap is gone', s => s.replace("if (JSON.stringify(out).length > VERB_MAX) return null;", "")],
   ['unknown fields are dropped', s => s.replace("for (k in w) if (Object.prototype.hasOwnProperty.call(w, k)) out[k] = w[k];", "")],
 ];
 for (const [name, fn] of mutants) {

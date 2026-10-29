@@ -12,6 +12,17 @@
    know is kept through every read, write and file, so a later phase's field (the
    conjugation record, a recorded pronunciation) survives an older page's save.
 
+   A VERB (Path 19 P3, step 2)
+   A word may carry `verb`, the teacher's conjugation record for it in the shape
+   _shared/conjugate.js takes (infinitive, class, stemChange, stems, forms, participle,
+   gerund, auxiliary, reflexive, defective, gloss): only what the teacher added or
+   corrected, merged over the pack's own record by Conjugate.merge(). It lives on the
+   word, so it applies to ITS LIST ONLY (Devon, 2026-10-21), travels with the list's JSON
+   file and is taken by a 040 save that keeps the word. A list may carry `lang` ('es',
+   'fr': the pack the verbs are conjugated in). cleanVerb() checks the record's SHAPE
+   (strings, six slots, a size cap); it does not know a language and never calls the
+   engine. No CSV column carries it.
+
    WHAT IS STORED
      key 'gvb-word-lists', a Store envelope { v: 1, data: {
        schema: 1,
@@ -85,7 +96,65 @@
     TEXT_FIELDS.forEach(function (f) { out[f] = str(w[f]); });
     out.tags = cleanTags(w.tags);
     out.id = typeof w.id === 'string' && w.id ? w.id : '';
+    if (Object.prototype.hasOwnProperty.call(w, 'verb')) {
+      var verb = cleanVerb(w.verb);
+      if (verb) out.verb = verb; else delete out.verb;
+    }
     return out.term ? out : null;
+  }
+
+  /* ---- a verb record: its shape only --------------------------------------- */
+
+  var VERB_TEXT = ['infinitive', 'class', 'stemChange', 'participle', 'gerund', 'auxiliary', 'gloss'];
+  var VERB_MAX = 4000;
+  var KEY_OK = /^[a-z0-9][a-z0-9-]{0,29}$/;
+
+  function cleanForm(v) { return typeof v === 'string' ? v.trim().slice(0, 80) : ''; }
+
+  function cleanStem(v) {
+    if (typeof v === 'string') return cleanForm(v) || null;
+    if (Array.isArray(v)) { var a = [cleanForm(v[0]), cleanForm(v[1])]; return a[0] && a[1] ? a : null; }
+    if (v && typeof v === 'object' && typeof v.cut === 'string') return { cut: cleanForm(v.cut), add: cleanForm(v.add) };
+    return null;
+  }
+
+  /* A teacher's verb record, whatever came in: known keys checked, unknown keys kept if JSON can hold them.
+     null when nothing is left, so an empty record is no record. */
+  function cleanVerb(v) {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+    var out = {}, k;
+    for (k in v) if (Object.prototype.hasOwnProperty.call(v, k) && k !== 'teacher') {
+      if (VERB_TEXT.indexOf(k) >= 0 || k === 'forms' || k === 'stems' || k === 'defective' || k === 'prefixes' || k === 'reflexive' || k === 'spelling') continue;
+      try { out[k] = JSON.parse(JSON.stringify(v[k])); } catch (e) { /* not JSON: dropped */ }
+    }
+    VERB_TEXT.forEach(function (f) { var t = cleanForm(v[f]); if (t) out[f] = t; });
+    if (v.reflexive === true) out.reflexive = true;
+    if (v.spelling === false) out.spelling = false;
+    if (Array.isArray(v.prefixes)) { var pre = v.prefixes.map(cleanForm).filter(Boolean); if (pre.length) out.prefixes = pre; }
+    if (v.forms && typeof v.forms === 'object' && !Array.isArray(v.forms)) {
+      var forms = {};
+      Object.keys(v.forms).forEach(function (t) {
+        if (!KEY_OK.test(t) || !v.forms[t] || typeof v.forms[t] !== 'object' || Array.isArray(v.forms[t])) return;
+        var cells = {};
+        Object.keys(v.forms[t]).forEach(function (slot) { var f = cleanForm(v.forms[t][slot]); if (/^[0-5]$/.test(slot) && f) cells[slot] = f; });
+        if (Object.keys(cells).length) forms[t] = cells;
+      });
+      if (Object.keys(forms).length) out.forms = forms;
+    }
+    if (v.stems && typeof v.stems === 'object' && !Array.isArray(v.stems)) {
+      var stems = {};
+      Object.keys(v.stems).forEach(function (t) { var st = KEY_OK.test(t) ? cleanStem(v.stems[t]) : null; if (st) stems[t] = st; });
+      if (Object.keys(stems).length) out.stems = stems;
+    }
+    if (v.defective && typeof v.defective === 'object') {
+      var d = {};
+      if (Array.isArray(v.defective.slots)) d.slots = v.defective.slots.filter(function (n) { return typeof n === 'number' && n >= 0 && n <= 5 && n % 1 === 0; });
+      if (Array.isArray(v.defective.tenses)) d.tenses = v.defective.tenses.filter(function (t) { return typeof t === 'string' && KEY_OK.test(t); });
+      if ((d.slots && d.slots.length) || (d.tenses && d.tenses.length)) out.defective = d;
+    }
+    if (!Object.keys(out).length) return null;
+    if (JSON.stringify(out).length > VERB_MAX) return null;
+    return out;
   }
 
   function nextNumber(items, prefix) {
@@ -227,6 +296,7 @@
         var changed = false;
         TEXT_FIELDS.forEach(function (f) { if (!hit[f] && w[f]) { hit[f] = w[f]; changed = true; } });
         if (!hit.tags.length && w.tags.length) { hit.tags = w.tags.slice(); changed = true; }
+        if (!hit.verb && w.verb) { hit.verb = JSON.parse(JSON.stringify(w.verb)); changed = true; }
         if (changed) filled++;
       } else {
         var copy = {}; for (var k in w) if (Object.prototype.hasOwnProperty.call(w, k)) copy[k] = w[k];
@@ -305,10 +375,17 @@
 
   /* ---- JSON file ---------------------------------------------------------- */
 
+  /* A list's language: a pack id such as 'es' or 'fr', else ''. */
+  function cleanLang(v) { return typeof v === 'string' && /^[a-z]{2,3}$/.test(v.trim().toLowerCase()) ? v.trim().toLowerCase() : ''; }
+
   function toJSON(lists) {
     return JSON.stringify({
       app: 'word-lists', v: 1,
-      lists: (lists || []).map(function (l) { return { name: str(l.name), words: cleanWords(l.words) }; })
+      lists: (lists || []).map(function (l) {
+        var o = { name: str(l.name), words: cleanWords(l.words) }, lang = cleanLang(l.lang);
+        if (lang) o.lang = lang;
+        return o;
+      })
     }, null, 2);
   }
 
@@ -324,7 +401,9 @@
     data.lists.forEach(function (l, i) {
       var name = l && str(l.name);
       if (!name) { problems.push('List ' + (i + 1) + ' has no name and was skipped.'); return; }
-      out.push({ name: name, words: cleanWords(l.words) });
+      var item = { name: name, words: cleanWords(l.words) }, lang = cleanLang(l.lang);
+      if (lang) item.lang = lang;
+      out.push(item);
     });
     return { lists: out, problems: problems };
   }
@@ -343,6 +422,7 @@
       seenName[name] = 1;
       var copy = {}; for (var k in l) if (Object.prototype.hasOwnProperty.call(l, k)) copy[k] = l[k];
       copy.name = name; copy.words = cleanWords(l.words);
+      if (cleanLang(l.lang)) copy.lang = cleanLang(l.lang); else delete copy.lang;
       copy.id = typeof l.id === 'string' && l.id ? l.id : '';
       copy.createdAt = typeof l.createdAt === 'number' ? l.createdAt : 0;
       copy.updatedAt = typeof l.updatedAt === 'number' ? l.updatedAt : copy.createdAt;
@@ -376,6 +456,46 @@
 
   function names() { return load().lists.map(function (l) { return l.name; }); }
   function get(name) { var l = findList(load(), name); return l ? JSON.parse(JSON.stringify(l)) : null; }
+
+  function findWord(list, key) {
+    if (!list) return null;
+    var k = str(key), lower = k.toLowerCase();
+    for (var i = 0; i < list.words.length; i++) if (list.words[i].id === k) return list.words[i];
+    for (var j = 0; j < list.words.length; j++) if (list.words[j].term.toLowerCase() === lower) return list.words[j];
+    return null;
+  }
+
+  /* The teacher's verb record on a word of the list (by id, else by term), or null. */
+  function getVerb(listName, key) {
+    var w = findWord(findList(load(), str(listName)), key);
+    return w && w.verb ? JSON.parse(JSON.stringify(w.verb)) : null;
+  }
+
+  /* Stores (or, with null or an empty record, removes) the verb record on one word. Returns the stored
+     record, null when it was removed, and undefined when there is no such list or word. */
+  function setVerb(listName, key, verb, now) {
+    var s = load(), l = findList(s, str(listName)), w = findWord(l, key);
+    if (!w) return undefined;
+    var clean = cleanVerb(verb);
+    if (clean) w.verb = clean; else delete w.verb;
+    l.updatedAt = typeof now === 'number' ? now : Date.now();
+    save(s);
+    return clean ? JSON.parse(JSON.stringify(clean)) : null;
+  }
+
+  function getLang(listName) { var l = findList(load(), str(listName)); return l && l.lang ? l.lang : ''; }
+
+  /* Sets the list's language; '' clears it. false when there is no such list or the language is not a pack id. */
+  function setLang(listName, lang, now) {
+    var s = load(), l = findList(s, str(listName));
+    if (!l) return false;
+    var c = cleanLang(lang);
+    if (str(lang) && !c) return false;
+    if (c) l.lang = c; else delete l.lang;
+    l.updatedAt = typeof now === 'number' ? now : Date.now();
+    save(s);
+    return true;
+  }
 
   /* Replaces (or makes) the list `name`. words are normalized; `now` is a clock for tests. */
   function put(name, words, now) {
@@ -493,8 +613,14 @@
     var s = load(), t = typeof now === 'number' ? now : Date.now();
     (incoming || []).forEach(function (l) {
       var have = findList(s, l.name);
-      if (have) { have.words = mergeWords(have.words, l.words).words; have.updatedAt = t; }
-      else s.lists.push({ id: 'l' + nextNumber(s.lists, 'l'), name: l.name, words: cleanWords(l.words), createdAt: t, updatedAt: t });
+      if (have) {
+        have.words = mergeWords(have.words, l.words).words; have.updatedAt = t;
+        if (!have.lang && cleanLang(l.lang)) have.lang = cleanLang(l.lang);
+      } else {
+        var fresh = { id: 'l' + nextNumber(s.lists, 'l'), name: l.name, words: cleanWords(l.words), createdAt: t, updatedAt: t };
+        if (cleanLang(l.lang)) fresh.lang = cleanLang(l.lang);
+        s.lists.push(fresh);
+      }
     });
     save(s);
     return (incoming || []).length;
@@ -506,6 +632,7 @@
     fromText: fromText, toText: toText, fromPairs: fromPairs, toPairs: toPairs, reconcile: reconcile, mergeWords: mergeWords,
     parseTable: parseTable, toCsv: toCsv, templateCsv: templateCsv,
     toJSON: toJSON, fromJSON: fromJSON,
+    cleanVerb: cleanVerb, cleanLang: cleanLang, getVerb: getVerb, setVerb: setVerb, getLang: getLang, setLang: setLang,
     load: load, save: save, names: names, get: get, put: put, putText: putText,
     remove: remove, rename: rename, setCurrent: setCurrent,
     putPairs: putPairs, importLegacy: importLegacy, importLegacyDrill: importLegacyDrill, importPlan: importPlan, applyImport: applyImport
