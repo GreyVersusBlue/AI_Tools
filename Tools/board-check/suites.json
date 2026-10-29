@@ -59,6 +59,7 @@
     "Tools/name-picker/test/drive-weighting.mjs",
     "Tools/name-picker/test/smoke-share.mjs",
     "Tools/sub-plan-builder/test/smoke-share.mjs",
+    "Tools/sub-plan-builder/test/smoke-seating-pull.mjs",
     "Tools/classroom-timer/test/smoke-strip.mjs",
     "Tools/classroom-timer/test/smoke-remote.mjs",
     "Tools/classroom-timer/test/smoke-board-core.mjs",

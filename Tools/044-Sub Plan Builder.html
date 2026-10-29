@@ -15,6 +15,9 @@
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
 <script src="../_shared/media-db.js"></script>
+<script src="../_shared/seating-read.js"></script>
+<script src="packet-builder/sections.js"></script>
+<script src="packet-builder/providers.js"></script>
 <style>
   /* --ink, --paper, --card, --card-2, --line, --muted, --err and their dark
      values come from _shared/ink-paper.css (AI-35); these are 044's own. */
@@ -214,6 +217,7 @@
   }
   .back-link { display: inline-block; color: var(--muted); text-decoration: none; font-size: .88rem; padding: .3rem .5rem .3rem 0; margin-bottom: .2rem; }
   .back-link:hover { color: var(--accent); }
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
@@ -402,8 +406,12 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     <button type="button" class="small danger" id="seatingChartRemoveBtn" style="display:none;">✕ Remove</button>
     <span class="field-hint" id="seatingChartStatus" style="margin:0;">No image attached.</span>
   </div>
+  <div class="toggle-row" id="seatingChartPullRow" style="gap:10px; flex-wrap:wrap; margin-top:6px;" hidden>
+    <select id="seatingChartPick" aria-label="Class to draw from Seating Chart Generator"></select>
+    <button type="button" class="small" id="seatingChartPullBtn">Use my saved seating chart</button>
+  </div>
   <img id="seatingChartPreview" alt="Seating chart preview" style="display:none; max-width:220px; max-height:160px; border:1px solid var(--line); border-radius:6px; margin-top:8px;">
-  <p class="field-hint" style="margin-top:4px;">Export a chart from the Seating Chart Generator (or use any photo/screenshot). Like Student Notes below, <strong>this image is never saved</strong> — it lives only in this tab until you generate or leave the page.</p>
+  <p class="field-hint" style="margin-top:4px;">Pick a class you have already seated in the Seating Chart Generator (the room is drawn for you), or attach any photo or screenshot. Like Student Notes below, <strong>this image is never saved</strong> — it lives only in this tab until you generate or leave the page.</p>
 
   <div class="toggle-row">
     <input type="checkbox" id="saveToHistory">
@@ -1294,6 +1302,72 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     seatingChartImage = null;
     setSeatingChartUI();
   });
+
+  // Path 10 P4: draw the room from the seating chart saved in the Seating Chart Generator instead of
+  // asking for an image. The Packet Builder's seating section (packet-builder/providers.js) reads the
+  // chart and draws the SVG; this page names no key of that tool. The drawing is turned into the same
+  // PNG an attached file becomes, held in this tab only, like the attached image.
+  function seatingClasses() {
+    if (!window.PacketSections || !window.SeatingRead) return [];
+    try {
+      const ctx = { read: PacketSections.readerFor(localStorage), todayISO: '', SeatingRead: window.SeatingRead };
+      const built = PacketSections.build(['seating'], ctx).sections[0];
+      if (!built) return [];
+      return built.pages.map(pg => ({
+        name: pg.title.replace(/^Seating: /, ''),
+        svg: (pg.blocks.find(b => b.type === 'html') || {}).html || ''
+      })).filter(c => c.svg);
+    } catch (e) { return []; }
+  }
+
+  function svgToPng(svg) {
+    return new Promise((resolve, reject) => {
+      const m = /viewBox="([-\d. ]+)"/.exec(svg);
+      const v = m ? m[1].trim().split(/\s+/).map(Number) : [];
+      if (v.length !== 4 || !(v[2] > 0) || !(v[3] > 0)) { reject(new Error('could not size the chart')); return; }
+      const scale = SEATING_CHART_MAX_DIM / Math.max(v[2], v[3]);
+      const w = Math.round(v[2] * scale), h = Math.round(v[3] * scale);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const g = canvas.getContext('2d');
+        g.fillStyle = '#fff';
+        g.fillRect(0, 0, w, h);
+        g.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/png');
+        resolve({ dataUrl: dataUrl, base64: dataUrl.split(',')[1], widthPx: w, heightPx: h });
+      };
+      img.onerror = () => reject(new Error('could not draw the chart'));
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg.replace('width="100%"', 'width="' + w + '" height="' + h + '"'));
+    });
+  }
+
+  let seatingClassList = [];
+  function renderSeatingPull() {
+    seatingClassList = seatingClasses();
+    const pick = el('seatingChartPick');
+    pick.textContent = '';
+    seatingClassList.forEach((c, i) => {
+      const o = document.createElement('option');
+      o.value = String(i);
+      o.textContent = c.name;
+      pick.appendChild(o);
+    });
+    el('seatingChartPullRow').hidden = !seatingClassList.length;
+  }
+  el('seatingChartPullBtn').addEventListener('click', async () => {
+    const c = seatingClassList[+el('seatingChartPick').value];
+    if (!c) return;
+    try {
+      seatingChartImage = await svgToPng(c.svg);
+      setSeatingChartUI();
+      el('seatingChartStatus').textContent = 'Drawn from your saved seating chart: ' + c.name + ' (' + seatingChartImage.widthPx + '×' + seatingChartImage.heightPx + 'px) — will be embedded in the Word doc.';
+    } catch (err) {
+      el('seatingChartStatus').textContent = 'Could not draw that class: ' + err.message;
+    }
+  });
+  renderSeatingPull();
 
   // ---------- DOCX generation ----------
 

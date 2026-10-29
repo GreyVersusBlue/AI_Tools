@@ -9,6 +9,15 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-19: Path 10 P4 increment 1, 044 draws the room from the saved seating chart (2026-10-29, v443)
+
+**What shipped.** In 044's seating chart field, a "Use my saved seating chart" button and class picker appear when 005 has a chart with at least one desk. Choosing a class draws the room with 090's seating section (`PacketSections.build(['seating'], ctx)`, so 044's script names no key of 005 and the chart is read through `SeatingRead` as everywhere else), rasterises the SVG to the same 900 px PNG an attached file becomes (a white ground drawn first, so Word does not show a transparent picture) and sets the page's existing `seatingChartImage`. Nothing downstream changed: the preview, Remove, the plain-text copy line and the `.docx` embed on every day's page all read that one variable, and Attach image works as before. The image is held in the tab only, like the attached one. 044 now loads `seating-read.js`, `packet-builder/sections.js` and `providers.js`; the two packet-builder files joined `SHELL_URLS` because 044 is a shell tool and `check:precache` (SHELLDEP) refuses a shell page whose eager scripts install late.
+- Suite: `test:sub-plan-seating` (port 8598; next free **8599**): the control is hidden with no chart or no desks, lists only classes with a desk and shows a name as text, the PNG is the room's shape at 900 px with ink and an opaque white corner, nothing of it is saved in storage, Remove clears it, the generated `.docx` holds a `word/media` picture with it and none without. Break-on-purpose: removing the white `fillRect` turns the corner check red (the first version checked the share of light pixels and the mutant survived, because the white desks alone cover enough).
+
+**Left on P4 (rank 19 rewritten).** The do-now from the prompt banks: "prompt banks" is not one thing in the repo. `QuestionBank` has no do-now field, 076's slip prompts and `gvb-exit-ticket:customPrompts` are other lists. That choice was not taken here because it is a product call to write down before building; the default for the next session is `QuestionBank.peek()` filtered to a `do-now` tag, with a button that drops one into the lesson's opening. The calendar half was done in v316. One renderer for the `.docx` and the printed output is also left.
+
+**Not verified.** The `.docx` was checked for the picture's presence in the zip, not opened in Word; the chart's class names with markup are shown as text only (checked), and a chart whose desks are all unseated draws empty desks. The full `npm test` was not run.
+
 ## AI-19: Path 10 P3, the evergreen emergency binder and its staleness reminder (2026-10-29, v442)
 
 **What shipped.** The Emergency binder was already a built-in preset on 090 (v438); P3 makes it a thing a teacher keeps current.
