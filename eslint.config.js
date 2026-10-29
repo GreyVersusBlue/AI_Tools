@@ -51,6 +51,7 @@ const SITE_GLOBALS = {
   StudentFlags: 'readonly',
   UndoStack: 'readonly',
   SchoolDay: 'readonly',
+  BinderStale: 'readonly',
   ToolRegistry: 'readonly',
   ThemeToggle: 'readonly',
   Countdown: 'readonly',

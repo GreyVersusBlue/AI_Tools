@@ -579,9 +579,18 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     if (isCheckbox) node.addEventListener('change', () => { settings[key] = node.checked; scheduleSave(); });
   }
 
+  // The version stamp on the standing details: the local date of the last save. 090 Packet Builder
+  // prints it under the sub plan and the emergency page, so a binder printed in September shows
+  // that it predates an October room change (Path 10 P3).
+  function stampSettings() {
+    const d = new Date(), p = n => (n < 10 ? '0' : '') + n;
+    settings.savedOn = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+
   function scheduleSave() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
+      stampSettings();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
       saveNote.textContent = 'Saved.';
       saveNote.classList.add('saved');
@@ -673,6 +682,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
         assignMissingPeriodIds(settings.periods);
         applySettingsToForm();
         renderPerPeriodBlocks();
+        stampSettings();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
         saveNote.textContent = 'Imported.';
         saveNote.classList.add('saved');

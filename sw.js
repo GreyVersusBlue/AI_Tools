@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v441';
+const CACHE_VERSION = 'v442';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -172,6 +172,7 @@ const SHELL_URLS = [
   "_shared/restore-kit.js",
   "_shared/roster.js",
   "_shared/rotation.js",
+  "_shared/binder-stale.js",
   "_shared/school-day.js",
   "_shared/seating-read.js",
   "_shared/share.js",
@@ -552,6 +553,7 @@ const PRECACHE_URLS = [
   "_shared/restore-kit.js",
   "_shared/roster.js",
   "_shared/rotation.js",
+  "_shared/binder-stale.js",
   "_shared/school-day.js",
   "_shared/seating-read.js",
   "_shared/share.js",

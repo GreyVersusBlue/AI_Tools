@@ -9,6 +9,18 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-19: Path 10 P3, the evergreen emergency binder and its staleness reminder (2026-10-29, v442)
+
+**What shipped.** The Emergency binder was already a built-in preset on 090 (v438); P3 makes it a thing a teacher keeps current.
+- **One click prints it.** 090 has a "Print emergency binder" button that ticks the preset's pages (emergency information, sub plan standing details, hall pass procedure, class rosters; whichever have something saved) and prints. `?preset=emergency` opens 090 with that packet showing and the button focused; it is the link the reminder uses.
+- **A version stamp on the standing details.** 044 writes `savedOn` (the local date of the last save or import) into `subPlanBuilder.standingDetails.v1`; the sub plan and emergency pages print "Details last saved 2026-09-02." under their content. A record saved before the stamp prints none. 044's own output and 045's byte-equal check are untouched (045 reads through `load()`, not `build()`).
+- **`_shared/binder-stale.js` (`BinderStale`).** When 090 prints exactly the Emergency binder it stores `gvb-packet:evergreen.v1 = { v: 1, at, sums }`: when, and an FNV-1a fingerprint of each watched key's raw text (`subPlanBuilder.standingDetails.v1`, `hall-pass-log-sections`, `np_rosters`), never the data. `check()` answers none, never, changed, old (180 days) or fresh; changed wins over old. The landing page (a link in the app bar, shown only when stale) and Command Center (one line above the board) call `mount()`. Both read fingerprints, so the reminder names no student and no detail; nothing is fetched. The record is written by 090 itself with a literal `localStorage.setItem`, because `check:registry` only sees literal call sites (`BinderStale.entry()` builds the record; `record()` is the same with the write, for the Node suite).
+- Suites: `test:binder-stale` (pure, 62 checks and mutants, including that the watched keys equal the Emergency binder's providers' keys less `crh_students_v1`) and `test:binder-stale-smoke` (8597; next free **8598**).
+
+**Calls Devon can reverse (taken by default).** The old-print threshold is 180 days (`MAX_DAYS`). `crh_students_v1` is not watched: it supplies only preferred names and moves on every student note, so watching it would nag daily; a student added to a roster still changes `np_rosters`. A print that is not exactly the Emergency binder (a subset, other pages) records nothing. The reminder has no snooze or dismiss: printing is the dismissal. "Never printed" shows only once something is saved in a watched key, so a teacher who never uses these tools sees nothing.
+
+**What did not work or was not verified.** The first smoke stubbed `window.print()` and the record never appeared, because the record is written on `beforeprint`, which the stub does not fire (the stub now dispatches it, as a browser does). The first mutant for "a removed key counts as a change" survived: `record()` stores every watched key, so the case needed a hand-built record that predates a key. `check:registry` reported the new key as written by nothing until the write was a literal in the page. Not run: the full `npm test`. No printer has printed the binder; no real `beforeprint` from Ctrl+P was exercised.
+
 ## AI-19: Path 10 P2, 045 Sub Binder on the providers, 076's questions, and the share sheet (2026-10-29, v441)
 
 **What shipped.** (1) `PacketSections` gained an optional `load(ctx)` on a provider (the one place a source key's shape is read) and `readerFor(storage)`.

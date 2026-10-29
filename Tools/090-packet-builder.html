@@ -35,6 +35,7 @@
 <script src="../_shared/print-kit.js"></script>
 <script src="packet-builder/sections.js"></script>
 <script src="packet-builder/providers.js"></script>
+<script src="../_shared/binder-stale.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -122,6 +123,7 @@
     <div class="btnrow">
       <button type="button" class="secondary" id="previewBtn">Preview pages</button>
       <button type="button" id="printBtn">Print packet</button>
+      <button type="button" class="secondary" id="binderBtn">Print emergency binder</button>
     </div>
   </div>
 
@@ -366,6 +368,32 @@
   PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.6in' });
   function printPacket() { fillPrintArea(); window.print(); }
   byId('printBtn').addEventListener('click', printPacket);
+
+  /* The emergency binder (Path 10 P3): one click puts the Emergency binder preset's pages in the packet
+     and prints them. Printing exactly those pages is what BinderStale records, so the landing page and
+     Command Center can say when the details have changed since. */
+  var EMERGENCY = 'Emergency binder';
+  function emergencyIds() {
+    var p = builtIns().filter(function (b) { return b.name === EMERGENCY; })[0];
+    return p ? p.ids.filter(function (id) { var s = statusOf(id); return s && s.available; }) : [];
+  }
+  function isEmergency() {
+    var want = emergencyIds();
+    return !!want.length && want.length === chosen.length && want.every(function (id, i) { return chosen[i] === id; });
+  }
+  function useEmergency() {
+    chosen = emergencyIds();
+    changed();
+    return chosen.length > 0;
+  }
+  byId('binderBtn').addEventListener('click', function () {
+    if (!useEmergency()) { say(byId('presetMsg'), 'The emergency binder has nothing saved yet. Fill in Sub Plan Builder’s Emergency info first.'); return; }
+    printPacket();
+  });
+  window.addEventListener('beforeprint', function () {
+    if (!window.BinderStale || !isEmergency()) return;
+    try { localStorage.setItem('gvb-packet:evergreen.v1', JSON.stringify(BinderStale.entry(localStorage, new Date().toISOString()))); } catch (e) { /* storage full or blocked: the reminder stays on */ }
+  });
   byId('previewBtn').addEventListener('click', function () {
     fillPrintArea();
     PrintKit.preview({ trigger: byId('previewBtn'), onPrint: printPacket });
@@ -434,6 +462,8 @@
   renderPresets();
   renderList();
   renderPreview();
+  /* A reminder's link arrives with ?preset=emergency: show that packet and leave the button under the cursor. */
+  if (/[?&]preset=emergency(&|$)/.test(location.search) && useEmergency()) byId('binderBtn').focus();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

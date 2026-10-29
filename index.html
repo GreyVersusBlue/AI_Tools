@@ -790,7 +790,7 @@
 
   <div class="app-bar ink" style="--d:40ms">
     <span><span class="wordmark">ASPERMYLESSONPLAN<span class="tld">.COM</span></span> · Unofficial Toolbook · Term 2026–27 · Q1</span>
-    <span class="rhs"><span class="dot" aria-hidden="true"></span>88 records · local only · nothing syncs<span class="offline-status" id="offlineStatus" data-sw-offline-status role="status" aria-live="polite" hidden></span><a class="backup-status" id="backupStatus" href="Tools/009-backup-restore.html" hidden></a><button type="button" class="clear-rosters" id="clearRostersBtn" aria-haspopup="dialog" aria-controls="clearRostersDlg" hidden>Clear all rosters</button><button type="button" class="cmdk-hint" id="cmdkOpenBtn" aria-haspopup="dialog" aria-controls="cmdkOverlay" aria-label="Open quick jump search (Control or Command plus K)"><span aria-hidden="true">&#8984;K</span> Quick jump</button></span>
+    <span class="rhs"><span class="dot" aria-hidden="true"></span>88 records · local only · nothing syncs<span class="offline-status" id="offlineStatus" data-sw-offline-status role="status" aria-live="polite" hidden></span><a class="backup-status" id="backupStatus" href="Tools/009-backup-restore.html" hidden></a><a class="backup-status stale" id="binderStatus" href="Tools/090-packet-builder.html?preset=emergency" hidden></a><button type="button" class="clear-rosters" id="clearRostersBtn" aria-haspopup="dialog" aria-controls="clearRostersDlg" hidden>Clear all rosters</button><button type="button" class="cmdk-hint" id="cmdkOpenBtn" aria-haspopup="dialog" aria-controls="cmdkOverlay" aria-label="Open quick jump search (Control or Command plus K)"><span aria-hidden="true">&#8984;K</span> Quick jump</button></span>
   </div>
 
   <div class="letterhead ink" style="--d:90ms" aria-hidden="true">
@@ -2845,6 +2845,7 @@
   </div>
 </div>
 
+<script src="_shared/binder-stale.js"></script>
 <script>
 (function () {
   'use strict';
@@ -2878,6 +2879,14 @@
     el.title = 'Open Backup & Restore';
     el.classList.toggle('stale', isNaN(days) || days >= 30);
     el.hidden = false;
+  })();
+
+  /* ---------- emergency binder reminder (Path 10 P3) ----------
+     One line, shown only when the printed binder is stale: never printed, details changed since, or
+     printed 180 days ago. BinderStale reads fingerprints, not data, so nothing about a student is
+     here, and nothing is fetched or written. */
+  (function () {
+    if (window.BinderStale) BinderStale.mount(document.getElementById('binderStatus'), localStorage, new Date().toISOString(), '');
   })();
 
   /* ---------- "Clear all rosters" (Path 3 P6, item 5) ----------

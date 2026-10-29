@@ -635,6 +635,11 @@ files must be added there too.
   older backup working. The module's header has the migration, the ids and the file formats. Its suites are
   `npm run test:question-bank` (pure Node) and `smoke-bank-file.mjs` in `npm run test:review-board`; no file it
   writes has been opened in a spreadsheet.
+- **The emergency binder's staleness reminder is `_shared/binder-stale.js`** (`BinderStale`, Path 10 P3, v442): 090 records the print of exactly
+  the Emergency binder preset (`gvb-packet:evergreen.v1`, a time and a fingerprint per watched key, never data) and `index.html` and 010 call
+  `mount()`; they show a line, never a student or a detail. `WATCHED` must equal the preset's providers' keys less `crh_students_v1`
+  (`npm run test:binder-stale` holds that); a section added to the preset is a line there. 044 stamps `savedOn` on its standing details.
+  `npm run test:binder-stale-smoke`.
 - **A page of the Packet Builder (090) is a provider in `Tools/packet-builder/`** (Path 10 P1, v437-v439): `sections.js` is the pure registry and
   `providers.js` the sections. A provider is data in, blocks out (`evaluate(ctx)`, `build(ctx)`; it reads only through `ctx.read(key)` and never
   touches storage or the DOM), `toHtml()` is the one place its text becomes markup, and its `storageKeys` must equal 090's `reads` on its row in

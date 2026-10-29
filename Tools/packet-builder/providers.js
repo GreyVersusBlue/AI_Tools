@@ -42,6 +42,14 @@
 
   function rows(pairs) { return pairs.filter(function (p) { return has(p[1]); }).map(function (p) { return [p[0], p[1].trim()]; }); }
 
+  /* 044 stamps its standing details with the local date of their last save (`savedOn`). Printed under
+     the sub plan and the emergency page, it is how a binder printed in September shows it predates
+     an October room change. Absent on details saved before the stamp: then nothing is printed. */
+  function stampNote(s) {
+    return typeof s.savedOn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s.savedOn)
+      ? [{ type: 'note', text: 'Details last saved ' + s.savedOn + '.' }] : [];
+  }
+
   function standingBlocks(s) {
     var blocks = [];
     var facts = rows([
@@ -79,7 +87,7 @@
     },
     build: function (ctx) {
       var s = standing(ctx);
-      return { pages: [{ title: 'Substitute information', blocks: s ? standingBlocks(s) : [] }] };
+      return { pages: [{ title: 'Substitute information', blocks: s ? standingBlocks(s).concat(stampNote(s)) : [] }] };
     }
   });
 
@@ -102,7 +110,7 @@
     },
     build: function (ctx) {
       var s = standing(ctx);
-      return { pages: [{ title: 'Emergency information', blocks: s ? [{ type: 'kv', rows: emergencyRows(s) }] : [] }] };
+      return { pages: [{ title: 'Emergency information', blocks: s ? [{ type: 'kv', rows: emergencyRows(s) }].concat(stampNote(s)) : [] }] };
     }
   });
 

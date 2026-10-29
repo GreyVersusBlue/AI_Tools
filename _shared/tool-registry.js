@@ -474,6 +474,9 @@
       keys: [
         { k: 'gvb-packet:layout.v1' },
         { k: 'gvb-packet:presets.v1' },
+        /* When the Emergency binder was last printed and a fingerprint of each source key then
+           (_shared/binder-stale.js). No data is copied; index.html and 010 read it for the reminder. */
+        { k: 'gvb-packet:evergreen.v1' },
       ],
       reads: [
         'behavior-points-tracker-sections',

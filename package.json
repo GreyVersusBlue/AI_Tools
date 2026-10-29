@@ -155,6 +155,8 @@
     "test:school-calendar-weeks": "node Tools/school-calendar/test/smoke-weeks.mjs",
     "test:packet-builder": "node Tools/packet-builder/test/smoke-packet-builder.mjs",
     "test:packet-providers": "node Tools/packet-builder/test/providers.test.mjs",
+    "test:binder-stale": "node Tools/packet-builder/test/binder-stale.test.mjs",
+    "test:binder-stale-smoke": "node Tools/packet-builder/test/smoke-binder-stale.mjs",
     "test:packet-sections": "node Tools/packet-builder/test/sections.test.mjs",
     "test:school-day": "node Tools/school-calendar/test/school-day.test.mjs",
     "test:school-calendar-plan": "node Tools/school-calendar/test/plan.test.mjs",
