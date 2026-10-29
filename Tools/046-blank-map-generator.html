@@ -368,7 +368,7 @@
     cursor: grab;
   }
   #locatorInset.dragging { cursor: grabbing; }
-  #locatorInset img { display: block; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+  #locatorInset img, #locatorInset canvas { display: block; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
   #locatorRect { position: absolute; border: 2px solid var(--err); background: rgba(163,55,43,.12); pointer-events: none; }
 
   #attribution { font-size: 0.78rem; color: var(--muted); margin-top: 10px; }
@@ -831,6 +831,7 @@
       </div>
       <div id="locatorInset" hidden>
         <img id="locatorImg" alt="">
+        <canvas id="locatorCanvas" hidden></canvas>
         <div id="locatorRect"></div>
       </div>
       <div id="viewerEmpty">Search above and pick a map to get started.</div>
@@ -936,14 +937,29 @@ const liveBase = (() => {
   function schedule() {
     if (source && !queued) { queued = true; requestAnimationFrame(draw); }
   }
+  /** The locator's picture: one drawBaseMap call at the fit view, 150 px on its long side, so the inset is vectors too. */
+  function drawLocator() {
+    const lc = el('locatorCanvas');
+    if (!source) { lc.hidden = true; el('locatorImg').hidden = false; return; }
+    const s = 150 / Math.max(source.width, source.height);
+    const cssW = Math.round(source.width * s), cssH = Math.round(source.height * s);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    lc.width = Math.max(1, Math.round(cssW * dpr));
+    lc.height = Math.max(1, Math.round(cssH * dpr));
+    drawBaseMap(lc.getContext('2d'), source, { x: 0, y: 0, scale: cssW / source.width }, cssW, cssH, { dpr, strokePx: 1 });
+    lc.hidden = false;
+    el('locatorImg').hidden = true;
+  }
   function hide() {
     token++; source = null;
+    drawLocator();
     canvas.hidden = true;
     mapImg.style.visibility = '';
   }
   /** Shows the id's map live when it is one this can draw; otherwise leaves (or puts back) the picture. */
   async function show(id, record, fills) {
     const mine = ++token;
+    el('locatorCanvas').hidden = true; el('locatorImg').hidden = false;   // the old map's inset must not outlive it
     const p = parseBaseMapId(id);
     if (!p || !p.preset) { hide(); return; }
     let src;
@@ -961,6 +977,7 @@ const liveBase = (() => {
     source = src;
     canvas.hidden = false;
     draw();
+    drawLocator();
     mapImg.style.visibility = 'hidden';
   }
   new ResizeObserver(schedule).observe(viewport);
@@ -3740,7 +3757,8 @@ async function drawPngLocator(ctx, cssW, cssH) {
   if (!lw || !lh) return;
   ctx.strokeStyle = '#fff';
   ctx.lineWidth = 2;
-  ctx.drawImage(el('locatorImg'), lx, ly, lw, lh);
+  const lcv = el('locatorCanvas');
+  ctx.drawImage(lcv.hidden ? el('locatorImg') : lcv, lx, ly, lw, lh);
   ctx.strokeRect(lx, ly, lw, lh);
   const rectEl = el('locatorRect');
   const rx = lx + parseFloat(rectEl.style.left || '0');

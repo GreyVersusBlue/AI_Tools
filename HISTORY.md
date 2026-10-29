@@ -9,6 +9,27 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-28: Path 20 P3 increment 4, step 6: the locator inset drawn from the vectors (2026-10-29, v431)
+
+**What shipped.** One step. The locator inset ("Locator Map") is a second canvas, `#locatorCanvas`, drawn by one `drawBaseMap` call at the fit
+view onto 150 px on its long side (at the device pixel ratio, capped at 2), whenever the page shows a built-in or dropped-file map on the live
+canvas; the raster `<img id="locatorImg">` is hidden then and comes back the moment the live map is hidden or being replaced (so an old map's inset
+never outlives it). `drawPngLocator()` draws whichever of the two is showing into Download PNG, Print, Save PDF, the worksheet panel and the poster,
+so the inset on paper has the same hairline border as the map beside it. The red view rectangle is unchanged (it is positioned from the viewer's
+state, not from the picture).
+
+**Verified.** `test:blank-map-live-locator` (new, port 8589): the canvas shows and the image hides for a plain built-in map, the canvas is 150 px on
+its long side at 1x to 2x and has the inset box's aspect, it holds ocean, land and border colours, Download PNG draws `locatorCanvas` and never
+`locatorImg`, a new project puts the image back, nothing off-site. With the `drawLocator()` calls commented out 5 of its 10 checks fail.
+`--only blank-map-generator` (17 green), the a11y sweep for 046, lint and the guards named in CLAUDE.md.
+
+**Not verified.** The inset on paper; dpr 2 (suites run at 1x); the inset on a real Chromebook; a screen reader (the inset is decorative, as it was).
+**Left in P3 (rank 60, now a quarter session).** Design step (d): no `bmg-maps` write for a `vector:` id (`useBuiltInBaseMap` and
+`rebuildBuiltInRecord` stop calling `buildBaseMapRecord`; the stage takes its size from the source; "Recently used" ignores the blob) and
+`renderBaseMapCanvas` as a wrapper. Not started: `mapImg`'s `onload` still sets the fit view, `locator.setImage` still takes the object URL for
+its box size, and the stage-size reads use `currentRecord.width`; each needs a source-backed path first.
+**Obliges others.** `suite-durations.json` has a 20 s estimate for the new suite. Next free suite port: 8590.
+
 ## AI-28: Path 20 P3 increment 3, step 5: shaded maps live, a shared map arrives drawn, the a11y seed (2026-10-28, v430)
 
 **What shipped.** One step. (1) A data-shaded built-in map is drawn on the live canvas like a plain one: `liveBase.show()` now takes the
