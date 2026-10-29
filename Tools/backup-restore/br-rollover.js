@@ -825,6 +825,7 @@
     { key: 'np_absent', tool: '007', kind: 'delete' },
     { key: 'crh_archived_students', tool: '006', kind: 'delete' },
     { key: 'crh_flags_v1', tool: '006', kind: 'delete' },
+    { key: 'escape-room-builder:monitor-record', tool: '019', kind: 'delete', what: 'the teacher monitor’s record of each team’s play' },
     { key: 'pcl_entries_v1', tool: '068', kind: 'delete' },
     { key: 'pcl_idnames_v1', tool: '068', kind: 'delete' },
     { key: 'pcl_roster_v1', tool: '068', kind: 'delete' },

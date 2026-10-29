@@ -27,6 +27,7 @@
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
 <script src="../_shared/export.js"></script>
+<script src="../_shared/paste-table.js"></script>
 <script src="staff-directory-builder/wallet-card.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -519,12 +520,31 @@
     els.bulkInput.value = list.join('\n');
   });
 
+  /* Pasted rows -> the argument lists addPerson takes. A tab on the line makes it tab-separated,
+     else commas, as it always was (no quote handling: a name with a comma in it was never kept
+     whole here). A line with nothing in its first cell has no name to add; it used to vanish and
+     is now returned with its line number so the message can say so. */
+  function readBulkRows(text) {
+    var rows = [], unreadable = [];
+    String(text).split('\n').forEach(function (raw, i) {
+      var line = raw.trim();
+      if (!line) return;
+      var delim = PasteTable.pickDelimiter(line, { candidates: ['\t'], fallback: ',' });
+      var parts = PasteTable.splitLine(line, delim, { quotes: false });
+      if (!parts[0]) unreadable.push({ line: i + 1, text: line });
+      else rows.push(parts);
+    });
+    return { rows: rows, unreadable: unreadable };
+  }
+  function describeBulkUnreadable(list) {
+    var shown = list.slice(0, 3).map(function (u) { return 'line ' + u.line + ' \u201c' + (u.text.length > 24 ? u.text.slice(0, 23) + '\u2026' : u.text) + '\u201d'; });
+    return list.length + ' row' + (list.length === 1 ? ' has' : 's have') + ' no name, so ' + (list.length === 1 ? 'it was' : 'they were') + ' not added: ' + shown.join(', ') + (list.length > 3 ? ' and ' + (list.length - 3) + ' more' : '') + '.';
+  }
+
   els.bulkAddBtn.addEventListener('click', function () {
-    var lines = els.bulkInput.value.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+    var read = readBulkRows(els.bulkInput.value);
     var added = 0, skipped = 0;
-    lines.forEach(function (line) {
-      var parts = line.indexOf('\t') !== -1 ? line.split('\t') : line.split(',');
-      parts = parts.map(function (p) { return p.trim(); });
+    read.rows.forEach(function (parts) {
       var result = addPerson(parts[0], parts[1], parts[2], parts[3], { skipDuplicates: true, email: parts[4] });
       if (result === 'added') added++;
       else if (result === 'duplicate') skipped++;
@@ -532,7 +552,8 @@
     els.bulkInput.value = '';
     save(); render();
     els.bulkMsg.style.display = 'block';
-    els.bulkMsg.textContent = 'Added ' + added + (skipped ? ', skipped ' + skipped + ' duplicate' + (skipped === 1 ? '' : 's') + ' (same name + room already in the directory).' : '.');
+    els.bulkMsg.textContent = 'Added ' + added + (skipped ? ', skipped ' + skipped + ' duplicate' + (skipped === 1 ? '' : 's') + ' (same name + room already in the directory).' : '.') +
+      (read.unreadable.length ? ' ' + describeBulkUnreadable(read.unreadable) : '');
   });
 
   els.dirRows.addEventListener('input', function (ev) {

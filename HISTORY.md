@@ -9,6 +9,463 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-28: Path 20 P3 increment 4, step 6: the locator inset drawn from the vectors (2026-10-29, v431)
+
+**What shipped.** One step. The locator inset ("Locator Map") is a second canvas, `#locatorCanvas`, drawn by one `drawBaseMap` call at the fit
+view onto 150 px on its long side (at the device pixel ratio, capped at 2), whenever the page shows a built-in or dropped-file map on the live
+canvas; the raster `<img id="locatorImg">` is hidden then and comes back the moment the live map is hidden or being replaced (so an old map's inset
+never outlives it). `drawPngLocator()` draws whichever of the two is showing into Download PNG, Print, Save PDF, the worksheet panel and the poster,
+so the inset on paper has the same hairline border as the map beside it. The red view rectangle is unchanged (it is positioned from the viewer's
+state, not from the picture).
+
+**Verified.** `test:blank-map-live-locator` (new, port 8589): the canvas shows and the image hides for a plain built-in map, the canvas is 150 px on
+its long side at 1x to 2x and has the inset box's aspect, it holds ocean, land and border colours, Download PNG draws `locatorCanvas` and never
+`locatorImg`, a new project puts the image back, nothing off-site. With the `drawLocator()` calls commented out 5 of its 10 checks fail.
+`--only blank-map-generator` (17 green), the a11y sweep for 046, lint and the guards named in CLAUDE.md.
+
+**Not verified.** The inset on paper; dpr 2 (suites run at 1x); the inset on a real Chromebook; a screen reader (the inset is decorative, as it was).
+**Left in P3 (rank 60, now a quarter session).** Design step (d): no `bmg-maps` write for a `vector:` id (`useBuiltInBaseMap` and
+`rebuildBuiltInRecord` stop calling `buildBaseMapRecord`; the stage takes its size from the source; "Recently used" ignores the blob) and
+`renderBaseMapCanvas` as a wrapper. Not started: `mapImg`'s `onload` still sets the fit view, `locator.setImage` still takes the object URL for
+its box size, and the stage-size reads use `currentRecord.width`; each needs a source-backed path first.
+**Obliges others.** `suite-durations.json` has a 20 s estimate for the new suite. Next free suite port: 8590.
+
+## AI-28: Path 20 P3 increment 3, step 5: shaded maps live, a shared map arrives drawn, the a11y seed (2026-10-28, v430)
+
+**What shipped.** One step. (1) A data-shaded built-in map is drawn on the live canvas like a plain one: `liveBase.show()` now takes the
+band colours (`displayMap(..., { liveFills })`, which `useBuiltInBaseMap()` fills from the shading it has just built), and for a project
+opened from storage works them out again from the pasted rows with `buildActiveChoropleth()`, using them only if their key is the one the map
+id names. Because `liveBase.active` is true for it, Download PNG, Print, Save PDF, the worksheet panel and the poster now export a shaded map
+from the vectors too: band colours and ocean/land as before, a hairline border instead of the raster's blur at zoom. (2) A project whose
+built-in map this browser has never drawn (a `?map=` link, an imported file, a cleared picture cache) is rebuilt on load by
+`rebuildBuiltInRecord(id)` from `parseBaseMapId()`, with the shading re-derived the same way, and stored in the picture cache; the arrival
+sentence then no longer says "pick the same base map again", and the share note says a built-in map is drawn again from the same boundaries.
+A shaded id the rows no longer give (a hand-edited key, changed data) still opens map-less and the sentence still says to pick it again.
+(3) The a11y seed for 046 now names a built-in map (`vector:usa-48:...`) so the sweep scans the live canvas and the focusable map.
+
+**A behaviour that changed on purpose.** After "Clear cached maps", a project on a built-in or dropped-file map used to open on the empty-map
+card; it now redraws itself on load (the clear still empties the cache; the redraw refills one record). `smoke-dropped.mjs` held the old
+behaviour in a line and now asserts the redraw. The raster is still written and still sized the stage: this step does not drop it (below).
+
+**Decided here (cheap to reverse).** The design said a shared map arrives drawn with no raster at all; this builds the raster once on
+arrival instead, because the raster is still what the stage, the locator and the stage-size reads depend on. Dropping the raster write
+(design step (d)) stays in the P3 row, to be done only with the locator on the vectors. No new question for Devon.
+
+**Verified.** `test:blank-map-live-arrival` (new, port 8588: plain and shaded links to a fresh context arrive on the live canvas, the
+shaded one with band colours, a link with a stale shading key opens map-less and says so, nothing off-site; with `rebuildBuiltInRecord`
+returning null 6 of its 12 checks fail). `test:blank-map-live-viewer` (a shaded map is on the canvas with band colours, again after a reload,
+and clearing leaves the plain one; with the fills not passed 2 checks fail), `-live-keys` (a shaded map's status names the window now),
+`-live-export` (the shaded PNG carries band colours and no fat border), `smoke-dropped`. `--only blank-map-generator`, the a11y sweep for
+046, all tracked `*.test.mjs`, lint, offline build + verify and the guards named in CLAUDE.md were run; see the pending-merge row.
+
+**Not verified.** Paper; dpr 2; a real shared link from another device (the maker and victim are two contexts of one browser); a shaded
+map on a Chromebook (the fills are recomputed on every load of a shaded project: a parse of the pasted rows plus a region-name listing).
+**Obliges others.** `suite-durations.json` has a 25 s estimate for the new suite; `Tools/a11y-sweep/seeds.mjs`'s 046 seed changed.
+
+## AI-28: Path 20 P3 increment 2, step 4: the exports draw from the vectors (2026-10-28, v429)
+
+**What shipped.** One step. `drawMapContent()`, which Download PNG, Print Map, Save PDF, the worksheet's map panel and the tiled poster
+all go through, now calls `liveBase.drawInto()` in place of `drawImage(mapImg, ...)` whenever the screen is showing a plain built-in map
+from the vectors. It draws the same function the screen does at the export's own scale (the context's transform is the dpr), so a
+border is a hairline on paper at every zoom. Every other map (a data-shaded one, a Wikimedia one, an upload) is still the raster.
+
+**What a printed page now looks like.** A zoomed single page or a worksheet panel: a 1 px border at the export's resolution (2 device px
+at dpr 2) where the old raster path printed the same border as a blur 38 px wide at 12x. The tiled poster: a 2 px border at poster
+resolution (a 1200 px tile fills a letter page, about 141 dpi, so about 0.36 mm), set by `opts.strokePx` at the one call site; the
+screen and the other exports use 1. The ocean, land and shading colours, the relief, and the view are the same pixels as before at the
+identity view (the step-1 parity suite); only the line work and the sharpness of a zoomed view change. Annotations, grid, legend,
+compass, scale bar and credit are drawn over it exactly as before.
+
+**Decided here.** No new question: Devon's 2026-10-21 defaults (thin constant borders) are what the poster's 2 px and the screen's 1 px
+implement. The locator inset was left on the raster: it is a 150 px downscale of a 3000 px picture, which is sharp already, so drawing it
+from the vectors buys nothing until the raster write itself is dropped (step (d)). No stored data changes, no `__v` bump.
+
+**Verified.** `test:blank-map-live-export` (port 8587; lower-48 at 3x: the PNG's middle equals the live canvas, 0 of 79,968 pixels
+differ; at 12x the PNG and all four poster tiles have no pixel inside a 7 px block of ink, where the raster border was 38 px; the overlap
+strip of two neighbouring tiles is byte-equal; no off-site request, no console error). Break-on-purpose: with the vector branch disabled
+6 of its 12 checks fail (4,744 pixels differ, 7,199 to 68,828 fat-ink pixels). `--only blank-map-generator` (15 suites, green),
+the a11y sweep for 046, all tracked `*.test.mjs` with node, lint, `offline:build` + `offline:verify`, check:tests, check:precache
+(`--base origin/main`), check:registry, check:dedupe, check:inline-sinks, check:entities, check:hidden-flex, check:print-clip, check:art,
+check:docs-commands and `check:adoption -- --check`. No function was renamed or removed; `drawMapContent` is read by no suite's text cuts.
+
+**Not verified.** Anything on paper, a device pixel ratio of 2, the worksheet panel and Save PDF by their own buttons (they call the same
+function; the suite exercises Download PNG and the poster), a shaded or Wikimedia map's export (unchanged by construction: `liveBase.active`
+is false for them). **Obliges others.** `suite-durations.json` has a 30 s estimate for the new suite.
+
+## AI-28: Path 20 P3 increment 1, the base map drawn from the vectors on screen (2026-10-28, v426-v428)
+
+**What shipped.** Three steps, each its own commit and `CACHE_VERSION`. v426: `Tools/blank-map-generator/bmg-live.js`, the one draw
+function of the P3 design (`parseBaseMapId`, `loadSource`, `drawBaseMap`, `drawExtent`), over `_shared/geo-project.js`. v427: 046's
+screen draws a plain built-in map on `#baseCanvas`, a border 1 px at every zoom, one redraw per animation frame. v428: the map is a
+focusable named group with keyboard pan and zoom and a polite status line naming the zoom and the longitude/latitude window.
+
+**Decided here (cheap to reverse).** `renderBaseMapCanvas()` was not turned into a wrapper as the design said: it stays the raster path
+untouched, and the parity suite holds the live drawing to its bytes at the identity view instead, which gives the same guarantee with no
+risk to 015's panel, the series sheet or the cache records. The raster is still built and cached for every built-in pick, because the
+exports, the locator and the stage's size read it; removing the write waits until the exports draw vectors. A shaded map stays the
+raster until its fills can be rebuilt on load. Nothing here touches a project's stored data (the stage unit is unchanged), so there is
+no `__v` bump and no migration. No decision numbers.
+
+**Verified.** `test:blank-map-live` (pure Node, 11 mutants, all caught), `test:blank-map-live-parity` (48 pairs byte-equal; break-on-purpose
+with the stroke width and fill rule changed fails), `test:blank-map-live-viewer` (port 8585: a 20-event wheel burst is 1 to 2 draws, a
+12x border 4 px or less, reload reopens live at the saved view, shading falls back to the raster and un-shading returns, Download PNG
+identical with the canvas shown or not, axe clean, no off-site request from its own steps; a stroke of 12 px makes it fail),
+`test:blank-map-live-keys` (port 8586: pan directions and amounts, `+ - 0 Home`, a selected label keeps the arrows, the announcement
+computed independently from the saved view; reversing the arrows or dropping the label guard each fail it). `--only blank-map-generator`
+(14 suites), `--only timeline-builder`, `--only theme`, the a11y sweep for 046, all 95 tracked `*.test.mjs` with node, lint,
+`offline:build` + `offline:verify`, and the check:tests/precache(--base)/registry/dedupe/inline-sinks/hidden-flex/entities/print-clip/art/docs-commands/adoption sweeps.
+
+**Not verified.** A real device pixel ratio of 2 (the suites draw at 1), a Chromebook's frame time, a screen reader reading the status
+line, any printed page. **Found.** An empty project asks Wikimedia for a default search at load; that contradicts Devon's 2026-10-07
+answer and is recorded under P3 in `BACKLOG.md` as P5's to remove. **Obliges others.** `Tools/board-check/suite-durations.json` has
+estimates for the four new suites (3, 15, 25, 25 s); refresh with `suite-durations.mjs` from a CI run.
+
+## AI-28: Path 20 P1's remainder and P2, a dropped boundary file as the base map (2026-10-28, v424-v425)
+
+**What shipped.** v424: 062's `gbq-map.js` dropped its own adapted `unwrapRing`/`drawableRings`/`project`/`traceFeature` and imports
+`projectPoint`/`traceFeature` from `_shared/geo-project.js`, a port alone. The old functions are frozen in
+`Tools/geography-bee-quiz-generator/test/_legacy-gbq-geo.mjs`; `npm run test:geo-bee-parity` records the path operations of both over
+the two datasets, every preset crop and three bitmap sizes, stroke and fill, and requires them equal, with three mutants and a source
+check that the page no longer defines its own copies. `test:geo-bee` (136 assertions) is unchanged. v425: P2. A dropped or chosen
+GeoJSON/TopoJSON file becomes a preset of its own: `bmg-dropped.js` (pure) reads and cleans it, `bmg-geo-store.js` keeps the clean copy,
+`bmg-vector.js` draws it through the shared geometry. The design is in the P2 bullet (written and committed before the code).
+
+**Decisions taken here (none is Devon's open question; each is cheap to reverse).** TopoJSON is decoded by about forty lines of our own
+(`transform`, delta coding, reversed `~i` arcs), so no library was vendored and nothing is Devon's call. Reprojection is not offered:
+a projected file is refused with the fix named. The dropped file is stored in `gvb-media` under `bmg-geo`, **not** in `bmg-maps`,
+because that database is a cache ("Clear cached maps" empties it, the registry marks it safe to leave out of a backup) and a dropped
+file does not come back by itself; this leaves P3's question 4 (Clear cached maps unchanged) as Devon answered it. Shapes are filled one
+at a time so overlapping shapes keep their own holes. Data on both sides of 180 as separate parts calibrates to the whole world, because
+the renderer shifts a ring by 360 only when that ring itself crosses 180; fixing that means changing the shared module and was not done.
+Nothing is fetched and nothing runs at load (the stored files are listed the first time the base map list is opened).
+
+**Held.** `test:blank-map-dropped` (pure Node, 14 mutants) and `test:blank-map-dropped-smoke` (port 8583: choose a file, click-shade a
+shape, Clear cached maps leaves the file, reload restores it, a TopoJSON dropped on the strip, three bad files, no offsite request).
+a11y sweep clean for 046 and 062; `offline:build` + `offline:verify` pass (the bundler lists files with `git ls-files`, so a new module
+fails the build until it is added to git: it did, once, before the commit).
+
+**Not verified.** A real GIS export (every fixture is hand-made); a file near the 8 MB limit in a browser; the map on paper; the
+`gvb-media` record in a 009 backup and restore (the registry row exists for the database, not checked for this namespace).
+**What a handoff must not claim:** that the Fiji case works; it calibrates to the whole world on purpose.
+
+## AI-24: `test:paste-table-037-parity` cut the wrong slice of 037 (2026-10-28, test fix, no version bump)
+
+The suite cut 037's reader out of the page by text, the second piece from `function describeUnreadable` to `function renderOutput`. P3 (v411 to v415) put the item-analysis page code between those two anchors, so the slice dragged in DOM code and the suite died with `ReferenceError: els is not defined`. It now ends at the `/* ---------- per-question item analysis` comment, right after `describeUnreadable`; every comparison and expectation is unchanged (5025 comparisons pass). Proved the other way: a changed line in 037's `tryNumber` makes it exit 1 with 1059 differences. The sweep of other suites that slice a page by `indexOf('function ...')` (`smoke-bulk-core`, the 006, 036, 038 and 075 parity suites, `stations.test`) found none broken; they all pass. **What not to repeat:** an end anchor of "the next function I know of" breaks the day someone adds code before it; anchor on a section comment, or move the reader into a module the test can import.
+
+## AI-24: Path 16 P5, 038 for science: fits, log axes, more series, annotations (2026-10-28, v419-v423)
+
+**What shipped.** v419 first repaired two rows of AI-26's (not this path's): `escape-room-builder:monitor-record` (a student key
+since v396) had no year-rollover rule, so `rollover.test.mjs` failed; it now has a `delete` rule in `br-rollover.js`, and
+`registry-shape.test.mjs` excuses the key as one added since the migration and sees `er-image.js`'s default `escape-room`
+namespace (`EscapeRoomImage = create('escape-room', ...)`), which the scanner could not. Then 038: **v420** `dcb-fit.js`, five
+fits by least squares (power, exponential and logarithmic on the transformed data, as a spreadsheet does), **R² always on the
+original y** so models compare on one number, points a model cannot take left out and counted; a Fit select under the trendline;
+`ChartSvg.scatter` takes an optional `fit`. **v421** log axes (`xScale`/`yScale`), decade labels with faint 2 and 5 lines,
+non-positive points left out and counted, trendlines drawn as the curves they are. **v422** more Y columns as series, a marker
+shape and colour each, a legend with R², a fit per series. **v423** the annotation layer: `region` (hatched, clipped), `arrow`,
+`callout`, in data coordinates; `ChartSvg.cleanNotes` is the only way a list gets in (12, 60 characters, finite numbers, control
+characters flattened); the card builds its list with DOM calls; notes travel in the share link and are never stored.
+
+**Held.** The default scatter is byte-identical (`test:chart-svg-draw-parity`, 553 drawings; one of its mutants had to be re-pointed
+at the renamed line, the check itself untouched). Each new pure suite has mutants that must be caught, and writing them found two
+real gaps in the tests (a log-scale mutant that kept even spacing, a curve sampled linearly that was still collinear); a mutant
+removing the dropped-point filter also hung the module (`-Infinity` as the lowest decade), so `logDomain` now ignores non-positive
+values. `test:chart-builder-science` (port 8582) drives the page: each model, each log case, series, notes, share links written
+before these fields existed, and a link whose note text is markup (drawn as text). axe found the data preview scrollable without
+keyboard access once a table was longer than the box; it now has `tabindex="0"`, a role and a label.
+
+**Not built, and why.** Step 5 (several charts to a printed page): 038 prints with its own `@media print` block, so a sheet means
+moving that onto the print kit or following 032's precedent, with a preview-adopters entry and a print audit; a session of its own.
+Step 6 (handoffs to 065 and 073): 073's link takes milestones and 065's a template, neither a chart, so no `handoffs.js` route
+exists and none was invented; what a receiver would need is written in the Path 16 P5 bullet. **Decisions taken (reversible):**
+base-10 logs only; R² on the original scale; no weights or confidence bands; notes not stored on the device; inline-sink baseline for
+038 raised 12 to 13 (the extra-column list: an escaped header and a numeric index). **Not verified:** on paper, with a screen reader,
+or against a spreadsheet's trendline (the fits are held to constructed datasets and independent arithmetic).
+
+## AI-24: Path 16 P4, 036 modelling: term count, before/after charts, roster check (2026-10-28, v416-v418)
+
+**What shipped.** The Final Grade Checker can grade a year of two semesters, three trimesters or four quarters. The count is
+`opts.terms` (`termsOf()`; 2 to 4, anything else is four) in `grade-math.mjs` and `scenario-math.mjs`, and `termCount()` on the
+page; cards, weights, the scenario form, the need tab, Excel and PDF exports, slips, triage wording and the paste reading all follow
+it. At four the page is what it was: the golden suite (`smoke-scenarios`) pins every card and the stored settings string byte for
+byte, so `terms` is written only when it is not 4. The Scenarios card now draws the class's final letters and percentage averages
+before and after (`distributions()` counts `compareClass()`'s own rows, so the pictures cannot disagree with the table), through
+`ChartSvg.bar`, grayscale-hatched, no names, with SVG/PNG download. A roster check (`roster-join.mjs`): roster students with no row,
+rows not on the roster, a pasted name twice, a row that fits two roster names; names compare with order, case, accents and
+punctuation ignored; a near spelling is shown as "close to ...?" and never matched; the roster is read (not written) from Class
+Roster Hub or typed, held in memory only. The need tab's grading window needed only `periods.length === termCount()`.
+
+**Decisions taken (all reversible).** Terms are 2, 3 or 4 (not 5 or 6); a semester exam is a further term column with its own
+weight, said in the help text; changing the count re-reads the paste if it is still in the box, else trims or pads; changing it
+resets custom weights to equal shares; the scenario chart is a class distribution, not one line per student; 036 gained
+`np_rosters` in its registry `reads`. **Not built, and why:** the triage handoff to 085/068, because neither has a share row or a
+`Share.receive`; **persistence of any grade or roster stays off** (policy), and the opt-in question is left for Devon with default no.
+
+**What the checks found.** (1) Typing in the need tab called `updateManual(NaN)` and threw: `attachManualListeners` bound every
+`.grade-input`, including the need tab's, which carry no student; now guarded. (2) `smoke-consumers-trips-grades.mjs` mutates the
+page's source text (`periods.length === QUARTERS`), so renaming that line made the break pass silently ("9/10 caught"); updated.
+(3) Two failures in `registry-shape.test.mjs` (`escape-room-builder:monitor-record` classification, namespace `escape-room`) were
+red before this work and are not 036's. (4) The first term-count smoke asserted the wrong thing about an unmarked 4-period paste read
+as quarters (the bare average column is taken as Q4); the default is unchanged and the test now says so.
+
+**Not verified.** No semester or trimester export has been opened in a spreadsheet or a PDF viewer: a throwaway run clicked Export
+Excel and Export PDF at 2, 3 and 4 terms and each produced a file with no page error, and the sheet-adopter suite covers four terms only. The charts were not checked in dark
+mode by eye. Suites: `test:final-grade-terms-core` / `-terms` (8579), `-scenario-chart` (8580), `-roster-core` / `-roster` (8581).
+
+---
+
+## AI-24: Path 16 P3, per-question item analysis in 037, whole (2026-10-28, v411-v415)
+
+**What shipped.** Five commits after the design (written into the P3 bullet first), each its own `CACHE_VERSION`.
+v411: a "Per-question scores" box read through `PasteTable`, `Tools/grade-distribution-visualizer/gd-items.js`
+(`GradeItems.analyze`, `tier`, `chart`), a missed-questions chart (`ChartSvg.bar`, which gained a `yMax` option so a
+percent axis ends at 100 and not 200) and a ranked reteach table. v412: the printed reteach priority list through the print
+kit (`#reteachSheet`, `PrintKit.setPage`, `PrintKit.preview({ area })`). v413: section against section (`items` is a
+list; `GradeItems.compare`; a hatched percent-correct chart; gap flag at 15 points; a reteach table per section).
+v414: small multiples of the compared assignments on one bucket list and one count axis. v415: "What this says",
+`GradeItems.narrate`, plain sentences from the page's own numbers, printed through the kit. Storage: new fields (`items`,
+`itemLine`) on the assignment record under the existing keys, no new key, no name ever displayed or drawn. Suites:
+`test:gd-items` (pure Node, named cases and 19 mutants) and `test:gd-items-smoke` (port 8578, next free 8579; includes axe,
+the print preview against Chromium's PDF page count, and the 70-question multi-page list).
+
+**What the checks found that the design did not.** (1) The reteach sheet printed a blank last page: `body { padding-bottom:
+100px }` stayed on the page, and `.pk-page:last-child` does not match when scripts follow the sheet in `<body>`; both
+are fixed in the print block and the suite holds the preview's count to the PDF's. (2) 037's assignment switcher, New and
+Delete were hidden after any reload, because only `newList()` showed the toolbar; `loadListByName()` does now. (3) The
+compare-with trend bars had no label colour (axe, serious: contrast); they take `textColorFor` as the main bar does. (4) My
+first "break-on-purpose" for the axis (no `yMax`) survived because the test data's tallest bar happened to give 100
+anyway; the suite now also pastes an easy test (25 % missed) and fails without `yMax`.
+
+**Defaults taken, none of them Devon's open questions:** percent correct against the highest score in a column when no
+"points possible" row is pasted; reteach below 70 %, watch within 10 points above; sections matched by question label,
+up to four; a 15-point gap is flagged; English only; the reteach list and the narrative print through one `#reteachSheet`
+and one `body.printing-reteach` class. **Not done / not verified:** nothing was printed on paper or read by a screen reader;
+no question text or standard (Path 12's bank); small multiples have no download button; the narrative's wording is rule
+text nobody has read in a PLC; the missed-questions chart for a second section is drawn but only the first has download
+buttons. No decision numbers.
+
+---
+
+## AI-24: Path 16 P2, `_shared/paste-table.js` built; 046, 038, 036, 037, 075 and 006 read through it (2026-10-28, v404-v410)
+
+**What shipped.** `PasteTable`, one classic script that an ES module also reaches as a side-effect import
+(`bmg-choropleth.js` and `grade-math.mjs` import it and read the global; `check:precache` follows the import). Seven commits, one
+per unit: the design in the BACKLOG bullet (the eight readers grep found), the module (`test:paste-table`, 47 named cases and 17
+break-on-purpose mutants), then six adopters, each its own `CACHE_VERSION` (v405 046, v406 038, v407 036, v408 037, v409 075,
+v410 006). Each adopter has a `paste-table-<tool>-parity` suite: a frozen copy of the old reader in `_legacy-*.mjs`, the page's
+own function cut out of its HTML and run in a `vm` (so the suite cannot pass against a copy that is not the page's), a hand corpus
+plus 4,000 to 6,000 seeded random pastes, and mutants of the module that the corpus must catch.
+**Reports where the tool showed nothing:** 038 names the column that one stray cell kept out of the value columns; 037's note names
+the skipped lines (it only counted them); 075's Add pasted rows says a row had no name (it used to vanish); 006's mapping dialog says
+which rows had fewer cells than the widest. 046 and 036 already reported what they could not read.
+
+**Decisions taken (none Devon's open questions).** Parity means the same result for every input the tool accepted before, so
+075 and 036 still read no quotes (a quoted name with a comma was never kept whole in 075; turning quotes on would change what it
+read) and 038 keeps its own `isNumeric` (it accepts `1e3`; `toNumber` does not) and passes it to `columnReport`. `Roster.parseDelimited`
+was deleted (006 was its only caller). `scv-ics.js`'s `readTable` (Path 9 P4) does not join: it finds dates by pattern in free text and has
+no delimiter to detect; `question-bank.js`'s `parseCsv` reads whole files with newlines inside cells; `vfg-layout.js` splits a term from its
+definition on one tab.
+
+**What went wrong and what is not verified.** (1) Deleting `parseDelimited` broke `qr-code-generator/test/smoke-bulk-core.mjs`, which cuts
+`Roster.splitCells` out of `roster.js` by text up to the next doc comment; it now cuts up to `function looksLikeHeader`. `--only
+qr-code-generator` found it, the parity suites did not: a function other suites slice out of a file by its neighbours is a hidden
+coupling. (2) The first 037 and 036 mutants were equivalent mutants (cell trimming cannot be seen where the line is trimmed first); the
+suite says so rather than keeping a mutant that proves nothing. (3) `check:registry` prints `STALE br_rollover_v1` ("written by nothing in
+the tree") and still exits 0; it was there before this work and is not touched. (4) The browser behaviour of 037's and 075's new notes is
+held by the Node `vm` suites on the page's own functions, not by a browser run; 038's and 006's notes have a browser check
+(`smoke-chart-a11y.mjs`, `smoke-bulk-import.mjs`). (5) No spreadsheet was opened; a real Excel/Sheets paste with a quoted multi-line cell was
+not tried (a quoted newline splits the paste into lines before any parser sees it, as it always did).
+**Left.** `Roster.splitCells` (016's batch codes) and `qr-code-generator/bulk-rows.js`'s `delimOf` keep the last two copies of the split.
+
+## AI-24: Path 16 P1, `_shared/chart-svg.js` built; 037 and 038 adopt it (2026-10-28, v402-v403)
+
+**Step 1 (v402), a port.** 037's contrast rule, hatch patterns, `n =` caption, both SVG builders (stacked bar, histogram), the
+2x-on-white rasterizer and the copy/download path moved into one classic script, `window.ChartSvg` (not a module: 037 and 038
+are inline classic scripts; `export.js` is the precedent). 037's HTML is otherwise untouched and its charts are
+byte-identical: `test:chart-svg-parity` runs 1,441 data cases through the new code and a frozen copy of the old
+(`Tools/grade-distribution-visualizer/test/_legacy-chart.mjs`), plus the colour arithmetic, and 9 deliberate defects
+must each be caught; `test:chart-svg` holds the properties on their own (>= 4.5:1 labels on every ramp step, segments
+sum to the bar, heights are shares, nothing unescaped, well-formed XML) with 10 mutants. `test:grade-dist` (the clipboard
+suite) and the a11y sweep for 037 pass.
+
+**Step 2 (v403), 038 adopts.** `niceMax`, `formatNum`, `linearRegression`, the axes and `bar`/`line`/`pie`/`scatter`/`box`/
+`blankAxes` take the page's state as an options object; 038 keeps parsing, column picking, the share link and the
+worksheet. `test:chart-svg-draw-parity` (553 drawings against the frozen `_legacy-draw.mjs`, a11y envelope and pie label
+colour normalized away, 12 mutants), `test:chart-svg-a11y` (13 mutants) and the browser suite `test:chart-builder-a11y`
+(port 8577) hold it. The baseline: `role="img"` + `aria-labelledby` on a `<title>` and a generated `<desc>` (types, categories,
+values, shares, the fit, capped at 12 items, escaped), a polite announcement on every redraw, pie percentages in the better of
+ink and white (white on the yellow slice was 1.6:1), a hatch per later series in grayscale mode, ids with a prefix so the
+printed worksheet and the chart never share one. **Found on the way:** 038's value-column checkboxes had no label at all (axe
+"critical"); the empty-page sweep never reached them. Fixed with `for`/`id`. The a11y allowlist needed no change (038 was never on it).
+
+**Step 3 not done, on purpose.** Moving `RAMPS` to `ChartSvg.ramp()` does not fit: `bmg-choropleth.js` is an ES module
+imported by 046 and `smoke-choropleth`; ChartSvg is a classic script. 046 would depend on a global having loaded first and the
+pure-Node import would break, for no behaviour gained. `chart-svg.test.mjs` instead pins ChartSvg's luminance to the map's on
+every ramp stop (the formula was written twice). Reversible: a `ramps` ES module both import is the clean version if a third
+reader appears.
+
+**Housekeeping.** Rank 43 deleted, ranks after it moved up one (the earlier gaps in the table stay as they were); live in-text
+refs I could verify against a row were moved with them, three stale ones (rank 100, 116, 98: no such row today) were left.
+`SHELL_URLS` and `PRECACHE_URLS` both list the file (v403 also bumped for the page changes). Shared lists this obliges others to
+touch: `suites.json`, `suite-durations.json` (new suites costed at 1/20), `package.json`, `eslint.config.js` (`ChartSvg` global).
+`offline:build` and `offline:verify` pass (all 11 entry points) with this change. Not verified: a screen reader reading the `<desc>`;
+the grayscale hatches on paper; 037 and 038 opened from a `file://` offline copy (the verify's 11 entry points do not include them).
+
+## AI-28: offline:verify fixed, Path 20 P1 ported to `_shared/geo-project.js` (2026-10-28, v401)
+
+**The offline failure (part A).** `npm run offline:verify` had failed on 046 with `Uncaught TypeError: Failed to
+construct 'URL': Invalid URL` since the relief art arrived. Cause: `bmg-vector.js` gained a second
+`new URL('./art/', import.meta.url)` (`ART_DIR`) after `make-offline-copy.mjs` was written, and the generator's
+patch knew only `DATA_DIR`. esbuild's IIFE output leaves `import.meta` empty, so the constant threw as the bundle
+loaded. The patch now rewrites `ART_DIR` from `document.baseURI` (asserted exactly once, like the others), and
+`bundleModule()` fails the build if any offline bundle still contains `import.meta`, which is the check that would
+have caught it at build time. Verified: `offline:build` then `offline:verify` pass all 11 entry points, twice.
+`offline:verify` is still not in CI. Not run: a real file:// check that the relief image paints (the verify only
+proves nothing throws).
+
+**P1 (part B).** The projection, antimeridian handling, per-feature tracing and the hit test moved out of
+`bmg-vector.js`/`bmg-hittest.js` into `_shared/geo-project.js`, which they now re-export. 046's maps are unchanged:
+`test:geo-project-parity` compares the module with a frozen copy of the old code over the real data (135 checks)
+and `test:geo-project` has 559 checks and 15 mutants. `blank-map-generator`, `timeline-builder` and
+`geography-bee-quiz-generator` suites green. Decisions taken (reversible): the `data/` files stay put; the
+gazetteer is not lifted (one copy, classic script, no second reader), `gbq-map.js` is not switched; both are rank
+62's remainder. `unprojectPoint` is new and not yet used by anything: `bmg-latlong.js` keeps its own inverse.
+Shared lists this obliges others to touch: `sw.js` (done, both tiers), `suites.json`, `suite-durations.json`,
+`package.json`. Another thing found: `check:registry` prints a STALE line for `br_rollover_v1` that is not from this
+change.
+
+## AI-31: Path 5 P5-1, the three home-made projector overlays move to the shared fullscreen (2026-10-28, v398-v400)
+
+Devon's 2026-10-21 answer to Path 5's one open question was "Move them to the shared fullscreen". One tool per commit, each with its own `CACHE_VERSION`; `_shared/stage.js` did not change.
+
+**v398, 017.** The rotation projector (`#projectorView`) is a `Stage.mount` in 001's shape: it stays `hidden` until opened, is un-hidden first (an element that is `display:none` cannot be fullscreened) and then entered, `fullscreenKey: false` with `f` in the hotkey map, and the stage's `onChange` is the one place it closes. Its own Escape handler went (the helper's handles the fallback; real fullscreen's Escape is the browser's). `#projectorView.is-fullscreen` restates the dark background because the helper's injected fallback rule paints `var(--paper)` after the page's `<style>`. `rotation-parity` stays green.
+
+**v399, 064.** The review game overlay, same shape; "Pause & close" is the stage's `exitButton` and its `onChange` saves the game first, so every way out (button, F, Escape on the fallback, the browser's Escape) pauses it as before. F only ever *leaves*: a game needs its teams chosen, so F cannot start one (the rollout suite takes `fOnlyLeaves`). The page's own Escape branch went.
+
+**v400, 030.** `<body>` is the stage (010's shape) with a Fullscreen button beside Projector view and F. The `enabled` gate switches the stage's keys off while a clue or round overlay is open or the board is not showing, so Escape closes the clue and does not also leave a fallback stage.
+
+**Decided, reversible.** (a) 030's clue overlay is not itself the stage: it opens on every tile, and a fullscreen entered and left per clue flips the projector's screen mode each time. (b) Projector view and Fullscreen are two switches on 030 (as on 010): the view is remembered per tab and a reload cannot re-enter fullscreen without a click. Folding them into one button is a small change in `setProjector`.
+
+**Changed tests.** `gallery-walk-qr/smoke-projector` closes the view with F (headless Chromium ignores Escape in real fullscreen; Escape on the fallback is in the rollout suite). `smoke-stage-rollout` gained 017, 064 and 030 (238 assertions, was 190).
+
+**Not verified.** A real projector, a Chromebook, or a real Escape out of real fullscreen (only the fallback's Escape is driven). 030's tall board scrolling in real fullscreen was set (`body.is-fullscreen {overflow-y:auto}`) but not scrolled by a test.
+
+---
+
+## AI-26: Path 18 P4, the debrief for a 019 room (2026-10-28, v395-v397)
+
+**v395, one sheet for both tools.** 018's debrief layout (path table, summary line, reflection page) moved out of the page into `_shared/stations-debrief.js` (`StationsDebrief.render(host, teams, opts)`, one `PrintKit.renderCards` call) with `_shared/stations-debrief.css`; 018 calls it and its inline rules went. `smoke-print` now counts five `renderCards` calls in the page, one `StationsDebrief.render`, and the one in the module (it said six in the page before).
+
+**v396, the record.** 019's play is on student devices, so the monitor keeps only what it hears: `ErBoard.applyMessage` marks a station solved when a device moves off it (or finishes while on it), at the monitor's clock; the first solve is kept, a room sent back to an earlier station overwrites nothing, a room restarted after it finished starts again, a code with no station ids records nothing. `ErBoard.toRecord` writes it in the run shape `Stations.debrief` already reads (so there is one rule, not two), `cleanRecord` reads it back, `roomFor` picks the saved room that holds most of its station ids. Kept in `escape-room-builder:monitor-record` (Store envelope, registry row `student: true` since it holds the team names the teacher typed), on the teacher's device only; saved only once a team has moved on, so opening the monitor never overwrites the last record. `lock.html` is unchanged. `er-board.test` now 46 assertions and 11 mutants (5 new); `smoke-monitor-record` (port 8575), three page mutants by hand.
+
+**v397, the print.** The monitor's Record card has a room choice (the matching room preselected), Preview Debrief and Print Debrief, through the kit; `smoke-monitor-debrief` (port 8576, 27 assertions, four page mutants by hand) and a `019` entry in `smoke-preview-adopters` (the preview's page count is Chromium's PDF count in three states, light and dark).
+
+**Decided, reversible (no number; none are Devon's open questions).** (a) The sheet for a room has **no wrong-tries or hint columns** and says so, rather than print a 0: a phone's message carries only station, total, done and score, and adding counts to it is a `lock.html` change, held by "nothing is student-facing right now". The `without` option puts them back for a sheet that has the data. (b) A room's stations have no names, so the sheet says "Station n". (c) The record is replaced only by a new session that has moved a team; a Clear button asks first. (d) Monitor times are the teacher's clock (as for v392's board), so a device that reconnects after the clock is reset reads from the new start.
+
+**Not verified.** Paper; a phone; a real WebRTC pairing feeding the record (devices were fed through `ErBoard.applyMessage`, as v392's suite does); `audit-print` and `test:print-tail` for the monitor's sheet (neither opens that page).
+
+## AI-26: Path 18 P3's last printed pieces and P4, 018's debrief print (2026-10-28, v393-v394)
+
+**v393, branches on paper.** 018's teacher answer key lists under a multiple-choice station where each branched choice sends a team ("Choice A "Forest" sends the team to Station 3"); a route card, which a team holds, says only that at some stops the answer decides where to go next and never names a choice, so the card does not give an answer away. `validStations()` had been dropping `branches` from its copy of each station, which is why the key could not see them; it now carries them.
+
+**v394, the debrief (P4).** `Stations.debrief(set, run)` works out, per team, from records the run already holds and nothing new: the path in the order the stations were reached (`marks[id].at`), the time since the clock started and on each leg, the wrong tries before each stop (`marks[id].attempts`, else `attempts[id]`), the hint taken (`hintsUsed[id]`), the branch a team was sent on (`marks[id].branch`), the stations still open with their wrong tries, and totals. A time the records cannot give is null and prints as a dash: with no clock start there is no first leg and no finish time, never a guessed one. 018 has Print Debrief and Preview Debrief on the Live Run tab: two pages a team (the path page, then a reflection page with four prompts and ruled lines), through `PrintKit.renderCards` with the one-per-page grid, so the print preview and `test:preview-adopters` cover it. Tests: `stations.test.mjs` gains a debrief case and 3 mutants; `smoke-debrief` (port 8574, **next free 8575**); a by-hand page mutant was caught.
+
+**Decided, reversible (no number; none are Devon's open questions).** (a) The debrief is **018's**, not 019's: a 019 room is played on student devices and the monitor keeps nothing across a reload, so there is no record to print; giving 019 a record is the room `run` field's job and was left alone. (b) Station branching stays on **choice** stations only: a text or numeric station has no list of accepted answers to key a branch on, and the design names none. (c) `bankId` (questions from Path 12's bank) is **not built**: the design says only that the field is carried, and how a station's answer type maps onto a bank question is Path 12's call. (d) The reflection prompts are fixed text, four of them, not editable. **Not verified:** a sheet on paper, a phone, the annotated floor-plan map the P4 bullet mentions (046 and 035 are other tools' pages).
+
+## AI-26: Path 18 P3, 018's per-answer branching and 019's teams, timing and leaderboard (2026-10-28, v391-v392)
+
+**Branching (v391).** The default built, for the questions the design left: a branch lives on a **choice** station only (a text, numeric or photo station is marked by the teacher, so there is no answer to branch on); a branched choice **is an accepted answer** even when it is not the right one (otherwise a "choose your path" hunt could not have a second path); the branch is keyed by the choice's text (the schema's `byAnswer`), so renaming a choice moves its key and removing one drops it, and two choices that read the same cannot both carry a branch. The run stores the route **on the mark** (`marks[id].branch`), not in a list beside it, so un-marking a station cannot leave a stale route. `Stations.branchOf(set, station, given)` is the single reader (`nextOf` now calls it), and `Stations.branchProblems(set)` returns the sentences the editor shows: a choice back to its own station, a branch to a station with nothing on its card, twin choices, and a **closed loop** (stations whose accepted answers all branch, only ever to each other, so no team can finish; a station finishes if it has an unbranched right answer or any branched choice reaches one that finishes). The editor refuses an edit that raises the count of problems, puts the field back and says why; a hunt that already has a problem (arrived by link) shows it in a status line. Branches ride the share link only to stations in the link, and `fromShare` keeps one only for a choice the station has. `stations.test`: 430 assertions, four new mutants (outside-the-link branch kept, self-branch not refused, loop not refused, unmatched answer takes a branch); `smoke-branches` (port 8572) has three by-hand page mutants run and caught (refusal off, branch not stored on the mark, rename not re-keyed). Not built: route cards still say "work down the list" for a hunt with branches; the answer key shows no branch.
+
+**019's teams, timing and leaderboard (v392), on the teacher monitor.** 019's play happens on student devices, so a leaderboard there means the teacher's page: `monitor.html` already received each device's station and score over WebRTC. It now names each device as a team (a typed name, "Team n" otherwise), has the teacher's Start/Reset clock, and ranks the devices with `Stations.rank()` (stations reached, then the earlier arrival; the comparator is 018's, moved into `stations.js`, and 018's leaderboard calls it). Times are the **monitor's own clock at the moment a message arrived**, so `lock.html` did not change and no student device's clock is trusted. Score is shown beside the rank. **Devon's open question 5 (minutes or points) is not decided here: the default built ranks by stations then time and shows the score beside it; reverse it by changing `leaderboard()`.** `er-board.js` is pure (`applyMessage`, `leaderboard`, `formatElapsed`), `test:er-board` runs it in Node with five mutants of it and one of `Stations.rank`; `smoke-monitor-board` (port 8573) adds devices through `window.__monitor` (a WebRTC pairing needs two peers) and covers ranking, a typed name keeping the cursor through redraws, markup in a name staying text, the clock, a disconnect and a restarted room. Not built: nothing about the monitor persists across a reload (as before); 019's own `run` field is still unused. Not verified: a real paired phone, or the monitor on a classroom Wi-Fi.
+
+## AI-26: Path 18 P3, the required set in 018's share link (2026-10-28, v390)
+
+`Stations.shareState` adds `required` for a hunt only when a station is starred, filtered to the link's own station ids; `fromShare` keeps the strings that name a station of the arrival, once each, and adds the field only if any remain. A hunt with no star, and a room, produce exactly the v389 output (the frozen-function parity cases in `stations.test` still hold). Two new mutants (`shareState` drops the set; `fromShare` keeps an unknown id) and a round trip in `smoke-required`: the page's own state is turned into a link with `StateLink.buildShareUrl`, opened on an empty store, and the same ids are starred. Not built, rank 54: 018's per-answer branching (the run must store a route), 019's teams/timing/leaderboard, the bank. Not verified: a link made by an older page (it carries no field, so it reads as before), a phone.
+
+## AI-26: Path 18 P3, 018's free-order required set (2026-10-28, v389)
+
+A hunt may star some stations as required: `required`, a list of station ids on the hunt, written only once a star exists (absent, a hunt counts every station as it always did). `Stations.progress(set, marks)` is the one reader: `{ total, done, bonus, explicit, required, finished, nextId }`, taking the canonical set (`Stations.read(state)`; passing the on-disk shape crashes in `huntNorm`, which the first browser run found). 018's row actions gained a star button (`aria-pressed`); the leaderboard counts required stations ("1 / 2 (+1 bonus)"), ranks by required reached before total reached, and a team is Finished when it has every starred station; Live Run's "next up" skips a bonus station and says "All required stations complete!"; route cards and answer sheets tag a bonus stop. Tests: 8 cases and 2 mutants in `stations.test.mjs` (397 assertions), `smoke-required.mjs` (port 8571, **next free 8572**, 20 assertions) with three by-hand mutants on the page (leaderboard finish by count, the field kept when empty, the route tag removed), each caught. **One behaviour changed on purpose:** the leaderboard no longer counts a mark that belongs to no current station (it used to count and could show a team finished early after stations were deleted); the old code kept it only because marks were keyed by position. **Not built:** the share link does not carry `required` (`shareState` is held to the frozen v385 function; adding it only when present is the next step), `flow: 'free'|'chain'` has no UI, per-answer branching in 018 (a hunt's route is derived from a position, so branching needs the run to store a route; a design step, not a quick edit), 019's teams/timing/leaderboard, `bankId`. Not verified: a phone, paper.
+
+## AI-26: Path 18 P2's two loose ends and P3's first feature, 018 station pictures (2026-10-28, v385-v387)
+
+**v385:** a room's go-to is stored as the target station's id on disk. `Stations.toDisk(room)` returns the stored form (a position becomes the id at that position, `'end'` stays); `Stations.read` takes an id or an old numeric position, and `write` gives positions back, so 019 still holds positions in memory and its move/delete code is unchanged. 019 calls `toDisk` at its three write points (save, rename, share arrival). Old saved rooms still read; a page from an older cache sees a string `next` as "auto" until it reloads the new page. `smoke-ids` and `smoke-legacy-codes` now read the id back as a position. **v386:** `Stations.shareState(obj, {kind, imageSrc})` and `Stations.fromShare(obj, {kind, uniqueName, roomId, isInline})` replace the two pages' `getState` and `normalizeRoom`/`normalizeHunt`; the v385 functions are frozen as `Tools/stations/test/_old-share-functions.txt` and the suite runs old and new on the same rooms and hunts, including hostile rows. **v387:** 018 gets a picture per station (`image`, optional, absent until used): a file input in the station's detail row (the bulb button now reads "hint or picture"), shown on the preview card and printed on the QR card and the clue card as a decorative `<img>` (empty alt, `max-height` not a clip). The picture lives in the media namespace `scavenger-hunt` through `EscapeRoomImage.forNamespace(ns, tool)` (`er-image.js` is now built per namespace; 019's default is unchanged) and is hydrated, migrated and cleaned at boot as 019's are; the registry declares the namespace and `registry-shape` learned to find `forNamespace(...)`. The share link carries no picture (as before). `smoke-images` (port 8570): 20 assertions and three deliberately broken pages that must fail. **Judgement calls (reversible):** namespace per tool rather than one shared with 019, so neither tool's `gc()` can delete the other's pictures; the picture sits above the code, not beside it. **Left:** 018 branching and required set, 019 teams/timing/leaderboard, `bankId`, the typed short code (held). **Not verified:** a phone, paper, 018's older-cache page reading a hunt with a picture. Checks: `lint`, `check:tests/precache --base/registry/inline-sinks/entities/hidden-flex/print-clip/dedupe`, `test:registry`, suites stations (pure, smoke, legacy), escape-room x3, scavenger-hunt x3, share-rollout, `a11y --only 018`, `audit-print --only 018`.
+
+## AI-26: Path 18 P2 loose end and P3 step 1 (2026-10-28, v383-v384)
+
+**v383:** `er-match.js` is folded into `_shared/stations.js` (the matcher moved over unchanged and `window.EscapeRoomMatch` is still published, so `lock.html`, 019's test run and `smoke-test-run.mjs` call it as before); `lock.html` and 019 stop loading the file; `sw.js` loses its line. `test:stations` now loads the v382 file, frozen as `Tools/stations/test/_old-er-match.txt`, in its own context as the parity reference, so the module's copy cannot drift unseen. **v384:** the schema fields P3 needs, in the module only: `branches.byAnswer`, `bankId`, a hunt station's `image` and `encode: 'player'`, a set's `flow` and `required`, a room's `run`, and `nextOf(set, station, given)` / `reachable()` reading them. All are absent until used, so `write(read(x))` of every existing fixture is unchanged. 366 assertions, eight mutants. No page uses them; the player's branching is student-facing and held. **Judgement calls (reversible):** a branch's key is the accepted answer as the teacher typed it, matched by the text normaliser; a branch target may be `'end'`; `flow` is written only when it differs from the kind's default. **Left:** the `next`-as-id disk change and the `getState`/`normalize*` consolidation (rank 53), the tool features (rank 54). **Not verified:** nothing in a browser exercises a branch, no phone, no paper. Checks: `lint`, `check:precache --base origin/main`, `check:registry`, `check:docs-commands`, `check:adoption --check`, suites stations (8), escape-room (3), scavenger-hunt (3).
+
+## AI-26: Path 18 P2, both tools on the schema, the payload budget; the typed short code held (2026-10-28, v380-v382)
+
+Three commits, one tool or one step each. **v380:** 018 loads a hunt through `Stations.read`/`write` and keys its live run by station id (every `marks[i]`, `attempts[i]`, `hintsUsed[i]`, `checkinStation` site; an index-keyed run saved before is converted once at load). **v381:** 019 builds every link and code with `Stations.playPayload`/`playUrl` and deletes its own `buildRoomPayload`/`stationPayloadFor`; `lock.html` decodes through `playRead`, saves progress by id when the code has ids and by index when not, ends the room on `'end'` (the one named behaviour change: it used to carry on), and `monitor.html` passes the id through. **v382:** `Stations.budget()` gets its body (QrDraw at the printed 600 px canvas, 4 px a module) and 019 refuses a station over it by number and disables Print codes.
+
+**Decided, cheap to reverse:** (1) the typed short code in `lock.html` is **not built**. Devon's standing "nothing is student-facing right now" covers question 1, which lists it; the row says what the shape is when it is allowed (two codes per card, P18-4). (2) `next` stays a position on disk, because that is the shape a page from an older cache reads; moving or deleting a station now re-points the links by id instead. (3) id-keyed progress opened by a code without ids (G2) shows a generic sentence and writes nothing. (4) A station over the budget disables only Print codes, not the answer key or the packet. (5) The parity half of `test:stations` reads 019's v379 functions frozen as text (`_old-019-functions.txt`), because the page no longer has them; the frozen copy is the old behaviour on purpose.
+
+**Found:** the 018 run assertion in `smoke-ids` (marks "still index-keyed") was P1's and had to flip to id keys; `write()` orders a room's keys differently from the seed, so that comparison is now key-order-blind. A fat-station probe needed 700 characters, not 1,300, to land between "fits" and "past version 40": the 600 px floor bites at about version 31.
+
+**Not verified:** no phone read a v2 code; `lock.html` from before this change opening a P2 code is argued, not run (the design's served `v255` copy was not set up); nothing printed. Checks: `lint`, `check:tests`, `check:precache`, `check:registry` (`br_rollover_v1` STALE, pre-existing), `check:inline-sinks`, `check:entities`, `check:hidden-flex`, `check:dedupe`, `check:docs-commands`, `test:select-suites`, `test:shard-suites`; suites `test:stations`, `test:stations-smoke`, `test:stations-legacy`, `test:escape-room`, `test:escape-room-images`, `test:escape-room-station-qr`, `test:scavenger-hunt`, `test:scavenger-hunt-print`, a11y 018 and 019. No rank renumbered: rank 53 is kept and cut.
+
+## AI-26: Path 18 P1 built, `_shared/stations.js` and ids on disk in 018 and 019 (2026-10-28, v378-v379)
+
+The design was written 2026-10-06 (`BACKLOG.md`, Path 18, P1 bullet); this is its build, in two commits. **v378:** the module (`window.Stations`, pure, no storage or DOM) and `test:stations`: 346 assertions, with `playable()` held to 019's and 018's own `validStations()` and `playPayload()` to 019's `buildRoomPayload` + `stationPayloadFor`, those functions cut out of the HTML by name at run time (so a drift in a page shows here), `check()` to `er-match.js` loaded from its file and to 018's `parseFloat` rule, and five broken copies of the module (a null shift read as 0, a duplicate id kept, the ids string dropped, a tolerance ignored, an orphan mark kept) that the suite must go red on. **v379:** 018 and 019 load the module and call `ensureIds()` in `save()` and after a load; `test:stations-smoke` (port 8568) seeds each page with its pre-P1 shape and checks the id on every station, that a reload, a move and a remove keep them, and that nothing else in the saved blob moved. `test:escape-room` (3 suites), 018's three suites and the a11y sweep on both pages stay green.
+
+**Decided, cheap to reverse:** the share link does not carry ids yet (adding `id` to either `getState` changes the link's bytes; P2 does it with `read()`/`write()`). `write()` to the other kind carries the whole canonical station in `x` so a trip through the other tool's shape loses nothing. Devon's recorded answers (2026-10-05, 10-07, 10-21) are written into the P1 bullet as settled.
+
+**Found:** adding `id` to a 019 station is safe because every payload builder lists fields; 018's `ensureRun()` already upgrades a bare numeric mark, so the smoke compares against that. **Not verified:** nothing printed or scanned; `lock.html` and `monitor.html` untouched and not re-run beyond `test:escape-room-station-qr`.
+
+Checks: `lint`, `check:tests`, `check:precache --base origin/main`, `check:registry` (`br_rollover_v1` STALE, pre-existing), `check:inline-sinks`, `check:entities`, `check:hidden-flex`, `check:dedupe`, `check:docs-commands`, `check:adoption --check`, `test:select-suites`, `test:shard-suites`.
+
+## AI-22: Path 14 P5 increment 3, live mode on 005; 018 and 043 decided out (2026-10-28, v377)
+
+The design is in the P5 bullet in `BACKLOG.md`. **Live mode** is opt-in: a "Live mode" button beside Actual size mounts `Stage` (`_shared/stage.js`) on `#floorWrap` (`fullscreenKey: false`; `hud: #liveBtn`, because a button outside the stage is under the overlay and could not be pressed to leave, which `smoke-live` found the first time it ran). While live, a tap on a seat toggles *absent today* through `_shared/student-flags.js` (`crh_flags_v1`, by the id `Roster.idIndex()/idFor()` finds from the name, the section's name as the hint); a student on no saved roster is absent for the live session only and writes nothing; no tap touches the chart, desk controls hide and seats do not drag. 005 is now a second writer of `crh_flags_v1` (006 was the only one); the key is spelled out in the `setItem` so `check:registry` can read it. `smoke-live.mjs` (`npm run test:seating-live`, port 8567, 21 assertions), seen failing five ways with the write broken.
+
+**Decided, not built: 018 and 043.** Each keeps one cleared/deleted thing for a timed window and a second step replaces the first (018 clears its timer and buffer; 043 says so in a comment), so a stack would never hold two. Recorded as 024 was.
+
+**Not built: a point in 008 and a pass in 001.** Neither tool takes anything in: no query parameter, no `Handoffs` entry to receive. The design lists the two honest routes (a handoff entry plus a receiver in each, or 005 writing their storage the way 003 writes 037's), both cross-tool schema changes and, for a link, a student's name in browser history against `handoffs.js`'s "published only" rule. Left for Devon; not forced.
+
+Checks: `--only seating-chart` (16 suites), a11y 005, `test:theme`, lint, `check:precache --base origin/main`, `check:registry` (`br_rollover_v1` STALE pre-existing), `check:entities`, `check:hidden-flex`, `check:print-clip`, `check:inline-sinks`, `check:dedupe`, `check:docs-commands`, `check:adoption --check` (stage.js 13, student-flags.js 6; the header row is rewritten). Not run: the whole `--changed` list (`sw.js` is site-wide), a real projector or a phone.
+
+## AI-22: Path 14 P5 increment 2, `_shared/undo.js` in 002, 021 and 027 (2026-10-28, v374-v376)
+
+One tool per commit, each with its own `CACHE_VERSION` and its own `smoke-undo.mjs`, seen failing once with `limit: 1`. Path 13's `test:grouping-parity` (122,352), `test:grouping-adopters` (256) and `test:rotation-parity` (64,000 checks) are unchanged and green, and 002's golden classes were not touched.
+
+- **v374, 002.** Undo walks back up to 30 shuffles (it kept one). The snapshot is the same (groups, pair history, locks, role memory); the first Make Groups still has nothing behind it, so Undo stays grey there. `smoke-undo.mjs` (port 8564): grey before and after the first grouping, one reshuffle one Undo, three reshuffles undone in reverse, a new class clears the stack.
+- **v375, 021.** Undo walks back every Reset and New unit (30 steps). The two `captureUndoSnapshot()` call sites are unchanged. `smoke-undo.mjs` (port 8565): one Reset one Undo, two Resets undone in reverse, switching unit clears the stack.
+- **v376, 027.** Undo walks back every meeting delete and role-history reset (30 steps). The button still names the step it will take (`Undo: delete meeting`); a label list runs alongside the stack. Logging a meeting or switching project still empties it. `smoke-undo.mjs` (port 8566): delete, reset, delete undone in reverse with the label following, each step restoring only its own field.
+
+**Decided, not built: 024.** "Undo clear" cannot hold a second step. Clear board needs cards on the board; Add card empties the undo (a restored board would overwrite the new card), so the stack never reaches depth 2. Adopting would change nothing a teacher sees. If Remove-card is ever made undoable, that is a new feature and a new row.
+
+**Still not done.** 003 (no undo today; adopting adds a feature, not a port), 018 (15-second Undo clear window) and 043 (10-second deleted-trip bar), both kept as timed windows per the design, and live mode (cross-tool, needs its own design). Not run: the whole `--changed` list (`sw.js` is site-wide).
+
+## AI-22: Path 14 P5 increment 1, `_shared/undo.js` and three adopters (2026-10-28, v371-v373)
+
+P5 had no written design; it is now in the P5 bullet in `BACKLOG.md` (surface, limits, what is kept per tool, buttons and keys, adoption order). `_shared/undo.js` publishes `UndoStack`: `create({ limit, maxBytes, serialize, parse, onChange })`, `push`, `pushRaw`, `undo(current?)`, `redo(current?)`, `canUndo/canRedo/depth/redoDepth/clear` and `keyHandler`. Snapshots are strings; 60 steps by default; redo only fills when a tool passes `current`.
+
+- **v371, 005 as a port alone.** `undoStack` is now an `UndoStack` (limit 60); `pushUndo`, the drag's `pushRaw(snap0)`, `undo()` and the `setState` clear use it. No Redo, and 005 keeps its own Ctrl+Z handler because Ctrl+Shift+Z undoes there today and `keyHandler` would treat it as redo. All 15 `seating-chart` suites unchanged and green. `npm run test:undo` (pure Node, 8 deliberate breaks each seen caught; the first draft let "clear leaves redo" survive because the test cleared an already-empty redo side).
+- **v372, 022.** "Undo last shuffle" walks back up to 30 shuffles (it kept one). The snapshot is the same five fields. A new roster or switch clears the stack. `smoke-undo.mjs` (port 8562): one shuffle then one undo, three shuffles undone in reverse, a new roster clears; seen failing with `limit: 1`.
+- **v373, 020.** "Undo last pick" walks back up to 40 picks (8 MB cap). The 20 `captureUndoSnapshot()` call sites are unchanged, which `smoke-redecide` needs because it rewrites that text. `smoke-undo.mjs` (port 8563); seen failing with `limit: 1`. The old comment said single-level was "per the ask"; I took that as the first version's scope, not a rule.
+
+**Not done.** 002, 003, 018, 021, 024, 027, 043, and live mode (cross-tool, needs its own design). 003 has no undo today (its only "undo" hits are confirm text), so it would gain a new feature, not a port. 018's "Undo clear" is a 15-second window and 043's deleted-trip bar a 10-second one, both kept as they are; the P5 bullet records the default, decide when reached. No Redo button was added anywhere (default: keys only, none wired yet). No decision numbers; next free port 8564.
+
+## AI-22: Path 14 P4 increment 3, marks edited in place and zone rules that follow a mark (2026-10-28, v369-v370)
+
+Audit entry AI-22, rank 36 (now ¼, only Devon's items left). Two steps, each its own commit and `CACHE_VERSION`.
+
+- **Step 5 (v369), 005.** `editMark(state, roomId, markId, patch)` (w, h, rot, label, kind only; the same repair a stored mark gets
+  clamps it) and `footprint(m)`, the box a turned mark covers (a quarter turn swaps width and height about the centre; `desksNear` reads it).
+  On the page: a corner grip (pointer, snapped, undoable, measured along the mark's own axes), Shift+arrows to resize, R to turn, and per mark in
+  the Room card a label box, width and height boxes and a Turn button, each named for a screen reader. `test:seating-room` 45 (+11),
+  `test:seating-room-edit` (port 8561); disabling the Shift branch was seen failing it. The grip is a corner triangle: aim inside it.
+- **Step 6 (v370), zone rules.** A zone rule over desks may carry `mark` (a room mark id), written by the Rules block's new "Desks near a mark in the
+  room" zone. `syncMarkRules(state)` recomputes `desks` from `desksNear` at the top of every `renderAll()`, so the solver, checker, Why? panel
+  and share/sub paths still see a desk list and were not touched. Defaults taken (not Devon's open questions): a mark with no desk near it leaves
+  the rule's desks as they were (never an empty rule); a removed mark, or a period that leaves the room, drops `mark` and keeps the desks; a share link
+  carries no `mark` (`forShare`). `repairRule` adds the key only when set, so old rules are byte-identical. `test:seating-room-zone` (25, pure
+  Node, on `saved-v357.json`), and the page flow in `smoke-room-edit.mjs` (33 total); skipping `syncMarkRules` was seen failing two assertions.
+- **Not done / not verified.** Marks in 007's and 045's pictures (Devon's call, left listed on rank 36); rank 37 (P5). No real classroom, no
+  paper, no touch screen: the grip and Shift+arrows were driven with Playwright's mouse and keyboard only. A rule's mark cannot be changed in place
+  (remove and re-add), like the rules themselves. 005's a11y sweep passes; the desks' own colour-contrast findings are the allowlisted ones, so the
+  new test scans the mark list and marks only.
+
 ## AI-22: drive-seating's "refused with a sentence" flake (2026-10-27, test only, no CACHE_VERSION)
 
 The check at "placing a student on it is refused with a sentence" (`Tools/seating-chart/test/drive-seating.mjs`, from v362) failed about 1 run in 3

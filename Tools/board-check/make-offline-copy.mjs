@@ -127,6 +127,14 @@ const BMG_VECTOR_REL = path.join('Tools', 'blank-map-generator', 'bmg-vector.js'
 
 const OLD_DATA_DIR = `const DATA_DIR = new URL('./data/', import.meta.url);`;
 
+// The relief art is an <img>, which file:// loads fine, but its base URL is
+// also built from import.meta.url, which esbuild's IIFE output leaves empty
+// (new URL(..., undefined) throws at load: the "Invalid URL" 046 failed on
+// from the relief art's arrival until this patch). Resolve it from the page,
+// which sits in Tools/ beside the tool's folder.
+const OLD_ART_DIR = `const ART_DIR = new URL('./art/', import.meta.url);`;
+const NEW_ART_DIR = `const ART_DIR = new URL('blank-map-generator/art/', document.baseURI);`;
+
 const OLD_LOAD_FN = `async function loadGeoJson(file) {
   if (geoCache.has(file)) return geoCache.get(file);
   const promise = fetch(new URL(file, DATA_DIR)).then(res => {
@@ -183,11 +191,13 @@ function patchBmgVector() {
   // unconditionally: this only touches the gitignored staged copy.
   let src = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
   assertExactlyOne(src, OLD_DATA_DIR, 'bmg-vector.js DATA_DIR const');
+  assertExactlyOne(src, OLD_ART_DIR, 'bmg-vector.js ART_DIR const');
   assertExactlyOne(src, OLD_LOAD_FN, 'bmg-vector.js loadGeoJson() function');
   for (const name of KNOWN_GEOJSON_FILES) {
     assertExactlyOne(src, `'${name}'`, `bmg-vector.js reference to '${name}'`);
   }
   src = src.replace(OLD_DATA_DIR, NEW_IMPORTS);
+  src = src.replace(OLD_ART_DIR, NEW_ART_DIR);
   src = src.replace(OLD_LOAD_FN, NEW_LOAD_FN);
   // geoCache is now dead (loadGeoJson no longer caches an in-flight fetch
   // promise — the imports are already resolved at bundle time) — drop it so
@@ -241,7 +251,14 @@ function bundleModule(source, resolveDir) {
     write: false,
     logLevel: 'silent',
   });
-  return result.outputFiles[0].text;
+  const text = result.outputFiles[0].text;
+  // An IIFE bundle has no module URL: esbuild leaves import.meta as an empty
+  // object, so `new URL(x, import.meta.url)` throws "Invalid URL" at load.
+  // That went unnoticed in 046 until verify-offline-copy ran; fail at build.
+  if (/\bimport_meta\b|\bimport\.meta\b/.test(text)) {
+    fail(`an offline bundle (${resolveDir}) still reads import.meta, which is empty in a classic script — patch that module's use of it in make-offline-copy.mjs.`);
+  }
+  return text;
 }
 
 // 035's browser and publisher: rewrite the staged sv-browser.js as a classic

@@ -25,7 +25,10 @@
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
+<script src="../_shared/undo.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/student-flags.js"></script>
+<script src="../_shared/stage.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
@@ -179,6 +182,8 @@
     font-size:11px; font-weight:700; letter-spacing:.5px; display:flex; align-items:center; justify-content:center; text-align:center; overflow:hidden;}
   .room-mark.movable{pointer-events:auto; cursor:grab; touch-action:none;}
   .room-mark.movable:focus-visible{outline:3px solid var(--teal-deep); outline-offset:2px;}
+  .mark-grip{position:absolute; right:0; bottom:0; width:16px; height:16px; cursor:nwse-resize; touch-action:none; background:var(--teal-deep); opacity:.75; clip-path:polygon(100% 0,100% 100%,0 100%);}
+  .mark-row input[type=number]{width:64px;} .mark-row input[type=text]{flex:1; min-width:90px;}
   .desk-layer.mirrored .room-mark > span{display:inline-block; transform:scaleX(-1);}
   .room-mark.door{border-style:solid; background:rgba(160,110,60,.18);} .room-mark.window{background:rgba(90,150,200,.2);}
   .room-mark.projector{background:rgba(60,60,60,.18);} .room-mark.obstacle{background:repeating-linear-gradient(45deg,rgba(0,0,0,.1) 0 6px,transparent 6px 12px);}
@@ -302,6 +307,12 @@
     background:var(--gold); color:#fff; font-size:9px; font-weight:700; padding:1px 6px; border-radius:0; display:none;}
   .desk.selected .selnote{display:block;}
   .desk.selected{box-shadow:0 0 0 3px var(--gold);}
+  /* Live mode (Path 14 P5): the chart on stage; a tap marks a seat absent today. */
+  #floorWrap.is-fullscreen{background:var(--bg,#fff); overflow:auto; padding:12px;}
+  body.live .desk-ctrls, body.live .selnote{display:none !important;}
+  body.live .desk .seat{cursor:pointer;}
+  .desk.absent .seat{opacity:.4; text-decoration:line-through;}
+  .desk.absent::after{content:"Absent"; position:absolute; left:0; right:0; bottom:-14px; text-align:center; font-size:.7rem; font-weight:700; color:var(--err,#a33);}
 
   /* Seat numbers: a sibling of .seat, not inside it, so a screen reader (and
      anything that reads a seat's textContent) still sees just the name. */
@@ -627,7 +638,13 @@
             <option value="edge">An end-of-row desk</option>
             <option value="notEdge">A desk that is not at an end</option>
             <option value="desks">Desks I choose on the floor</option>
+            <option value="mark" id="ruleZoneMarkOpt" hidden>Desks near a mark in the room</option>
           </select>
+          <div id="ruleMarkWrap" hidden>
+            <label class="field" for="ruleMark">Near which mark</label>
+            <select id="ruleMark"></select>
+            <p class="hint">The rule follows the mark: move or resize it and the desks change with it.</p>
+          </div>
           <div id="ruleDesksWrap" hidden class="row tight" style="margin-top:6px;">
             <button class="btn sm ghost" type="button" id="ruleTapBtn" aria-pressed="false" onclick="toggleTapDesks()">Choose desks on the floor</button>
             <span class="status" id="ruleTapInfo" role="status" aria-live="polite"></span>
@@ -741,6 +758,7 @@
       </div>
       <div class="sep"></div>
       <div class="grp">
+        <button class="btn sm ghost" id="liveBtn" type="button" title="Put the chart on the projector; tap a seat to mark that student absent today">Live mode</button>
         <button class="btn sm ghost" id="zoomBtn" onclick="toggleZoom()" title="Fit the room to the window, or show it full size">Actual size</button>
         <button class="btn sm ghost" id="mirrorBtn" onclick="toggleMirror()"
                 title="Flip the floor left/right to see it the way students facing the front do">Mirror view</button>
@@ -849,7 +867,7 @@ import {
 } from './seating-chart/seating.mjs';
 import { solve, normalizeRules } from './seating-chart/seating-solve.mjs';
 import { explain } from './seating-chart/seating-explain.mjs';
-import { MARK_KINDS, createRoom, attachSection, detachSection, setRoomDesks, setMark, removeMark, deleteRoom, desksNear, sectionsIn } from './seating-chart/seating-room.mjs';
+import { MARK_KINDS, createRoom, attachSection, detachSection, setRoomDesks, setMark, editMark, removeMark, deleteRoom, desksNear, sectionsIn, syncMarkRules } from './seating-chart/seating-room.mjs';
 import { forShare, subRules, buildRule, addRule, removeRule, pruneRules, describeRule } from './seating-chart/seating-rules.mjs';
 import { mountSaveBar, defaultStorage } from '../_shared/gvb-save.js';
 const { getParam, decodeState, clearParam } = window.StateLink;
@@ -898,11 +916,12 @@ let erasing = false;
 function touch(){ if (typeof followRoom === 'function') followRoom(); if (autosaver && !erasing) autosaver.mark(); }
 
 /* ---- undo, cold-call picker ---- */
-let undoStack = [];
-function pushUndo(){ undoStack.push(JSON.stringify(state)); if (undoStack.length > 60) undoStack.shift(); }
+const undoStack = UndoStack.create({ limit: 60 });   // _shared/undo.js; no redo here, so undo() passes no current
+function pushUndo(){ undoStack.push(state); }
 function undo(){
-  if (!undoStack.length) return;
-  state = JSON.parse(undoStack.pop());
+  const prev = undoStack.undo();
+  if (!prev) return;
+  state = prev;
   if (!sec()) state.active = state.sections[0].id;
   selectedStudent = null;
   renderAll();
@@ -1142,15 +1161,64 @@ function markNode(m, movable){
   const name = m.kind + (m.label ? ', ' + m.label : '');
   if (movable){
     n.dataset.markId = m.id; n.tabIndex = 0; n.setAttribute('role', 'group');
-    n.setAttribute('aria-label', name + '. Arrow keys move it.');
+    n.setAttribute('aria-label', name + '. Arrow keys move it, Shift with an arrow resizes it, R turns it.');
     n.addEventListener('pointerdown', ev => markPointerDown(ev, m.id, n));
+    const grip = document.createElement('div'); grip.className = 'mark-grip'; grip.setAttribute('aria-hidden', 'true');
+    grip.addEventListener('pointerdown', ev => { ev.stopPropagation(); markGripDown(ev, m.id, n, grip); });
+    n.appendChild(grip);
     n.addEventListener('keydown', ev => {
+      if (ev.target !== n) return;
+      if (ev.key === 'r' || ev.key === 'R'){ ev.preventDefault(); turnMark(m.id); focusMark(m.id); return; }
       const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[ev.key];
       if (!d) return;
-      ev.preventDefault(); nudgeMark(m.id, d[0], d[1]); focusMark(m.id);
+      ev.preventDefault();
+      if (ev.shiftKey) resizeMark(m.id, d[0] * ROOM.grid, d[1] * ROOM.grid); else nudgeMark(m.id, d[0], d[1]);
+      focusMark(m.id);
     });
   } else { n.setAttribute('role', 'img'); n.setAttribute('aria-label', name); }
   return n;
+}
+/** Pull the corner: the change is measured along the mark's own width and height, so a turned mark resizes the way it looks. */
+let sizingMark = null;
+function markGripDown(ev, id, node, grip){
+  if (ev.button !== 0 || state.mirror) return;
+  const r = roomOfActive(), m = r && r.marks.find(x => x.id === id); if (!m) return;
+  sizingMark = { id, el: node, m, x0: ev.clientX, y0: ev.clientY, w: m.w, h: m.h, moved: false };
+  grip.setPointerCapture(ev.pointerId);
+}
+function markSizeFrom(g, ev){
+  const rad = (g.m.rot || 0) * Math.PI / 180, dx = (ev.clientX - g.x0) / scale, dy = (ev.clientY - g.y0) / scale;
+  const lx = dx * Math.cos(rad) + dy * Math.sin(rad), ly = -dx * Math.sin(rad) + dy * Math.cos(rad);
+  return [Math.max(10, Math.min(ROOM.width - g.m.x, g.w + lx)), Math.max(10, Math.min(ROOM.height - g.m.y, g.h + ly))];
+}
+document.addEventListener('pointermove', ev => {
+  if (!sizingMark) return;
+  const g = sizingMark, [w, h] = markSizeFrom(g, ev);
+  g.moved = true; g.el.style.width = w + 'px'; g.el.style.height = h + 'px';
+});
+document.addEventListener('pointerup', ev => {
+  if (!sizingMark) return;
+  const g = sizingMark; sizingMark = null;
+  const r = roomOfActive();
+  if (g.moved && r){
+    const [w, h] = markSizeFrom(g, ev);
+    pushUndo(); state = editMark(state, r.id, g.id, { w: snap(w) || ROOM.grid, h: snap(h) || ROOM.grid }).state;
+  }
+  renderAll();
+});
+function editMarkBy(id, patch){
+  const r = roomOfActive(), m = r && r.marks.find(x => x.id === id); if (!m) return;
+  const out = editMark(state, r.id, id, patch);
+  if (!out.mark || JSON.stringify(out.state.rooms) === JSON.stringify(state.rooms)) return;
+  pushUndo(); state = out.state; renderAll();
+}
+function resizeMark(id, dw, dh){
+  const r = roomOfActive(), m = r && r.marks.find(x => x.id === id); if (!m) return;
+  editMarkBy(id, { w: m.w + dw, h: m.h + dh });
+}
+function turnMark(id){
+  const r = roomOfActive(), m = r && r.marks.find(x => x.id === id); if (!m) return;
+  editMarkBy(id, { rot: ((m.rot || 0) + 90) % 360 });
 }
 function focusMark(id){ const n = document.querySelector(`.room-mark[data-mark-id="${id}"]`); if (n) n.focus(); }
 let movingMark = null;
@@ -1245,9 +1313,17 @@ function renderRoom(){
   const list = el('markList');
   list.textContent = '';
   r.marks.forEach(m => {
-    const row = document.createElement('div'); row.className = 'row tight'; row.style.marginBottom = '4px';
-    const t = document.createElement('span'); t.style.flex = '1'; t.textContent = m.kind + (m.label ? ': ' + m.label : '');
+    const row = document.createElement('div'); row.className = 'row tight mark-row'; row.style.marginBottom = '4px';
+    const t = document.createElement('span'); t.textContent = m.kind[0].toUpperCase() + m.kind.slice(1);
     row.appendChild(t);
+    const nm = m.kind + (m.label ? ' ' + m.label : '');
+    const lab = document.createElement('input'); lab.type = 'text'; lab.value = m.label; lab.maxLength = 40; lab.setAttribute('aria-label', `Label of ${nm}`);
+    lab.onchange = () => editMarkBy(m.id, { label: lab.value.trim() }); row.appendChild(lab);
+    [['w', 'Width', m.w], ['h', 'Height', m.h]].forEach(([k, word, v]) => {
+      const i = document.createElement('input'); i.type = 'number'; i.min = '10'; i.max = String(k === 'w' ? ROOM.width : ROOM.height); i.step = String(ROOM.grid); i.value = String(v);
+      i.setAttribute('aria-label', `${word} of ${nm}`); i.onchange = () => editMarkBy(m.id, { [k]: Number(i.value) }); row.appendChild(i);
+    });
+    const tb = document.createElement('button'); tb.className = 'btn sm'; tb.textContent = 'Turn'; tb.setAttribute('aria-label', `Turn ${nm} a quarter`); tb.onclick = () => turnMark(m.id); row.appendChild(tb);
     [['\u25C0', -1, 0, 'left'], ['\u25B2', 0, -1, 'up'], ['\u25BC', 0, 1, 'down'], ['\u25B6', 1, 0, 'right']].forEach(([ch, dx, dy, word]) => {
       const b = document.createElement('button'); b.className = 'btn sm'; b.textContent = ch; b.setAttribute('aria-label', `Move ${m.kind} ${m.label || ''} ${word}`);
       b.onclick = () => nudgeMark(m.id, dx, dy); row.appendChild(b);
@@ -1538,6 +1614,15 @@ function syncRuleForm(){
   el('ruleAnyWrap').hidden = kind !== 'partner';
   el('ruleZoneWrap').hidden = kind !== 'zone';
   el('ruleDesksWrap').hidden = !(kind === 'zone' && el('ruleZone').value === 'desks');
+  const rm = roomOfActive();
+  el('ruleZoneMarkOpt').hidden = !(rm && rm.marks.length);
+  if (el('ruleZoneMarkOpt').hidden && el('ruleZone').value === 'mark') el('ruleZone').value = 'front';
+  el('ruleMarkWrap').hidden = !(kind === 'zone' && el('ruleZone').value === 'mark');
+  if (!el('ruleMarkWrap').hidden && rm){
+    const cur = el('ruleMark').value; el('ruleMark').textContent = '';
+    rm.marks.forEach(m => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.kind + (m.label ? ': ' + m.label : ''); el('ruleMark').appendChild(o); });
+    if (cur) el('ruleMark').value = cur;
+  }
   el('ruleStudentsLbl').textContent = kind === 'partner' ? 'The student who needs a partner' : 'Students (Ctrl or Shift to pick several)';
   if (el('ruleDesksWrap').hidden) setTapMode(false);
 }
@@ -1551,13 +1636,19 @@ function setTapMode(on){
   renderFloor();
 }
 function toggleTapDesks(){ setTapMode(!tapDesks); }
+function markDesksFor(id){
+  const r = roomOfActive(); if (!r || !id) return [];
+  const have = new Set(sec().desks.map(d => d.id));
+  return desksNear(r, id).filter(x => have.has(x));
+}
+function markName(id){ const r = roomOfActive(), m = r && r.marks.find(x => x.id === id); return m ? (m.label || m.kind) : ''; }
 function addRuleFromForm(){
   const s = sec();
   const picked = id => [...el(id).selectedOptions].map(o => o.value);
   const st = el('ruleStrength').value;
   const r = buildRule({
     kind: el('ruleKind').value, students: picked('ruleStudents'), anyOf: picked('ruleAnyOf'),
-    zone: el('ruleZone').value, desks: [...tapPicked], hard: st === 'must', weight: st === 'must' ? 3 : Number(st),
+    zone: el('ruleZone').value, desks: [...tapPicked], mark: el('ruleMark').value, markDesks: markDesksFor(el('ruleMark').value), hard: st === 'must', weight: st === 'must' ? 3 : Number(st),
     why: el('ruleWhy').value,
   }, s, uid);
   if (r.error){ say(r.error, 'bad'); return; }
@@ -1592,7 +1683,7 @@ function renderRules(){
   const shown = list.filter(r => r.kind !== 'seat' && r.kind !== 'empty');
   el('rulesCount').textContent = shown.length;
   shown.forEach(r => {
-    const d = describeRule(r, nameOf, deskNo);
+    const d = describeRule(r, nameOf, deskNo, markName);
     const row = document.createElement('div'); row.className = 'pair ' + (r.kind === 'apart' || r.kind === 'together' ? r.kind : 'other');
     const pp = document.createElement('span'); pp.className = 'pp';
     pp.textContent = `${d.text} \u00B7 ${d.strength}${d.why ? ' \u00B7 ' + d.why : ''}`;
@@ -1835,13 +1926,15 @@ function renderFloor(){
     node.style.left = d.x + 'px'; node.style.top = d.y + 'px';
     node.style.transform = (d.rot ? 'rotate(' + d.rot + 'deg)' : '');
     node.dataset.id = d.id;
+    const gone = !!(st && liveOn && isAbsentLive(st));
+    if (gone) node.classList.add('absent');
 
     const label = st
-      ? `Seat ${i + 1} of ${total}, ${st.name}${st.flag ? ', flagged' : ''}${d.locked ? ', pinned' : ''}`
+      ? `Seat ${i + 1} of ${total}, ${st.name}${gone ? ', absent today' : ''}${st.flag ? ', flagged' : ''}${d.locked ? ', pinned' : ''}`
       : `Seat ${i + 1} of ${total}, ${d.empty ? 'left empty' : 'empty'}`;
     const label2 = label + (tapPicked.has(d.id) ? ', chosen for the rule' : '');
     node.innerHTML =
-        `<button class="seat" data-id="${d.id}" aria-label="${esc(label2)}"${st ? ' draggable="true"' : ''}>`
+        `<button class="seat" data-id="${d.id}" aria-label="${esc(label2)}"${st && !liveOn ? ' draggable="true"' : ''}>`
       +   (st && photoSrc(st.photo) ? `<img class="photo" src="${esc(photoSrc(st.photo))}" alt="">` : '')
       +   `<span>${st ? esc(st.name) : 'empty'}</span>`
       + `</button>`
@@ -1892,6 +1985,7 @@ function renderFloor(){
 
 /* ----- keyboard: one tab stop per desk, every action on a key ----- */
 function deskKey(ev, id){
+  if (liveOn) return;   // Enter / Space reach liveTap through the seat button's own click
   const k = ev.key;
   const step = ev.shiftKey ? ROOM.grid * 3 : ROOM.grid;
   const d = sec().desks.find(x => x.id === id);
@@ -1923,6 +2017,7 @@ function focusDesk(id){
 /* ----- moving desks with pointer ----- */
 let moving = null;
 function deskPointerDown(ev, id, node){
+  if (liveOn) return;
   if (ev.target.closest('.desk-ctrl')) return;
   if (ev.target.closest('.seat') && sec().assign[id]) return;   // that's a student drag
   if (ev.button !== 0) return;
@@ -1956,7 +2051,7 @@ document.addEventListener('pointermove', ev => {
 document.addEventListener('pointerup', () => {
   if (!moving) return;
   if (moving.moved){
-    undoStack.push(moving.snap0); if (undoStack.length > 60) undoStack.shift();
+    undoStack.pushRaw(moving.snap0);
     const d = sec().desks.find(x => x.id === moving.id);
     d.x = snap(parseFloat(moving.el.style.left));
     d.y = snap(parseFloat(moving.el.style.top));
@@ -1968,7 +2063,57 @@ document.addEventListener('pointerup', () => {
 });
 
 /* ----- tap-to-place ----- */
+/* ============================================================
+   Live mode (Path 14 P5): the chart on stage, a tap marks absent today.
+   The flag is Class Roster Hub's (_shared/student-flags.js, crh_flags_v1, by roster id):
+   found by name through Roster.idIndex(). A student on no saved roster has no id, so
+   that absence lives in memory for this live session only, and the tap says so.
+============================================================ */
+let liveOn = false;
+const liveLocal = new Set();   // 005 student ids with no roster id, absent this session
+function liveRosterId(st){
+  try { return Roster.idFor(Roster.idIndex(), st.name, sec().name); } catch(e){ return null; }
+}
+function readFlags(){
+  try { return StudentFlags.read(window.localStorage); } catch(e){ return StudentFlags.empty(); }
+}
+function isAbsentLive(st){
+  const id = liveRosterId(st);
+  if (!id) return liveLocal.has(st.id);
+  return !!StudentFlags.get(readFlags(), id, StudentFlags.dayKey()).absent;
+}
+function liveTap(deskId){
+  const st = studentById(sec().assign[deskId]);
+  if (!st) return;
+  const id = liveRosterId(st), now = !isAbsentLive(st);
+  if (id){
+    const doc = StudentFlags.set(readFlags(), id, 'absent', now, StudentFlags.dayKey());
+    try { window.localStorage.setItem('crh_flags_v1', JSON.stringify(doc))   /* StudentFlags.KEY, spelled out so check:registry can read it */; }
+    catch(e){ say('Could not save that: the browser refused to store it.', 'bad'); return; }
+  } else {
+    if (now) liveLocal.add(st.id); else liveLocal.delete(st.id);
+  }
+  renderFloor();
+  say(st.name + (now ? ' marked absent today' : ' marked present') + (id ? '.' : ' for this live session only (not on a saved roster).'), 'good');
+  const again = [...document.querySelectorAll('.desk')].find(e => e.dataset.id === deskId);
+  if (again) { const b = again.querySelector('.seat'); if (b) b.focus(); }
+}
+function setLive(on){
+  liveOn = !!on;
+  document.body.classList.toggle('live', liveOn);
+  if (!liveOn) liveLocal.clear();
+  renderFloor();
+}
+if (window.Stage) Stage.mount(document.getElementById('floorWrap'), {
+  button: document.getElementById('liveBtn'),
+  labels: { enter: 'Live mode', exit: 'Exit live mode' },
+  hud: document.getElementById('liveBtn'),   // the exit button rides inside the stage, or it would vanish
+  fullscreenKey: false,
+  onChange: function(active){ setLive(active); }
+});
+
 function deskClick(ev, deskId){
+  if (liveOn){ liveTap(deskId); return; }
   if (moving && moving.moved) return; // was a drag
   if (tapDesks){            // choosing desks for a zone rule: a tap picks or drops the desk, nothing else
     if (tapPicked.has(deskId)) tapPicked.delete(deskId); else tapPicked.add(deskId);
@@ -2452,11 +2597,13 @@ function printSubExportAll(){
 function esc(s){ return (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 function renderAll(){
+  state = syncMarkRules(state);   // a zone rule tied to a mark follows the mark
   renderSections();
   renderRoster();
   renderLayouts();
   renderRoom();
   renderRules();
+  syncRuleForm();
   renderPrefs();
   renderHistory();
   renderFloor();
@@ -2485,7 +2632,7 @@ document.addEventListener('keydown', e => {
 /** An imported file or an erased save has to be taken up whole. */
 function setState(next){
   state = next;
-  undoStack = [];
+  undoStack.clear();
   selectedStudent = null; dragStudentId = null; dragFromDeskId = null;
   pickedSet = new Set(); pickedSection = null; lastPicked = null;
   applyZoom(); renderAll();

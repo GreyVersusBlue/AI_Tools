@@ -16,8 +16,16 @@
 <script src="../../_shared/qr-scan.js"></script>
 <script src="../../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../../_shared/qr-draw.js"></script>
+<script src="../../_shared/store.js"></script>
+<script src="../../_shared/stations.js"></script>
+<script src="../../_shared/print-kit.js"></script>
+<script src="../../_shared/stations-debrief.js"></script>
+<script src="er-board.js"></script>
 <script src="../../_shared/vendor/jsqr/jsqr.js"></script>
 <link rel="stylesheet" href="../../_shared/ink-paper.css">
+<link rel="stylesheet" href="../../_shared/print-area.css">
+<link rel="stylesheet" href="../../_shared/print-kit.css">
+<link rel="stylesheet" href="../../_shared/stations-debrief.css">
 <link rel="stylesheet" href="../../_shared/a11y.css">
 <style>
   /* Tool-local semantic tints, with 001's values — the shared file owns the 11
@@ -72,6 +80,8 @@
   /* The camera viewfinder stays black in both themes — it is a lens, not chrome. */
   video.scan-video { width: 100%; max-width: 320px; border-radius: 8px; display: none; margin: .5rem auto; background: #000; }
   video.scan-video.active { display: block; }
+  .clock-readout { font-variant-numeric: tabular-nums; font-weight: 700; align-self: center; }
+  .roster input.team-name { width: 100%; min-width: 7rem; font: inherit; padding: .3rem .4rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--card); color: var(--ink); }
   .status-line { font-size: .82rem; color: var(--muted); margin-top: .5rem; }
 </style>
 </head>
@@ -84,10 +94,38 @@
   <div class="card">
     <div class="card-title">Connected Devices</div>
     <table class="roster" id="rosterTable" style="display:none;">
-      <thead><tr><th>Device</th><th>Progress</th><th>Score</th><th>Status</th></tr></thead>
+      <thead><tr><th>Team</th><th>Progress</th><th>Score</th><th>Status</th></tr></thead>
       <tbody id="rosterBody"></tbody>
     </table>
     <p class="empty-hint" id="rosterEmpty">No devices connected yet. Add one below for each team.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Leaderboard</div>
+    <div class="btn-row">
+      <button id="clockBtn" type="button">Start the clock</button>
+      <span class="clock-readout" id="clockReadout" aria-live="off"></span>
+    </div>
+    <table class="roster" id="boardTable" style="display:none;">
+      <thead><tr><th>#</th><th>Team</th><th>Progress</th><th>Score</th><th>Time</th></tr></thead>
+      <tbody id="boardBody"></tbody>
+    </table>
+    <p class="empty-hint" id="boardEmpty">The leaderboard fills in as devices connect. Teams are ranked by stations reached, then by who got there first; score is shown beside it.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Record of the Room</div>
+    <p class="status-line" id="recordLine" style="margin-top:0;"></p>
+    <div class="btn-row">
+      <label for="debriefRoom" class="status-line" style="margin:0;align-self:center;">Room</label>
+      <select id="debriefRoom" aria-describedby="recordLine"></select>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="secondary" id="previewDebriefBtn">Preview Debrief</button>
+      <button class="secondary" id="printDebriefBtn" type="button">🖨️ Print Debrief</button>
+      <button class="danger" id="clearRecordBtn" type="button">Clear the record</button>
+    </div>
+    <p class="status-line" id="debriefNote" role="status"></p>
   </div>
 
   <div class="card">
@@ -123,13 +161,17 @@
   </footer>
 </div>
 
+<div id="printArea" class="pk-paper">
+  <div class="sd-grid" id="printDebriefGrid"></div>
+</div>
+
 <script>
 (function () {
   "use strict";
 
   var els = {};
   ['rosterTable', 'rosterBody', 'rosterEmpty', 'addDeviceBtn', 'pairingBox', 'offerQr', 'offerText',
-   'copyOfferBtn', 'scanAnswerBtn', 'scanVideo', 'answerInput', 'connectDeviceBtn', 'cancelPairingBtn', 'pairingStatus'
+   'clockBtn', 'clockReadout', 'recordLine', 'clearRecordBtn', 'debriefRoom', 'previewDebriefBtn', 'printDebriefBtn', 'debriefNote', 'printDebriefGrid', 'boardTable', 'boardBody', 'boardEmpty', 'copyOfferBtn', 'scanAnswerBtn', 'scanVideo', 'answerInput', 'connectDeviceBtn', 'cancelPairingBtn', 'pairingStatus'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var devices = []; // { id, pc, channel, station, total, done, connected }
@@ -137,7 +179,121 @@
   var pendingPc = null;
   var scanHandle = null;
 
+  function escapeAttr(t) { return String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+  function escapeText(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+
+  var clockStart = null;   // the teacher's Start, ms; times on the board are measured from it
+
+  // The record of the room (Path 18 P4): when each team moved off each station, by the monitor's own clock,
+  // kept on this device only (never sent anywhere, never asked of a student's phone) so it outlives the page.
+  // It is the run Stations.debrief reads. A device reports where a team is, not its wrong tries or hints, so
+  // none are kept. Saving replaces the last record only once a new device has moved a team off a station.
+  var RECORD_KEY = 'escape-room-builder:monitor-record';
+  var kept = window.ErBoard.cleanRecord(Store.get(RECORD_KEY, { version: 1, migrate: function (v, d) { return d; }, 'default': null }));
+  function saveRecord() {
+    var rec = window.ErBoard.toRecord(devices, clockStart, Date.now());
+    if (!rec.teams.length) return;   // nothing solved yet: leave what is kept alone
+    kept = rec;
+    Store.set(RECORD_KEY, rec, { version: 1 });
+    renderRecord();
+  }
+  function renderRecord() {
+    if (!kept || !kept.teams.length) { els.recordLine.textContent = 'Nothing kept yet. Once a team moves on from a station, the monitor keeps when it did, on this device.'; els.clearRecordBtn.disabled = true; drawRoomChoices(); return; }
+    var stops = kept.teams.reduce(function (n, t) { return n + Object.keys(t.marks).length; }, 0);
+    els.recordLine.textContent = 'Kept on this device' + (kept.at ? ' (last updated ' + new Date(kept.at).toLocaleString() + ')' : '') + ': ' + kept.teams.length +
+      ' team' + (kept.teams.length === 1 ? '' : 's') + ', ' + stops + ' station' + (stops === 1 ? '' : 's') + ' passed' +
+      (kept.raceStartAt === null ? ', no clock started' : '') + '. It holds when each team reached each station; wrong tries and hints are not reported to the monitor.';
+    els.clearRecordBtn.disabled = false;
+    drawRoomChoices();
+  }
+
+  // The debrief print (Path 18 P4): the kept record, laid out by _shared/stations-debrief.js through the print
+  // kit, against the saved room it belongs to. The room is read from 019's own store (read only); the record
+  // names stations by id, so the room chosen decides the labels and the order of the sheet's stops.
+  PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.5in' });
+  var ROOMS_KEY = 'escape-room-builder:rooms';
+  function savedRooms() {
+    var store = Store.get(ROOMS_KEY, { version: 1, migrate: function (v, d) { return d; }, 'default': null });
+    return store && store.sets && typeof store.sets === 'object' ? store.sets : {};
+  }
+  function drawRoomChoices() {
+    var sets = savedRooms(), names = Object.keys(sets), pick = kept ? window.ErBoard.roomFor(sets, kept) : null;
+    var before = els.debriefRoom.value;
+    els.debriefRoom.textContent = '';
+    names.forEach(function (n) { var o = document.createElement('option'); o.value = n; o.textContent = n; els.debriefRoom.appendChild(o); });
+    if (!names.length) { var none = document.createElement('option'); none.value = ''; none.textContent = 'No saved rooms'; els.debriefRoom.appendChild(none); }
+    els.debriefRoom.value = names.indexOf(before) >= 0 ? before : (pick || names[0] || '');
+    var can = !!(kept && kept.teams.length && names.length);
+    els.printDebriefBtn.disabled = !can; els.previewDebriefBtn.disabled = !can;
+    els.debriefNote.textContent = !kept || !kept.teams.length ? '' : !names.length ? 'Save the room in the Escape Room Builder on this device to print its debrief.'
+      : pick ? '' : 'No saved room holds the stations in this record: pick the room it was played in.';
+  }
+  function buildDebrief() {
+    var room = savedRooms()[els.debriefRoom.value], set = room ? Stations.read(room) : null;
+    if (!set || !kept) return false;
+    var teams = Stations.debrief(set, kept);
+    StationsDebrief.render(els.printDebriefGrid, teams, {
+      grid: { cols: 1, perPage: 1 }, title: 'Room debrief', formatElapsed: window.ErBoard.formatElapsed, without: ['misses', 'hints'],
+      prompts: ['Which puzzle took your team longest, and why?', 'What did your team try that did not work, and what did you change after that?',
+        'What did you learn today that you did not know before the room?', 'If you ran the room again, what would your team do differently?']
+    });
+    return true;
+  }
+  var previewing = false;
+  els.printDebriefBtn.addEventListener('click', function () {
+    if (!buildDebrief()) return;
+    if (!previewing) { window.print(); return; }
+    PrintKit.preview({ trigger: els.previewDebriefBtn, onPrint: function () { els.printDebriefBtn.click(); } });
+  });
+  els.previewDebriefBtn.addEventListener('click', function () {
+    previewing = true;
+    try { els.printDebriefBtn.click(); } finally { previewing = false; }
+  });
+  els.clearRecordBtn.addEventListener('click', function () {
+    if (!window.confirm('Clear the kept record of this room? This cannot be undone.')) return;
+    Store.remove(RECORD_KEY); kept = null; renderRecord();
+  });
+
+
+  function renderBoard() {
+    var rows = window.ErBoard.leaderboard(devices, clockStart);
+    els.boardTable.style.display = rows.length ? '' : 'none';
+    els.boardEmpty.style.display = rows.length ? 'none' : '';
+    els.boardBody.innerHTML = rows.map(function (r, i) {
+      var progress = r.total > 0 ? (r.finished ? '\uD83C\uDFC1 Finished' : r.passed + ' of ' + r.total) : '\u2014';
+      var time = r.finished ? (r.elapsedMs == null ? (clockStart == null ? 'Start the clock' : '\u2014') : window.ErBoard.formatElapsed(r.elapsedMs)) : '\u2014';
+      return '<tr><td>' + (i + 1) + '</td><td>' + escapeText(r.name) + (r.connected ? '' : ' <span class="status-disconnected">(disconnected)</span>') + '</td><td>' + progress +
+        '</td><td>' + (r.score == null ? '\u2014' : r.score) + '</td><td>' + time + '</td></tr>';
+    }).join('');
+  }
+  function renderClock() {
+    els.clockBtn.textContent = clockStart == null ? 'Start the clock' : 'Reset the clock';
+    els.clockReadout.textContent = clockStart == null ? '' : window.ErBoard.formatElapsed(Date.now() - clockStart);
+  }
+  els.clockBtn.addEventListener('click', function () {
+    clockStart = clockStart == null ? Date.now() : null;
+    renderClock(); renderBoard(); saveRecord();
+  });
+  setInterval(function () { if (clockStart != null) renderClock(); }, 1000);
+
   function renderRoster() {
+    var focus = document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('team-name')
+      ? { id: document.activeElement.getAttribute('data-device'), at: document.activeElement.selectionStart } : null;
+    drawRoster();
+    renderBoard();
+    if (focus) {   // a message must not take the cursor out of a name being typed
+      var again = els.rosterBody.querySelector('input[data-device="' + focus.id + '"]');
+      if (again) { again.focus(); try { again.setSelectionRange(focus.at, focus.at); } catch (e) { /* not a text field */ } }
+    }
+  }
+  els.rosterBody.addEventListener('input', function (e) {
+    var t = e.target;
+    if (!t.classList || !t.classList.contains('team-name')) return;
+    devices.forEach(function (d) { if (String(d.id) === t.getAttribute('data-device')) d.name = t.value; });
+    renderBoard(); saveRecord();
+  });
+
+  function drawRoster() {
     if (!devices.length) {
       els.rosterTable.style.display = 'none';
       els.rosterEmpty.style.display = '';
@@ -152,7 +308,7 @@
         : (d.done ? '<span class="status-done">🏁 Finished!</span>' : 'In progress');
       var progressText = d.total > 0 ? ('Station ' + (d.done ? d.total : d.station + 1) + ' of ' + d.total) : '—';
       var scoreText = (typeof d.score === 'number') ? d.score : '—';
-      return '<tr><td>Device ' + d.id + '</td><td>' + progressText +
+      return '<tr><td><input type="text" class="team-name" data-device="' + d.id + '" value="' + escapeAttr(d.name || '') + '" placeholder="Team ' + d.id + '" aria-label="Name for the team on device ' + d.id + '"></td><td>' + progressText +
         '<div class="bar-wrap"><div class="bar-fill" style="width:' + pct + '%;"></div></div></td>' +
         '<td>' + scoreText + '</td><td>' + statusHtml + '</td></tr>';
     }).join('');
@@ -198,11 +354,8 @@
       device.channel.addEventListener('message', function (e) {
         var msg;
         try { msg = JSON.parse(e.data); } catch (err) { return; }
-        device.station = msg.station || 0;
-        device.total = msg.total || 0;
-        device.done = !!msg.done;
-        device.score = (typeof msg.score === 'number') ? msg.score : null;
-        renderRoster();
+        window.ErBoard.applyMessage(device, msg, Date.now());
+        renderRoster(); saveRecord();
       });
       renderRoster();
       resetPairingBox();
@@ -248,6 +401,9 @@
   });
 
   renderRoster();
+  renderClock();
+  renderRecord();
+  window.__monitor = { devices: devices, render: renderRoster, save: saveRecord, kept: function () { return kept; } };   // for the suite: it adds devices without a WebRTC pairing
 })();
 </script>
 <script>

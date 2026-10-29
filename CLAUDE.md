@@ -631,6 +631,18 @@ files must be added there too.
   older backup working. The module's header has the migration, the ids and the file formats. Its suites are
   `npm run test:question-bank` (pure Node) and `smoke-bank-file.mjs` in `npm run test:review-board`; no file it
   writes has been opened in a spreadsheet.
+- **A pasted spreadsheet region is read by `_shared/paste-table.js`** (`PasteTable`, Path 16 P2, v404): `splitLine`,
+  `pickDelimiter`, `parse` (rows padded, short rows named in `ragged`), `columnReport` (the cells that stopped a column reading
+  as numbers), and 046's name-and-value parsers. 046, 038, 036, 037, 075 and 006 use it; do not write another `split('\t')`. A line a
+  tool cannot read is reported with its line number, never dropped or guessed. An ES module reaches it by `import
+  '../../_shared/paste-table.js'` and reads `globalThis.PasteTable`. A new adopter gets a `paste-table-<tool>-parity` suite in
+  `Tools/paste-table/test/` (a frozen copy of the old reader, the page's own function cut out of its HTML). `npm run test:paste-table`.
+- **037's per-question item analysis is `Tools/grade-distribution-visualizer/gd-items.js`** (`GradeItems`, Path 16 P3, v411-v415): pasted
+  scores by question through `PasteTable`, percent correct, the reteach/watch/secure tiers, section comparison and the plain-language
+  sentences, all pure and held by `npm run test:gd-items` with mutants. The page keeps `items` and `itemLine` on the assignment record it
+  already stored (no new key, no name shown), draws through `ChartSvg`, and prints the reteach list and the "What this says" page
+  through the print kit in one `#reteachSheet` under `body.printing-reteach` (the preview's page count is held to Chromium's PDF in
+  `test:gd-items-smoke`, port 8578). A new reader of the item table calls `GradeItems.analyze` and does not split the paste itself.
 - **A WebRTC pairing code is drawn with `QrDraw.fit(canvas, text)`** (`_shared/qr-draw.js`,
   AI-10, v223), which takes the size from the room the canvas's parent has, draws whole px per
   module and never under 4, and puts a note on the page when there is not room. Do not write

@@ -25,6 +25,10 @@
 // Keep this file free of DOM/UI concerns beyond the canvas it draws on: the
 // host page owns the picker, the cache write, and displayMap().
 
+import { DEFAULT_LONG_SIDE, pixelSizeFor, traceFeature, traceFeatures } from '../../_shared/geo-project.js';
+
+const TARGET_LONG_SIDE = DEFAULT_LONG_SIDE;
+
 const DATA_DIR = new URL('./data/', import.meta.url);
 const ART_DIR = new URL('./art/', import.meta.url);
 
@@ -71,13 +75,36 @@ export const BASE_MAP_STYLES = Object.freeze([
   { key: 'land', label: 'Light land fill' },
 ]);
 
-const STYLE_PAINT = {
+export const STYLE_PAINT = {
   outline: { ocean: '#ffffff', land: '#ffffff', stroke: '#2f2e2b' },
   land: { ocean: '#e4eef5', land: '#f6f1e4', stroke: '#5c5a52' },
 };
 
+// Boundary files a teacher dropped on the page (Path 20 P2, bmg-dropped.js): key -> { preset,
+// geojson }, in memory only. The file itself is stored by bmg-geo-store.js; this registry is
+// what lets findPreset() and presetFromBaseMapId() answer for a `custom-...` key.
+const customPresets = new Map();
+
+/** Makes a dropped file's preset known to this module. `parsed` is a parseBoundaryFile() success. */
+export function registerCustomPreset(parsed) {
+  const preset = Object.freeze({
+    key: parsed.key,
+    label: parsed.title,
+    dataset: 'custom',
+    custom: true,
+    bounds: Object.freeze({ ...parsed.bounds }),
+    note: 'Your file: ' + parsed.stats.shapes + ' shape' + (parsed.stats.shapes === 1 ? '' : 's') + ', drawn here on your own machine. It is kept on this device only.',
+  });
+  customPresets.set(parsed.key, { preset, geojson: parsed.geojson });
+  return preset;
+}
+
+export function customPresetList() {
+  return Array.from(customPresets.values(), c => c.preset);
+}
+
 export function findPreset(key) {
-  return BASE_MAP_PRESETS.find(p => p.key === key) || null;
+  return BASE_MAP_PRESETS.find(p => p.key === key) || (customPresets.get(key) || {}).preset || null;
 }
 
 /**
@@ -95,6 +122,18 @@ export function presetFromBaseMapId(id) {
 // Fetched GeoJSON is kept in memory for the life of the page: switching
 // styles or re-cropping a continent shouldn't re-read a 200 KB file.
 const geoCache = new Map();
+
+/** One layer of a preset's geometry: the vendored files for a built-in map, the dropped file (its one layer is both) for a custom one. */
+async function layerFor(preset, which) {
+  if (preset.custom) {
+    const c = customPresets.get(preset.key);
+    if (!c) throw new Error('that dropped file is not loaded; drop it again');
+    return c.geojson;
+  }
+  const files = DATASETS[preset.dataset];
+  if (!files) throw new Error(`unknown base map dataset "${preset.dataset}"`);
+  return loadGeoJson(files[which]);
+}
 
 async function loadGeoJson(file) {
   if (geoCache.has(file)) return geoCache.get(file);
@@ -145,7 +184,8 @@ export function sameBaseMap(a, b) {
 
 export function baseMapTitle(preset, style, borders, shaded, relief = false) {
   const parts = [preset.label];
-  if (preset.dataset === 'us') parts.push(borders ? 'state outlines' : 'national outline');
+  if (preset.custom) parts.push(borders ? 'your file, with boundaries' : 'your file, outline');
+  else if (preset.dataset === 'us') parts.push(borders ? 'state outlines' : 'national outline');
   else parts.push(borders ? 'country outlines' : 'coastlines only');
   if (style === 'land') parts.push('land fill');
   if (relief && !shaded && hasRelief(preset)) parts.push('shaded relief');
@@ -166,7 +206,7 @@ export function hasRelief(preset) {
  * raster. Its zoom ceiling is its own 2048 px width; that is accepted, not
  * chased (BACKLOG.md, Path 21).
  */
-function loadReliefImage(preset) {
+export function loadReliefImage(preset) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
@@ -193,128 +233,21 @@ export async function listRegionNames(preset) {
  * bmg-hittest.js can project it for picking. Shares the in-memory cache, so
  * entering shade mode on a map that is already drawn costs no second read.
  */
+export async function loadWholeGeoJson(preset) {
+  return layerFor(preset, 'whole');
+}
+
 export async function loadDividedGeoJson(preset) {
+  if (preset && preset.custom) return layerFor(preset, 'divided');
   const files = DATASETS[preset && preset.dataset];
   if (!files) return { type: 'FeatureCollection', features: [] };
   return loadGeoJson(files.divided);
 }
 
-// Target size of the raster's longer side. Big enough that a full-page or
-// poster-tile print stays crisp (a US Letter page at 300 dpi is 3300 px on
-// its long edge), small enough that the render and the PNG encode stay
-// quick and the blob stays a sensible thing to keep in IndexedDB.
-const TARGET_LONG_SIDE = 4000;
-
-/** Pixel dimensions for a bounds rectangle: plate carrée means one degree of latitude and one of longitude occupy the same number of pixels, so the raster is simply the degree-extent scaled up. */
-export function pixelSizeFor(bounds, longSide = TARGET_LONG_SIDE) {
-  const lonSpan = Math.abs(bounds.east - bounds.west);
-  const latSpan = Math.abs(bounds.north - bounds.south);
-  const scale = longSide / Math.max(lonSpan, latSpan);
-  return {
-    width: Math.max(2, Math.round(lonSpan * scale)),
-    height: Math.max(2, Math.round(latSpan * scale)),
-  };
-}
-
-/**
- * The projection, in one place. Everything else here — and the calibration
- * the record carries — is this function and its inverse.
- *
- * Exported (as `projectPoint`) so bmg-hittest.js can turn a click into a
- * region using the identical arithmetic rather than a second copy of it: a
- * hit test that disagrees with what was drawn is wrong silently, which is
- * the worst way for it to be wrong.
- */
-export function projectPoint(bounds, width, height, lon, lat) {
-  return {
-    x: ((lon - bounds.west) / (bounds.east - bounds.west)) * width,
-    y: ((bounds.north - lat) / (bounds.north - bounds.south)) * height,
-  };
-}
-
-/**
- * Rewrites a ring's longitudes so consecutive points never jump more than
- * 180°, letting values run past ±180 instead.
- *
- * This matters because Natural Earth stores a ring that straddles the
- * antimeridian with its vertices clamped to ±180 — so the ring contains a
- * step from, say, -180 straight to +179.4 (Fiji), or +180 to -180
- * (Antarctica's closing edge). Drawn naively, each of those steps is a
- * `lineTo` clean across the entire map: the stray full-width horizontal
- * lines through the South Pacific and across northern Siberia that a plate
- * carrée render of this data otherwise picks up.
- */
-function unwrapRing(ring) {
-  const out = [[ring[0][0], ring[0][1]]];
-  for (let i = 1; i < ring.length; i++) {
-    let lon = ring[i][0];
-    const prev = out[i - 1][0];
-    while (lon - prev > 180) lon -= 360;
-    while (prev - lon > 180) lon += 360;
-    out.push([lon, ring[i][1]]);
-  }
-  return out;
-}
-
-/**
- * One ring in, one or more drawable subpaths out — in continuous longitude
- * space, with the antimeridian handled.
- *
- * A ring that goes all the way around the globe (Antarctica) comes out of
- * unwrapRing() with its ends 360° apart, so it can't simply be closed. For
- * *filling* it is closed through the pole, which is what makes Antarctica
- * fill as a polar cap down to the bottom of the map rather than as a sliver
- * cut off at the data's own clip latitude. For *stroking* that closure is
- * left off entirely: it is a construction, not a coastline, and drawing it
- * would put a hard line along the bottom edge of every world map. A ring
- * that merely pokes past ±180 (Fiji, the tip of Chukotka) is additionally
- * emitted shifted a full 360°, so the part belonging at the opposite edge of
- * the map is drawn there.
- */
-export function drawableRings(ring, forStroke) {
-  const un = unwrapRing(ring);
-  const first = un[0][0], last = un[un.length - 1][0];
-  const encircles = Math.abs(last - first) > 180;
-  if (encircles && !forStroke) {
-    const meanLat = un.reduce((sum, p) => sum + p[1], 0) / un.length;
-    const pole = meanLat < 0 ? -90 : 90;
-    un.push([last, pole], [first, pole]);
-  }
-  let min = Infinity, max = -Infinity;
-  for (const p of un) { if (p[0] < min) min = p[0]; if (p[0] > max) max = p[0]; }
-  const shifts = [0];
-  if (max > 180) shifts.push(-360);
-  if (min < -180) shifts.push(360);
-  return shifts.map(shift => ({
-    points: shift ? un.map(p => [p[0] + shift, p[1]]) : un,
-    closed: !(encircles && forStroke),
-  }));
-}
-
-function tracePolygon(ctx, rings, bounds, width, height, forStroke) {
-  for (const ring of rings) {
-    for (const { points, closed } of drawableRings(ring, forStroke)) {
-      for (let i = 0; i < points.length; i++) {
-        const { x, y } = projectPoint(bounds, width, height, points[i][0], points[i][1]);
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      }
-      if (closed) ctx.closePath();
-    }
-  }
-}
-
-function traceOneFeature(ctx, feature, bounds, width, height, forStroke) {
-  const g = feature.geometry;
-  if (!g) return;
-  if (g.type === 'Polygon') tracePolygon(ctx, g.coordinates, bounds, width, height, forStroke);
-  else if (g.type === 'MultiPolygon') for (const poly of g.coordinates) tracePolygon(ctx, poly, bounds, width, height, forStroke);
-}
-
-/** Adds every polygon of a FeatureCollection to the current path. `evenodd` filling then handles holes (lakes, enclaves) correctly. `forStroke` drops the synthetic polar closure described in drawableRings(). */
-function traceFeatures(ctx, geojson, bounds, width, height, forStroke = false) {
-  ctx.beginPath();
-  for (const feature of geojson.features || []) traceOneFeature(ctx, feature, bounds, width, height, forStroke);
-}
+// The projection, antimeridian handling and path tracing live in
+// _shared/geo-project.js (Path 20 P1); these names are re-exported so every
+// importer of this file (015, the hit test, the tests) is unchanged.
+export { pixelSizeFor, projectPoint, drawableRings } from '../../_shared/geo-project.js';
 
 /**
  * Paints each named region that has a colour in `fills` (see
@@ -333,7 +266,7 @@ function paintChoropleth(ctx, geojson, bounds, width, height, fills) {
     const hex = name && fills[name];
     if (!hex) continue;
     ctx.beginPath();
-    traceOneFeature(ctx, feature, bounds, width, height, false);
+    traceFeature(ctx, feature, bounds, width, height, false);
     ctx.fillStyle = hex;
     ctx.fill('evenodd');
   }
@@ -352,18 +285,17 @@ export async function renderBaseMapCanvas(preset, { style = 'outline', borders =
   // and then throwing nine tenths of it away in the downscale is slow for no
   // gain. Everything else takes the default and is unaffected.
   const { width, height } = pixelSizeFor(bounds, longSide);
-  const files = DATASETS[preset.dataset];
-  if (!files) throw new Error(`unknown base map dataset "${preset.dataset}"`);
+  if (!preset.custom && !DATASETS[preset.dataset]) throw new Error(`unknown base map dataset "${preset.dataset}"`);
   const shading = fills && Object.keys(fills).length ? fills : null;
   // Relief is off under data shading: hill shading behind data colours
   // reads as data. The page disables the toggle too; this is the backstop.
   const reliefImg = relief && !shading && hasRelief(preset) ? await loadReliefImage(preset) : null;
 
-  const whole = await loadGeoJson(files.whole);
+  const whole = await layerFor(preset, 'whole');
   // Data shading is per-region, so it needs the divided file even when the
   // teacher has boundaries switched off — you can still shade Maryland on a
   // borderless map, the shapes just aren't outlined.
-  const divided = (borders || shading) ? await loadGeoJson(files.divided) : null;
+  const divided = (borders || shading) ? await layerFor(preset, 'divided') : null;
 
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -375,9 +307,21 @@ export async function renderBaseMapCanvas(preset, { style = 'outline', borders =
 
   // Land fill comes from the undivided landmass so no seams show between
   // neighbours; the boundaries are stroked on top of it afterwards.
-  traceFeatures(ctx, whole, bounds, width, height);
-  ctx.fillStyle = paint.land;
-  ctx.fill('evenodd');
+  if (preset.custom) {
+    // A dropped file's shapes may overlap (nested watersheds, a district inside a county); one
+    // even-odd path over all of them would punch holes where they do. Each shape is filled on
+    // its own instead, so only its own holes cancel.
+    ctx.fillStyle = paint.land;
+    for (const feature of whole.features) {
+      ctx.beginPath();
+      traceFeature(ctx, feature, bounds, width, height, false);
+      ctx.fill('evenodd');
+    }
+  } else {
+    traceFeatures(ctx, whole, bounds, width, height);
+    ctx.fillStyle = paint.land;
+    ctx.fill('evenodd');
+  }
 
   // The relief multiplies over the land fill only (the path above is still
   // current, so it is the clip). Multiply keeps either style's land colour
@@ -429,7 +373,9 @@ export async function buildBaseMapRecord(preset, { style = 'outline', borders = 
     mime: 'image/png',
     width,
     height,
-    attribution: { ...NATURAL_EARTH_ATTRIBUTION },
+    attribution: preset.custom
+      ? { artist: 'Your file: ' + preset.label, license: 'Supplied by the teacher', licenseUrl: null, descriptionUrl: null }
+      : { ...NATURAL_EARTH_ATTRIBUTION },
     calibration,
     cachedAt: Date.now(),
   };

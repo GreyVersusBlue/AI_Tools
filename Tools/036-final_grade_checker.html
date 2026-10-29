@@ -25,6 +25,9 @@
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/export.js"></script>
+<script src="../_shared/chart-svg.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <script src="../_shared/school-day.js"></script>
 <link rel="stylesheet" href="../_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css">
 <link rel="stylesheet" href="../_shared/theme.css">
@@ -182,6 +185,11 @@
   .sc-note.warn { color: var(--color-warn); font-weight: 600; }
   .sc-summary { margin-top: 10px; font-size: 13px; line-height: 1.55; }
   .sc-summary:empty { display: none; }
+  .sc-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-4); margin-top: 10px; }
+  .sc-chart { margin: 0; }
+  .sc-chart svg { width: 100%; height: auto; display: block; border: 1px solid var(--color-divider); border-radius: 4px; }
+  .sc-chart-actions { display: flex; gap: var(--space-2); margin-top: 6px; }
+  .sc-chart-actions .btn { font-size: 12px; padding: 4px 10px; }
   .sc-scroll { max-height: 340px; overflow: auto; margin-top: 8px; border: 1px solid var(--color-divider); }
   .sc-table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
   .sc-table caption { text-align: left; font-weight: 700; padding: 6px 8px; font-size: 12px; }
@@ -326,12 +334,22 @@
     </div>
 
     <div class="settings-row">
-      <label><input type="checkbox" id="weights-enabled"> Use custom quarter weights instead of an equal 25% each</label>
+      <strong><label for="term-count">How many grading terms make up the final grade?</label></strong>
+      <select class="input" id="term-count" aria-describedby="term-count-help">
+        <option value="4">Four quarters (default)</option>
+        <option value="3">Three trimesters</option>
+        <option value="2">Two semesters</option>
+      </select>
+      <span class="persist-help" id="term-count-help">A semester exam counts as one more column: choose three terms, label it by its place in your export, and give it its own weight below. Changing this re-reads the pasted rows if they are still in the paste box; otherwise extra scores are dropped and missing ones left blank.</span>
+    </div>
+
+    <div class="settings-row">
+      <label><input type="checkbox" id="weights-enabled"> Use custom <span data-tw="n">quarter</span> weights instead of an equal <span data-tw="eq">25%</span> each</label>
       <div class="weights-inputs" id="weights-inputs" hidden>
-        <div class="weight-field"><label for="weight-q1">Q1</label><input class="input" type="number" id="weight-q1" min="0" step="1" value="25"></div>
-        <div class="weight-field"><label for="weight-q2">Q2</label><input class="input" type="number" id="weight-q2" min="0" step="1" value="25"></div>
-        <div class="weight-field"><label for="weight-q3">Q3</label><input class="input" type="number" id="weight-q3" min="0" step="1" value="25"></div>
-        <div class="weight-field"><label for="weight-q4">Q4</label><input class="input" type="number" id="weight-q4" min="0" step="1" value="25"></div>
+        <div class="weight-field" data-term="1"><label for="weight-q1" data-tl="1">Q1</label><input class="input" type="number" id="weight-q1" min="0" step="1" value="25"></div>
+        <div class="weight-field" data-term="2"><label for="weight-q2" data-tl="2">Q2</label><input class="input" type="number" id="weight-q2" min="0" step="1" value="25"></div>
+        <div class="weight-field" data-term="3"><label for="weight-q3" data-tl="3">Q3</label><input class="input" type="number" id="weight-q3" min="0" step="1" value="25"></div>
+        <div class="weight-field" data-term="4"><label for="weight-q4" data-tl="4">Q4</label><input class="input" type="number" id="weight-q4" min="0" step="1" value="25"></div>
         <div class="weights-sum-note" id="weights-sum-note"></div>
       </div>
     </div>
@@ -351,7 +369,7 @@
   <div class="card blueprint import-panel no-print">
     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
     <h2><label for="import-area">Paste Grade Export</label></h2>
-    <p id="import-help">Paste rows directly from your grade system. Each row should have a student ID, name, section, grade level, and four quarter grades like <code>C(73.28)</code>. The system average column at the end is ignored. Paste with tabs between columns so an empty quarter stays in its own column — or drop a <code>.csv</code>/<code>.xlsx</code> export onto this box, or choose one below.</p>
+    <p id="import-help">Paste rows directly from your grade system. Each row should have a student ID, name, section, grade level, and <span data-tw="num">four</span> <span data-tw="n">quarter</span> grades like <code>C(73.28)</code>. The system average column at the end is ignored. Paste with tabs between columns so an empty quarter stays in its own column — or drop a <code>.csv</code>/<code>.xlsx</code> export onto this box, or choose one below.</p>
     <textarea class="input import-textarea" id="import-area" aria-describedby="import-help" placeholder="Paste your grade data here, then click Import... (or drop a .csv/.xlsx file here)"></textarea>
     <div class="import-actions">
       <button class="btn btn-primary" id="import-btn" type="button">Import</button>
@@ -373,7 +391,7 @@
         <label style="display:flex;flex-direction:column;gap:0.2rem;">Student name column
           <select id="map-name-col" class="input"></select>
         </label>
-        <label style="display:flex;flex-direction:column;gap:0.2rem;">Quarter 1 starts at column
+        <label style="display:flex;flex-direction:column;gap:0.2rem;"><span><span data-tw="N">Quarter</span> 1 starts at column</span>
           <select id="map-q1-col" class="input"></select>
         </label>
         <button class="btn btn-secondary" id="apply-mapping-btn" type="button">Re-import with this mapping</button>
@@ -390,9 +408,9 @@
       <strong>Class-wide what-if</strong>
       <p class="whatif-hint">Asks a question without changing anything. The pasted grades stay exactly as they are; every card below gains a second, clearly-marked result so you can see which letters actually move.</p>
       <div class="whatif-controls">
-        <label for="whatif-plus">Add points to every quarter</label>
+        <label for="whatif-plus">Add points to every <span data-tw="n">quarter</span></label>
         <input type="number" id="whatif-plus" class="input" value="0" step="0.5" min="-20" max="20" style="width:90px;">
-        <label class="whatif-check"><input type="checkbox" id="whatif-drop"> Drop each student&rsquo;s lowest quarter</label>
+        <label class="whatif-check"><input type="checkbox" id="whatif-drop"> Drop each student&rsquo;s lowest <span data-tw="n">quarter</span></label>
         <button class="btn btn-secondary" id="whatif-reset" type="button">Clear</button>
       </div>
       <div id="whatif-summary" class="whatif-summary"></div>
@@ -441,12 +459,12 @@
         </fieldset>
         <fieldset class="sc-group">
           <legend>3. Re-weight</legend>
-          <label><input type="checkbox" id="sc-rw"> Use different quarter weights for this scenario</label>
+          <label><input type="checkbox" id="sc-rw"> Use different <span data-tw="n">quarter</span> weights for this scenario</label>
           <div class="sc-weights" id="sc-weights" hidden>
-            <label for="sc-w1">Q1<input class="input" type="number" id="sc-w1" min="0" step="0.01" value="25"></label>
-            <label for="sc-w2">Q2<input class="input" type="number" id="sc-w2" min="0" step="0.01" value="25"></label>
-            <label for="sc-w3">Q3<input class="input" type="number" id="sc-w3" min="0" step="0.01" value="25"></label>
-            <label for="sc-w4">Q4<input class="input" type="number" id="sc-w4" min="0" step="0.01" value="25"></label>
+            <label for="sc-w1" data-term="1"><span data-tl="1">Q1</span><input class="input" type="number" id="sc-w1" min="0" step="0.01" value="25"></label>
+            <label for="sc-w2" data-term="2"><span data-tl="2">Q2</span><input class="input" type="number" id="sc-w2" min="0" step="0.01" value="25"></label>
+            <label for="sc-w3" data-term="3"><span data-tl="3">Q3</span><input class="input" type="number" id="sc-w3" min="0" step="0.01" value="25"></label>
+            <label for="sc-w4" data-term="4"><span data-tl="4">Q4</span><input class="input" type="number" id="sc-w4" min="0" step="0.01" value="25"></label>
           </div>
         </fieldset>
       </div>
@@ -468,6 +486,22 @@
       </div>
       <div id="sc-note" class="sc-note" role="status" aria-live="polite"></div>
       <div id="sc-summary" class="sc-summary" role="status" aria-live="polite"></div>
+      <div id="sc-charts" class="sc-charts" hidden>
+        <figure class="sc-chart" id="sc-chart-letters">
+          <div class="sc-chart-svg"></div>
+          <figcaption class="sc-chart-actions no-print">
+            <button class="btn btn-secondary" type="button" data-sc-dl="letters-svg">Download letters chart (SVG)</button>
+            <button class="btn btn-secondary" type="button" data-sc-dl="letters-png">PNG</button>
+          </figcaption>
+        </figure>
+        <figure class="sc-chart" id="sc-chart-percent">
+          <div class="sc-chart-svg"></div>
+          <figcaption class="sc-chart-actions no-print">
+            <button class="btn btn-secondary" type="button" data-sc-dl="percent-svg">Download percentage chart (SVG)</button>
+            <button class="btn btn-secondary" type="button" data-sc-dl="percent-png">PNG</button>
+          </figcaption>
+        </figure>
+      </div>
       <div id="sc-scroll" class="sc-scroll" tabindex="0" role="region" aria-label="Scenario results by student" hidden>
         <table class="sc-table" id="sc-table"></table>
       </div>
@@ -491,11 +525,36 @@
           <div id="triage-missing-list"></div>
         </div>
         <div class="triage-col">
-          <h3>One quarter from a letter change</h3>
+          <h3>One <span data-tw="n">quarter</span> from a letter change</h3>
           <div id="triage-oneaway-list"></div>
         </div>
       </div>
       <button class="btn btn-secondary" id="print-catchup-btn" type="button" style="margin-top:0.75rem;">Print Catch-Up Slips</button>
+    </div>
+  </div>
+
+  <!-- The roster check, like the triage, asks about a whole paste and is hidden until there is one.
+       Neither list is stored: the roster is read from Class Roster Hub or typed here and lives in
+       this page only, and this tool still saves no grade. -->
+  <div class="card blueprint no-print" id="roster-card" style="display:none;">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="settings-row">
+      <strong>Check the paste against a class roster</strong>
+      <p class="whatif-hint">Finds the students who are on your class list but have no row in the grades above, and the rows that are
+        not on the list. Names match whatever the order (&ldquo;Lee, Jordan&rdquo; is &ldquo;Jordan Lee&rdquo;), capitals or accents; a
+        near spelling is shown as a hint and never matched for you. The list is kept in this page only &mdash; nothing is saved.</p>
+      <div class="rj-controls">
+        <label for="rj-roster">A roster from Class Roster Hub</label>
+        <select id="rj-roster" class="input"><option value="">None chosen</option></select>
+      </div>
+      <label for="rj-area" style="display:block;margin-top:8px;">Or paste the class list, one name per line</label>
+      <textarea class="input import-textarea" id="rj-area" rows="4" placeholder="Ada Lovelace&#10;Polo, Marco"></textarea>
+      <div class="import-actions">
+        <button class="btn btn-primary" id="rj-check-btn" type="button">Check the roster</button>
+        <button class="btn btn-secondary" id="rj-clear-btn" type="button">Clear</button>
+      </div>
+      <div id="rj-summary" class="sc-summary" role="status" aria-live="polite"></div>
+      <div id="rj-lists" class="triage-columns"></div>
     </div>
   </div>
 
@@ -507,9 +566,9 @@
 
   <div class="note-bar">
     <strong>Which grade to use?</strong> Per Carroll County grading policy, award the <strong>higher</strong> of the two methods. The highlighted box is the one to report.<br>
-    <strong>Quality Points:</strong> Each quarter letter converts to a point value (A=4, B=3, C=2, D=1, F=0). Those four values are averaged, then converted back to a letter (3.5 and up is an A).<br>
-    <strong>Percentage Average:</strong> The four raw percentages are averaged directly, then converted using the 10-point scale. Exactly .5 rounds up, so 89.5 is an A and 89.49 is a B.<br>
-    <strong>All four quarters are required.</strong> With a quarter missing or exempt, no final grade is shown, because a three-quarter average is not the county's number.
+    <strong>Quality Points:</strong> Each <span data-tw="n">quarter</span> letter converts to a point value (A=4, B=3, C=2, D=1, F=0). Those <span data-tw="num">four</span> values are averaged, then converted back to a letter (3.5 and up is an A).<br>
+    <strong>Percentage Average:</strong> The <span data-tw="num">four</span> raw percentages are averaged directly, then converted using the 10-point scale. Exactly .5 rounds up, so 89.5 is an A and 89.49 is a B.<br>
+    <strong><span data-tw="Allt">All four quarters</span> are required.</strong> With a <span data-tw="n">quarter</span> missing or exempt, no final grade is shown, because a <span data-tw="fewer">three-quarter</span> average is not the county's number.
   </div>
   <div class="legend no-print">
     <div class="legend-item"><div class="legend-dot grade-A"></div> A (90–100)</div>
@@ -524,33 +583,33 @@
   <div id="need-section" style="display:none;">
     <div class="card blueprint import-panel">
       <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-      <h2>What Do I Need on the Remaining Quarter?</h2>
+      <h2>What Do I Need on the Remaining <span data-tw="N">Quarter</span>?</h2>
       <p>
-        Enter the quarters you already know, mark which one is still open, and set a target final grade.
+        Enter the <span data-tw="ns">quarters</span> you already know, mark which one is still open, and set a target final grade.
         This solves the same two county rules used above — Quality Points and Percentage Average — for the
         score needed on the open quarter, using whichever method gets there with the lower score. Each
-        quarter counts equally: 25% of the final grade.
+        <span data-tw="n">quarter</span> counts equally: <span data-tw="eq">25%</span> of the final grade.
       </p>
       <p class="need-calendar" id="need-calendar" role="status" hidden></p>
 
       <div class="need-quarters-row">
-        <div class="need-quarter-wrap">
-          <label for="need-q1">Quarter 1</label>
+        <div class="need-quarter-wrap" data-term="1">
+          <label for="need-q1" data-tn-label="1">Quarter 1</label>
           <input class="input grade-input" type="number" id="need-q1" min="0" max="100" step="0.01" inputmode="decimal" placeholder="—">
           <label class="need-solve-radio"><input type="radio" name="need-solve" value="0"> solving for this one</label>
         </div>
-        <div class="need-quarter-wrap">
-          <label for="need-q2">Quarter 2</label>
+        <div class="need-quarter-wrap" data-term="2">
+          <label for="need-q2" data-tn-label="2">Quarter 2</label>
           <input class="input grade-input" type="number" id="need-q2" min="0" max="100" step="0.01" inputmode="decimal" placeholder="—">
           <label class="need-solve-radio"><input type="radio" name="need-solve" value="1"> solving for this one</label>
         </div>
-        <div class="need-quarter-wrap">
-          <label for="need-q3">Quarter 3</label>
+        <div class="need-quarter-wrap" data-term="3">
+          <label for="need-q3" data-tn-label="3">Quarter 3</label>
           <input class="input grade-input" type="number" id="need-q3" min="0" max="100" step="0.01" inputmode="decimal" placeholder="—">
           <label class="need-solve-radio"><input type="radio" name="need-solve" value="2"> solving for this one</label>
         </div>
-        <div class="need-quarter-wrap">
-          <label for="need-q4">Quarter 4</label>
+        <div class="need-quarter-wrap" data-term="4">
+          <label for="need-q4" data-tn-label="4">Quarter 4</label>
           <input class="input grade-input" type="number" id="need-q4" min="0" max="100" step="0.01" inputmode="decimal" placeholder="—" disabled>
           <label class="need-solve-radio"><input type="radio" name="need-solve" value="3" checked> solving for this one</label>
         </div>
@@ -585,11 +644,13 @@
 import {
   getLetter, calcFinals, parsePastedData, LETTER_CUTOFFS, QP_CUTOFFS,
   LETTER_CUTOFFS_STRICT, QP_CUTOFFS_STRICT,
-  isGradeCell, Q1_COLUMN, QUARTERS, getQP, qpToFinalLetter, RANK,
+  isGradeCell, Q1_COLUMN, getQP, qpToFinalLetter, RANK,
   findQuarterWindow, splitRow, curveScores, triageStudent,
+  termsOf, termLabel, termNoun,
 } from './final-grade-checker/grade-math.mjs';
+import { joinRoster } from './final-grade-checker/roster-join.mjs';
 import {
-  cleanScenario, compareClass, describeScenario, isNoScenario,
+  cleanScenario, compareClass, describeScenario, isNoScenario, distributions,
 } from './final-grade-checker/scenario-math.mjs';
 
 /** How close `value` sits to the nearest letter-boundary in `cutoffs` (grade-math.mjs's
@@ -639,6 +700,10 @@ function loadPersistedSettings() {
     const saved = JSON.parse(raw);
     if (saved && typeof saved === 'object') {
       settings = { ...DEFAULT_SETTINGS, ...saved, persist: true };
+      if (settings.terms !== undefined) {   // absent means four quarters, so the stored string is the old one
+        if (termsOf({ terms: settings.terms }) === 4) delete settings.terms;
+        settings.weights = fitWeights(settings.weights, termCount());
+      }
     }
   } catch { /* corrupt or blocked storage — fall back to session defaults */ }
 }
@@ -648,6 +713,70 @@ function savePersistedSettings() {
     else localStorage.removeItem(SETTINGS_KEY);
   } catch { /* private browsing or a full quota — settings just won't persist */ }
 }
+// ── Terms: how many grades make a final ─────────────────────
+// The count and its words come from one place, so the cards, exports, slips and
+// every sentence agree. At the default (four quarters) every string is the one
+// the page always had.
+const NUM_WORD = ['', 'one', 'two', 'three', 'four'];
+function termCount() { return termsOf(settings); }   // settings.terms is set only when it is not 4
+function noun() { return termNoun(termCount()); }
+function Noun() { const n = noun(); return n[0].toUpperCase() + n.slice(1); }
+function allTerms() { const c = termCount(); return c === 2 ? 'both semesters' : `all ${NUM_WORD[c]} ${noun()}s`; }
+function tLabel(i) { return termLabel(i, termCount()); }
+/** A weights list made N long: the old values kept, new places equal to the first. */
+function fitWeights(w, n) {
+  const src = Array.isArray(w) ? w : [];
+  const eq = Number.isFinite(src[0]) && src[0] > 0 ? src[0] : 100 / n;
+  return Array.from({ length: n }, (_, i) => Number.isFinite(src[i]) ? src[i] : eq);
+}
+function fitScores(scores, n) {
+  return Array.from({ length: n }, (_, i) => (scores && scores[i] !== undefined) ? scores[i] : null);
+}
+/** The words the static markup marks with data-tw, for the current count. */
+function termWords(kind) {
+  const c = termCount(), nn = noun(), N = Noun();
+  switch (kind) {
+    case 'n': return nn;
+    case 'N': return N;
+    case 'ns': return nn + 's';
+    case 'Ns': return N + 's';
+    case 'num': return NUM_WORD[c];
+    case 'eq': return (100 / c) % 1 === 0 ? (100 / c) + '%' : (100 / c).toFixed(1) + '%';
+    case 'Allt': return allTerms()[0].toUpperCase() + allTerms().slice(1);
+    case 'fewer': return c === 2 ? 'one-semester' : c === 3 ? 'two-trimester' : 'three-quarter';
+    default: return '';
+  }
+}
+function applyTermsToDom() {
+  const c = termCount();
+  document.querySelectorAll('[data-tw]').forEach(el => { el.textContent = termWords(el.dataset.tw); });
+  document.querySelectorAll('[data-term]').forEach(el => { el.hidden = Number(el.dataset.term) > c; });
+  document.querySelectorAll('[data-tl]').forEach(el => { el.textContent = tLabel(Number(el.dataset.tl) - 1); });
+  document.querySelectorAll('[data-tn-label]').forEach(el => { el.textContent = `${Noun()} ${el.dataset.tnLabel}`; });
+  const n = noun();
+  const drop = document.getElementById('sc-drop');
+  [...drop.options].forEach(o => {
+    const k = Number(o.value);
+    o.hidden = k > c - 1; o.disabled = k > c - 1;
+    o.textContent = k === 0 ? `no ${n}s` : k === 1 ? `1 ${n}` : `${k} ${n}s`;
+  });
+  if (Number(drop.value) > c - 1) drop.value = String(c - 1);
+  const apply = document.getElementById('sc-apply');
+  [...apply.options].forEach(o => {
+    if (o.value === 'all') { o.textContent = `Every ${n}`; return; }
+    const k = Number(o.value);
+    o.hidden = k >= c; o.disabled = k >= c;
+    o.textContent = `${Noun()} ${k + 1} only`;
+  });
+  if (apply.value !== 'all' && Number(apply.value) >= c) apply.value = 'all';
+  document.getElementById('term-count').value = String(c);
+  const solve = document.querySelector('input[name="need-solve"]:checked');
+  if (!solve || Number(solve.value) >= c) {
+    const last = document.querySelector(`input[name="need-solve"][value="${c - 1}"]`);
+    if (last) last.checked = true;
+  }
+}
+
 function precisionDecimals(p) { return p === 'whole' ? 0 : p === 'tenth' ? 1 : null; }
 /** The opts object every calcFinals/getLetter/qpToFinalLetter call in this
  * file passes, built fresh from the current Grading Settings. With every
@@ -657,7 +786,8 @@ function calcOpts() {
   return {
     boundary: settings.boundary,
     precision: precisionDecimals(settings.precision),
-    weights: settings.weightsEnabled ? settings.weights : null,
+    weights: settings.weightsEnabled ? settings.weights.slice(0, termCount()) : null,
+    terms: termCount(),
   };
 }
 
@@ -670,13 +800,13 @@ function calcOpts() {
  */
 function arithmeticLines(scores, f, opts) {
   const weighted = !!(opts && opts.weights);
-  const w = weighted ? opts.weights : [25, 25, 25, 25];
+  const w = weighted ? opts.weights : new Array(termsOf(opts)).fill(25);
   const letters = scores.map(s => s === null ? null : getLetter(s, opts));
   const qpVals  = letters.map(l => l === null ? null : getQP(l));
 
   const qpTerms  = qpVals.map((v, i) => v === null ? '—' : weighted ? `${v}×${w[i]}` : `${v}`);
   const pctTerms = scores.map((s, i) => s === null ? '—' : weighted ? `${s.toFixed(2)}×${w[i]}` : s.toFixed(2));
-  const denom = weighted ? `(${w.join('+')})` : QUARTERS;
+  const denom = weighted ? `(${w.join('+')})` : termsOf(opts);
 
   const qpLine  = `Quality Points — letters ${letters.map(l => l ?? '—').join(', ')} → points ${qpVals.map(v => v ?? '—').join(', ')}. `
                 + `(${qpTerms.join(' + ')}) ÷ ${denom} = ${f.avgQP.toFixed(2)} → ${f.qpFinal}`;
@@ -752,7 +882,7 @@ async function withLibs(which, btn, run) {
   const rows = exportableStudents();
   if (rows.length === 0) { alert('No student data to export.'); return; }
   if (rows.every(s => !calcFinals(s.scores, calcOpts()))) {
-    alert('Nothing complete to export yet. A student needs all four quarters before a final grade exists.');
+    alert(`Nothing complete to export yet. A student needs ${allTerms()} before a final grade exists.`);
     return;
   }
   const label = btn.textContent;
@@ -783,7 +913,7 @@ function exportExcel() {
   const students = exportableStudents();
   const rows = [[
     '#', 'Student Name',
-    'Q1', 'Q2', 'Q3', 'Q4',
+    ...Array.from({ length: termCount() }, (_, i) => tLabel(i)),
     'QP Avg', 'QP Grade',
     'Pct Avg', 'Pct Grade',
     'Final Grade', 'Method Used'
@@ -801,13 +931,13 @@ function exportExcel() {
       f ? parseFloat(f.pctAvg.toFixed(2)) : 'Incomplete',
       f ? f.pctFinal                       : '',
       f ? f.finalLetter                    : 'No final grade',
-      f ? (f.winner === 'QP' ? 'Quality Points' : 'Pct. Average') : 'All four quarters required'
+      f ? (f.winner === 'QP' ? 'Quality Points' : 'Pct. Average') : `${allTerms()[0].toUpperCase()}${allTerms().slice(1)} required`
     ]);
   });
 
   ExportKit.toXlsx({
     name: 'Final Grades', rows,
-    widths: [4, 30, 9, 9, 9, 9, 10, 10, 10, 10, 14, 26]
+    widths: [4, 30, ...new Array(termCount()).fill(9), 10, 10, 10, 10, 14, 26]
   }, { filename: 'final_grades.xlsx' });
 }
 
@@ -850,13 +980,16 @@ function buildPdfDoc() {
 
   // Build table rows
   const pdfOpts = calcOpts();
+  // Column places: id, name, then one column per term, then the six result columns.
+  const T = termCount();
+  const C_QPAVG = 2 + T, C_QP = 3 + T, C_PCTAVG = 4 + T, C_PCT = 5 + T, C_FINAL = 6 + T, C_METHOD = 7 + T;
   const tableRows = students.map((s, i) => {
     const f = calcFinals(s.scores, pdfOpts);
     const fmt = v => v !== null ? v.toFixed(2) : 'Missing';
     return [
       i + 1,
       s.name || `Student ${i+1}`,
-      fmt(s.scores[0]), fmt(s.scores[1]), fmt(s.scores[2]), fmt(s.scores[3]),
+      ...fitScores(s.scores, termCount()).map(fmt),
       f ? f.avgQP.toFixed(2) : '—',
       f ? f.qpFinal  : '—',
       f ? f.pctAvg.toFixed(2)+'%' : '—',
@@ -871,7 +1004,7 @@ function buildPdfDoc() {
     margin: { left: 40, right: 40 },
     head: [[
       '#', 'Student Name',
-      'Q1', 'Q2', 'Q3', 'Q4',
+      ...Array.from({ length: termCount() }, (_, i) => tLabel(i)),
       'QP Avg', 'QP', 'Pct Avg', 'Pct',
       'Final', 'Method'
     ]],
@@ -890,20 +1023,17 @@ function buildPdfDoc() {
       fontSize: 9,
       halign: 'center',
     },
-    columnStyles: {
-      0:  { halign:'center', cellWidth:22 },
-      1:  { halign:'left',   cellWidth:110 },
-      2:  { halign:'center', cellWidth:46 },
-      3:  { halign:'center', cellWidth:46 },
-      4:  { halign:'center', cellWidth:46 },
-      5:  { halign:'center', cellWidth:46 },
-      6:  { halign:'center', cellWidth:44 },
-      7:  { halign:'center', cellWidth:28 },
-      8:  { halign:'center', cellWidth:46 },
-      9:  { halign:'center', cellWidth:28 },
-      10: { halign:'center', cellWidth:34 },
-      11: { halign:'center', cellWidth:54 },
-    },
+    columnStyles: Object.fromEntries([
+      [0, { halign:'center', cellWidth:22 }],
+      [1, { halign:'left',   cellWidth:110 }],
+      ...Array.from({ length: T }, (_, i) => [2 + i, { halign:'center', cellWidth:46 }]),
+      [C_QPAVG, { halign:'center', cellWidth:44 }],
+      [C_QP,    { halign:'center', cellWidth:28 }],
+      [C_PCTAVG,{ halign:'center', cellWidth:46 }],
+      [C_PCT,   { halign:'center', cellWidth:28 }],
+      [C_FINAL, { halign:'center', cellWidth:34 }],
+      [C_METHOD,{ halign:'center', cellWidth:54 }],
+    ]),
     didParseCell(data) {
       if (data.section === 'head') return;
       const col = data.column.index;
@@ -914,9 +1044,9 @@ function buildPdfDoc() {
       if (!s) return;
       const f = calcFinals(s.scores, pdfOpts);
 
-      // Quarter score cells (cols 2–5)
-      if (col >= 2 && col <= 5) {
-        const score = s.scores[col - 2];
+      // Term score cells
+      if (col >= 2 && col < 2 + T) {
+        const score = fitScores(s.scores, T)[col - 2];
         if (score !== null) {
           const letter = getLetter(score, pdfOpts);
           if (letter && gradeColors[letter]) {
@@ -930,32 +1060,32 @@ function buildPdfDoc() {
         }
       }
 
-      // QP grade (col 7)
-      if (col === 7 && f) {
+      // QP grade
+      if (col === C_QP && f) {
         const gc = gradeColors[f.qpFinal];
         if (gc) { data.cell.styles.fillColor=gc.bg; data.cell.styles.textColor=gc.text; data.cell.styles.fontStyle='bold'; }
       }
-      // Pct grade (col 9)
-      if (col === 9 && f) {
+      // Pct grade
+      if (col === C_PCT && f) {
         const gc = gradeColors[f.pctFinal];
         if (gc) { data.cell.styles.fillColor=gc.bg; data.cell.styles.textColor=gc.text; data.cell.styles.fontStyle='bold'; }
       }
-      // Final grade (col 10) — winner style
-      if (col === 10 && f) {
+      // Final grade — winner style
+      if (col === C_FINAL && f) {
         const gc = gradeColors[f.finalLetter];
         data.cell.styles.fillColor = winnerBg;
         data.cell.styles.textColor = gc ? gc.text : winnerText;
         data.cell.styles.fontStyle = 'bold';
         data.cell.styles.fontSize  = 10;
       }
-      // Method (col 11)
-      if (col === 11 && f) {
+      // Method
+      if (col === C_METHOD && f) {
         data.cell.styles.fillColor = winnerBg;
         data.cell.styles.textColor = winnerText;
         data.cell.styles.fontStyle = 'bold';
       }
       // Row banding on non-colored cells
-      if (![2,3,4,5,7,9,10,11].includes(col)) {
+      if (!(col >= 2 && col < 2 + T) && ![C_QP, C_PCT, C_FINAL, C_METHOD].includes(col)) {
         if (si % 2 === 0) data.cell.styles.fillColor = bandBg;
       }
     },
@@ -982,7 +1112,7 @@ function buildPdfDoc() {
     doc.setTextColor(120,120,120);
     doc.setFont('helvetica', 'normal');
     doc.text('Final grade = higher of the Quality Points or Percentage Average method. Exactly .5 rounds up, so 89.5 is an A.', 40, finalY + 18);
-    doc.text('A student missing any quarter shows no final grade; all four are required.', 40, finalY + 30);
+    doc.text(`A student missing any ${noun()} shows no final grade; ${allTerms()} are required.`, 40, finalY + 30);
   }
 
   return doc;
@@ -1067,7 +1197,7 @@ function renderColumnMapping(raw) {
     cols.map(c => `<td style="padding:2px 6px;border:1px solid var(--color-border,#ccc);">${escHtml(c || '·')}</td>`).join('') +
     '</tr></tbody></table>';
 
-  const auto = findQuarterWindow(cols);
+  const auto = findQuarterWindow(cols, termCount());
   // Auto-detect had to move the window from the documented position — pop
   // the panel open so the teacher notices the guess instead of hunting for
   // it. An explicit mapping the teacher already chose is left as they left it.
@@ -1089,7 +1219,7 @@ function doImport() {
   const raw = document.getElementById('import-area').value;
   if (!raw.trim()) { setStatus('Nothing to import.', 'warn'); showWarnings([]); document.getElementById('column-mapping').hidden = true; return; }
   renderColumnMapping(raw);
-  const { students, warnings } = parsePastedData(raw, columnOverride);
+  const { students, warnings } = parsePastedData(raw, { ...columnOverride, terms: termCount() });
   if (students.length === 0) {
     setStatus('Could not read any students. Check the format and try again.', 'err');
     showWarnings(warnings);
@@ -1099,7 +1229,7 @@ function doImport() {
   currentStudents = students;
   renderImportedStudents(students);
   showWarnings(warnings);
-  const incomplete = students.filter(s => !calcFinals(s.scores)).length;
+  const incomplete = students.filter(s => !calcFinals(s.scores, calcOpts())).length;
   let msg = `Imported ${students.length} student${students.length > 1 ? 's' : ''}.`;
   if (incomplete) msg += ` ${incomplete} without a final grade.`;
   if (warnings.length) msg += ` ${warnings.length} warning${warnings.length > 1 ? 's' : ''} below.`;
@@ -1119,6 +1249,8 @@ function renderImportedStudents(students) {
   renderScenario(students);
   document.getElementById('triage-card').style.display = students.length ? '' : 'none';
   renderTriageSummary(students);
+  document.getElementById('roster-card').style.display = students.length ? '' : 'none';
+  showRosterResult(null);
 }
 
 /* ── Class-wide what-if ──────────────────────────────────────────────────────
@@ -1246,8 +1378,8 @@ function readScenarioForm() {
       apply: applyV === 'all' ? 'all' : parseInt(applyV, 10),
       extra: $('sc-extra').checked,
     },
-    weights: $('sc-rw').checked ? [1, 2, 3, 4].map(n => parseFloat($('sc-w' + n).value)) : null,
-  });
+    weights: $('sc-rw').checked ? Array.from({ length: termCount() }, (_, i) => parseFloat($('sc-w' + (i + 1)).value)) : null,
+  }, termCount());
 }
 
 function scenarioToForm(sc) {
@@ -1281,16 +1413,18 @@ function renderScenario(students) {
   note.classList.toggle('warn', problems.length > 0);
   table.textContent = '';
   if (!students || !students.length || isNoScenario(scenario)) {
-    summary.textContent = students && students.length ? describeScenario(scenario) : '';
+    summary.textContent = students && students.length ? describeScenario(scenario, termCount()) : '';
     box.hidden = true;
+    $('sc-charts').hidden = true;
     return;
   }
   const c = compareClass(students, scenario, calcOpts());
+  drawScenarioCharts(c);
   const parts = [`${c.up} up`, `${c.down} down`, `${c.same} unchanged`];
-  if (c.noFinal) parts.push(`${c.noFinal} with no final on one side or both (a quarter that counts is missing)`);
+  if (c.noFinal) parts.push(`${c.noFinal} with no final on one side or both (a ${noun()} that counts is missing)`);
   summary.textContent = '';
   const l1 = document.createElement('div');
-  const em = document.createElement('em'); em.textContent = describeScenario(scenario);
+  const em = document.createElement('em'); em.textContent = describeScenario(scenario, termCount());
   l1.append(em, ' \u2014 final letters: ' + parts.join(', ') + '.');
   const l2 = document.createElement('div');
   l2.textContent = 'Letters before: ' + letterTally(c.letters.before) + '. After: ' + letterTally(c.letters.after) + '.';
@@ -1317,20 +1451,107 @@ function renderScenario(students) {
       ch.textContent = (r.moved === 'same' ? `${r.after.finalLetter}, no letter change` : `${r.before.finalLetter} \u2192 ${r.after.finalLetter} (${r.moved})`) + `; ${fmtSigned(r.diffPct)} points`;
       if (r.moved !== 'same') ch.className = r.moved;
     } else ch.textContent = '\u2014';
-    cell(r.dropped.length ? r.dropped.map(q => 'Q' + (q + 1)).join(', ') : '\u2014');
+    cell(r.dropped.length ? r.dropped.map(q => tLabel(q)).join(', ') : '\u2014');
     tbody.append(tr);
   });
   table.append(cap, thead, tbody);
   box.hidden = false;
 }
 
+// The before/after pictures: the same numbers as the table (compareClass), counted by
+// distributions() and drawn by the shared ChartSvg. No name is in either picture.
+const scChartSvgs = { letters: '', percent: '' };
+function drawScenarioCharts(cmp) {
+  const d = distributions(cmp);
+  const box = $('sc-charts');
+  if (!d.n) { box.hidden = true; return; }
+  const yMax = ChartSvg.niceMax(Math.max(1, ...d.letters.before, ...d.letters.after, ...d.percent.before, ...d.percent.after) * 1.15);
+  const series = (cat) => [
+    { label: 'Real grades', values: d[cat].before, color: '#6c8ef5' },
+    { label: 'With the scenario', values: d[cat].after, color: '#fbbf24' },
+  ];
+  scChartSvgs.letters = ChartSvg.bar({ categories: d.letters.categories, series: series('letters') },
+    { W: 480, H: 300, grayscale: true, showValues: true, yMax, yLabel: 'Students', idPrefix: 'scl',
+      title: `Final letters, real and with the scenario (${d.n} students)`, pad: { top: 40, right: 16, bottom: 56, left: 44 } });
+  scChartSvgs.percent = ChartSvg.bar({ categories: d.percent.categories, series: series('percent') },
+    { W: 480, H: 300, grayscale: true, showValues: true, yMax, yLabel: 'Students', idPrefix: 'scp',
+      title: `Percentage average, real and with the scenario (${d.n} students)`, pad: { top: 40, right: 16, bottom: 56, left: 44 } });
+  [['letters', 'sc-chart-letters'], ['percent', 'sc-chart-percent']].forEach(([k, id]) => {
+    const host = $(id).querySelector('.sc-chart-svg');
+    host.textContent = '';
+    const doc = new DOMParser().parseFromString(scChartSvgs[k], 'image/svg+xml').documentElement;
+    host.append(document.importNode(doc, true));
+  });
+  box.hidden = false;
+}
+function downloadScenarioChart(which) {
+  const [k, kind] = which.split('-');
+  const svg = scChartSvgs[k];
+  if (!svg) return;
+  const base = 'scenario-' + (k === 'letters' ? 'final-letters' : 'percentage-average');
+  if (kind === 'svg') ChartSvg.downloadSvg(svg, base); else ChartSvg.downloadPng(svg, base, 960, 600);
+}
+document.getElementById('sc-charts').addEventListener('click', e => {
+  const b = e.target.closest('[data-sc-dl]');
+  if (b) downloadScenarioChart(b.dataset.scDl);
+});
+
+// ── The roster check ─────────────────────────────────────────
+// Two lists held in memory: the students just read and a class list typed or read (never
+// written) from Class Roster Hub. roster-join.mjs decides; this only draws what it found.
+function rosterNamesFromBox() {
+  return document.getElementById('rj-area').value.split('\n').map(l => l.replace(/\t+/g, ' ').trim()).filter(Boolean);
+}
+function rosterList(title, items, cls) {
+  const col = document.createElement('div'); col.className = 'triage-col';
+  const h = document.createElement('h3'); h.textContent = `${title} (${items.length})`;
+  col.append(h);
+  if (!items.length) { const p = document.createElement('p'); p.className = 'triage-empty'; p.textContent = 'None.'; col.append(p); return col; }
+  const ul = document.createElement('ul'); ul.className = cls;
+  items.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.append(li); });
+  col.append(ul);
+  return col;
+}
+function showRosterResult(res) {
+  const sum = document.getElementById('rj-summary'), box = document.getElementById('rj-lists');
+  box.textContent = '';
+  if (!res) { sum.textContent = ''; return; }
+  const parts = [`${res.rosterSize} on the roster`, `${res.matched.length} matched to a row`];
+  if (res.missing.length) parts.push(`${res.missing.length} with no row`);
+  if (res.extra.length) parts.push(`${res.extra.length} row${res.extra.length === 1 ? '' : 's'} not on the roster`);
+  if (res.ambiguous.length) parts.push(`${res.ambiguous.length} that fit more than one roster name`);
+  if (res.duplicates.length) parts.push(`${res.duplicates.length} name${res.duplicates.length === 1 ? '' : 's'} pasted more than once`);
+  sum.textContent = (res.rosterSize ? parts.join('; ') + '.' : 'The roster is empty, so every row is shown as not on it.');
+  if (!res.missing.length && !res.extra.length && !res.ambiguous.length && !res.duplicates.length && res.rosterSize) {
+    sum.textContent += ' Everyone lines up.';
+  }
+  box.append(rosterList('On the roster, no row above', res.missing, 'rj-missing'));
+  box.append(rosterList('In the grades, not on the roster', res.extra.map(e => e.closeTo ? `${e.name} \u2014 close to ${e.closeTo}?` : e.name), 'rj-extra'));
+  const odd = [
+    ...res.ambiguous.map(a => `${a.name} fits ${a.candidates.join(' and ')}`),
+    ...res.duplicates.map(d => `${d.name} appears on ${d.indexes.length} rows`),
+  ];
+  if (odd.length) box.append(rosterList('Needs a look', odd, 'rj-odd'));
+}
+function checkRoster() {
+  const names = rosterNamesFromBox();
+  if (!names.length) { showRosterResult(null); document.getElementById('rj-summary').textContent = 'Choose a roster or paste a class list first.'; return; }
+  showRosterResult(joinRoster(currentStudents, names));
+}
+function fillRosterChoices() {
+  const sel = document.getElementById('rj-roster');
+  const lists = window.Roster ? Roster.listRosters() : [];
+  lists.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; sel.append(o); });
+  sel.disabled = !lists.length;
+  if (!lists.length) sel.options[0].textContent = 'No saved rosters found in this browser';
+}
 function refreshScenario() { if (currentStudents && currentStudents.length && mode !== 'manual') renderScenario(currentStudents); }
 
 // ── Saved scenarios ──
 function savedScenarios() {
   const raw = Array.isArray(settings.scenarios) ? settings.scenarios : [];
   return raw.filter(x => x && typeof x.name === 'string' && x.name.trim()).slice(0, 20)
-    .map(x => ({ name: x.name.trim().slice(0, 40), ...cleanScenario(x).scenario }));
+    .map(x => ({ name: x.name.trim().slice(0, 40), ...cleanScenario(x, termCount()).scenario }));
 }
 
 function renderSavedScenarios(selectedName) {
@@ -1375,7 +1596,7 @@ function loadScenario() {
   $('sc-name').value = sc.name;
   refreshScenario();
   $('sc-note').classList.remove('warn');
-  $('sc-note').textContent = `Using \u201c${sc.name}\u201d. ` + describeScenario(sc);
+  $('sc-note').textContent = `Using \u201c${sc.name}\u201d. ` + describeScenario(sc, termCount());
 }
 
 function deleteScenario() {
@@ -1420,14 +1641,14 @@ function studentLabel(student, i) {
 
 function missingWorkLine(student, i, missing) {
   const bits = [];
-  if (missing.zeros.length) bits.push(`<span class="triage-zero">zero</span> on ${missing.zeros.map(q => 'Q' + (q + 1)).join(', ')}`);
-  if (missing.blanks.length) bits.push(`<span class="triage-blank">not entered</span>: ${missing.blanks.map(q => 'Q' + (q + 1)).join(', ')}`);
+  if (missing.zeros.length) bits.push(`<span class="triage-zero">zero</span> on ${missing.zeros.map(q => tLabel(q)).join(', ')}`);
+  if (missing.blanks.length) bits.push(`<span class="triage-blank">not entered</span>: ${missing.blanks.map(q => tLabel(q)).join(', ')}`);
   return `<li><strong>${escHtml(studentLabel(student, i))}</strong> — ${bits.join('; ')}</li>`;
 }
 
 function oneAwayLine(student, i, oneAway) {
   return `<li><strong>${escHtml(studentLabel(student, i))}</strong> — ${oneAway.fromLetter} &rarr; <strong>${oneAway.toLetter}</strong> ` +
-    `if Quarter ${oneAway.quarterIdx + 1} (now ${oneAway.currentScore.toFixed(2)}%) reaches ${oneAway.neededPct.toFixed(2)}%</li>`;
+    `if ${Noun()} ${oneAway.quarterIdx + 1} (now ${oneAway.currentScore.toFixed(2)}%) reaches ${oneAway.neededPct.toFixed(2)}%</li>`;
 }
 
 /** Every student's triage result, computed once and reused by the summary
@@ -1468,15 +1689,15 @@ function renderTriageSummary(students) {
 function buildCatchupSlipHtml(student, i, result) {
   const name = studentLabel(student, i);
   const scores = student.scores;
-  const quartersLine = [0, 1, 2, 3].map(qi => `Q${qi + 1}: ${scores[qi] !== null ? scores[qi].toFixed(2) + '%' : '—'}`).join(' &nbsp; ');
+  const quartersLine = fitScores(scores, termCount()).map((v, qi) => `${tLabel(qi)}: ${v !== null ? v.toFixed(2) + '%' : '—'}`).join(' &nbsp; ');
 
   const missingParts = [];
-  if (result.missing.zeros.length) missingParts.push(`Zero recorded: ${result.missing.zeros.map(q => 'Quarter ' + (q + 1)).join(', ')}`);
-  if (result.missing.blanks.length) missingParts.push(`Not yet entered: ${result.missing.blanks.map(q => 'Quarter ' + (q + 1)).join(', ')}`);
+  if (result.missing.zeros.length) missingParts.push(`Zero recorded: ${result.missing.zeros.map(q => Noun() + ' ' + (q + 1)).join(', ')}`);
+  if (result.missing.blanks.length) missingParts.push(`Not yet entered: ${result.missing.blanks.map(q => Noun() + ' ' + (q + 1)).join(', ')}`);
   const missingHtml = missingParts.length ? `<div class="slip-missing">${missingParts.map(escHtml).join('<br>')}</div>` : '';
 
   const oneAwayHtml = result.oneAway
-    ? `<div class="slip-need">One quarter from a ${result.oneAway.toLetter}: raise Quarter ${result.oneAway.quarterIdx + 1} ` +
+    ? `<div class="slip-need">One ${noun()} from a ${result.oneAway.toLetter}: raise ${Noun()} ${result.oneAway.quarterIdx + 1} ` +
       `from ${result.oneAway.currentScore.toFixed(2)}% to ${result.oneAway.neededPct.toFixed(2)}% or higher to move the final grade ` +
       `from ${result.oneAway.fromLetter} to ${result.oneAway.toLetter}.</div>`
     : '';
@@ -1513,11 +1734,11 @@ function buildImportCard(student, i) {
   const opts = calcOpts();
   const letters = scores.map(s => s !== null ? getLetter(s, opts) : null);
 
-  const quartersHtml = [0,1,2,3].map(qi => {
+  const quartersHtml = Array.from({ length: termCount() }, (_, qi) => qi).map(qi => {
     const s = scores[qi], l = letters[qi];
-    if (s === null) return `<div class="quarter-wrap"><span class="quarter-label">Quarter ${qi+1}</span><div class="missing-badge">Missing</div></div>`;
+    if (s === null) return `<div class="quarter-wrap"><span class="quarter-label">${Noun()} ${qi+1}</span><div class="missing-badge">Missing</div></div>`;
     return `<div class="quarter-wrap">
-      <span class="quarter-label">Quarter ${qi+1}</span>
+      <span class="quarter-label">${Noun()} ${qi+1}</span>
       <div class="grade-readonly">${s.toFixed(2)}</div>
       <div class="letter-badge ${gradeClass(l)}">${l}</div>
     </div>`;
@@ -1549,14 +1770,14 @@ function buildImportCard(student, i) {
       <span class="final-method">by ${METHOD_NAME[f.winner]}</span>
     </div>`;
   } else {
-    const m = 4 - scores.filter(s=>s!==null).length;
-    const note = `<div class="pending-note">${m} quarter(s) missing</div>`;
+    const m = termCount() - scores.filter(s=>s!==null).length;
+    const note = `<div class="pending-note">${m} ${noun()}(s) missing</div>`;
     qpHtml  = `<div class="result-box"><div class="result-label">Quality Points</div><div class="result-pct" style="opacity:0.4">—</div>${note}</div>`;
     avgHtml = `<div class="result-box"><div class="result-label">Pct. Average</div><div class="result-pct" style="opacity:0.4">—</div></div>`;
     finalHtml = `<div class="final-line pending">
       <span class="final-label">Final</span>
       <span class="final-letter">no grade</span>
-      <span class="final-method">all four quarters required</span>
+      <span class="final-method">${allTerms()} required</span>
     </div>`;
   }
 
@@ -1583,9 +1804,10 @@ function switchToManual() {
   document.getElementById('whatif-card').style.display = 'none';
   document.getElementById('scenario-card').style.display = 'none';
   document.getElementById('triage-card').style.display = 'none';
+  document.getElementById('roster-card').style.display = 'none';
   document.getElementById('import-area').value = '';
   setStatus('','');
-  currentStudents = Array.from({length: DEFAULT_MANUAL_COUNT}, () => ({ id: manualNextId++, name:'', scores:[null,null,null,null] }));
+  currentStudents = Array.from({length: DEFAULT_MANUAL_COUNT}, () => ({ id: manualNextId++, name:'', scores: fitScores(null, termCount()) }));
   renderManualCards();
   document.getElementById('clear-all-btn').onclick = clearAllManual;
   document.getElementById('add-student-row').style.display = '';
@@ -1604,7 +1826,7 @@ function findStudentIndexById(id) {
 }
 
 function addManualStudent() {
-  const student = { id: manualNextId++, name: '', scores: [null,null,null,null] };
+  const student = { id: manualNextId++, name: '', scores: fitScores(null, termCount()) };
   currentStudents.push(student);
   renderManualCards();
   const nameInput = document.getElementById(`name-${student.id}`);
@@ -1640,11 +1862,11 @@ function buildManualCard(student, displayIndex) {
     </div>
     <div class="grades-row">
       <div class="quarters-section">
-        ${[1,2,3,4].map(q=>{
+        ${Array.from({ length: termCount() }, (_, i) => i + 1).map(q=>{
           const val = student.scores[q-1];
           return `
           <div class="quarter-wrap">
-            <label for="q${q}-${id}">Quarter ${q}</label>
+            <label for="q${q}-${id}">${Noun()} ${q}</label>
             <input class="input grade-input" type="number" id="q${q}-${id}" min="0" max="100" step="0.01"
               inputmode="decimal" placeholder="—" data-student="${id}" data-quarter="${q-1}"
               aria-describedby="badge-${id}-${q-1}" value="${val !== null && val !== undefined ? val : ''}">
@@ -1690,7 +1912,8 @@ function attachManualListeners() {
   // grade inputs. DOM order is already the order you want to type in, so the
   // attribute is gone.
   document.querySelectorAll('.grade-input').forEach(inp => {
-    inp.addEventListener('input', () => updateManual(parseInt(inp.dataset.student, 10)));
+    // the need tab's boxes share the class and have no student: typing in one used to call updateManual(NaN)
+    inp.addEventListener('input', () => { if (inp.dataset.student !== undefined) updateManual(parseInt(inp.dataset.student, 10)); });
     inp.addEventListener('keydown', e => {
       if (e.key !== 'Enter') return;
       e.preventDefault();
@@ -1746,8 +1969,8 @@ function updateManual(id) {
 
   const filledEl = document.getElementById(`filled-${id}`);
   if (filledCount===0) { filledEl.textContent=''; filledEl.className='filled-count'; }
-  else if (filledCount<4) { filledEl.textContent=`${filledCount} of 4 quarters entered, need all 4 for a final grade`; filledEl.className='filled-count'; }
-  else { filledEl.textContent='All 4 quarters entered'; filledEl.className='filled-count all-filled'; }
+  else if (filledCount<termCount()) { filledEl.textContent=`${filledCount} of ${termCount()} ${noun()}s entered, need all ${termCount()} for a final grade`; filledEl.className='filled-count'; }
+  else { filledEl.textContent=`All ${termCount()} ${noun()}s entered`; filledEl.className='filled-count all-filled'; }
 
   const qpBox=document.getElementById(`qp-box-${id}`), avgBox=document.getElementById(`avg-box-${id}`);
   const qpAvgEl=document.getElementById(`qp-avg-${id}`), qpLetEl=document.getElementById(`qp-letter-${id}`);
@@ -1763,17 +1986,17 @@ function updateManual(id) {
   qpBox.querySelectorAll('.winner-tag').forEach(t=>t.remove());
   avgBox.querySelectorAll('.winner-tag').forEach(t=>t.remove());
 
-  const f = letters.filter(l=>l!==null).length < 4 ? null : calcFinals(scores, opts);
+  const f = letters.filter(l=>l!==null).length < termCount() ? null : calcFinals(scores, opts);
 
   if (!f) {
     qpAvgEl.textContent='—'; qpLetEl.textContent='—'; qpLetEl.style.opacity='0.4';
-    qpNoteEl.textContent=filledCount>0?'Enter all 4 quarters':''; qpNoteEl.className='pending-note';
+    qpNoteEl.textContent=filledCount>0?`Enter all ${termCount()} ${noun()}s`:''; qpNoteEl.className='pending-note';
     avgPctEl.textContent='—'; avgLetEl.textContent='—'; avgLetEl.style.opacity='0.4';
-    avgNoteEl.textContent=filledCount>0?'Enter all 4 quarters':''; avgNoteEl.className='pending-note';
+    avgNoteEl.textContent=filledCount>0?`Enter all ${termCount()} ${noun()}s`:''; avgNoteEl.className='pending-note';
     finalLine.classList.add('pending');
     finalLetEl.textContent = filledCount>0 ? 'no grade' : '—';
     finalLetEl.style.color = '';
-    finalMethodEl.textContent = filledCount>0 ? 'all four quarters required' : '';
+    finalMethodEl.textContent = filledCount>0 ? `${allTerms()} required` : '';
     if (arithEl) arithEl.innerHTML = '';
     return;
   }
@@ -1811,7 +2034,7 @@ function clearManualStudent(id) {
   document.querySelectorAll(`.grade-input[data-student="${id}"]`).forEach(inp=>{inp.value='';inp.classList.remove('input-error');});
   const n=document.getElementById(`name-${id}`); if(n) n.value='';
   const idx = findStudentIndexById(id);
-  if (idx !== -1) currentStudents[idx] = { id, name:'', scores:[null,null,null,null] };
+  if (idx !== -1) currentStudents[idx] = { id, name:'', scores: fitScores(null, termCount()) };
   updateManual(id);
 }
 function clearAllManual() { currentStudents.forEach(s => clearManualStudent(s.id)); }
@@ -1948,7 +2171,7 @@ function renderNeedResults(errorMsg, data) {
 
 function updateNeedSolveTarget() {
   const solveIdx = parseInt(document.querySelector('input[name="need-solve"]:checked').value, 10);
-  for (let i = 0; i < QUARTERS; i++) {
+  for (let i = 0; i < termCount(); i++) {
     const inp = document.getElementById(`need-q${i+1}`);
     inp.disabled = (i === solveIdx);
     if (i === solveIdx) inp.value = '';
@@ -1960,20 +2183,20 @@ function computeNeed() {
   // Equal 25% weights unless Grading Settings has custom weights on — the
   // formulas below use each quarter's own weight, so they reduce to the
   // original plain-average arithmetic exactly when every weight is equal.
-  const weights = opts.weights || [25, 25, 25, 25];
-  const wSum = weights.reduce((a, b) => a + b, 0) || QUARTERS;
+  const weights = opts.weights || new Array(termCount()).fill(25);
+  const wSum = weights.reduce((a, b) => a + b, 0) || termCount();
   const solveIdx = parseInt(document.querySelector('input[name="need-solve"]:checked').value, 10);
   const wMissing = weights[solveIdx];
 
   const known = [];
-  for (let i = 0; i < QUARTERS; i++) {
+  for (let i = 0; i < termCount(); i++) {
     if (i === solveIdx) continue;
     const v = document.getElementById(`need-q${i+1}`).value.trim();
     const n = v === '' ? NaN : parseFloat(v);
     if (isNaN(n) || n < 0 || n > 100) { known.push(NaN); } else { known.push(n); }
   }
   if (known.some(v => isNaN(v))) {
-    renderNeedResults('Enter valid scores (0–100) for the other three quarters to calculate.');
+    renderNeedResults(`Enter valid scores (0–100) for the other ${NUM_WORD[termCount() - 1]} ${noun()}${termCount() === 2 ? '' : 's'} to calculate.`);
     return;
   }
 
@@ -1993,7 +2216,7 @@ function computeNeed() {
   const targetPctRaw = targetType === 'pct' ? parseFloat(document.getElementById('need-target-pct').value) : pctCutoffForLetter(targetLetter, opts);
 
   let knownSumPctW = 0, knownSumQPW = 0, ki = 0;
-  for (let i = 0; i < QUARTERS; i++) {
+  for (let i = 0; i < termCount(); i++) {
     if (i === solveIdx) continue;
     const v = known[ki++];
     knownSumPctW += v * weights[i];
@@ -2013,7 +2236,7 @@ function computeNeed() {
   else requiredQP = qpMinPctForValue(neededRemainingQP, opts);
 
   renderNeedResults(null, {
-    qLabel: `Quarter ${solveIdx + 1}`,
+    qLabel: `${Noun()} ${solveIdx + 1}`,
     requiredPct, requiredQP,
     bestCasePct: (knownSumPctW + 100 * wMissing) / wSum,
     bestCaseQP:  (knownSumQPW + 4 * wMissing) / wSum,
@@ -2039,14 +2262,14 @@ function showSchoolCalendar(pick) {
   const today = SchoolDay.localISO(new Date());
   const periods = SchoolDay.gradingPeriods(cal);
   const gp = SchoolDay.gradingPeriodOf(cal, today);
-  const quarters = periods.length === QUARTERS;
+  const quarters = periods.length === termCount();
   let msg;
   if (!gp) {
     msg = today < cal.meta.start
       ? `From the School Calendar: the school year starts ${isoWords(cal.meta.start)}.`
       : `From the School Calendar: the school year ended ${isoWords(cal.meta.end)}.`;
   } else {
-    const name = quarters ? `Quarter ${gp.n}` : `grading period ${gp.n} of ${periods.length}`;
+    const name = quarters ? `${Noun()} ${gp.n}` : `grading period ${gp.n} of ${periods.length}`;
     const left = SchoolDay.daysRemaining(cal, gp, today);
     const days = left.days === 0 ? 'no school days left'
       : `${left.days} school day${left.days === 1 ? '' : 's'} left` +
@@ -2066,7 +2289,7 @@ function showSchoolCalendar(pick) {
 
 function attachNeedListeners() {
   document.querySelectorAll('input[name="need-solve"]').forEach(r => r.addEventListener('change', () => { updateNeedSolveTarget(); computeNeed(); }));
-  for (let i = 1; i <= QUARTERS; i++) {
+  for (let i = 1; i <= 4; i++) {
     document.getElementById(`need-q${i}`).addEventListener('input', computeNeed);
   }
   document.querySelectorAll('input[name="need-target-type"]').forEach(r => r.addEventListener('change', () => {
@@ -2095,7 +2318,8 @@ function applySettingsToForm() {
   document.getElementById('round-precision').value = settings.precision;
   document.getElementById('weights-enabled').checked = settings.weightsEnabled;
   document.getElementById('weights-inputs').hidden = !settings.weightsEnabled;
-  for (let i = 0; i < QUARTERS; i++) document.getElementById(`weight-q${i+1}`).value = settings.weights[i];
+  for (let i = 0; i < termCount(); i++) document.getElementById(`weight-q${i+1}`).value = settings.weights[i];
+  applyTermsToDom();
   updateWeightsSumNote();
   document.getElementById('show-work-toggle').checked = settings.showWork;
   document.body.classList.toggle('show-work', settings.showWork);
@@ -2132,13 +2356,28 @@ function wireSettingsPanel() {
     document.getElementById('weights-inputs').hidden = !e.target.checked;
     onSettingsChanged();
   });
-  for (let i = 0; i < QUARTERS; i++) {
+  for (let i = 0; i < 4; i++) {
     document.getElementById(`weight-q${i+1}`).addEventListener('input', () => {
-      settings.weights = Array.from({length: QUARTERS}, (_, j) => parseFloat(document.getElementById(`weight-q${j+1}`).value) || 0);
+      settings.weights = Array.from({length: termCount()}, (_, j) => parseFloat(document.getElementById(`weight-q${j+1}`).value) || 0);
       updateWeightsSumNote();
       onSettingsChanged();
     });
   }
+  document.getElementById('term-count').addEventListener('change', e => {
+    const n = termsOf({ terms: parseInt(e.target.value, 10) });
+    if (n === termCount()) return;
+    if (n === 4) delete settings.terms; else settings.terms = n;
+    settings.weights = new Array(n).fill(Math.round(10000 / n) / 100);
+    applySettingsToForm();
+    if (mode === 'import' && document.getElementById('import-area').value.trim()) {
+      doImport();
+    } else {
+      currentStudents.forEach(st => { st.scores = fitScores(st.scores, n); });
+      if (mode === 'manual') renderManualCards(); else renderImportedStudents(currentStudents);
+    }
+    savePersistedSettings();
+    computeNeed();
+  });
   document.getElementById('show-work-toggle').addEventListener('change', e => {
     settings.showWork = e.target.checked;
     document.body.classList.toggle('show-work', settings.showWork);
@@ -2161,8 +2400,8 @@ function wireSettingsPanel() {
  * is missing (there's no unique solution to report). */
 function neededOnSingleMissingQuarter(scores, missingIdx, targetLetter, opts) {
   if (scores.filter(s => s === null).length !== 1) return null;
-  const weights = opts.weights || [25, 25, 25, 25];
-  const wSum = weights.reduce((a, b) => a + b, 0) || QUARTERS;
+  const weights = opts.weights || new Array(termCount()).fill(25);
+  const wSum = weights.reduce((a, b) => a + b, 0) || termCount();
   const wMissing = weights[missingIdx];
 
   let knownSumPctW = 0, knownSumQPW = 0;
@@ -2208,7 +2447,7 @@ function buildSlipHtml(student, i, targetLetter, opts) {
   const missingIdx = [];
   scores.forEach((s, qi) => { if (s === null) missingIdx.push(qi); });
 
-  const quartersLine = [0,1,2,3].map(qi => `Q${qi+1}: ${scores[qi] !== null ? scores[qi].toFixed(2)+'%' : '—'}`).join(' &nbsp; ');
+  const quartersLine = fitScores(scores, termCount()).map((v, qi) => `${tLabel(qi)}: ${v !== null ? v.toFixed(2)+'%' : '—'}`).join(' &nbsp; ');
 
   let bodyHtml;
   if (f) {
@@ -2220,7 +2459,7 @@ function buildSlipHtml(student, i, targetLetter, opts) {
       </div>`;
   } else if (missingIdx.length === 1) {
     const need = neededOnSingleMissingQuarter(scores, missingIdx[0], targetLetter, opts);
-    const qLabel = `Quarter ${missingIdx[0]+1}`;
+    const qLabel = `${Noun()} ${missingIdx[0]+1}`;
     const needLine = need ? slipNeedSummary(need.requiredPct, need.requiredQP, qLabel, targetLetter) : '';
     bodyHtml = `<div class="slip-missing">Missing: ${qLabel}. No final grade yet.</div>
       <div class="slip-need">${escHtml(needLine)}</div>`;
@@ -2253,6 +2492,13 @@ window.addEventListener('afterprint', () => document.body.classList.remove('prin
 const on = (id, fn) => document.getElementById(id).addEventListener('click', fn);
 
 on('import-btn', doImport);
+on('rj-check-btn', checkRoster);
+on('rj-clear-btn', () => { document.getElementById('rj-area').value = ''; document.getElementById('rj-roster').value = ''; showRosterResult(null); });
+document.getElementById('rj-roster').addEventListener('change', e => {
+  document.getElementById('rj-area').value = e.target.value && window.Roster ? Roster.getRoster(e.target.value).join('\n') : '';
+  showRosterResult(null);
+});
+fillRosterChoices();
 on('clear-paste-btn', () => {
   document.getElementById('import-area').value = '';
   setStatus('', '');
@@ -2332,8 +2578,8 @@ function rowsToTsv(rows) {
  * bare numbers instead of letter-wrapped ones, never matches that. */
 function stripHeaderRow(rows) {
   if (rows.length < 2) return rows;
-  const windowCells = rows[0].slice(Q1_COLUMN, Q1_COLUMN + QUARTERS);
-  const looksLikeHeader = windowCells.length === QUARTERS &&
+  const windowCells = rows[0].slice(Q1_COLUMN, Q1_COLUMN + termCount());
+  const looksLikeHeader = windowCells.length === termCount() &&
     windowCells.every(c => !isGradeCell(c) && isNaN(parseFloat(c)));
   return looksLikeHeader ? rows.slice(1) : rows;
 }

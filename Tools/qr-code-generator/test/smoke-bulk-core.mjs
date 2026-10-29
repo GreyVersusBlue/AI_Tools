@@ -33,7 +33,7 @@ const B = globalThis.QrBulkRows;
 // Roster.splitCells, as the page hands it in, cut out of the real file.
 const rosterSrc = fs.readFileSync(path.join(root, '_shared', 'roster.js'), 'utf8');
 const a = rosterSrc.indexOf('function splitCells(line, delim) {');
-const b = rosterSrc.indexOf('/** CSV/TSV text', a);
+const b = rosterSrc.indexOf('function looksLikeHeader', a);
 const splitCells = new Function(rosterSrc.slice(a, b) + '; return splitCells;')();
 
 // The real encoder, to read the limit off.

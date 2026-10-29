@@ -346,5 +346,33 @@ const run = (scores, user, page = PAGE0, tops = [null, null, null, null]) => {
   eq([dwn.up, dwn.down, dwn.same], [0, 1, 0], 'counted as one down');
 }
 
+
+// ── distributions(): what the before/after charts draw ───────────────────────
+console.log('distributions');
+{
+  const mk = (name, scores) => ({ name, scores });
+  const pageOpts = { boundary: 'half', precision: null, weights: null };
+  const klass = [mk('A1', [95, 95, 95, 95]), mk('B1', [85, 85, 85, 85]), mk('C1', [75, 75, 75, 75]),
+    mk('Edge', [89, 90, 89, 90]), mk('Gap', [80, null, 80, 80]), mk('Low', [40, 45, 50, 49])];
+  const add5 = S.cleanScenario({ curve: { mode: 'plus', points: 500, apply: 'all', extra: false } }).scenario;
+  const d = S.distributions(S.compareClass(klass, add5, pageOpts));
+  eq(d.n, 5, 'five students have a final on both sides');
+  eq(d.excluded, 1, 'the student with a gap is excluded from both columns');
+  eq(d.letters.categories, ['A', 'B', 'C', 'D', 'F'], 'letters in order');
+  eq(d.letters.before.reduce((a, b) => a + b, 0), d.letters.after.reduce((a, b) => a + b, 0), 'both columns count the same students');
+  // 95 -> A, 85 -> B, 75 -> C, 89.5 -> A (half-up), 46 -> F ; plus 5: 100 A, 90 A, 80 B, 94.5 A, 51 F
+  eq(d.letters.before, [2, 1, 1, 0, 1], 'letters before');
+  eq(d.letters.after, [3, 1, 0, 0, 1], 'letters after');
+  eq(d.percent.categories.length, S.PERCENT_BINS.length, 'a count for every bin');
+  // before: 95 | 85 | 75 | 89.5 | 46 -> 90-99 x1 (95), 80-89 x2 (85, 89.5), 70-79 x1, under 50 x1
+  eq(d.percent.before, [1, 0, 0, 1, 2, 1, 0], 'percent before');
+  // after: 100 | 90 | 80 | 94.5 | 51 -> 100+ x1, 90-99 x2 (90, 94.5), 80-89 x1, 50-59 x1
+  eq(d.percent.after, [0, 1, 0, 0, 1, 2, 1], 'percent after');
+  eq(S.distributions(null).n, 0, 'nothing in, nothing counted');
+  // the bin edge: 90.00 exactly is in 90-99, 89.9999 is in 80-89
+  const edge = S.distributions({ rows: [{ before: { pctAvg: 90, finalLetter: 'A' }, after: { pct4: 899999, finalLetter: 'B' } }] });
+  eq([edge.percent.before.indexOf(1), edge.percent.after.indexOf(1)], [5, 4], 'bin edges are inclusive at the low end');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

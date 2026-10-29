@@ -1,0 +1,111 @@
+// The functions 019 had at v379 (2976b6b), frozen as text. Path 18 P2 deleted buildRoomPayload and
+// stationPayloadFor from the page for Stations.playPayload; stations.test.mjs holds the module to these,
+// to the letter, so the parity the P1 build proved cannot drift. Read by the suite; not served, not precached.
+// (trStationNext has since gained a line for "end"; validStations is unchanged.)
+
+function splitAnswers(raw) {
+    return String(raw || '').split(',').map(function (a) { return a.trim(); }).filter(function (a) { return a.length; });
+  }
+
+function clampShift(raw) {
+    var x = parseInt(raw, 10);
+    if (!isFinite(x) || isNaN(x)) x = 3;
+    x = ((x % 26) + 26) % 26;
+    if (x === 0) x = 13;
+    return x;
+  }
+
+function validStations() {
+    return state.stations
+      .map(function (s, i) {
+        var type = s.type || 'text';
+        var answers = type === 'cipher' ? splitAnswers(s.cipherPlain) : splitAnswers(s.answers);
+        var numericTolerance = (s.numericTolerance === undefined || s.numericTolerance === null || s.numericTolerance === '')
+          ? null : Math.max(0, parseFloat(s.numericTolerance) || 0);
+        return {
+          idx: i, clue: (s.clue || '').trim(), answers: answers, hint: (s.hint || '').trim(),
+          hintCost: Math.max(0, parseInt(s.hintCost, 10) || 0),
+          next: s.next, image: ER.src(s.image),
+          type: type, cipherShift: clampShift(s.cipherShift),
+          awardLetter: (s.awardLetter || '').trim().slice(0, 1).toUpperCase(),
+          maxAttempts: Math.max(0, parseInt(s.maxAttempts, 10) || 0),
+          numericTolerance: numericTolerance,
+        };
+      })
+      .filter(function (s) { return s.clue.length > 0 && s.answers.length > 0; });
+  }
+
+function buildRoomPayload(valid) {
+    var idxMap = {};
+    valid.forEach(function (s, n) { idxMap[s.idx] = n; });
+    var room = {
+      id: state.roomId,
+      title: state.name || 'Escape Room',
+      stations: valid.map(function (s) {
+        var next = null;
+        if (s.next === 'end') next = null;
+        else if (typeof s.next === 'number' && idxMap.hasOwnProperty(s.next)) next = idxMap[s.next];
+        var out = { clue: s.clue, answers: s.answers, hint: s.hint || '', next: next };
+        if (s.image) out.image = s.image; // omitted unless set, keeps links the same size without one
+        if (s.type && s.type !== 'text') out.type = s.type;
+        if (s.type === 'cipher') out.cipherShift = s.cipherShift;
+        if (s.hintCost) out.hintCost = s.hintCost;
+        if (s.awardLetter) out.awardLetter = s.awardLetter;
+        if (s.maxAttempts) out.maxAttempts = s.maxAttempts;
+        // Numeric tolerance only ever applies to the free-text matching path —
+        // guarded to text type so it can't be set on digit/cipher stations.
+        if (s.type === 'text' && s.numericTolerance !== null && s.numericTolerance !== undefined) {
+          out.numericTolerance = s.numericTolerance;
+        }
+        return out;
+      }),
+    };
+    // Omitted entirely unless enabled, so the link is byte-for-byte the same
+    // as before when this option is off (matches the randomizeStart pattern).
+    if (state.countdownEnabled) {
+      var minutes = Math.max(1, parseInt(state.countdownMinutes, 10) || 20);
+      room.timerMinutes = minutes;
+    }
+    return room;
+  }
+
+function stationPayloadFor(room, n) {
+    var out = {
+      id: room.id,
+      title: room.title,
+      stations: room.stations.map(function (st, i) {
+        var copy = {};
+        if (i !== n) {
+          if (st.hintCost) copy.hintCost = st.hintCost;
+          if (st.awardLetter) copy.awardLetter = '?';
+          return copy;
+        }
+        Object.keys(st).forEach(function (k) { if (k !== 'image') copy[k] = st[k]; });
+        if (st.image) copy.imageOnCard = 1;
+        return copy;
+      }),
+    };
+    if (room.timerMinutes) out.timerMinutes = room.timerMinutes;
+    return out;
+  }
+
+function trStationNext(room, idx) {
+    var st = room.stations[idx];
+    var next = (typeof st.next === 'number') ? st.next : idx + 1;
+    return (next === null || next >= room.stations.length) ? null : next;
+  }
+
+function unreachableStations(room) {
+    var seen = {};
+    var queue = room.stations.length ? [0] : [];
+    while (queue.length) {
+      var i = queue.shift();
+      if (seen[i]) continue;
+      seen[i] = true;
+      var n = trStationNext(room, i);
+      if (n !== null && !seen[n]) queue.push(n);
+    }
+    var out = [];
+    room.stations.forEach(function (_, i) { if (!seen[i]) out.push(i + 1); });
+    return out;
+  }

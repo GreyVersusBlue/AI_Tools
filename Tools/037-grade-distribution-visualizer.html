@@ -29,6 +29,7 @@
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/print-kit.css">
 <style>
   :root {
     /* Letter-grade palette: a single-hue sequential ramp (ColorBrewer "Blues" —
@@ -162,6 +163,39 @@
   .compare-trend-label { flex: 0 0 9rem; font-size: .82rem; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .compare-trend-bar { flex: 1; margin-bottom: 0; height: 1.5rem; }
 
+  .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); border: 0; white-space: nowrap; }
+  .items-chart svg { width: 100%; height: auto; display: block; border: 1px solid var(--line); border-radius: 6px; }
+  .items-table { width: 100%; border-collapse: collapse; font-size: .88rem; margin: .8rem 0 .4rem; }
+  .items-table th, .items-table td { padding: .35rem .5rem; border-bottom: 1px solid var(--line); text-align: right; }
+  .items-table th:nth-child(-n+2), .items-table td:nth-child(-n+2) { text-align: left; }
+  .items-table th { color: var(--muted); font-weight: 600; font-size: .8rem; }
+  .items-table .tier-reteach { font-weight: 700; }
+  .items-table .tier-watch { font-style: italic; }
+  .items-table .tier-secure { color: var(--muted); }
+  .brief-h { font-size: .95rem; margin: 1rem 0 .2rem; }
+  .brief-p { margin: 0 0 .4rem; font-size: .92rem; }
+  #reteachSheet .brief-sh { font-size: 1.05rem; margin: 1rem 0 .15rem; }
+  #reteachSheet .brief-sp { margin: 0; font-size: .95rem; line-height: 1.5; break-inside: avoid; }
+  .sm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .6rem; margin: .4rem 0 1rem; }
+  .sm-cell { margin: 0; break-inside: avoid; }
+  .sm-cell svg { width: 100%; height: auto; display: block; border: 1px solid var(--line); border-radius: 6px; }
+  label.item-sub { font-weight: 500; margin-top: .2rem; }
+  .item-section { border-top: 1px solid var(--line); padding-top: .6rem; margin-top: .4rem; }
+  .items-gap { font-weight: 700; }
+  .items-line { display: grid; grid-template-columns: 1fr 5.5rem; gap: .6rem; align-items: end; }
+  /* The reteach list: a sheet of its own (Path 16 P3), drawn through the print kit. It is never on screen;
+     body.printing-reteach (set for the length of one print or preview) swaps it in for the page. */
+  #reteachSheet { display: none; }
+  #reteachSheet h1 { font-size: 1.3rem; margin: 0 0 .2rem; }
+  #reteachSheet .rt-sub { margin: 0 0 .8rem; font-size: .9rem; }
+  .rt-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  .rt-table th, .rt-table td { border: 1px solid #000; padding: .45rem .5rem; text-align: left; vertical-align: top; }
+  .rt-table th { font-size: .8rem; }
+  .rt-table thead { display: table-header-group; }
+  .rt-table tr { break-inside: avoid; }
+  .rt-table .rt-plan { width: 36%; padding-top: 1.1rem; padding-bottom: 1.1rem; }
+  .rt-table .rt-reteach td:nth-child(5) { font-weight: 700; }
+  .rt-foot { margin-top: .8rem; font-size: .8rem; }
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
   footer.note a { color: var(--accent-2); }
 
@@ -171,6 +205,12 @@
     /* What visibility hides still takes its height, and that height printed as
        blank sheets after this one. Everything but the sheet leaves the flow. */
     body > *:not(.wrap), .wrap > *:not(.layout), .layout > *:not(#printArea) { display: none !important; }
+    /* The reteach list prints alone: the page leaves the flow and the sheet takes its place. */
+    body.printing-reteach { padding: 0 !important; }
+    body.printing-reteach > .wrap { display: none !important; }
+    /* Scripts follow the sheet in <body>, so it is not :last-child and the kit's page break would add a blank page. */
+    body.printing-reteach > #reteachSheet { display: block !important; break-after: auto !important; page-break-after: auto !important; }
+    body.printing-reteach #reteachSheet, body.printing-reteach #reteachSheet * { visibility: visible; }
     /* The copy/download buttons under each chart sit inside the print area. */
     #printArea .chart-dl-row { display: none; }
     #printArea {
@@ -236,6 +276,21 @@
       </div>
 
       <div class="card">
+        <label for="itemInput">Per-question scores (optional)</label>
+        <label for="itemLabel" class="item-sub">Section name (for comparing class periods)</label>
+        <input type="text" id="itemLabel" placeholder="e.g. 3rd period">
+        <p class="hint">One row per student, one column per question, pasted from a spreadsheet. A first column of names and a header row are found for you and no name is ever shown. A row starting &ldquo;Points possible&rdquo; gives each question&rsquo;s maximum; without it a question is out of the highest score in its column, so a 1/0 right-or-wrong export needs no marking. A blank cell means not attempted.</p>
+        <textarea id="itemInput" placeholder="Name&#9;Q1&#9;Q2&#9;Q3&#10;Points possible&#9;4&#9;2&#9;1&#10;Alvarez&#9;4&#9;1&#9;1&#10;Baker&#9;2&#9;0&#9;1"></textarea>
+        <div id="itemExtra"></div>
+        <button type="button" class="secondary small" id="addSectionBtn" style="margin-bottom:.6rem">Add another section (class period)</button>
+        <p class="parse-note" id="itemNote"></p>
+        <div class="items-line">
+          <div><label for="itemLine">Reteach questions below this percent correct</label></div>
+          <div><input type="number" id="itemLine" value="70" min="0" max="100" step="1" style="margin-bottom:0"></div>
+        </div>
+      </div>
+
+      <div class="card">
         <label>Compare current assignment with</label>
         <div class="compare-checks" id="compareChecks"></div>
         <p class="hint">Pick any number of saved assignments to pull in their own scores and letter cutoffs and line them up alongside this one &mdash; handy for tracking a trend across a unit.</p>
@@ -246,6 +301,7 @@
       <h2 id="printTitle">Assignment</h2>
       <div id="outputBody"></div>
       <div id="compareWrap"></div>
+      <div id="itemsAnnounce" class="sr-only" role="status" aria-live="polite"></div>
     </div>
   </div>
 
@@ -257,6 +313,12 @@
 
 </div>
 
+<div id="reteachSheet" class="pk-page pk-paper"></div>
+
+<script src="../_shared/chart-svg.js"></script>
+<script src="../_shared/paste-table.js"></script>
+<script src="../_shared/print-kit.js"></script>
+<script src="grade-distribution-visualizer/gd-items.js"></script>
 <script>
 (function () {
   'use strict';
@@ -296,7 +358,7 @@
   var els = {};
   ['toolbar', 'listSwitch', 'newListBtn', 'deleteListBtn', 'undoDeleteBtn', 'listName', 'scoreInput', 'parseNote',
    'cutoffPreset', 'cutA', 'cutB', 'cutC', 'cutD', 'bucketWidth', 'printBtn', 'printTitle', 'outputBody',
-   'compareChecks', 'compareWrap'
+   'compareChecks', 'compareWrap', 'itemInput', 'itemLabel', 'itemExtra', 'addSectionBtn', 'itemNote', 'itemLine', 'itemsAnnounce'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   // Presets a teacher can pick instead of typing four cutoffs from scratch.
@@ -309,6 +371,9 @@
   };
 
   var state = null; // { name, text, cutA, cutB, cutC, cutD, bucketWidth, compareNames }
+  var lastItems = null;     // [{ label, res }]: the analysis behind the sections on screen, for the reteach list
+  var lastSectSvg = '';     // the section-comparison chart as drawn
+  var lastItemsSvg = '';    // the missed-questions chart as drawn, for its downloads and its announcement
   var lastChartData = null; // snapshot of what's currently rendered, for the PNG/SVG downloads below
 
   /* ---------- tolerant score parser ----------
@@ -330,7 +395,7 @@
     if (!t) return null;
 
     if (t.indexOf('\t') !== -1) {
-      var tabParts = t.split('\t').map(function (p) { return p.trim(); }).filter(function (p) { return p !== ''; });
+      var tabParts = PasteTable.splitLine(t, '\t', { quotes: false }).filter(function (p) { return p !== ''; });
       var vTab = tabParts.length ? tryNumber(tabParts[tabParts.length - 1]) : null;
       if (vTab !== null) return vTab;
     }
@@ -358,15 +423,15 @@
   function parseScores(raw) {
     var lines = String(raw || '').split(/\r?\n/);
     var scores = [];
-    var seen = 0, skipped = 0;
-    lines.forEach(function (line) {
+    var seen = 0, skipped = 0, unreadable = [];
+    lines.forEach(function (line, i) {
       if (!line.trim()) return;
       seen++;
       var v = extractScore(line);
       if (v !== null) scores.push(v);
-      else skipped++;
+      else { skipped++; unreadable.push({ line: i + 1, text: line.trim() }); }
     });
-    return { scores: scores, seen: seen, skipped: skipped };
+    return { scores: scores, seen: seen, skipped: skipped, unreadable: unreadable };
   }
 
   /* ---------- stats ---------- */
@@ -463,70 +528,14 @@
   }
 
   /* ---------- rendering ---------- */
-  function fmt(n, d) {
-    if (n == null || isNaN(n)) return '—';
-    var f = n.toFixed(d == null ? 1 : d);
-    return f.replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1') || f;
-  }
+  var fmt = ChartSvg.fmt;
 
-  // Same sequential, colorblind-/print-safe ramp as the --gA..--gF CSS
-  // variables above, duplicated here because the SVG exports are built as
-  // plain strings and can't reference a CSS custom property.
-  var LETTER_HEX = { A: '#08306b', B: '#2171b5', C: '#4292c6', D: '#6baed6', F: '#9ecae1' };
-  var ZERO_HEX = '#6b6a63';
-
-  var INK_HEX = '#1f2430';
-
-  /** WCAG 2.x relative luminance of a #rrggbb string. */
-  function relLuminance(hex) {
-    var chan = [1, 3, 5].map(function (i) {
-      var v = parseInt(hex.slice(i, i + 2), 16) / 255;
-      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-    });
-    return 0.2126 * chan[0] + 0.7152 * chan[1] + 0.0722 * chan[2];
-  }
-
-  function contrastRatio(l1, l2) {
-    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
-  }
-
-  var INK_LUM = relLuminance(INK_HEX);
-
-  /** Picks readable label text (near-black or white) for a fill color,
-   * instead of assuming white always works — the whole point of a
-   * light-to-dark sequential palette is that some steps are light.
-   *
-   * This used to be a perceived-brightness guess with a 0.55 threshold, and
-   * it got C (--gC, #4292c6) wrong in both themes: white on that blue is
-   * 3.41:1, a serious axe color-contrast violation on the stacked bar since
-   * the tool shipped, unseen because the site-wide sweep opens this page with
-   * no scores and the bar never renders. Real WCAG contrast, both candidates,
-   * better one wins: C now takes the dark ink at 4.55:1. */
-  function textColorFor(hex) {
-    var lum = relLuminance(hex);
-    return contrastRatio(lum, INK_LUM) >= contrastRatio(lum, 1) ? INK_HEX : '#ffffff';
-  }
-
-  /** The <defs> hatch patterns shared by both SVG builders below — F and the
-   * "zero" histogram bar both get a diagonal hatch as a second, non-color
-   * signal on top of the palette, so they survive grayscale printing and
-   * don't depend on hue perception at all. */
-  function hatchDefs() {
-    return '<defs>' +
-      '<pattern id="hatchF" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">' +
-        '<rect width="7" height="7" fill="' + LETTER_HEX.F + '"/>' +
-        '<line x1="0" y1="0" x2="0" y2="7" stroke="rgba(31,36,48,.35)" stroke-width="3"/>' +
-      '</pattern>' +
-      '<pattern id="hatchZero" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">' +
-        '<rect width="7" height="7" fill="' + ZERO_HEX + '"/>' +
-        '<line x1="0" y1="0" x2="0" y2="7" stroke="rgba(255,255,255,.45)" stroke-width="3"/>' +
-      '</pattern>' +
-      '</defs>';
-  }
-
-  function escapeXml(s) {
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
+  // The chart code (colours, contrast rule, hatching, both SVG builders, the PNG
+  // rasterizer and the copy/download path) is _shared/chart-svg.js. The ramp here
+  // stays the one the --gA..--gF CSS variables above repeat, because the exports are
+  // plain strings and can't reference a custom property.
+  var LETTER_HEX = ChartSvg.LETTER_HEX;
+  var textColorFor = ChartSvg.textColorFor;
 
   function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   function escapeAttr(s) { return escapeHtml(s).replace(/"/g, '&quot;'); }
@@ -539,212 +548,23 @@
     return scores.filter(function (s) { return Math.abs(s - mean) > 2 * stdev; });
   }
 
-  /** "n=31 (2 excluded — blank/non-numeric)" — the same line the caller
-   * embeds in every SVG export, so a downloaded or printed chart never loses
-   * the count that decides whether the shape it's showing is trustworthy. */
-  function nCaption(data) {
-    var s = 'n = ' + data.stats.n;
-    if (data.excluded) s += ' (' + data.excluded + ' excluded — blank/non-numeric)';
-    return s;
-  }
-
-  /* Rebuilt as standalone SVG (distinct from the CSS flexbox bar shown on
-     screen) so it can be downloaded as a self-contained file — a flexbox
-     layout has no meaning outside this page's stylesheet. */
-  function buildStackedBarSvg(data) {
-    var W = 640, H = 168, pad = 20, barY = 46, barH = 40;
-    var barW = W - pad * 2;
-    var x = pad, legend = '', segs = '';
-    var legendY = barY + barH + 34, lx = pad;
-    data.letterOrder.forEach(function (l) {
-      var count = data.letters[l];
-      var pct = data.stats.n ? (count / data.stats.n * 100) : 0;
-      var w = barW * (pct / 100);
-      var fill = l === 'F' ? 'url(#hatchF)' : LETTER_HEX[l];
-      var textFill = textColorFor(LETTER_HEX[l]);
-      if (w > 0) {
-        segs += '<rect x="' + x.toFixed(2) + '" y="' + barY + '" width="' + w.toFixed(2) + '" height="' + barH + '" fill="' + fill + '"/>';
-        if (pct >= 6) {
-          segs += '<text x="' + (x + w / 2).toFixed(2) + '" y="' + (barY + barH / 2 + 5) + '" text-anchor="middle" font-size="13" font-weight="700" fill="' + textFill + '" font-family="Segoe UI, Arial, sans-serif">' + Math.round(pct) + '%</text>';
-        }
-        x += w;
-      }
-      var legendText = l + ': ' + count + ' (' + fmt(pct, 1) + '%)';
-      legend += '<rect x="' + lx + '" y="' + (legendY - 11) + '" width="11" height="11" fill="' + fill + '" stroke="#8c897f"/>' +
-        '<text x="' + (lx + 16) + '" y="' + legendY + '" font-size="12" font-family="Segoe UI, Arial, sans-serif" fill="#1f2430">' + escapeXml(legendText) + '</text>';
-      lx += 16 + legendText.length * 6.6 + 18;
-    });
-    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' +
-      hatchDefs() +
-      '<rect width="' + W + '" height="' + H + '" fill="#fff"/>' +
-      '<text x="' + pad + '" y="18" font-size="14" font-weight="700" font-family="Segoe UI, Arial, sans-serif" fill="#1f2430">' + escapeXml((data.name || 'Assignment') + ' — Letter-grade breakdown') + '</text>' +
-      '<text x="' + pad + '" y="34" font-size="11" font-family="Segoe UI, Arial, sans-serif" fill="#6b6a63">' + escapeXml(nCaption(data)) + '</text>' +
-      '<rect x="' + pad + '" y="' + barY + '" width="' + barW + '" height="' + barH + '" fill="none" stroke="#8c897f"/>' +
-      segs + legend +
-      '</svg>';
-  }
-
-  function buildHistogramSvg(data) {
-    var W = 640, H = 330, padL = 30, padR = 20, padT = 50, padB = 50;
-    var plotW = W - padL - padR, plotH = H - padT - padB;
-    var buckets = data.buckets;
-    var maxCount = buckets.reduce(function (m, b) { return Math.max(m, b.count); }, 0) || 1;
-    var n = buckets.length;
-    var gap = 6;
-    var barW = (plotW - gap * (n - 1)) / n;
-    var bars = '', labels = '';
-    buckets.forEach(function (b, i) {
-      var h = (b.count / maxCount) * plotH;
-      var x = padL + i * (barW + gap);
-      var y = padT + (plotH - h);
-      var fill = b.isZero ? 'url(#hatchZero)' : '#2e6b8f';
-      bars += '<rect x="' + x.toFixed(2) + '" y="' + y.toFixed(2) + '" width="' + barW.toFixed(2) + '" height="' + h.toFixed(2) + '" fill="' + fill + '"/>';
-      if (b.count) bars += '<text x="' + (x + barW / 2).toFixed(2) + '" y="' + (y - 6).toFixed(2) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#1f3550" font-family="Segoe UI, Arial, sans-serif">' + b.count + '</text>';
-      var labelWeight = b.isZero ? 'font-weight="700" fill="#1f2430"' : 'fill="#6b6a63"';
-      labels += '<text x="' + (x + barW / 2).toFixed(2) + '" y="' + (padT + plotH + 18) + '" text-anchor="middle" font-size="10" ' + labelWeight + ' font-family="Segoe UI, Arial, sans-serif">' + escapeXml(b.isZero ? '0 (not submitted)' : b.label) + '</text>';
-    });
-    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' +
-      hatchDefs() +
-      '<rect width="' + W + '" height="' + H + '" fill="#fff"/>' +
-      '<text x="' + padL + '" y="20" font-size="14" font-weight="700" font-family="Segoe UI, Arial, sans-serif" fill="#1f2430">' + escapeXml((data.name || 'Assignment') + ' — Score histogram (bucket width ' + data.bucketWidth + ')') + '</text>' +
-      '<text x="' + padL + '" y="36" font-size="11" font-family="Segoe UI, Arial, sans-serif" fill="#6b6a63">' + escapeXml(nCaption(data)) + '</text>' +
-      '<line x1="' + padL + '" y1="' + (padT + plotH) + '" x2="' + (padL + plotW) + '" y2="' + (padT + plotH) + '" stroke="#8c897f" stroke-width="1.5"/>' +
-      bars + labels +
-      '</svg>';
-  }
-
-  function downloadBlob(blob, filename) {
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-  }
-
-  function downloadSvgString(svgString, filenameBase) {
-    downloadBlob(new Blob([svgString], { type: 'image/svg+xml' }), filenameBase + '.svg');
-  }
-
-  /** Rasterise one of the standalone SVG builders above to a PNG blob at 2x,
-      on a white background (a transparent chart pasted into a document with a
-      dark theme is unreadable). Shared by the download and the copy paths so
-      the image on the clipboard is byte-for-byte the image on disk. */
-  function svgToPngBlob(svgString, w, h, onBlob, onError) {
-    var img = new Image();
-    var svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-    var url = URL.createObjectURL(svgBlob);
-    img.onload = function () {
-      var scale = 2;
-      var canvas = document.createElement('canvas');
-      canvas.width = w * scale; canvas.height = h * scale;
-      var ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(url);
-      canvas.toBlob(function (blob) {
-        if (blob) onBlob(blob); else onError();
-      }, 'image/png');
-    };
-    img.onerror = function () { URL.revokeObjectURL(url); onError(); };
-    img.src = url;
-  }
-
-  function downloadSvgAsPng(svgString, filenameBase, w, h) {
-    svgToPngBlob(svgString, w, h,
-      function (blob) { downloadBlob(blob, filenameBase + '.png'); },
-      function () { alert('Could not render a PNG — try downloading the SVG instead.'); });
-  }
-
-  /* ---------- copy the chart straight to the clipboard --------------------
-     A downloaded PNG is three steps from where it is going: save, find it in
-     Downloads, insert it. A PLC agenda or a data-meeting doc wants it pasted.
-     `navigator.clipboard.write` with an image ClipboardItem does that, but it
-     is not universal — it needs a secure context and is unsupported or
-     permission-gated in some browsers — so a failure falls back to the
-     download that already worked and says so, rather than silently doing
-     nothing.
-
-     The status message goes next to the button rather than into an alert:
-     this is a "did that work?" confirmation, not something to dismiss. */
-  var copyStatusTimers = new WeakMap();
-
-  function setCopyStatus(row, text, isError) {
-    if (!row) return;
-    var el = row.querySelector('.copy-status');
-    if (!el) {
-      el = document.createElement('span');
-      el.className = 'copy-status';
-      /* Announced, not just shown. The whole point of this line is to be the
-         answer to "did that work?", and a status a screen reader never reaches
-         leaves exactly the ambiguity the button was supposed to remove. */
-      el.setAttribute('role', 'status');
-      el.setAttribute('aria-live', 'polite');
-      row.appendChild(el);
-    }
-    el.textContent = text;
-    el.classList.toggle('error', !!isError);
-
-    /* A success message clears itself; a failure does not. "Copied" still
-       sitting there ten minutes later will be read as the result of whatever
-       was clicked most recently, which is worse than no message. A failure
-       is asking the teacher to do something about it, so it stays until the
-       next attempt replaces it. */
-    var pending = copyStatusTimers.get(el);
-    if (pending) clearTimeout(pending);
-    if (!isError && text && text.indexOf('…') === -1) {
-      copyStatusTimers.set(el, setTimeout(function () {
-        if (el.textContent === text) el.textContent = '';
-      }, 6000));
-    }
-  }
-
-  function copyChartImage(svgString, filenameBase, w, h, row) {
-    var canWrite = !!(navigator.clipboard && window.ClipboardItem && navigator.clipboard.write);
-    setCopyStatus(row, 'Copying…');
-    svgToPngBlob(svgString, w, h, function (blob) {
-      if (!canWrite) {
-        downloadBlob(blob, filenameBase + '.png');
-        setCopyStatus(row, 'This browser can’t put an image on the clipboard — downloaded the PNG instead.', true);
-        return;
-      }
-      /* try/catch as well as a rejection handler, because the two failure
-         modes are different code paths. `write()` rejects when a permission
-         is refused or the type is unsupported; the `ClipboardItem`
-         constructor *throws synchronously* where the API is only partly
-         implemented. Without the catch that one escapes the click handler
-         entirely — no download, no message, a console error nobody is
-         looking at, and a button that appears to do nothing at all. Which is
-         precisely the failure this whole path exists to prevent. */
-      var wrote;
-      try {
-        wrote = navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]);
-      } catch (e) {
-        downloadBlob(blob, filenameBase + '.png');
-        setCopyStatus(row, 'This browser refused the clipboard — downloaded the PNG instead.', true);
-        return;
-      }
-      Promise.resolve(wrote).then(function () {
-        setCopyStatus(row, 'Copied — paste it straight into your document.');
-      }, function () {
-        downloadBlob(blob, filenameBase + '.png');
-        setCopyStatus(row, 'The clipboard was blocked here — downloaded the PNG instead.', true);
-      });
-    }, function () {
-      setCopyStatus(row, 'Could not render the chart as an image. The SVG download still works.', true);
-    });
-  }
-
   els.outputBody.addEventListener('click', function (e) {
     var btn = e.target.closest('[data-dl]');
-    if (!btn || !lastChartData) return;
-    var base = (lastChartData.name || 'assignment').trim().replace(/[\\/:*?"<>|]+/g, '-') || 'assignment';
+    if (!btn || (!lastChartData && !/^(items|sect)-/.test(btn.dataset.dl)) || (btn.dataset.dl.indexOf('items-') === 0 && !lastItemsSvg) || (btn.dataset.dl.indexOf('sect-') === 0 && !lastSectSvg)) return;
+    var base = ((lastChartData ? lastChartData.name : state && state.name) || 'assignment').trim().replace(/[\\/:*?"<>|]+/g, '-') || 'assignment';
     var row = btn.closest('.chart-dl-row');
-    if (btn.dataset.dl === 'letter-svg') downloadSvgString(buildStackedBarSvg(lastChartData), base + '-letter-grades');
-    else if (btn.dataset.dl === 'letter-png') downloadSvgAsPng(buildStackedBarSvg(lastChartData), base + '-letter-grades', 640, 168);
-    else if (btn.dataset.dl === 'letter-copy') copyChartImage(buildStackedBarSvg(lastChartData), base + '-letter-grades', 640, 168, row);
-    else if (btn.dataset.dl === 'hist-svg') downloadSvgString(buildHistogramSvg(lastChartData), base + '-histogram');
-    else if (btn.dataset.dl === 'hist-png') downloadSvgAsPng(buildHistogramSvg(lastChartData), base + '-histogram', 640, 330);
-    else if (btn.dataset.dl === 'hist-copy') copyChartImage(buildHistogramSvg(lastChartData), base + '-histogram', 640, 330, row);
+    if (btn.dataset.dl === 'letter-svg') ChartSvg.downloadSvg(ChartSvg.stackedBar(lastChartData), base + '-letter-grades');
+    else if (btn.dataset.dl === 'letter-png') ChartSvg.downloadPng(ChartSvg.stackedBar(lastChartData), base + '-letter-grades', 640, 168);
+    else if (btn.dataset.dl === 'letter-copy') ChartSvg.copyImage(ChartSvg.stackedBar(lastChartData), base + '-letter-grades', 640, 168, row);
+    else if (btn.dataset.dl === 'hist-svg') ChartSvg.downloadSvg(ChartSvg.histogram(lastChartData), base + '-histogram');
+    else if (btn.dataset.dl === 'hist-png') ChartSvg.downloadPng(ChartSvg.histogram(lastChartData), base + '-histogram', 640, 330);
+    else if (btn.dataset.dl === 'items-svg') ChartSvg.downloadSvg(lastItemsSvg, base + '-missed-questions');
+    else if (btn.dataset.dl === 'items-png') ChartSvg.downloadPng(lastItemsSvg, base + '-missed-questions', 640, 360);
+    else if (btn.dataset.dl === 'items-copy') ChartSvg.copyImage(lastItemsSvg, base + '-missed-questions', 640, 360, row);
+    else if (btn.dataset.dl === 'sect-svg') ChartSvg.downloadSvg(lastSectSvg, base + '-sections');
+    else if (btn.dataset.dl === 'sect-png') ChartSvg.downloadPng(lastSectSvg, base + '-sections', 640, 360);
+    else if (btn.dataset.dl === 'sect-copy') ChartSvg.copyImage(lastSectSvg, base + '-sections', 640, 360, row);
+    else if (btn.dataset.dl === 'hist-copy') ChartSvg.copyImage(ChartSvg.histogram(lastChartData), base + '-histogram', 640, 330, row);
   });
 
   function readCutoffs() {
@@ -759,6 +579,244 @@
     };
   }
 
+  /* Which lines were skipped, so a teacher can fix the cell: the first three, each cut short. */
+  function describeUnreadable(list) {
+    var shown = list.slice(0, 3).map(function (u) {
+      return 'line ' + u.line + ' \u201c' + (u.text.length > 24 ? u.text.slice(0, 23) + '\u2026' : u.text) + '\u201d';
+    });
+    return shown.join(', ') + (list.length > 3 ? ' and ' + (list.length - 3) + ' more' : '');
+  }
+
+  /* ---------- per-question item analysis (Path 16 P3) ---------- */
+  var sectionSeq = 0;
+  function addSectionBox(label, text) {
+    var n = ++sectionSeq;
+    var box = document.createElement('div');
+    box.className = 'item-section';
+    var l1 = document.createElement('label'); l1.className = 'item-sub'; l1.htmlFor = 'itemLabel' + n; l1.textContent = 'Section name';
+    var i1 = document.createElement('input'); i1.type = 'text'; i1.id = 'itemLabel' + n; i1.className = 'item-label'; i1.placeholder = 'e.g. 6th period'; i1.value = label || '';
+    var l2 = document.createElement('label'); l2.className = 'item-sub'; l2.htmlFor = 'itemText' + n; l2.textContent = 'Per-question scores for this section';
+    var t = document.createElement('textarea'); t.id = 'itemText' + n; t.className = 'item-text'; t.value = text || '';
+    var rm = document.createElement('button'); rm.type = 'button'; rm.className = 'secondary small item-remove'; rm.textContent = 'Remove this section';
+    rm.style.marginBottom = '.6rem';
+    [l1, i1, l2, t, rm].forEach(function (el) { box.appendChild(el); });
+    els.itemExtra.appendChild(box);
+    return box;
+  }
+
+  function itemLine() {
+    var v = parseFloat(els.itemLine.value);
+    return isNaN(v) ? GradeItems.DEFAULT_LINE : Math.min(100, Math.max(0, v));
+  }
+
+  /* Which cells were left out, so a teacher can fix them: the first three. */
+  function describeProblems(list) {
+    var shown = list.slice(0, 3).map(function (p) {
+      return p.label + ' on line ' + p.line + ' \u201c' + (p.text.length > 16 ? p.text.slice(0, 15) + '\u2026' : p.text) + '\u201d (' + p.why + ')';
+    });
+    return shown.join('; ') + (list.length > 3 ? ' and ' + (list.length - 3) + ' more' : '');
+  }
+
+  var MAX_SECTIONS = 4;
+  var SECTION_HEX = ['#08306b', '#4292c6', '#9ecae1', '#2171b5'];
+  function sectionLabel(it, i) { return String(it.label || '').trim() || ('Section ' + (i + 1)); }
+
+  function sectionNote(res, label, many) {
+    var pre = many ? label + ': ' : '';
+    if (!res.order.length) return { text: pre + 'No question columns with scores were found. Put one question per column, with a number in each cell.', ok: false };
+    var t = pre + res.order.length + ' question(s), ' + res.students + ' student(s) read' + (res.maxGiven ? ', points possible taken from your row' : ', each question out of its highest score') + '.';
+    if (res.problems.length) t += ' ' + res.problems.length + ' cell(s) left out: ' + describeProblems(res.problems) + '.';
+    if (res.ragged.length) t += ' ' + res.ragged.length + ' line(s) had fewer cells than the widest, e.g. line ' + res.ragged[0].line + '.';
+    return { text: t, ok: !res.problems.length && !res.ragged.length };
+  }
+
+  function tierWord(t) { return t === 'reteach' ? 'Reteach' : t === 'watch' ? 'Watch' : 'Secure'; }
+
+  /* Returns the sections' markup ('' when nothing is pasted) and writes the note under the boxes. */
+  function renderItems() {
+    var items = (state.items || []).map(function (it, i) { return { label: sectionLabel(it, i), text: it.text }; })
+      .filter(function (it) { return String(it.text).trim(); });
+    var many = items.length > 1;
+    var secs = items.map(function (it) { return { label: it.label, res: GradeItems.analyze(it.text, { line: itemLine() }) }; });
+    var notes = secs.map(function (sec) { return sectionNote(sec.res, sec.label, many); });
+    els.itemNote.textContent = notes.map(function (n) { return n.text; }).join(' ');
+    els.itemNote.className = 'parse-note' + (notes.length && notes.every(function (n) { return n.ok; }) ? ' ok' : '');
+    var valid = secs.filter(function (sec) { return sec.res.order.length; });
+    lastItems = valid.length ? valid : null;
+    lastItemsSvg = ''; lastSectSvg = '';
+    if (!valid.length) return '';
+
+    var out = '';
+    valid.forEach(function (sec, si) {
+      var res = sec.res;
+      var title = (state.name || 'Assignment') + (many ? ' (' + sec.label + ')' : '') + ': percent of students who missed each question';
+      var svg = ChartSvg.bar(GradeItems.chart(res), { W: 640, H: 360, title: title, yLabel: 'Percent missed', showValues: true, yMax: 100, idPrefix: 'gdi' + (si ? si : ''), pad: { top: 40, right: 24, bottom: 64, left: 56 } });
+      if (si === 0) lastItemsSvg = svg;
+      var rows = res.order.map(function (qi, rank) {
+        var q = res.questions[qi], t = GradeItems.tier(q.pct, res.line);
+        return '<tr><td>' + (rank + 1) + '</td><td>' + escapeHtml(q.label) + '</td><td>' + fmt(q.pct * 100, 1) + '%</td><td>' +
+          q.missed + ' of ' + q.n + '</td><td class="tier-' + t + '">' + tierWord(t) + '</td></tr>';
+      }).join('');
+      var counts = { reteach: 0, watch: 0, secure: 0 };
+      res.order.forEach(function (qi) { counts[GradeItems.tier(res.questions[qi].pct, res.line)]++; });
+      out += '<h3>Questions the class missed' + (many ? ' — ' + escapeHtml(sec.label) : '') + '</h3>' +
+        '<p class="chart-note">' + counts.reteach + ' of ' + res.order.length + ' question(s) are below ' + fmt(res.line, 0) + '% correct (reteach); ' +
+          counts.watch + ' within ' + GradeItems.WATCH_BAND + ' points above it (watch). Lowest percent correct first.</p>' +
+        '<div class="items-chart">' + svg + '</div>' +
+        (si === 0 ?
+          '<div class="chart-dl-row">' +
+            '<button type="button" class="secondary small" data-dl="items-copy">📋 Copy image</button>' +
+            '<button type="button" class="secondary small" data-dl="items-svg">Download SVG</button>' +
+            '<button type="button" class="secondary small" data-dl="items-png">Download PNG</button>' +
+            '<button type="button" class="secondary small" data-act="reteach-preview">Preview reteach list</button>' +
+            '<button type="button" class="secondary small" data-act="reteach-print">Print reteach list</button>' +
+          '</div>' : '') +
+        '<table class="items-table"><thead><tr><th>Rank</th><th>Question</th><th>Correct</th><th>Missed</th><th>Tier</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    });
+
+    if (many) {
+      var cmp = GradeItems.compare(valid);
+      var built = { categories: cmp.rows.map(function (r) { return r.label; }),
+        series: valid.map(function (sec, i) { return { label: sec.label, color: SECTION_HEX[i % SECTION_HEX.length], values: cmp.rows.map(function (r) { return r.pcts[i] == null ? 0 : r.pcts[i]; }) }; }) };
+      lastSectSvg = ChartSvg.bar(built, { W: 640, H: 360, title: (state.name || 'Assignment') + ': percent correct by section', yLabel: 'Percent correct', yMax: 100, grayscale: true, idPrefix: 'gds' });
+      var head = '<tr><th>Question</th>' + cmp.labels.map(function (l) { return '<th>' + escapeHtml(l) + '</th>'; }).join('') + '<th>Gap (points)</th></tr>';
+      var body = cmp.rows.map(function (r) {
+        return '<tr><td>' + escapeHtml(r.label) + '</td>' + r.pcts.map(function (v) { return '<td>' + (v == null ? '—' : fmt(v, 1) + '%') + '</td>'; }).join('') +
+          '<td' + (r.flagged ? ' class="items-gap"' : '') + '>' + (r.gap == null ? '—' : fmt(r.gap, 1) + (r.flagged ? ' (large gap)' : '')) + '</td></tr>';
+      }).join('');
+      out += '<h3>Section against section</h3>' +
+        '<p class="chart-note">' + cmp.flagged + ' question(s) differ by ' + GradeItems.GAP_FLAG + ' points or more between the best and worst section. A dash means that section has no scores for the question.</p>' +
+        '<div class="items-chart">' + lastSectSvg + '</div>' +
+        '<div class="chart-dl-row">' +
+          '<button type="button" class="secondary small" data-dl="sect-copy">📋 Copy image</button>' +
+          '<button type="button" class="secondary small" data-dl="sect-svg">Download SVG</button>' +
+          '<button type="button" class="secondary small" data-dl="sect-png">Download PNG</button>' +
+        '</div>' +
+        '<table class="items-table"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
+    }
+    return out;
+  }
+
+  /* ---------- "what this says": plain sentences for a PLC binder ---------- */
+  var lastBrief = null;
+  function briefModel() {
+    var parsed = parseScores(state.text);
+    var m = { name: state.name || 'Assignment', n: 0, zeros: 0, compare: [], sections: lastItems || [], line: itemLine() };
+    if (parsed.scores.length) {
+      var st = computeStats(parsed.scores);
+      m.n = st.n; m.mean = st.mean; m.median = st.median; m.stdev = st.stdev; m.min = st.min; m.max = st.max;
+      m.letters = computeLetters(parsed.scores, readCutoffs());
+      m.zeros = parsed.scores.filter(function (v) { return v === 0; }).length;
+      (state.compareNames || []).forEach(function (nm) {
+        var o = computeForSavedSet(nm);
+        if (o) m.compare.push({ name: o.name, mean: o.stats.mean });
+      });
+    }
+    return m;
+  }
+  function briefHtml() {
+    var m = briefModel();
+    if (!m.n && !m.sections.length) { lastBrief = null; return ''; }
+    lastBrief = GradeItems.narrate(m);
+    return '<h3>What this says</h3>' +
+      lastBrief.map(function (p) { return '<h4 class="brief-h">' + escapeHtml(p.h) + '</h4><p class="brief-p">' + escapeHtml(p.t) + '</p>'; }).join('') +
+      '<div class="chart-dl-row">' +
+        '<button type="button" class="secondary small" data-act="brief-preview">Preview this page</button>' +
+        '<button type="button" class="secondary small" data-act="brief-print">Print this page</button>' +
+      '</div>';
+  }
+  function buildBriefSheet() {
+    var sheet = document.getElementById('reteachSheet');
+    sheet.textContent = '';
+    if (!lastBrief) return false;
+    sheet.appendChild(node('h1', '', 'What this says'));
+    sheet.appendChild(node('p', 'rt-sub', state.name || 'Assignment'));
+    lastBrief.forEach(function (p) {
+      sheet.appendChild(node('h2', 'brief-sh', p.h));
+      sheet.appendChild(node('p', 'brief-sp', p.t));
+    });
+    return true;
+  }
+
+  /* The reteach priority list, built into #reteachSheet with textContent only. */
+  function node(tag, cls, text) {
+    var el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (text != null) el.textContent = text;
+    return el;
+  }
+  function buildReteachSheet() {
+    var secs = lastItems, sheet = document.getElementById('reteachSheet');
+    sheet.textContent = '';
+    if (!secs) return false;
+    var many = secs.length > 1;
+    sheet.appendChild(node('h1', '', 'Reteach priority list'));
+    secs.forEach(function (sec, si) {
+      var res = sec.res;
+      var wrap = node('section', 'rt-section');
+      if (si) wrap.style.breakBefore = 'page';
+      wrap.appendChild(node('p', 'rt-sub', (state.name || 'Assignment') + (many ? ' — ' + sec.label : '') + ' — ' + res.students + ' student(s), ' + res.order.length +
+        ' question(s). Lowest percent correct first; reteach is below ' + fmt(res.line, 0) + '%, watch is within ' + GradeItems.WATCH_BAND + ' points above it.'));
+      var table = node('table', 'rt-table');
+      var head = node('tr');
+      ['Priority', 'Question', 'Correct', 'Missed', 'Tier', 'Reteach plan'].forEach(function (h) { head.appendChild(node('th', '', h)); });
+      table.appendChild(node('thead')).appendChild(head);
+      var body = node('tbody');
+      res.order.forEach(function (qi, rank) {
+        var q = res.questions[qi], t = GradeItems.tier(q.pct, res.line);
+        var tr = node('tr', 'rt-' + t);
+        [rank + 1, q.label, fmt(q.pct * 100, 1) + '%', q.missed + ' of ' + q.n, tierWord(t)].forEach(function (v) { tr.appendChild(node('td', '', v)); });
+        tr.appendChild(node('td', 'rt-plan'));
+        body.appendChild(tr);
+      });
+      table.appendChild(body);
+      wrap.appendChild(table);
+      wrap.appendChild(node('p', 'rt-foot', 'Percent correct is the question’s mean score over its points possible' + (res.maxGiven ? '' : ' (the highest score in its column, as no points row was pasted)') +
+        '. A blank cell is not attempted. ' + (res.problems.length ? res.problems.length + ' cell(s) could not be read and were left out.' : '')));
+      sheet.appendChild(wrap);
+    });
+    return true;
+  }
+
+  function pageOn() { PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.4in' }); }
+  function pageOff() { var st = document.getElementById('pk-page-style'); if (st) st.remove(); }
+  function printSheet(build) {
+    if (!build()) return;
+    pageOn();
+    document.body.classList.add('printing-reteach');
+    var done = function () { document.body.classList.remove('printing-reteach'); pageOff(); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    window.print();
+  }
+  function previewSheet(build, trigger, title) {
+    if (!build()) return;
+    pageOn();
+    document.body.classList.add('printing-reteach');
+    PrintKit.preview({
+      area: document.getElementById('reteachSheet'), trigger: trigger, title: title,
+      onClose: function () { document.body.classList.remove('printing-reteach'); pageOff(); },
+      onPrint: function () { printSheet(build); }
+    });
+  }
+  els.outputBody.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act]');
+    if (!b) return;
+    if (b.dataset.act === 'reteach-print') printSheet(buildReteachSheet);
+    else if (b.dataset.act === 'reteach-preview') previewSheet(buildReteachSheet, b, 'Reteach priority list');
+    else if (b.dataset.act === 'brief-print') printSheet(buildBriefSheet);
+    else if (b.dataset.act === 'brief-preview') previewSheet(buildBriefSheet, b, 'What this says');
+  });
+
+  var lastAnnounced = '';
+  function announceItems() {
+    var d = lastItemsSvg ? /<desc[^>]*>([^<]*)<\/desc>/.exec(lastItemsSvg) : null;
+    var d2 = lastSectSvg ? /<desc[^>]*>([^<]*)<\/desc>/.exec(lastSectSvg) : null;
+    var msg = d ? 'Missed-questions chart updated. ' + d[1] + (d2 ? ' Section comparison updated. ' + d2[1] : '') : '';
+    if (msg === lastAnnounced) return;
+    lastAnnounced = msg;
+    els.itemsAnnounce.textContent = msg;
+  }
+
   function renderOutput() {
     var parsed = parseScores(state.text);
     var scores = parsed.scores;
@@ -767,7 +825,7 @@
       els.parseNote.textContent = '';
       els.parseNote.className = 'parse-note';
     } else if (parsed.skipped > 0) {
-      els.parseNote.textContent = scores.length + ' score(s) read, ' + parsed.skipped + ' line(s) skipped (headers, blanks, or non-numeric).';
+      els.parseNote.textContent = scores.length + ' score(s) read, ' + parsed.skipped + ' line(s) skipped (headers, blanks, or non-numeric): ' + describeUnreadable(parsed.unreadable) + '.';
       els.parseNote.className = 'parse-note';
     } else {
       els.parseNote.textContent = scores.length + ' score(s) read.';
@@ -780,9 +838,12 @@
     // to land here too for that default filename to be worth anything.
     document.title = (state.name ? state.name + ' — ' : '') + 'Grade Distribution Visualizer';
 
+    var itemsHtml = renderItems();
+    announceItems();
+
     if (!scores.length) {
       lastChartData = null;
-      els.outputBody.innerHTML = '<p class="empty-note">Paste some scores on the left to see stats here.</p>';
+      els.outputBody.innerHTML = (itemsHtml ? '' : '<p class="empty-note">Paste some scores on the left to see stats here.</p>') + itemsHtml + briefHtml();
       els.compareWrap.innerHTML = '';
       return;
     }
@@ -885,7 +946,7 @@
 
     lastChartData = { name: state.name, stats: stats, letters: letters, letterOrder: letterOrder, buckets: buckets, bucketWidth: bucketWidth, excluded: parsed.skipped };
 
-    els.outputBody.innerHTML = statsHtml + letterHtml + histHtml;
+    els.outputBody.innerHTML = statsHtml + letterHtml + histHtml + itemsHtml + briefHtml();
     renderComparison();
   }
 
@@ -903,7 +964,7 @@
       D: d.cutD != null ? d.cutD : 60
     };
     var letters = computeLetters(parsed.scores, cutoffs);
-    return { name: d.name, stats: stats, letters: letters };
+    return { name: d.name, stats: stats, letters: letters, scores: parsed.scores };
   }
 
   function renderComparison() {
@@ -993,14 +1054,40 @@
         var count = tr.letters[l];
         var p = pct(count, tr.n);
         if (p <= 0) return '';
-        return '<div class="stack-seg ' + l + '" style="width:' + p + '%;" title="' + l + ': ' + count + ' (' + fmt(p, 1) + '%)">' +
+        return '<div class="stack-seg ' + l + '" style="width:' + p + '%;color:' + textColorFor(LETTER_HEX[l]) + ';" title="' + l + ': ' + count + ' (' + fmt(p, 1) + '%)">' +
           (p >= 8 ? (fmt(p, 0) + '%') : '') + '</div>';
       }).join('');
       return '<div class="compare-trend-row"><div class="compare-trend-label">' + escapeHtml(tr.name) + '</div>' +
         '<div class="stack-bar compare-trend-bar">' + segs + '</div></div>';
     }).join('') + '</div>';
 
-    els.compareWrap.innerHTML = '<h3>' + heading + '</h3>' + missingHtml + deltaHtml + trendHtml + tableHtml;
+    // Small multiples: one small histogram per assignment, every one on the same buckets and the
+    // same count axis, so a shape that moves from one to the next is the class and not the scale.
+    var width = parseInt(els.bucketWidth.value, 10) || 10;
+    var sets = [{ name: curName, stats: curStats, scores: parsedCur.scores }].concat(present);
+    var drawn = sets.map(function (o) { return buildBuckets(o.scores, width); });
+    var shared = 0;
+    drawn.forEach(function (bs) { bs.forEach(function (b) { if (b.count > shared) shared = b.count; }); });
+    // Every assignment gets the same bucket list: a zero bucket on one is a zero bucket (possibly empty) on all.
+    var anyZero = drawn.some(function (bs) { return bs[0].isZero; });
+    drawn = drawn.map(function (bs, i) {
+      if (anyZero && !bs[0].isZero) {
+        bs = bs.slice(); bs.unshift({ start: 0, end: 0, label: '0', count: 0, isZero: true });
+        var f = bs[1]; if (f.start === 0 && f.end > 0) { bs[1] = Object.assign({}, f, { label: '1\u2013' + f.end }); }
+      }
+      return bs;
+    });
+    var yMax = ChartSvg.niceMax(shared * 1.15);
+    var cells = sets.map(function (o, i) {
+      var built = { categories: drawn[i].map(function (b) { return b.label; }), series: [{ label: 'Students', color: '#2171b5', values: drawn[i].map(function (b) { return b.count; }) }] };
+      var svg = ChartSvg.bar(built, { W: 300, H: 230, pad: { top: 34, right: 10, bottom: 56, left: 34 }, title: o.name + ': mean ' + fmt(o.stats.mean, 1) + ', n = ' + o.stats.n, yLabel: 'Students', showValues: true, yMax: yMax, idPrefix: 'gdm' + i });
+      return '<figure class="sm-cell">' + svg + '</figure>';
+    }).join('');
+    var smallHtml = '<h3>Score distributions side by side</h3>' +
+      '<p class="chart-note">Same score buckets (width ' + width + ') and the same count axis (0 to ' + yMax + ') in every panel, current assignment first.</p>' +
+      '<div class="sm-grid">' + cells + '</div>';
+
+    els.compareWrap.innerHTML = '<h3>' + heading + '</h3>' + missingHtml + deltaHtml + trendHtml + smallHtml + tableHtml;
   }
 
   function refreshCompareOptions() {
@@ -1025,11 +1112,16 @@
     state.compareNames = Array.prototype.slice.call(els.compareChecks.querySelectorAll('input[type="checkbox"]:checked'))
       .map(function (cb) { return cb.value; });
     save();
-    renderComparison();
+    renderOutput();   // the plain-language page quotes the compared assignments too
   });
 
   function readFormIntoState() {
     state.text = els.scoreInput.value;
+    state.items = [{ label: els.itemLabel.value, text: els.itemInput.value }];
+    Array.prototype.forEach.call(els.itemExtra.querySelectorAll('.item-section'), function (sec) {
+      state.items.push({ label: sec.querySelector('.item-label').value, text: sec.querySelector('.item-text').value });
+    });
+    state.itemLine = itemLine();
     var c = readCutoffs();
     state.cutA = c.A; state.cutB = c.B; state.cutC = c.C; state.cutD = c.D;
     state.bucketWidth = parseInt(els.bucketWidth.value, 10) || 10;
@@ -1065,6 +1157,12 @@
   function applyStateToForm() {
     els.listName.value = state.name;
     els.scoreInput.value = state.text;
+    els.itemInput.value = state.items && state.items[0] ? state.items[0].text : '';
+    els.itemLabel.value = state.items && state.items[0] && state.items[0].label ? state.items[0].label : '';
+    els.itemExtra.textContent = '';
+    (state.items || []).slice(1).forEach(function (it) { addSectionBox(it.label, it.text); });
+    els.addSectionBtn.hidden = (state.items || []).length >= MAX_SECTIONS;
+    els.itemLine.value = state.itemLine != null ? state.itemLine : GradeItems.DEFAULT_LINE;
     els.cutA.value = state.cutA;
     els.cutB.value = state.cutB;
     els.cutC.value = state.cutC;
@@ -1082,7 +1180,7 @@
 
   /* ---------- lifecycle ---------- */
   function newList(name) {
-    state = { name: name, text: '', cutA: 90, cutB: 80, cutC: 70, cutD: 60, bucketWidth: 10, compareNames: [] };
+    state = { name: name, text: '', cutA: 90, cutB: 80, cutC: 70, cutD: 60, bucketWidth: 10, compareNames: [], items: [{ label: '', text: '' }], itemLine: GradeItems.DEFAULT_LINE };
     applyStateToForm();
     refreshSwitcher();
     els.toolbar.style.display = '';
@@ -1096,8 +1194,10 @@
     state = loaded;
     if (state.bucketWidth == null) state.bucketWidth = 10;
     if (!state.compareNames) state.compareNames = [];
+    if (!state.items) state.items = [{ label: '', text: '' }];
     applyStateToForm();
     refreshSwitcher();
+    els.toolbar.style.display = '';   // it was shown only by a new assignment, so a reload hid the switcher and Delete
     renderOutput();
   }
 
@@ -1111,6 +1211,24 @@
   });
 
   els.scoreInput.addEventListener('input', refresh);
+  els.itemInput.addEventListener('input', refresh);
+  els.itemLabel.addEventListener('input', refresh);
+  els.itemExtra.addEventListener('input', refresh);
+  els.itemExtra.addEventListener('click', function (e) {
+    var b = e.target.closest('.item-remove');
+    if (!b) return;
+    b.closest('.item-section').remove();
+    els.addSectionBtn.hidden = false;
+    els.addSectionBtn.focus();
+    refresh();
+  });
+  els.addSectionBtn.addEventListener('click', function () {
+    var box = addSectionBox('', '');
+    if (els.itemExtra.children.length + 1 >= MAX_SECTIONS) els.addSectionBtn.hidden = true;
+    box.querySelector('.item-label').focus();
+    refresh();
+  });
+  els.itemLine.addEventListener('input', refresh);
   ['cutA', 'cutB', 'cutC', 'cutD'].forEach(function (id) {
     els[id].addEventListener('input', function () {
       els.cutoffPreset.value = 'custom'; // hand-edited — no longer a clean match to any preset

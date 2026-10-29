@@ -12,6 +12,10 @@
 // Rule 4 is the one that needs care, and it needs care in both directions.
 // See NORMALISE below.
 
+// The cell splitting is the site's one pasted-table reader (_shared/paste-table.js, a classic
+// script; an ES module reaches it as a side-effect import and reads the global).
+import '../../_shared/paste-table.js';
+
 // ── Precision ────────────────────────────────────────────────
 //
 // Quarter percentages arrive with two decimals (TAC prints `C(73.28)`), so the
@@ -33,6 +37,27 @@ const normalise = n => Math.round(n * PRECISION) / PRECISION;
 export const MIN_SCORE = 0;
 export const MAX_SCORE = 100;
 export const QUARTERS = 4;
+export const MIN_TERMS = 2;
+export const MAX_TERMS = 4;
+
+/** How many terms a year has in `opts` (2 semesters, 3 trimesters, 4
+ * quarters), or QUARTERS when it says nothing or says something unusable. The
+ * one place the count is read, so the default is the old behaviour. */
+export function termsOf(opts) {
+  const t = opts && opts.terms;
+  return Number.isInteger(t) && t >= MIN_TERMS && t <= MAX_TERMS ? t : QUARTERS;
+}
+
+/** The word for one term: quarter, trimester or semester. */
+export function termNoun(terms) {
+  return terms === 2 ? 'semester' : terms === 3 ? 'trimester' : 'quarter';
+}
+
+/** The label for term `i` (0-based) in a year of `terms`: Q1.., T1.., S1... */
+export function termLabel(i, terms) {
+  const n = terms === undefined ? QUARTERS : terms;
+  return (n === 2 ? 'S' : n === 3 ? 'T' : 'Q') + (i + 1);
+}
 
 // Cutoffs are the true .5 boundaries, compared against a normalised value.
 // Exported so callers (the "borderline grade" flag in 036-final_grade_checker.html)
@@ -130,20 +155,21 @@ export function qpToFinalLetter(avgQP, opts) {
  */
 export function calcFinals(scores, opts) {
   const weights = opts && opts.weights;
-  const valid = (scores || []).map(toScore).filter(s => s !== null);
-  if (valid.length < QUARTERS) return null;
+  const N = termsOf(opts);
+  const valid = (scores || []).slice(0, N).map(toScore).filter(s => s !== null);
+  if (valid.length < N) return null;
 
   const letters = valid.map(s => getLetter(s, opts));
   const qpVals  = letters.map(getQP);
 
   let avgQP, pctAvg;
-  if (weights && weights.length === QUARTERS && weights.every(w => Number.isFinite(w) && w > 0)) {
+  if (weights && weights.length === N && weights.every(w => Number.isFinite(w) && w > 0)) {
     const wSum = weights.reduce((a, b) => a + b, 0);
     avgQP  = qpVals.reduce((acc, v, i) => acc + v * weights[i], 0) / wSum;
     pctAvg = valid.reduce((acc, v, i) => acc + v * weights[i], 0) / wSum;
   } else {
-    avgQP  = qpVals.reduce((a, b) => a + b, 0) / QUARTERS;
-    pctAvg = valid.reduce((a, b) => a + b, 0) / QUARTERS;
+    avgQP  = qpVals.reduce((a, b) => a + b, 0) / N;
+    pctAvg = valid.reduce((a, b) => a + b, 0) / N;
   }
   const qpFinal  = qpToFinalLetter(avgQP, opts);
   const pctFinal = getLetter(pctAvg, opts);
@@ -252,8 +278,8 @@ export function parseGradeToken(tok) {
  */
 export function splitRow(line) {
   const l = String(line).replace(/\r$/, '');
-  if (l.includes('\t')) return l.split('\t').map(c => c.trim());
-  return l.trim().split(/ {2,}/).map(c => c.trim()).filter(c => c !== '');
+  if (l.includes('\t')) return globalThis.PasteTable.splitLine(l, '\t', { quotes: false });
+  return globalThis.PasteTable.splitFixed(l);
 }
 
 /**
@@ -261,14 +287,15 @@ export function splitRow(line) {
  * only moves if some other window holds strictly more recognisable grade
  * cells, which is what happens when a paste carries an extra leading column.
  */
-export function findQuarterWindow(cols) {
+export function findQuarterWindow(cols, terms) {
+  const N = terms === undefined ? QUARTERS : terms;
   const score = i => {
-    if (i < 0 || i + QUARTERS > cols.length) return -1;
-    return cols.slice(i, i + QUARTERS).filter(isGradeCell).length;
+    if (i < 0 || i + N > cols.length) return -1;
+    return cols.slice(i, i + N).filter(isGradeCell).length;
   };
   const documented = score(Q1_COLUMN);
   let best = Q1_COLUMN, bestScore = documented;
-  for (let i = 0; i + QUARTERS <= cols.length; i++) {
+  for (let i = 0; i + N <= cols.length; i++) {
     if (score(i) > bestScore) { best = i; bestScore = score(i); }
   }
   return { start: bestScore > 0 ? best : Q1_COLUMN, matches: Math.max(bestScore, 0), moved: bestScore > 0 && best !== Q1_COLUMN };
@@ -320,13 +347,14 @@ export function letterAbove(letter) {
  * unique single-quarter answer until the rest are actually on file.
  */
 export function requiredScoreForQuarter(scores, quarterIdx, targetLetter, opts) {
-  if (!Number.isInteger(quarterIdx) || quarterIdx < 0 || quarterIdx >= QUARTERS) return null;
-  const weights = (opts && opts.weights) || [25, 25, 25, 25];
-  const wSum = weights.reduce((a, b) => a + b, 0) || QUARTERS;
+  const N = termsOf(opts);
+  if (!Number.isInteger(quarterIdx) || quarterIdx < 0 || quarterIdx >= N) return null;
+  const weights = (opts && opts.weights) || new Array(N).fill(25);
+  const wSum = weights.reduce((a, b) => a + b, 0) || N;
   const wMissing = weights[quarterIdx];
 
   let knownSumPctW = 0, knownSumQPW = 0;
-  for (let i = 0; i < QUARTERS; i++) {
+  for (let i = 0; i < N; i++) {
     if (i === quarterIdx) continue;
     const v = toScore(scores[i]);
     if (v === null) return null;
@@ -375,7 +403,7 @@ export function triageStudent(scores, opts) {
     const toLetter = letterAbove(f.finalLetter);
     if (toLetter) {
       let lowIdx = 0;
-      for (let i = 1; i < QUARTERS; i++) {
+      for (let i = 1; i < termsOf(opts); i++) {
         if (toScore(scores[i]) < toScore(scores[lowIdx])) lowIdx = i;
       }
       const req = requiredScoreForQuarter(scores, lowIdx, toLetter, opts);
@@ -418,14 +446,17 @@ export function parsePastedData(raw, colOpts) {
   const students = [], warnings = [];
   const nameColOverride = colOpts && Number.isInteger(colOpts.nameCol) ? colOpts.nameCol : null;
   const q1ColOverride   = colOpts && Number.isInteger(colOpts.q1Col)   ? colOpts.q1Col   : null;
+  const N = termsOf(colOpts);
+  const noun = termNoun(N);
+  const minColumns = Q1_COLUMN + N;
 
   lines.forEach((line, li) => {
     const row = `Row ${li + 1}`;
     const cols = splitRow(line);
     const nameCol = nameColOverride !== null ? nameColOverride : 1;
     const minNeeded = q1ColOverride !== null
-      ? Math.max(MIN_COLUMNS, q1ColOverride + QUARTERS, nameCol + 1)
-      : MIN_COLUMNS;
+      ? Math.max(minColumns, q1ColOverride + N, nameCol + 1)
+      : minColumns;
 
     if (cols.length < minNeeded) {
       warnings.push(`${row}: ${cols.length} column(s), need at least ${minNeeded} (skipped)`);
@@ -437,19 +468,19 @@ export function parsePastedData(raw, colOpts) {
     if (q1ColOverride !== null) {
       start = q1ColOverride;
     } else {
-      const found = findQuarterWindow(cols);
+      const found = findQuarterWindow(cols, N);
       start = found.start;
       if (found.moved) warnings.push(`${row} (${name}): quarter columns found at position ${start + 1}, not ${Q1_COLUMN + 1}`);
     }
 
-    const raws   = [0, 1, 2, 3].map(q => cols[start + q] ?? '');
+    const raws   = Array.from({ length: N }, (_, q) => cols[start + q] ?? '');
     const scores = raws.map(parseGradeToken);
 
     // A cell with something in it that did not yield a percentage is a problem
     // worth naming, not a quarter to quietly treat as missing.
     raws.forEach((cell, q) => {
       if (String(cell).trim() !== '' && scores[q] === null) {
-        warnings.push(`${row} (${name}): Q${q + 1} reads "${String(cell).trim()}", which is not a grade, so it counts as missing`);
+        warnings.push(`${row} (${name}): ${termLabel(q, N)} reads "${String(cell).trim()}", which is not a grade, so it counts as missing`);
       }
     });
 
@@ -458,7 +489,7 @@ export function parsePastedData(raw, colOpts) {
       return;
     }
     const missing = scores.filter(v => v === null).length;
-    if (missing > 0) warnings.push(`${row} (${name}): ${missing} quarter(s) missing, so no final grade`);
+    if (missing > 0) warnings.push(`${row} (${name}): ${missing} ${noun}(s) missing, so no final grade`);
 
     students.push({ name, scores });
   });

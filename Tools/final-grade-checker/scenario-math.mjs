@@ -34,7 +34,7 @@
 
 import {
   LETTER_CUTOFFS, LETTER_CUTOFFS_STRICT, QP_CUTOFFS, QP_CUTOFFS_STRICT,
-  RANK, QUARTERS, calcFinals,
+  RANK, QUARTERS, calcFinals, termsOf, termLabel, termNoun,
 } from './grade-math.mjs';
 
 export const EXTRA_CREDIT_CEILING = 200;      // percent, per quarter
@@ -94,11 +94,13 @@ export const NO_SCENARIO = Object.freeze({
  * typed or loaded. Nothing is guessed: anything unreadable becomes "off" and is
  * named in `problems`. `weights` is null (use the page's) or four hundredths.
  */
-export function cleanScenario(raw) {
+export function cleanScenario(raw, terms) {
+  const N = terms === undefined ? QUARTERS : terms;
+  const maxDrop = N - 1;
   const problems = [];
   const s = raw && typeof raw === 'object' ? raw : {};
   let dropN = Number.isInteger(s.dropN) ? s.dropN : 0;
-  if (dropN < 0 || dropN > MAX_DROP) { problems.push(`Drop must be 0 to ${MAX_DROP}.`); dropN = Math.max(0, Math.min(MAX_DROP, dropN)); }
+  if (dropN < 0 || dropN > maxDrop) { problems.push(`Drop must be 0 to ${maxDrop}.`); dropN = Math.max(0, Math.min(maxDrop, dropN)); }
 
   const c = s.curve && typeof s.curve === 'object' ? s.curve : {};
   const mode = c.mode === 'plus' || c.mode === 'top' ? c.mode : 'none';
@@ -107,11 +109,11 @@ export function cleanScenario(raw) {
     problems.push(`A flat curve can add or take at most ${MAX_POINTS} points.`);
     points = Math.sign(points) * MAX_POINTS * 100;
   }
-  const apply = Number.isInteger(c.apply) && c.apply >= 0 && c.apply < QUARTERS ? c.apply : 'all';
+  const apply = Number.isInteger(c.apply) && c.apply >= 0 && c.apply < N ? c.apply : 'all';
 
   let weights = null;
   if (s.weights !== null && s.weights !== undefined) {
-    const w = checkWeights(s.weights);
+    const w = checkWeights(s.weights, N);
     if (w.ok) weights = w.hundredths;
     else problems.push(w.reason);
   }
@@ -122,8 +124,9 @@ export function cleanScenario(raw) {
 }
 
 /** Weights typed for the scenario: four numbers >= 0, not all zero. */
-export function checkWeights(arr) {
-  if (!Array.isArray(arr) || arr.length !== QUARTERS) return { ok: false, reason: 'There must be four weights.' };
+export function checkWeights(arr, terms) {
+  const N = terms === undefined ? QUARTERS : terms;
+  if (!Array.isArray(arr) || arr.length !== N) return { ok: false, reason: `There must be ${['', 'one', 'two', 'three', 'four'][N]} weights.` };
   const hundredths = arr.map(toHundredths);
   if (hundredths.some(h => h === null)) return { ok: false, reason: 'Every weight must be a number.' };
   if (hundredths.some(h => h < 0)) return { ok: false, reason: 'A weight cannot be negative.' };
@@ -138,17 +141,18 @@ export function isNoScenario(s) {
 /** The weights in force, in hundredths: the scenario's if it has any, else the
  *  page's Grading Settings (used only if every one is above 0, as calcFinals
  *  does), else an equal 25 each. */
-export function effectiveWeights(scenario, pageWeights) {
+export function effectiveWeights(scenario, pageWeights, terms) {
+  const N = terms === undefined ? QUARTERS : terms;
   if (scenario && scenario.weights) return scenario.weights.slice();
-  if (Array.isArray(pageWeights) && pageWeights.length === QUARTERS
+  if (Array.isArray(pageWeights) && pageWeights.length === N
       && pageWeights.every(w => Number.isFinite(w) && w > 0)) return pageWeights.map(w => Math.round(w * 100));
-  return new Array(QUARTERS).fill(EQUAL_WEIGHT);
+  return new Array(N).fill(EQUAL_WEIGHT);
 }
 
 /** The highest entered score in each quarter across the class, in hundredths
  *  (null where nobody has one). The "top score" a scale-to-100 curve uses. */
-export function classTops(students) {
-  const tops = new Array(QUARTERS).fill(null);
+export function classTops(students, terms) {
+  const tops = new Array(terms === undefined ? QUARTERS : terms).fill(null);
   for (const st of students || []) {
     (st.scores || []).forEach((v, q) => {
       const h = toHundredths(v);
@@ -174,15 +178,16 @@ export function classTops(students) {
 export function applyScenario(scores, scenario, ctx) {
   const c = ctx || {};
   const sc = scenario || NO_SCENARIO;
-  const w = effectiveWeights(sc, c.pageWeights);
+  const N = c.terms === undefined ? QUARTERS : c.terms;
+  const w = effectiveWeights(sc, c.pageWeights, N);
   const counted = [];
-  for (let i = 0; i < QUARTERS; i++) if (w[i] > 0) counted.push(i);
+  for (let i = 0; i < N; i++) if (w[i] > 0) counted.push(i);
 
-  const h = (scores || []).slice(0, QUARTERS).map(v => {
+  const h = (scores || []).slice(0, N).map(v => {
     const x = toHundredths(v);
     return x === null || x < 0 || x > NORMAL_CEILING * 100 ? null : x;
   });
-  while (h.length < QUARTERS) h.push(null);
+  while (h.length < N) h.push(null);
 
   const none = reason => ({ final: null, reason, dropped: [], counted, scoresH: h.map(() => null) });
   if (counted.some(i => h[i] === null)) return none('missing');
@@ -241,7 +246,7 @@ export function compareClass(students, scenario, pageOpts) {
   const po = pageOpts || {};
   const ctx = {
     boundary: po.boundary, precision: po.precision === undefined ? null : po.precision,
-    pageWeights: po.weights, tops: classTops(students),
+    pageWeights: po.weights, terms: termsOf(po), tops: classTops(students, termsOf(po)),
   };
   const rows = (students || []).map(st => {
     const before = calcFinals(st.scores, po);
@@ -270,18 +275,59 @@ export function compareClass(students, scenario, pageOpts) {
   };
 }
 
+// ── The class, drawn: before and after ─────────────────────────────────────
+
+/** The percentage bins the before/after chart counts into, low edge in percent. */
+export const PERCENT_BINS = [
+  { label: 'Under 50', lo: -Infinity }, { label: '50\u201359', lo: 50 }, { label: '60\u201369', lo: 60 },
+  { label: '70\u201379', lo: 70 }, { label: '80\u201389', lo: 80 }, { label: '90\u201399', lo: 90 },
+  { label: '100 and over', lo: 100 },
+];
+
+/**
+ * What the two charts draw, from compareClass()'s result and nothing else, so the picture cannot
+ * disagree with the table: counts of final letters and of percentage averages, before and after.
+ * A student with no final on either side is in neither (named in `excluded`), so both columns
+ * always count the same students. The percentage is the one in the table (an average held in
+ * ten-thousandths), put in the bin whose low edge it reaches.
+ */
+export function distributions(cmp) {
+  const both = (cmp && cmp.rows || []).filter(r => r.before && r.after);
+  const letters = ['A', 'B', 'C', 'D', 'F'];
+  const lettersOf = key => letters.map(l => both.filter(r => r[key].finalLetter === l).length);
+  const pct4 = (r, key) => key === 'after' ? r.after.pct4 : Math.round(r.before.pctAvg * 10000);
+  const binOf = v4 => {
+    let k = 0;
+    PERCENT_BINS.forEach((b, i) => { if (v4 >= b.lo * 10000) k = i; });
+    return k;
+  };
+  const pctOf = key => {
+    const out = PERCENT_BINS.map(() => 0);
+    both.forEach(r => { out[binOf(pct4(r, key))]++; });
+    return out;
+  };
+  return {
+    n: both.length,
+    excluded: ((cmp && cmp.rows) || []).length - both.length,
+    letters: { categories: letters, before: lettersOf('before'), after: lettersOf('after') },
+    percent: { categories: PERCENT_BINS.map(b => b.label), before: pctOf('before'), after: pctOf('after') },
+  };
+}
+
 // ── Words ────────────────────────────────────────────────────────────────────
 
 const pts = h => (h / 100).toString();
 
 /** The scenario in one sentence, in the order it is applied. */
-export function describeScenario(s) {
+export function describeScenario(s, terms) {
+  const N = terms === undefined ? QUARTERS : terms;
+  const noun = termNoun(N);
   if (isNoScenario(s)) return 'No scenario is on: the results are the real ones.';
   const bits = [];
-  if (s.dropN) bits.push(`drop each student’s lowest ${s.dropN === 1 ? 'quarter' : s.dropN + ' quarters'}`);
+  if (s.dropN) bits.push(`drop each student’s lowest ${s.dropN === 1 ? noun : s.dropN + ' ' + noun + 's'}`);
   const cv = s.curve;
   if (cv && cv.mode !== 'none') {
-    const where = cv.apply === 'all' ? 'every quarter' : `Q${cv.apply + 1}`;
+    const where = cv.apply === 'all' ? 'every ' + noun : termLabel(cv.apply, N);
     if (cv.mode === 'plus') bits.push(`${cv.points >= 0 ? 'add' : 'take off'} ${pts(Math.abs(cv.points))} points on ${where}`);
     else bits.push(`scale ${where} so the class’s top score becomes 100`);
     bits.push(cv.extra ? 'scores may go above 100, to 200 at most' : 'scores stop at 100');

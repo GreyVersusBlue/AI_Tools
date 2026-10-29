@@ -41,7 +41,7 @@ await page.goto(URL_PAGE, { waitUntil: 'networkidle' });
 await settle(page, 400);
 
 /* ── one matcher, two pages ─────────────────────────────────────────────
-   Both the builder and lock.html load er-match.js; if either ever grew its
+   Both the builder and lock.html load the matcher (_shared/stations.js); if either ever grew its
    own copy again, these agreements would be the first thing to break. */
 const CASES = [
   [{ type: 'text', answers: ['a keyboard'] }, ' A Keyboard! ', true, 'text matching forgives case, spacing and punctuation'],

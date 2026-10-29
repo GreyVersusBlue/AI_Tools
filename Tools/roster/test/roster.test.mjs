@@ -29,6 +29,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { SITE } from '../../board-check/harness.mjs';
+import '../../../_shared/paste-table.js';
+
+// Roster.parseDelimited moved to _shared/paste-table.js (Path 16 P2); 006 reads a paste exactly this way.
+const parseDelimited = text => {
+  const p = globalThis.PasteTable.parse(text, { candidates: ['\t', ','], firstLine: true, fallback: '\t' });
+  return { rows: p.rows, cols: p.width };
+};
 
 let passed = 0, failed = 0;
 const fails = [];
@@ -362,21 +369,20 @@ console.log('Roster — the shared roster service (Path 3 P1)');
 
 /* ── 18. Delimited text — the fixtures a gradebook export actually makes ─ */
 {
-  const { Roster } = make();
-  const csv = Roster.parseDelimited('Student ID,Last,First\n1001,"Smith, Jr.",John\n1002,Bly,Nellie');
+  const csv = parseDelimited('Student ID,Last,First\n1001,"Smith, Jr.",John\n1002,Bly,Nellie');
   eq(csv.cols, 3, '18: a CSV finds its columns');
   eq(csv.rows[1], ['1001', 'Smith, Jr.', 'John'], '18: a quoted cell keeps its comma');
 
-  const tsv = Roster.parseDelimited('Name\tPeriod\nAda Lovelace\t3');
+  const tsv = parseDelimited('Name\tPeriod\nAda Lovelace\t3');
   eq(tsv.rows[1], ['Ada Lovelace', '3'], '18: tabs win over commas when both are present');
 
-  const ragged = Roster.parseDelimited('a,b,c\nd,e');
+  const ragged = parseDelimited('a,b,c\nd,e');
   eq(ragged.rows[1], ['d', 'e', ''], '18: a short row is padded to the widest');
 
-  eq(Roster.parseDelimited(''), { rows: [], cols: 0 }, '18: empty text is empty, not a crash');
-  eq(Roster.parseDelimited('  \n\n  '), { rows: [], cols: 0 }, '18: whitespace-only text too');
+  eq(parseDelimited(''), { rows: [], cols: 0 }, '18: empty text is empty, not a crash');
+  eq(parseDelimited('  \n\n  '), { rows: [], cols: 0 }, '18: whitespace-only text too');
 
-  const escaped = Roster.parseDelimited('a,"he said ""hi""",c');
+  const escaped = parseDelimited('a,"he said ""hi""",c');
   eq(escaped.rows[0][1], 'he said "hi"', '18: a doubled quote unescapes');
 }
 
@@ -386,12 +392,12 @@ console.log('Roster — the shared roster service (Path 3 P1)');
   ok(Roster.looksLikeHeader(['Student Name', 'Period', 'Email']), '19: a real header is recognised');
   ok(!Roster.looksLikeHeader(['Ada Lovelace', 'Grace Hopper', 'Nellie Bly']), '19: a row of names is not');
 
-  const t = Roster.parseDelimited('ID,Last,First\n1001,Lovelace,Ada');
+  const t = parseDelimited('ID,Last,First\n1001,Lovelace,Ada');
   eq(Roster.guessColumn(t.rows, true, ['last', 'last name']), 1, '19: the last-name column is found by header');
   eq(Roster.guessColumn(t.rows, true, ['nickname']), -1, '19: a column that is not there is -1');
   eq(Roster.guessColumn(t.rows, false, ['last']), -1, '19: with no header row, nothing is guessed');
 
-  const noHeader = Roster.parseDelimited('1001,Ada Lovelace,3\n1002,Grace Hopper,3');
+  const noHeader = parseDelimited('1001,Ada Lovelace,3\n1002,Grace Hopper,3');
   eq(Roster.widestTextColumn(noHeader), 1, '19: with no header, the wordiest column is the names');
 }
 

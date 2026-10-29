@@ -15,7 +15,7 @@
 <script src="../../_shared/webrtc-pair.js"></script>
 <script src="../../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../../_shared/qr-draw.js"></script>
-<script src="er-match.js"></script>
+<script src="../../_shared/stations.js"></script>
 <link rel="stylesheet" href="../../_shared/ink-paper.css">
 <link rel="stylesheet" href="../../_shared/a11y.css">
 <style>
@@ -170,7 +170,7 @@
     return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
   }
 
-  // Answer matching lives in er-match.js, shared with the builder's teacher
+  // Answer matching lives in _shared/stations.js, shared with the builder's teacher
   // test-run mode. Both pages have to agree exactly on whether a typed answer
   // is right, and a test run that used a second implementation would be
   // testing the wrong thing.
@@ -200,7 +200,7 @@
 
   var room;
   try {
-    room = decodeRoom(rParam);
+    room = Stations.playRead(decodeRoom(rParam));   // v1 codes (a whole room, a #320 station code) read with ids: null
     if (!room || !Array.isArray(room.stations) || !room.stations.length) throw new Error('empty room');
   } catch (e) {
     card.innerHTML = '<p class="error-card">This escape room link looks damaged or incomplete. Ask your teacher for a fresh QR code.</p>';
@@ -208,6 +208,11 @@
   }
 
   var roomId = room.id || 'room';
+  // Path 18 P2: a v2 code carries the playable stations' ids. Progress is saved keyed by them (so an edited
+  // and reprinted room resumes, and a station moved keeps its solved mark); a code without ids keeps the
+  // index keys it always had. The rest of this page works in indexes; the two functions below convert at
+  // the storage edge only.
+  var ids = room.ids;
   var stationParamRaw = getParam('s');
   // If a station is embedded in this physical QR code, that's the station
   // this printed code represents. If absent, this is the generic "one link
@@ -246,11 +251,32 @@
       if (!p.hintsUsed || typeof p.hintsUsed !== 'object') p.hintsUsed = {};
       if (!p.letters || typeof p.letters !== 'object') p.letters = {};
       if (!p.lockUntil || typeof p.lockUntil !== 'object') p.lockUntil = {};
-      return p;
+      return fromIds(p);
     } catch (e) { return fresh; }
   }
+  // id-keyed progress (saved by a v2 code) to the index keys this page works in. A v1 code has no ids to
+  // read them with: the phone cannot tell which station the saved id is, so it gates with a generic
+  // sentence and advances nothing (`_unresolved`, never saved).
+  function fromIds(p) {
+    if (p.by !== 'id') return p;
+    if (!ids) {
+      if (p.current === 'done') return p;
+      p._unresolved = true;
+      return p;
+    }
+    function map(o) {
+      var out = {};
+      Object.keys(o || {}).forEach(function (k) { var i = ids.indexOf(k); if (i !== -1) out[i] = o[k]; });
+      return out;
+    }
+    var out = Object.assign({}, p);
+    delete out.by;
+    out.current = p.current === 'done' ? 'done' : (ids.indexOf(p.current) !== -1 ? ids.indexOf(p.current) : 0);
+    ['misses', 'solved', 'hintsUsed', 'letters', 'lockUntil'].forEach(function (k) { out[k] = map(p[k]); });
+    return out;
+  }
   function saveProgress(p) {
-    try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(p)); } catch (e) { /* private browsing — progress just won't persist */ }
+    try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(ids ? Stations.upgradeProgress(p, ids) : p)); } catch (e) { /* private browsing — progress just won't persist */ }
   }
 
   var progress = loadProgress();
@@ -313,6 +339,7 @@
     try {
       monitorChannel.send(JSON.stringify({
         station: done ? room.stations.length : progress.current,
+        id: (!done && ids) ? ids[progress.current] : undefined,
         total: room.stations.length,
         done: done,
         score: hasScoring ? computeScore() : null,
@@ -407,6 +434,13 @@
 
   function render() {
     clearLockoutInterval();
+    if (progress._unresolved) {
+      card.innerHTML =
+        '<div class="gate-icon">🔒</div>' +
+        '<p class="room-title">' + escapeHtml(room.title || 'Escape Room') + '</p>' +
+        '<p class="gate-text">Your next clue is at another station. Scan the code at the station you are on now.</p>';
+      return;
+    }
     if (progress.current === 'done') {
       renderDone();
       return;
@@ -628,7 +662,7 @@
         feedback.className = 'feedback show good';
         feedback.textContent = '✓ Correct!' + letterMsg + ' Unlocking the next clue…';
         var nextIdx = (typeof station.next === 'number') ? station.next : idx + 1;
-        if (nextIdx >= room.stations.length || nextIdx === null) {
+        if (station.next === 'end' || nextIdx >= room.stations.length || nextIdx === null) {   // 'end' is "End here (finish room)"; a v1 code never carries it
           progress.current = 'done';
         } else {
           progress.current = nextIdx;

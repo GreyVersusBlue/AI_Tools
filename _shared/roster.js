@@ -213,17 +213,6 @@
     return out;
   }
 
-  /** CSV/TSV text → `{rows, cols}`, every row right-padded to `cols`. */
-  function parseDelimited(text) {
-    var lines = String(text || '').split(/\r?\n/).filter(function (l) { return l.trim() !== ''; });
-    if (!lines.length) return { rows: [], cols: 0 };
-    var delim = lines[0].indexOf('\t') !== -1 ? '\t' : (lines[0].indexOf(',') !== -1 ? ',' : '\t');
-    var rows = lines.map(function (l) { return splitCells(l, delim); });
-    var cols = rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
-    rows.forEach(function (r) { while (r.length < cols) r.push(''); });
-    return { rows: rows, cols: cols };
-  }
-
   function looksLikeHeader(row) {
     var hits = row.filter(function (c) { return HEADER_WORDS.indexOf(normKey(c)) !== -1; }).length;
     return hits >= Math.max(1, Math.ceil(row.length / 3));
@@ -862,7 +851,6 @@
     idFor: idFor,
     idsFor: idsFor,
     /* text */
-    parseDelimited: parseDelimited,
     splitCells: splitCells,
     looksLikeHeader: looksLikeHeader,
     flipLastFirst: flipLastFirst,

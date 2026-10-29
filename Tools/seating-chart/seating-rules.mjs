@@ -46,8 +46,10 @@ export function buildRule(form, section, uid = () => Math.random().toString(36).
   const dset = new Set(section.desks.map(d => d.id));
   const students = [...new Set(form.students || [])].filter(id => sset.has(id));
   const anyOf = [...new Set(form.anyOf || [])].filter(id => sset.has(id) && !students.includes(id));
-  const byDesks = kind === 'zone' && form.zone === 'desks';
-  const desks = byDesks ? [...new Set(form.desks || [])].filter(id => dset.has(id)) : [];
+  const byMark = kind === 'zone' && form.zone === 'mark';
+  const byDesks = kind === 'zone' && (form.zone === 'desks' || byMark);
+  // a rule tied to a mark takes the desks the page found near it (`markDesks`) and remembers the mark
+  const desks = byDesks ? [...new Set((byMark ? form.markDesks : form.desks) || [])].filter(id => dset.has(id)) : [];
   if ((kind === 'apart' || kind === 'together') && students.length < 2) return { error: 'Pick at least two students.' };
   if (kind === 'partner') {
     if (students.length !== 1) return { error: 'Pick one student who needs a partner.' };
@@ -56,7 +58,8 @@ export function buildRule(form, section, uid = () => Math.random().toString(36).
   if (kind === 'space' && !students.length) return { error: 'Pick at least one student.' };
   if (kind === 'zone') {
     if (!students.length) return { error: 'Pick at least one student for the zone.' };
-    if (byDesks && !desks.length) return { error: 'Tap at least one desk on the floor.' };
+    if (byMark && !form.mark) return { error: 'Pick a mark in the room.' };
+    if (byDesks && !desks.length) return { error: byMark ? 'No desk is near that mark.' : 'Tap at least one desk on the floor.' };
     if (!byDesks && !Object.prototype.hasOwnProperty.call(ZONE_LABEL, form.zone)) return { error: 'Pick a zone.' };
   }
   const w = Math.round(Number(form.weight));
@@ -66,6 +69,7 @@ export function buildRule(form, section, uid = () => Math.random().toString(36).
     hard: form.hard === true, weight: Number.isFinite(w) ? w : 2,
     students, desks, zone: byDesks ? '' : (kind === 'zone' ? form.zone : ''), anyOf: kind === 'partner' ? anyOf : [],
     why: typeof form.why === 'string' ? form.why : '',
+    ...(byMark ? { mark: String(form.mark) } : {}),
   }, 0, sset, dset, dropped);
   if (!rule) return { error: 'That rule has too few students or desks.' };
   const same = (a, b) => JSON.stringify([a.kind, [...a.students].sort(), a.zone, [...a.desks].sort(), [...a.anyOf].sort()])
@@ -115,13 +119,13 @@ export function pruneRules(section) {
 }
 
 /** describeRule(rule, nameOf, deskNo) → { text, strength, why } for the list. */
-export function describeRule(r, nameOf, deskNo) {
+export function describeRule(r, nameOf, deskNo, markName) {
   const names = ids => ids.map(nameOf).join(', ');
   let text;
   if (r.kind === 'apart') text = `Keep apart: ${names(r.students)}`;
   else if (r.kind === 'together' && r.anyOf.length) text = `${names(r.students)} needs a partner from: ${names(r.anyOf)}`;
   else if (r.kind === 'together') text = `${r.students.length > 2 ? 'Pod' : 'Put together'}: ${names(r.students)}`;
-  else if (r.kind === 'zone') text = `${names(r.students)} in ${r.zone ? ZONE_LABEL[r.zone] : 'desk ' + r.desks.map(deskNo).join(', ')}`;
+  else if (r.kind === 'zone') text = `${names(r.students)} in ${r.zone ? ZONE_LABEL[r.zone] : (r.mark && markName && markName(r.mark) ? 'the desks near ' + markName(r.mark) : 'desk ' + r.desks.map(deskNo).join(', '))}`;
   else if (r.kind === 'space') text = `Needs room (no neighbour): ${names(r.students)}`;
   else if (r.kind === 'seat') text = `${names(r.students)} keeps desk ${r.desks.map(deskNo).join(', ')}`;
   else text = `Desk ${r.desks.map(deskNo).join(', ')} stays empty`;
@@ -135,7 +139,8 @@ export function forShare(section) {
   // A room belongs to this browser's chart (Path 14 P4): the link carries the desks, not the room id.
   const { room, ...rest } = section;
   if (!Array.isArray(rest.rules)) return room === undefined ? section : rest;
-  return { ...rest, rules: rest.rules.map(r => ({ ...r, why: '' })) };
+  // `why` is the reason; `mark` names a room mark this browser has and a link does not carry
+  return { ...rest, rules: rest.rules.map(r => { const { mark, ...x } = r; return { ...x, why: '' }; }) };
 }
 
 /** What the substitute's page says about the rules that are not plain pairs (the pairs keep their

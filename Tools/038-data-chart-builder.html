@@ -104,6 +104,7 @@
   .chart-stage { background: #fff; border-radius: 8px; padding: 1rem; width: 100%; min-height: 320px; display: flex; align-items: center; justify-content: center; }
   .chart-stage .empty-hint { color: #5a6080; } /* the stage is white, so the page's dim text is too light on it */
   #chart-svg { width: 100%; height: auto; max-height: 460px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   .empty-hint { font-size: 0.82rem; color: var(--text-dim); text-align: center; padding: 2rem 1rem; }
 
   .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 0.6rem; margin-top: 1rem; }
@@ -180,7 +181,7 @@
         <input type="checkbox" id="has-headers" checked>
         <label class="option-label" for="has-headers">First row is column headers</label>
       </div>
-      <div id="preview-table-wrap" style="display:none;"><table id="preview-table"></table></div>
+      <div id="preview-table-wrap" style="display:none;" tabindex="0" role="region" aria-label="Data preview"><table id="preview-table"></table></div>
 
       <div class="control-group" id="saved-datasets-group">
         <label for="dataset-name">Saved datasets</label>
@@ -209,6 +210,7 @@
       <div class="control-group" id="value-cols-group">
         <label>Value column(s)</label>
         <div id="value-cols-list"></div>
+        <p class="hint" id="value-cols-note" role="status" hidden></p>
         <div class="hint">Only columns that look numeric are offered here.</div>
         <div class="option-row" id="error-bars-row">
           <input type="checkbox" id="show-error-bars">
@@ -228,9 +230,33 @@
             <select id="scatter-y-col"></select>
           </div>
         </div>
+        <div class="control-group" id="scatter-extra-group" style="display:none;">
+          <label id="scatter-extra-label">More Y columns (each one is its own series)</label>
+          <div id="scatter-extra-list" role="group" aria-labelledby="scatter-extra-label"></div>
+        </div>
         <div class="option-row">
           <input type="checkbox" id="show-trendline">
-          <label class="option-label" for="show-trendline">Show trendline (linear regression)</label>
+          <label class="option-label" for="show-trendline">Show trendline (best fit)</label>
+        </div>
+        <div class="option-row">
+          <input type="checkbox" id="x-log">
+          <label class="option-label" for="x-log">Logarithmic X axis (powers of ten)</label>
+        </div>
+        <div class="option-row">
+          <input type="checkbox" id="y-log">
+          <label class="option-label" for="y-log">Logarithmic Y axis (powers of ten)</label>
+        </div>
+        <p class="hint" id="log-note" role="status"></p>
+        <div class="control-group" id="trend-model-group" style="display:none;">
+          <label for="trend-model">Fit</label>
+          <select id="trend-model">
+            <option value="linear">Linear: y = ax + b</option>
+            <option value="power">Power: y = a·x^b</option>
+            <option value="exponential">Exponential: y = a·e^(bx)</option>
+            <option value="logarithmic">Logarithmic: y = a + b·ln x</option>
+            <option value="quadratic">Quadratic: y = ax² + bx + c</option>
+          </select>
+          <p class="hint" id="fit-note" role="status"></p>
         </div>
       </div>
     </div>
@@ -271,6 +297,32 @@
       </div>
     </div>
 
+    <div class="card" id="notes-card" style="display:none;">
+      <h2>Annotations</h2>
+      <p class="hint" style="margin-top:0;">Mark the scatter in its own numbers: shade a range, point an arrow, or label a point. They stay on their points if you change the axes. They travel in a share link and are not saved on this device.</p>
+      <div class="control-group">
+        <label for="note-type">Add a</label>
+        <select id="note-type">
+          <option value="region">Shaded region</option>
+          <option value="arrow">Arrow</option>
+          <option value="callout">Callout (a label on a point)</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+        <div style="flex:1;min-width:6.5rem;"><label for="note-a" id="note-a-label">From X</label><input type="number" id="note-a" step="any"></div>
+        <div style="flex:1;min-width:6.5rem;"><label for="note-b" id="note-b-label">To X</label><input type="number" id="note-b" step="any"></div>
+        <div style="flex:1;min-width:6.5rem;"><label for="note-c" id="note-c-label">From Y (optional)</label><input type="number" id="note-c" step="any"></div>
+        <div style="flex:1;min-width:6.5rem;"><label for="note-d" id="note-d-label">To Y (optional)</label><input type="number" id="note-d" step="any"></div>
+      </div>
+      <div class="control-group">
+        <label for="note-text" id="note-text-label">Label (optional)</label>
+        <input type="text" id="note-text" maxlength="60">
+      </div>
+      <div class="btn-row"><button type="button" class="btn-secondary" id="note-add">Add to chart</button></div>
+      <p class="hint" id="notes-msg" role="status"></p>
+      <ul id="notes-list" aria-label="Notes on the chart" style="list-style:none;padding:0;margin:0.4rem 0 0;"></ul>
+    </div>
+
     <div id="msg"></div>
   </div>
 
@@ -280,6 +332,7 @@
       <div class="chart-stage paper-sheet" id="chart-stage">
         <p class="empty-hint">Paste a data table on the left to get started.</p>
       </div>
+      <div id="chart-announce" class="sr-only" role="status" aria-live="polite"></div>
       <div class="stats-grid" id="stats-grid" style="display:none;"></div>
       <div class="control-group" style="margin-top:1rem;">
         <label for="filename">Download filename</label>
@@ -305,6 +358,9 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/chart-svg.js"></script>
+<script src="../_shared/paste-table.js"></script>
+<script src="data-chart-builder/dcb-fit.js"></script>
 <script>
 (function () {
   "use strict";
@@ -328,7 +384,7 @@
 
   var els = {};
   ['data-input', 'has-headers', 'preview-table-wrap', 'preview-table', 'columns-card', 'category-col',
-   'value-cols-list', 'scatter-cols-group', 'scatter-x-col', 'scatter-y-col', 'show-trendline', 'options-card', 'chart-title',
+   'value-cols-list', 'value-cols-note', 'scatter-cols-group', 'scatter-x-col', 'scatter-y-col', 'show-trendline', 'scatter-extra-group', 'scatter-extra-list', 'notes-card', 'note-type', 'note-a', 'note-b', 'note-c', 'note-d', 'note-text', 'note-add', 'notes-msg', 'notes-list', 'trend-model-group', 'trend-model', 'fit-note', 'x-log', 'y-log', 'log-note', 'options-card', 'chart-title',
    'y-axis-label-group', 'y-axis-label', 'show-values', 'sort-row', 'sort-values', 'chart-stage', 'stats-grid', 'filename', 'btn-png', 'btn-svg', 'msg',
    'btn-choose-file', 'file-input', 'dataset-name', 'btn-save-dataset', 'saved-datasets-select',
    'btn-load-dataset', 'btn-delete-dataset', 'btn-undo-delete-dataset', 'grayscale-mode', 'show-error-bars', 'error-bars-config',
@@ -442,39 +498,17 @@
   });
 
   // ── Parsing ──────────────────────────────────────────────────────────────
-  function splitLine(line, delim) {
-    var result = [], cur = '', inQuotes = false;
-    for (var i = 0; i < line.length; i++) {
-      var ch = line[i];
-      if (inQuotes) {
-        if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else inQuotes = false; }
-        else cur += ch;
-      } else {
-        if (ch === '"') inQuotes = true;
-        else if (ch === delim) { result.push(cur); cur = ''; }
-        else cur += ch;
-      }
-    }
-    result.push(cur);
-    return result.map(function (s) { return s.trim(); });
-  }
-
+  // PasteTable.parse reads the region: a tab if the first line has one, else commas; quoted
+  // cells; every row padded to the widest; the first row the header only when the box is ticked.
   function parseTable(text) {
-    var lines = text.split(/\r?\n/).filter(function (l) { return l.trim().length; });
-    if (!lines.length) return null;
-    var delim = lines[0].indexOf('\t') !== -1 ? '\t' : ',';
-    var rows = lines.map(function (l) { return splitLine(l, delim); });
-    var width = rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
-    rows = rows.map(function (r) { while (r.length < width) r.push(''); return r; });
-
-    var headers;
-    if (els.hasHeaders.checked) {
-      headers = rows.shift();
-    } else {
+    var p = PasteTable.parse(text, { candidates: ['\t'], firstLine: true, fallback: ',', header: els.hasHeaders.checked });
+    if (!p.rows.length && !p.header) return null;
+    var headers = p.header;
+    if (!headers) {
       headers = [];
-      for (var i = 0; i < width; i++) headers.push('Column ' + (i + 1));
+      for (var i = 0; i < p.width; i++) headers.push('Column ' + (i + 1));
     }
-    return { headers: headers, rows: rows };
+    return { headers: headers, rows: p.rows, lines: p.lines };
   }
 
   function isNumeric(v) {
@@ -492,6 +526,22 @@
     return cols;
   }
 
+  /* A column that is almost all numbers but for a few cells ("n/a", "—", a typo) is left out of
+     the value columns, as it always was; this says which cells did it, so a teacher can fix the
+     cell instead of wondering where the column went. */
+  function renderValueColsNote(t) {
+    var rep = PasteTable.columnReport(t.rows, { isNumber: isNumeric });
+    var notes = [];
+    rep.forEach(function (c, i) {
+      if (numericCols.indexOf(i) !== -1 || !c.unreadable.length || c.numbers < c.unreadable.length) return;
+      var shown = c.unreadable.slice(0, 3).map(function (u) { return 'line ' + t.lines[u.row - 1] + ' reads \u201c' + u.text + '\u201d'; });
+      notes.push('\u201c' + t.headers[i] + '\u201d is not offered as a value column: ' + shown.join('; ') +
+        (c.unreadable.length > 3 ? ' (and ' + (c.unreadable.length - 3) + ' more)' : '') + ', which is not a number.');
+    });
+    els.valueColsNote.textContent = notes.join(' ');
+    els.valueColsNote.hidden = !notes.length;
+  }
+
   function renderPreview(t) {
     var maxRows = 8;
     var html = '<thead><tr>' + t.headers.map(function (h) { return '<th>' + escapeHtml(h) + '</th>'; }).join('') + '</tr></thead>';
@@ -500,6 +550,20 @@
     }).join('') + '</tbody>';
     els.previewTable.innerHTML = html;
     els.previewTableWrap.style.display = 'block';
+  }
+
+  // More Y columns for the scatter: every numeric column that is neither the X nor the main Y.
+  var extraYs = [];
+  function renderExtraYs() {
+    if (!table) { els.scatterExtraGroup.style.display = 'none'; return; }
+    var x = parseInt(els.scatterXCol.value, 10), y = parseInt(els.scatterYCol.value, 10);
+    var cols = numericCols.filter(function (c) { return c !== x && c !== y; });
+    extraYs = extraYs.filter(function (c) { return cols.indexOf(c) !== -1; });
+    els.scatterExtraList.innerHTML = cols.map(function (c) {
+      return '<div class="option-row"><input type="checkbox" class="scatter-extra-cb" id="scatter-extra-' + c + '" value="' + c + '"' + (extraYs.indexOf(c) !== -1 ? ' checked' : '') + '>' +
+        '<label class="option-label" for="scatter-extra-' + c + '">' + escapeHtml(table.headers[c]) + '</label></div>';
+    }).join('');
+    els.scatterExtraGroup.style.display = cols.length ? 'block' : 'none';
   }
 
   function populateColumnSelects(t) {
@@ -513,11 +577,13 @@
     els.categoryCol.value = firstNonNumeric !== -1 ? firstNonNumeric : 0;
     if (numericCols.length) els.scatterXCol.value = numericCols[0];
     if (numericCols.length > 1) els.scatterYCol.value = numericCols[1];
+    extraYs = [];
+    renderExtraYs();
 
     els.valueColsList.innerHTML = numericCols.map(function (c, i) {
       var checked = i === 0 ? 'checked' : '';
-      return '<div class="option-row"><input type="checkbox" class="value-col-cb" value="' + c + '" ' + checked + '>' +
-        '<label class="option-label"><span class="series-swatch" style="background:' + PALETTE[i % PALETTE.length] + ';"></span>' +
+      return '<div class="option-row"><input type="checkbox" class="value-col-cb" id="value-col-' + c + '" value="' + c + '" ' + checked + '>' +
+        '<label class="option-label" for="value-col-' + c + '"><span class="series-swatch" style="background:' + PALETTE[i % PALETTE.length] + ';"></span>' +
         escapeHtml(t.headers[c]) + '</label></div>';
     }).join('') || '<p class="hint">No numeric columns detected.</p>';
     renderErrorBarConfig();
@@ -583,6 +649,7 @@
     errorColSelections = {};
     renderPreview(t);
     populateColumnSelects(t);
+    renderValueColsNote(t);
     els.columnsCard.style.display = 'block';
     els.optionsCard.style.display = 'block';
     syncChartTypeUI();
@@ -720,9 +787,16 @@
   });
   els.categoryCol.addEventListener('change', scheduleRender);
   els.valueColsList.addEventListener('change', function () { renderErrorBarConfig(); scheduleRender(); });
-  els.scatterXCol.addEventListener('change', scheduleRender);
-  els.scatterYCol.addEventListener('change', scheduleRender);
+  els.scatterXCol.addEventListener('change', function () { renderExtraYs(); scheduleRender(); });
+  els.scatterYCol.addEventListener('change', function () { renderExtraYs(); scheduleRender(); });
+  els.scatterExtraList.addEventListener('change', function () {
+    extraYs = Array.from(els.scatterExtraList.querySelectorAll('.scatter-extra-cb:checked')).map(function (cb) { return parseInt(cb.value, 10); });
+    scheduleRender();
+  });
   els.showTrendline.addEventListener('change', scheduleRender);
+  els.trendModel.addEventListener('change', scheduleRender);
+  els.xLog.addEventListener('change', scheduleRender);
+  els.yLog.addEventListener('change', scheduleRender);
   els.chartTitle.addEventListener('input', scheduleRender);
   els.yAxisLabel.addEventListener('input', scheduleRender);
   els.showValues.addEventListener('change', function () { saveSettings(); scheduleRender(); });
@@ -743,8 +817,69 @@
     els.scatterColsGroup.style.display = isScatter ? 'block' : 'none';
     els.sortRow.style.display = (isScatter || isPie || isBox) ? 'none' : 'flex';
     els.yAxisLabelGroup.style.display = isPie ? 'none' : 'block';
+    els.notesCard.style.display = isScatter ? 'block' : 'none';
     renderErrorBarConfig();
   }
+
+  // ── Annotations on the scatter (ChartSvg notes: data coordinates, in memory and the share link only) ──
+  var notes = [];
+  var NOTE_FIELDS = {
+    region: [['From X', 1], ['To X', 1], ['From Y (optional)', 1], ['To Y (optional)', 1], 'Label (optional)'],
+    arrow: [['Tail X', 1], ['Tail Y', 1], ['Head X', 1], ['Head Y', 1], 'Label (optional)'],
+    callout: [['X of the point', 1], ['Y of the point', 1], null, null, 'Text of the label']
+  };
+  function syncNoteForm() {
+    var f = NOTE_FIELDS[els.noteType.value] || NOTE_FIELDS.region;
+    ['a', 'b', 'c', 'd'].forEach(function (k, i) {
+      var inp = els['note' + k.toUpperCase()], lab = document.getElementById('note-' + k + '-label');
+      inp.parentNode.style.display = f[i] ? '' : 'none';
+      if (f[i]) lab.textContent = f[i][0];
+    });
+    document.getElementById('note-text-label').textContent = f[4];
+  }
+  function describeNote(n) {
+    if (n.type === 'region') return 'Shaded region, x ' + n.x1 + ' to ' + n.x2 + ('y1' in n ? ', y ' + n.y1 + ' to ' + n.y2 : '') + (n.text ? ': ' + n.text : '');
+    if (n.type === 'arrow') return 'Arrow from ' + n.x1 + ', ' + n.y1 + ' to ' + n.x2 + ', ' + n.y2 + (n.text ? ': ' + n.text : '');
+    return 'Callout at ' + n.x + ', ' + n.y + ': ' + n.text;
+  }
+  function renderNotesList() {
+    els.notesList.textContent = '';
+    notes.forEach(function (n, i) {
+      var li = document.createElement('li');
+      li.style.cssText = 'display:flex;gap:0.5rem;align-items:center;margin:0.25rem 0;font-size:0.84rem;';
+      var span = document.createElement('span');
+      span.style.flex = '1';
+      span.textContent = describeNote(n);
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'btn-secondary'; btn.textContent = 'Remove';
+      btn.setAttribute('aria-label', 'Remove note: ' + describeNote(n));
+      btn.addEventListener('click', function () {
+        notes.splice(i, 1);
+        renderNotesList(); els.notesMsg.textContent = 'Note removed.'; scheduleRender();
+      });
+      li.appendChild(span); li.appendChild(btn);
+      els.notesList.appendChild(li);
+    });
+  }
+  function noteNum(el) { return el.value.trim() === '' ? null : Number(el.value); }
+  els.noteType.addEventListener('change', syncNoteForm);
+  els.noteAdd.addEventListener('click', function () {
+    var type = els.noteType.value, a = noteNum(els.noteA), b = noteNum(els.noteB), c = noteNum(els.noteC), d = noteNum(els.noteD);
+    var text = els.noteText.value, raw;
+    if (notes.length >= 12) { els.notesMsg.textContent = 'A chart holds 12 notes. Remove one first.'; return; }
+    if (type === 'region') {
+      if ((c === null) !== (d === null)) { els.notesMsg.textContent = 'Fill in both Y values for a band, or neither for the full height.'; return; }
+      raw = { type: 'region', x1: a, x2: b, text: text };
+      if (c !== null) { raw.y1 = c; raw.y2 = d; }
+    } else if (type === 'arrow') raw = { type: 'arrow', x1: a, y1: b, x2: c, y2: d, text: text };
+    else raw = { type: 'callout', x: a, y: b, text: text };
+    var clean = ChartSvg.cleanNotes([raw])[0];
+    if (!clean) { els.notesMsg.textContent = type === 'callout' ? 'A callout needs both numbers and some text.' : type === 'arrow' ? 'An arrow needs four different numbers.' : 'Fill in the numbers for the region.'; return; }
+    notes.push(clean);
+    els.noteA.value = els.noteB.value = els.noteC.value = els.noteD.value = els.noteText.value = '';
+    els.notesMsg.textContent = 'Added. ' + notes.length + ' note' + (notes.length === 1 ? '' : 's') + ' on the chart.';
+    renderNotesList(); scheduleRender();
+  });
 
   function scheduleRender() { clearTimeout(debounceTimer); debounceTimer = setTimeout(render, 100); }
 
@@ -755,38 +890,72 @@
   // ── Chart rendering (hand-drawn SVG, no external libraries) ──────────────
   var W = 640, H = 400, PAD = { top: 40, right: 24, bottom: 64, left: 56 };
 
+  // The drawing is _shared/chart-svg.js; this is the page's state handed to it.
+  function chartOpts(extra) {
+    var o = {
+      W: W, H: H, pad: PAD,
+      title: els.chartTitle.value.trim(), yLabel: els.yAxisLabel.value.trim(),
+      showValues: els.showValues.checked, trend: els.showTrendline.checked,
+      grayscale: els.grayscaleMode.checked, palette: activePalette(),
+      pointColor: PALETTE_HEX[0], trendColor: PALETTE_HEX[4]
+    };
+    for (var k in extra) o[k] = extra[k];
+    return o;
+  }
+
   function render() {
     if (!table) return;
     var type = getChartType();
+    els.fitNote.textContent = ''; els.logNote.textContent = '';
     try {
       var svg, statsSourceValues, statsLabel;
       if (type === 'bar' || type === 'line') {
         var built = buildCategorySeries();
         if (!built) { renderEmpty('Pick at least one value column.'); disableDownloads(); return; }
-        svg = type === 'bar' ? drawBarChart(built) : drawLineChart(built);
+        svg = type === 'bar' ? ChartSvg.bar(built, chartOpts()) : ChartSvg.line(built, chartOpts());
         statsSourceValues = built.series[0] ? built.series[0].values : [];
         statsLabel = built.series[0] ? built.series[0].label : '';
       } else if (type === 'pie') {
         var built2 = buildCategorySeries();
         if (!built2 || !built2.series.length) { renderEmpty('Pick a value column.'); disableDownloads(); return; }
-        svg = drawPieChart(built2);
+        svg = ChartSvg.pie(built2, chartOpts());
         statsSourceValues = built2.series[0].values;
         statsLabel = built2.series[0].label;
       } else if (type === 'box') {
         var built3 = buildBoxData();
         if (!built3) { renderEmpty('Pick at least one value column.'); disableDownloads(); return; }
-        svg = drawBoxChart(built3);
+        svg = ChartSvg.box(built3, chartOpts());
         statsSourceValues = built3.boxes[0].values;
         statsLabel = built3.boxes[0].label;
       } else {
         var sc = buildScatterData();
         if (!sc) { renderEmpty('Need at least one numeric column for each axis.'); disableDownloads(); return; }
-        svg = drawScatterChart(sc);
+        var model = els.trendModel.value, fitObj = null, fitsList = null;
+        if (els.showTrendline.checked && !sc.series) fitObj = ChartFit.fit(model, sc.points);
+        if (els.showTrendline.checked && sc.series) {
+          fitsList = sc.series.map(function (se) {
+            return ChartFit.fit(model, se.points) || { predict: function () { return NaN; }, label: '', desc: 'no ' + model + ' fit, too few usable points' };
+          });
+        }
+        var xLog = els.xLog.checked, yLog = els.yLog.checked;
+        var scOpts = fitObj && model !== 'linear' ? { fit: fitObj } : {};
+        if (fitsList && model !== 'linear') scOpts.fits = fitsList;
+        if (notes.length) scOpts.notes = notes;
+        if (xLog) scOpts.xScale = 'log';
+        if (yLog) scOpts.yScale = 'log';
+        svg = ChartSvg.scatter(sc, chartOpts(scOpts));
+        var offLog = (xLog || yLog) ? sc.points.filter(function (p) { return (xLog && !(p.x > 0)) || (yLog && !(p.y > 0)); }).length : 0;
+        els.logNote.textContent = offLog ? offLog + ' point' + (offLog === 1 ? ' has' : 's have') + ' a zero or negative value and ' + (offLog === 1 ? 'is' : 'are') + ' not plotted on a logarithmic axis.' : '';
+        els.trendModelGroup.style.display = els.showTrendline.checked ? 'block' : 'none';
+        if (fitsList) {
+          els.fitNote.textContent = sc.series.map(function (se, i) { return se.label + ': ' + (fitsList[i].label || fitsList[i].desc); }).join('. ') + '. ' + (fitsList[0].note || '');
+        } else els.fitNote.textContent = !els.showTrendline.checked ? '' : fitObj ? fitObj.label + '. ' + fitObj.note : 'Not enough usable points for a ' + model + ' fit.';
         statsSourceValues = sc.points.map(function (p) { return p.y; });
         statsLabel = sc.yLabel;
       }
       els.chartStage.innerHTML = svg;
       lastSvgString = svg;
+      announceChart();
       renderStats(statsSourceValues, statsLabel);
       enableDownloads();
     } catch (err) {
@@ -795,10 +964,18 @@
     }
   }
 
+  // The chart is redrawn as the teacher types; a polite status line says what is on screen now
+  // (the chart's own <title> and <desc>), so a screen reader hears the data and not just "image".
+  function announceChart() {
+    var t = els.chartStage.querySelector('svg > title'), d = els.chartStage.querySelector('svg > desc');
+    document.getElementById('chart-announce').textContent = t && d ? t.textContent + ' updated. ' + d.textContent : '';
+  }
+
   function renderEmpty(text) {
     els.chartStage.innerHTML = '<p class="empty-hint">' + escapeHtml(text) + '</p>';
     els.statsGrid.style.display = 'none';
     lastSvgString = null;
+    document.getElementById('chart-announce').textContent = text;
   }
   function enableDownloads() { els.btnPng.disabled = false; els.btnSvg.disabled = false; }
   function disableDownloads() { els.btnPng.disabled = true; els.btnSvg.disabled = true; }
@@ -838,7 +1015,17 @@
       .filter(function (r) { return isNumeric(r[xCol]) && isNumeric(r[yCol]); })
       .map(function (r) { return { x: toNumber(r[xCol]), y: toNumber(r[yCol]) }; });
     if (!points.length) return null;
-    return { points: points, xLabel: table.headers[xCol], yLabel: table.headers[yCol] };
+    var out = { points: points, xLabel: table.headers[xCol], yLabel: table.headers[yCol] };
+    if (extraYs.length) {
+      out.series = [{ label: table.headers[yCol], points: points }].concat(extraYs.map(function (c) {
+        return {
+          label: table.headers[c],
+          points: table.rows.filter(function (r) { return isNumeric(r[xCol]) && isNumeric(r[c]); }).map(function (r) { return { x: toNumber(r[xCol]), y: toNumber(r[c]) }; })
+        };
+      }));
+      out.yLabel = '';
+    }
+    return out;
   }
 
   // Exclusive median-of-halves quartiles (the "Moore & McCabe" / TI-84 1-Var
@@ -880,268 +1067,6 @@
     return { boxes: boxes };
   }
 
-  function niceMax(v) {
-    if (v <= 0) return 1;
-    var mag = Math.pow(10, Math.floor(Math.log10(v)));
-    var norm = v / mag;
-    var step = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
-    return step * mag;
-  }
-
-  function svgOpen() {
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" font-family="Inter, system-ui, sans-serif">' +
-      '<rect width="' + W + '" height="' + H + '" fill="#ffffff"/>';
-  }
-  function chartTitleEl() {
-    var t = els.chartTitle.value.trim();
-    if (!t) return '';
-    return '<text x="' + (W / 2) + '" y="22" text-anchor="middle" font-size="15" font-weight="700" fill="#16222e">' + escapeXML(t) + '</text>';
-  }
-
-  function drawAxes(maxVal, categories) {
-    var plotW = W - PAD.left - PAD.right, plotH = H - PAD.top - PAD.bottom;
-    var parts = [];
-    var ticks = 5;
-    for (var i = 0; i <= ticks; i++) {
-      var y = PAD.top + plotH - (plotH * i / ticks);
-      var val = (maxVal * i / ticks);
-      parts.push('<line x1="' + PAD.left + '" y1="' + y + '" x2="' + (W - PAD.right) + '" y2="' + y + '" stroke="#e1e5ea" stroke-width="1"/>');
-      parts.push('<text x="' + (PAD.left - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="10" fill="#5b6b78">' + formatNum(val) + '</text>');
-    }
-    parts.push('<line x1="' + PAD.left + '" y1="' + PAD.top + '" x2="' + PAD.left + '" y2="' + (PAD.top + plotH) + '" stroke="#c7cfd6" stroke-width="1.5"/>');
-    parts.push('<line x1="' + PAD.left + '" y1="' + (PAD.top + plotH) + '" x2="' + (W - PAD.right) + '" y2="' + (PAD.top + plotH) + '" stroke="#c7cfd6" stroke-width="1.5"/>');
-
-    if (categories) {
-      var n = categories.length;
-      var slot = plotW / n;
-      categories.forEach(function (cat, i) {
-        var x = PAD.left + slot * i + slot / 2;
-        var label = String(cat);
-        if (label.length > 10) label = label.slice(0, 9) + '…';
-        var rotate = n > 8;
-        if (rotate) {
-          parts.push('<text x="' + x + '" y="' + (PAD.top + plotH + 14) + '" text-anchor="end" font-size="9.5" fill="#5b6b78" transform="rotate(-40 ' + x + ' ' + (PAD.top + plotH + 14) + ')">' + escapeXML(label) + '</text>');
-        } else {
-          parts.push('<text x="' + x + '" y="' + (PAD.top + plotH + 18) + '" text-anchor="middle" font-size="10.5" fill="#5b6b78">' + escapeXML(label) + '</text>');
-        }
-      });
-    }
-    return parts.join('');
-  }
-
-  function drawYAxisLabel(defaultLabel) {
-    var text = els.yAxisLabel.value.trim() || defaultLabel;
-    if (!text) return '';
-    var plotH = H - PAD.top - PAD.bottom;
-    var x = 14, y = PAD.top + plotH / 2;
-    return '<text x="' + x + '" y="' + y + '" text-anchor="middle" font-size="10.5" fill="#5b6b78" transform="rotate(-90 ' + x + ' ' + y + ')">' + escapeXML(text) + '</text>';
-  }
-
-  function formatNum(v) {
-    if (Math.abs(v) >= 1000) return (v / 1000).toFixed(v % 1000 === 0 ? 0 : 1) + 'k';
-    return Math.round(v * 100) / 100 + '';
-  }
-
-  /** A vertical error-bar-with-caps centered on (cx, centerY), extending
-   * `halfH` pixels up and down — used identically by the bar and line
-   * charts so a ± value column reads the same way regardless of chart type. */
-  function errorBarSvg(cx, centerY, halfH) {
-    if (!halfH) return '';
-    var top = centerY - halfH, bot = centerY + halfH;
-    return '<line x1="' + cx.toFixed(1) + '" y1="' + top.toFixed(1) + '" x2="' + cx.toFixed(1) + '" y2="' + bot.toFixed(1) + '" stroke="#16222e" stroke-width="1.4"/>' +
-      '<line x1="' + (cx - 4).toFixed(1) + '" y1="' + top.toFixed(1) + '" x2="' + (cx + 4).toFixed(1) + '" y2="' + top.toFixed(1) + '" stroke="#16222e" stroke-width="1.4"/>' +
-      '<line x1="' + (cx - 4).toFixed(1) + '" y1="' + bot.toFixed(1) + '" x2="' + (cx + 4).toFixed(1) + '" y2="' + bot.toFixed(1) + '" stroke="#16222e" stroke-width="1.4"/>';
-  }
-
-  function drawBarChart(built) {
-    var plotW = W - PAD.left - PAD.right, plotH = H - PAD.top - PAD.bottom;
-    var maxVal = niceMax(Math.max.apply(null, built.series.map(function (s) { return Math.max.apply(null, s.values.concat([0])); })) * 1.15);
-    var n = built.categories.length;
-    var slot = plotW / n;
-    var groupPad = slot * 0.18;
-    var barW = (slot - groupPad * 2) / built.series.length;
-
-    var parts = [svgOpen(), chartTitleEl(), drawAxes(maxVal, built.categories), drawYAxisLabel(built.series[0] ? built.series[0].label : '')];
-    built.categories.forEach(function (cat, i) {
-      built.series.forEach(function (s, si) {
-        var val = s.values[i];
-        var barH = (val / maxVal) * plotH;
-        var x = PAD.left + slot * i + groupPad + barW * si;
-        var y = PAD.top + plotH - barH;
-        parts.push('<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + Math.max(barW - 2, 1).toFixed(1) + '" height="' + Math.max(barH, 0).toFixed(1) + '" fill="' + s.color + '" rx="2"/>');
-        if (s.errors && s.errors[i]) parts.push(errorBarSvg(x + (barW - 2) / 2, y, (s.errors[i] / maxVal) * plotH));
-        if (els.showValues.checked && val !== 0) {
-          parts.push('<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (y - 5).toFixed(1) + '" text-anchor="middle" font-size="9.5" fill="#16222e">' + formatNum(val) + '</text>');
-        }
-      });
-    });
-    parts.push(drawLegend(built.series));
-    parts.push('</svg>');
-    return parts.join('');
-  }
-
-  function drawLineChart(built) {
-    var plotW = W - PAD.left - PAD.right, plotH = H - PAD.top - PAD.bottom;
-    var maxVal = niceMax(Math.max.apply(null, built.series.map(function (s) { return Math.max.apply(null, s.values.concat([0])); })) * 1.15);
-    var n = built.categories.length;
-    var slot = plotW / Math.max(n - 1, 1);
-
-    var parts = [svgOpen(), chartTitleEl(), drawAxes(maxVal, built.categories), drawYAxisLabel(built.series[0] ? built.series[0].label : '')];
-    built.series.forEach(function (s) {
-      var pts = s.values.map(function (v, i) {
-        var x = n === 1 ? PAD.left + plotW / 2 : PAD.left + slot * i;
-        var y = PAD.top + plotH - (v / maxVal) * plotH;
-        return [x, y];
-      });
-      var dashAttr = s.dash ? ' stroke-dasharray="' + s.dash + '"' : '';
-      parts.push('<polyline points="' + pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '" fill="none" stroke="' + s.color + '" stroke-width="2.5"' + dashAttr + '/>');
-      pts.forEach(function (p, i) {
-        if (s.errors && s.errors[i]) parts.push(errorBarSvg(p[0], p[1], (s.errors[i] / maxVal) * plotH));
-        parts.push('<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3.5" fill="' + s.color + '"/>');
-        if (els.showValues.checked) {
-          parts.push('<text x="' + p[0].toFixed(1) + '" y="' + (p[1] - 9).toFixed(1) + '" text-anchor="middle" font-size="9.5" fill="#16222e">' + formatNum(s.values[i]) + '</text>');
-        }
-      });
-    });
-    parts.push(drawLegend(built.series));
-    parts.push('</svg>');
-    return parts.join('');
-  }
-
-  function drawPieChart(built) {
-    var s = built.series[0];
-    var total = s.values.reduce(function (a, b) { return a + Math.max(b, 0); }, 0);
-    var cx = W / 2, cy = H / 2 + 6, r = Math.min(W, H) * 0.28;
-    var parts = [svgOpen(), chartTitleEl()];
-    if (total <= 0) { parts.push('</svg>'); return parts.join(''); }
-    var angle = -Math.PI / 2;
-    built.categories.forEach(function (cat, i) {
-      var val = Math.max(s.values[i], 0);
-      var frac = val / total;
-      var next = angle + frac * Math.PI * 2;
-      var x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
-      var x2 = cx + r * Math.cos(next), y2 = cy + r * Math.sin(next);
-      var largeArc = frac > 0.5 ? 1 : 0;
-      var color = paletteColor(i);
-      if (frac > 0) {
-        parts.push('<path d="M' + cx + ',' + cy + ' L' + x1.toFixed(1) + ',' + y1.toFixed(1) + ' A' + r + ',' + r + ' 0 ' + largeArc + ' 1 ' + x2.toFixed(1) + ',' + y2.toFixed(1) + ' Z" fill="' + color + '" stroke="#fff" stroke-width="1.5"/>');
-      }
-      if (els.showValues.checked && frac > 0.02) {
-        var midAngle = angle + frac * Math.PI;
-        var lx = cx + r * 0.68 * Math.cos(midAngle), ly = cy + r * 0.68 * Math.sin(midAngle);
-        parts.push('<text x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle" font-size="10.5" fill="#fff" font-weight="600">' + Math.round(frac * 100) + '%</text>');
-      }
-      angle = next;
-    });
-    var legendItems = built.categories.map(function (cat, i) {
-      return { label: String(cat), color: paletteColor(i) };
-    });
-    parts.push(drawLegendItems(legendItems));
-    parts.push('</svg>');
-    return parts.join('');
-  }
-
-  function linearRegression(points) {
-    var n = points.length;
-    var sumX = 0, sumY = 0, sumXY = 0, sumXX = 0, sumYY = 0;
-    points.forEach(function (p) {
-      sumX += p.x; sumY += p.y; sumXY += p.x * p.y; sumXX += p.x * p.x; sumYY += p.y * p.y;
-    });
-    var denom = n * sumXX - sumX * sumX;
-    if (n < 2 || denom === 0) return null;
-    var slope = (n * sumXY - sumX * sumY) / denom;
-    var intercept = (sumY - slope * sumX) / n;
-    var corrDenom = Math.sqrt((n * sumXX - sumX * sumX) * (n * sumYY - sumY * sumY));
-    var r = corrDenom === 0 ? 0 : (n * sumXY - sumX * sumY) / corrDenom;
-    return { slope: slope, intercept: intercept, r2: r * r };
-  }
-
-  function drawScatterChart(sc) {
-    var plotW = W - PAD.left - PAD.right, plotH = H - PAD.top - PAD.bottom;
-    var xs = sc.points.map(function (p) { return p.x; }), ys = sc.points.map(function (p) { return p.y; });
-    var maxX = niceMax(Math.max.apply(null, xs.concat([0])) * 1.1);
-    var maxY = niceMax(Math.max.apply(null, ys.concat([0])) * 1.15);
-    var minX = Math.min.apply(null, xs.concat([0]));
-    var xRange = maxX - Math.min(minX, 0) || 1;
-    var xOrigin = Math.min(minX, 0);
-
-    function toX(v) { return PAD.left + ((v - xOrigin) / xRange) * plotW; }
-    function toY(v) { return PAD.top + plotH - (v / maxY) * plotH; }
-
-    var parts = [svgOpen(), chartTitleEl(), drawAxes(maxY, null), drawYAxisLabel(sc.yLabel)];
-    parts.push('<text x="' + (W / 2) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10.5" fill="#5b6b78">' + escapeXML(sc.xLabel) + '</text>');
-
-    var trend = null;
-    if (els.showTrendline.checked) trend = linearRegression(sc.points);
-    if (trend) {
-      var lineX1 = xOrigin, lineX2 = maxX;
-      var lineY1 = trend.slope * lineX1 + trend.intercept;
-      var lineY2 = trend.slope * lineX2 + trend.intercept;
-      parts.push('<line x1="' + toX(lineX1).toFixed(1) + '" y1="' + toY(lineY1).toFixed(1) + '" x2="' + toX(lineX2).toFixed(1) + '" y2="' + toY(lineY2).toFixed(1) + '" stroke="' + PALETTE_HEX[4] + '" stroke-width="2" stroke-dasharray="5,4"/>');
-      var eq = 'y = ' + round2(trend.slope) + 'x ' + (trend.intercept >= 0 ? '+ ' : '- ') + round2(Math.abs(trend.intercept)) + '  (R² = ' + round2(trend.r2) + ')';
-      parts.push('<text x="' + (W - PAD.right) + '" y="' + (PAD.top - 6) + '" text-anchor="end" font-size="10" fill="' + PALETTE_HEX[4] + '">' + escapeXML(eq) + '</text>');
-    }
-
-    sc.points.forEach(function (p) {
-      parts.push('<circle cx="' + toX(p.x).toFixed(1) + '" cy="' + toY(p.y).toFixed(1) + '" r="4" fill="' + PALETTE_HEX[0] + '" opacity="0.75"/>');
-    });
-    parts.push('</svg>');
-    return parts.join('');
-  }
-
-  function drawBoxChart(built) {
-    var plotW = W - PAD.left - PAD.right, plotH = H - PAD.top - PAD.bottom;
-    var boxes = built.boxes;
-    var maxVal = niceMax(Math.max.apply(null, boxes.map(function (b) { return b.max; })) * 1.15);
-    var n = boxes.length;
-    var slot = plotW / n;
-    var boxW = Math.min(slot * 0.5, 70);
-
-    function toY(v) { return PAD.top + plotH - (v / maxVal) * plotH; }
-
-    var parts = [svgOpen(), chartTitleEl(), drawAxes(maxVal, boxes.map(function (b) { return b.label; })), drawYAxisLabel('')];
-    boxes.forEach(function (b, i) {
-      var x = PAD.left + slot * i + slot / 2;
-      var yMin = toY(b.min), yMax = toY(b.max), yQ1 = toY(b.q1), yQ3 = toY(b.q3), yMed = toY(b.median);
-      var capW = boxW * 0.5;
-
-      parts.push('<line x1="' + x.toFixed(1) + '" y1="' + yMax.toFixed(1) + '" x2="' + x.toFixed(1) + '" y2="' + yMin.toFixed(1) + '" stroke="' + b.color + '" stroke-width="1.5"/>');
-      parts.push('<line x1="' + (x - capW / 2).toFixed(1) + '" y1="' + yMax.toFixed(1) + '" x2="' + (x + capW / 2).toFixed(1) + '" y2="' + yMax.toFixed(1) + '" stroke="' + b.color + '" stroke-width="1.5"/>');
-      parts.push('<line x1="' + (x - capW / 2).toFixed(1) + '" y1="' + yMin.toFixed(1) + '" x2="' + (x + capW / 2).toFixed(1) + '" y2="' + yMin.toFixed(1) + '" stroke="' + b.color + '" stroke-width="1.5"/>');
-      parts.push('<rect x="' + (x - boxW / 2).toFixed(1) + '" y="' + yQ3.toFixed(1) + '" width="' + boxW.toFixed(1) + '" height="' + Math.max(yQ1 - yQ3, 1).toFixed(1) + '" fill="' + b.color + '" fill-opacity="0.25" stroke="' + b.color + '" stroke-width="1.5" rx="2"/>');
-      parts.push('<line x1="' + (x - boxW / 2).toFixed(1) + '" y1="' + yMed.toFixed(1) + '" x2="' + (x + boxW / 2).toFixed(1) + '" y2="' + yMed.toFixed(1) + '" stroke="' + b.color + '" stroke-width="2.5"/>');
-      if (els.showValues.checked) {
-        var lx = x + boxW / 2 + 5;
-        parts.push('<text x="' + lx.toFixed(1) + '" y="' + (yMax + 3).toFixed(1) + '" font-size="8.5" fill="#16222e">max ' + formatNum(b.max) + '</text>');
-        parts.push('<text x="' + lx.toFixed(1) + '" y="' + (yQ3 + 3).toFixed(1) + '" font-size="8.5" fill="#16222e">Q3 ' + formatNum(b.q3) + '</text>');
-        parts.push('<text x="' + lx.toFixed(1) + '" y="' + (yMed + 3).toFixed(1) + '" font-size="8.5" fill="#16222e" font-weight="600">med ' + formatNum(b.median) + '</text>');
-        parts.push('<text x="' + lx.toFixed(1) + '" y="' + (yQ1 + 3).toFixed(1) + '" font-size="8.5" fill="#16222e">Q1 ' + formatNum(b.q1) + '</text>');
-        parts.push('<text x="' + lx.toFixed(1) + '" y="' + (yMin + 3).toFixed(1) + '" font-size="8.5" fill="#16222e">min ' + formatNum(b.min) + '</text>');
-      }
-    });
-    parts.push('</svg>');
-    return parts.join('');
-  }
-
-  function drawLegend(series) {
-    if (series.length < 2) return '';
-    return drawLegendItems(series.map(function (s) { return { label: s.label, color: s.color }; }));
-  }
-  function drawLegendItems(items) {
-    var y = 12, x = PAD.left;
-    var parts = ['<g transform="translate(0,' + (H - 8) + ')">'];
-    var curX = x;
-    items.forEach(function (item) {
-      var textW = Math.min(item.label.length * 6 + 24, 160);
-      if (curX + textW > W - PAD.right) return; // skip overflow rather than overlapping
-      parts.push('<rect x="' + curX + '" y="-9" width="9" height="9" fill="' + item.color + '" rx="2"/>');
-      parts.push('<text x="' + (curX + 13) + '" y="-1" font-size="10" fill="#16222e">' + escapeXML(item.label.length > 20 ? item.label.slice(0, 19) + '…' : item.label) + '</text>');
-      curX += textW;
-    });
-    parts.push('</g>');
-    return parts.join('');
-  }
-
   // ── Stats ────────────────────────────────────────────────────────────────
   function renderStats(values, label) {
     if (!values || !values.length) { els.statsGrid.style.display = 'none'; return; }
@@ -1162,7 +1087,7 @@
     }).join('');
     els.statsGrid.style.display = 'grid';
   }
-  function round2(v) { return Math.round(v * 100) / 100; }
+  var round2 = ChartSvg.round2;
 
   // ── Downloads ────────────────────────────────────────────────────────────
   function currentFilename(ext) {
@@ -1170,36 +1095,16 @@
     name = name.replace(/[\\/:*?"<>|]+/g, '-');
     return /\.[a-z0-9]+$/i.test(name) ? name.replace(/\.[a-z0-9]+$/i, '.' + ext) : name + '.' + ext;
   }
-  function downloadBlob(blob, filename) {
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
-  }
-
   els.btnSvg.addEventListener('click', function () {
     if (!lastSvgString) return;
-    downloadBlob(new Blob([lastSvgString], { type: 'image/svg+xml' }), currentFilename('svg'));
+    ChartSvg.downloadBlob(new Blob([lastSvgString], { type: 'image/svg+xml' }), currentFilename('svg'));
   });
 
   els.btnPng.addEventListener('click', function () {
     if (!lastSvgString) return;
-    var img = new Image();
-    var svgBlob = new Blob([lastSvgString], { type: 'image/svg+xml;charset=utf-8' });
-    var url = URL.createObjectURL(svgBlob);
-    img.onload = function () {
-      var scale = 2;
-      var canvas = document.createElement('canvas');
-      canvas.width = W * scale; canvas.height = H * scale;
-      var ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(url);
-      canvas.toBlob(function (blob) { downloadBlob(blob, currentFilename('png')); }, 'image/png');
-    };
-    img.onerror = function () { URL.revokeObjectURL(url); showMsg('Could not render a PNG — try downloading the SVG instead.'); };
-    img.src = url;
+    ChartSvg.toPngBlob(lastSvgString, W, H,
+      function (blob) { ChartSvg.downloadBlob(blob, currentFilename('png')); },
+      function () { showMsg('Could not render a PNG — try downloading the SVG instead.'); });
   });
 
   // ── Print blank worksheet (teacher-generated student handout) ────────────
@@ -1208,10 +1113,8 @@
   // by hand from a printed table of the numbers, rather than the tool
   // plotting it for them.
   function buildBlankWorksheetSvg(built) {
-    var maxVal = niceMax(Math.max.apply(null, built.series.map(function (s) { return Math.max.apply(null, s.values.concat([0])); })) * 1.15);
-    var parts = [svgOpen(), chartTitleEl(), drawAxes(maxVal, built.categories), drawYAxisLabel(built.series[0] ? built.series[0].label : '')];
-    parts.push('</svg>');
-    return parts.join('');
+    // Its own id prefix: the worksheet is printed while the chart is still on the page.
+    return ChartSvg.blankAxes(built, chartOpts({ idPrefix: 'cs-ws' }));
   }
 
   els.btnPrintWorksheet.addEventListener('click', function () {
@@ -1281,6 +1184,11 @@
         scatterX: parseInt(els.scatterXCol.value, 10) || 0,
         scatterY: parseInt(els.scatterYCol.value, 10) || 0,
         trendline: els.showTrendline.checked,
+        trendModel: els.trendModel.value === 'linear' ? undefined : els.trendModel.value,
+        xLog: els.xLog.checked || undefined,
+        yLog: els.yLog.checked || undefined,
+        scatterYs: extraYs.length ? extraYs.slice() : undefined,
+        notes: notes.length ? notes : undefined,
         errorBars: els.showErrorBars.checked,
         errorCols: errorCols,
         title: els.chartTitle.value,
@@ -1319,6 +1227,9 @@
         els.sortValues.checked = !!c.sortValues;
         els.grayscaleMode.checked = !!c.grayscale;
         els.showTrendline.checked = !!c.trendline;
+        els.xLog.checked = c.xLog === true;
+        els.yLog.checked = c.yLog === true;
+        els.trendModel.value = ChartFit.MODELS.some(function (m) { return m.id === c.trendModel; }) ? c.trendModel : 'linear';
         els.showErrorBars.checked = !!c.errorBars;
         els.chartTitle.value = String(c.title == null ? '' : c.title).slice(0, 80);
         els.yAxisLabel.value = String(c.yLabel == null ? '' : c.yLabel).slice(0, 60);
@@ -1331,6 +1242,10 @@
         if (inRange(c.categoryCol)) els.categoryCol.value = c.categoryCol;
         if (inRange(c.scatterX)) els.scatterXCol.value = c.scatterX;
         if (inRange(c.scatterY)) els.scatterYCol.value = c.scatterY;
+        extraYs = Array.isArray(c.scatterYs) ? c.scatterYs.filter(function (n, i, a) { return inRange(n) && numericCols.indexOf(n) !== -1 && a.indexOf(n) === i; }).slice(0, 6) : [];
+        renderExtraYs();
+        notes = ChartSvg.cleanNotes(c.notes);
+        renderNotesList();
         if (Array.isArray(c.valueCols) && c.valueCols.length) {
           document.querySelectorAll('.value-col-cb').forEach(function (cb) {
             cb.checked = c.valueCols.indexOf(parseInt(cb.value, 10)) !== -1;
@@ -1355,6 +1270,7 @@
 
   // ── Init ─────────────────────────────────────────────────────────────────
   loadSettings();
+  syncNoteForm();
   syncChartTypeUI();
   refreshSavedDatasetsSelect();
   importSharedChart();

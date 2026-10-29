@@ -150,16 +150,62 @@ export function deleteRoom(state, roomId) {
   return rest;
 }
 
+/** The box a mark covers on the floor: a mark turned 90 or 270 degrees is drawn about its centre,
+    so its width and height trade places. Everything that asks "where is it" reads this. */
+export function footprint(m) {
+  if (m.rot === 90 || m.rot === 270) {
+    const cx = m.x + m.w / 2, cy = m.y + m.h / 2;
+    return { x: cx - m.h / 2, y: cy - m.w / 2, w: m.h, h: m.w };
+  }
+  return { x: m.x, y: m.y, w: m.w, h: m.h };
+}
+
+/** Change a mark in place: any of `w`, `h`, `rot`, `label`, `kind`. Sizes are clamped and the
+    mark kept on the floor by the same repair a stored mark gets; an unknown field is ignored. */
+export function editMark(state, roomId, markId, patch, rng = Math.random) {
+  const room = roomOf(state, roomId), m = room && room.marks.find(x => x.id === markId);
+  if (!m) return { state, mark: null };
+  const next = { ...m };
+  for (const k of ['w', 'h', 'rot', 'label', 'kind']) if (patch && k in patch) next[k] = patch[k];
+  return setMark(state, roomId, next, rng);
+}
+
 /** Desk ids whose centre is within `radius` of the edge of a mark (a door, a window): the
     desk list for a tapped zone, so "near the door" is a rule over desks and not a new kind. */
 export function desksNear(room, markId, radius = 150) {
-  const m = room && room.marks.find(x => x.id === markId);
-  if (!m) return [];
+  const mk = room && room.marks.find(x => x.id === markId);
+  if (!mk) return [];
+  const m = footprint(mk);
   return room.desks.filter(d => {
     const cx = d.x + DESK_W / 2, cy = d.y + DESK_H / 2;
     const dx = Math.max(m.x - cx, 0, cx - (m.x + m.w)), dy = Math.max(m.y - cy, 0, cy - (m.y + m.h));
     return Math.hypot(dx, dy) <= radius;
   }).map(d => d.id);
+}
+
+/** A zone rule tied to a mark follows it. Every section in a room has its mark-tied rules'
+    `desks` recomputed from the mark as it is now (the section's own desks only). A mark that
+    has gone is forgotten (the rule keeps its last desks and becomes an ordinary desk-list rule);
+    a mark with no desk near it leaves the rule's desks as they were. Returns the same state
+    object when nothing changed, so a caller can tell. */
+export function syncMarkRules(state) {
+  let changed = false;
+  const sections = state.sections.map(s => {
+    if (!Array.isArray(s.rules) || !s.rules.some(r => r && r.mark)) return s;
+    const room = s.room ? roomOf(state, s.room) : null;
+    const have = new Set(s.desks.map(d => d.id));
+    const rules = s.rules.map(r => {
+      if (!r || !r.mark) return r;
+      if (!room || !room.marks.some(m => m.id === r.mark)) { const { mark, ...rest } = r; return rest; }
+      const near = desksNear(room, r.mark).filter(id => have.has(id));
+      if (!near.length || JSON.stringify(near) === JSON.stringify(r.desks)) return r;
+      return { ...r, desks: near };
+    });
+    if (rules.every((r, i) => r === s.rules[i])) return s;
+    changed = true;
+    return { ...s, rules };
+  });
+  return changed ? { ...state, sections } : state;
 }
 
 /** Which periods sit in a room, for the editor's "this changes N periods" line. */

@@ -81,7 +81,7 @@
                                    (rgb-audio and stviz-recovery did, until
                                    v240).
      reads / readPrefixes          another tool's keys this tool only reads.
-                                   TWENTY-FIVE rows read np_rosters (28 tool
+                                   TWENTY-SIX rows read np_rosters (28 tool
                                    pages mention the key at all, counting its
                                    owner 007, its writer 006 and 009, which
                                    backs up every key generically). This said
@@ -151,7 +151,7 @@
           namespaces: [
             { ns: 'seating', student: true },
             { ns: 'cam' }, { ns: 'class-screen' }, { ns: 'dbq' }, { ns: 'escape-room' }, { ns: 'fsb' }, { ns: 'htcm' },
-            { ns: 'ppg' }, { ns: 'psa' }, { ns: 'rgb' }, { ns: 'stviz-trace' }, { ns: 'tlb' },
+            { ns: 'ppg' }, { ns: 'psa' }, { ns: 'rgb' }, { ns: 'scavenger-hunt' }, { ns: 'stviz-trace' }, { ns: 'tlb' },
           ] },
       ],
       /* _shared/roster.js writes both of these on a tool's behalf, so a
@@ -495,6 +495,7 @@
         { k: 'final-grade-checker:settings-v1' },
       ],
       reads: [
+        'np_rosters',
         'scv_calendar_v1',
       ],
     },
@@ -678,6 +679,9 @@
       keys: [
         { k: 'escape-room-builder:rooms' },
         { k: 'escape-room-progress:' },
+        /* The teacher monitor's record of a room's play (Path 18 P4): when each team moved off each station,
+           under the team names the teacher typed, so it is student data. Kept on the teacher's device only. */
+        { k: 'escape-room-builder:monitor-record', student: true },
       ],
       prefixes: [
         { p: 'escape-room-builder:', legacy: true },

@@ -63,7 +63,7 @@ const eq = (a, b, label) => ok(a === b, `${label} (got ${JSON.stringify(a)}, wan
 const server = await serve(PORT);
 const browser = await launch();
 
-console.log('Stage rollout — 001, 004, 021, 023 and 025 on _shared/stage.js');
+console.log('Stage rollout — 001, 004, 017, 021, 023, 025, 030 and 064 on _shared/stage.js');
 
 /** The state every one of these checks reads, for a given stage + button. */
 const readState = (page, stageSel, btnSel) => page.evaluate(({ stageSel, btnSel }) => {
@@ -105,7 +105,7 @@ const fillsViewport = box => box[2] >= 1270 && box[3] >= 890;
  * leaves — which is also the only way to check that 001's F reaches a stage
  * whose element was display:none when the key was pressed.
  */
-async function driveStage(browser, { label, url, stage, stageName, btn, enterBtn, prep, hudded }) {
+async function driveStage(browser, { label, url, stage, stageName, btn, enterBtn, prep, hudded, fOnlyLeaves }) {
   const enterSel = enterBtn || btn;
   const twoButton = !!enterBtn;
 
@@ -151,11 +151,16 @@ async function driveStage(browser, { label, url, stage, stageName, btn, enterBtn
       s = await readState(page, stage, btn);
       eq(s.fs, null, `${label}: the view's own Exit button leaves fullscreen`);
       ok(!/is-fullscreen/.test(s.cls), `${label}: the class is gone after Exit (${s.cls})`);
-      await page.evaluate(() => document.activeElement && document.activeElement.blur());
-      await page.keyboard.press('f');
+      if (fOnlyLeaves) {
+        // the view needs setup the tool asks for (064's game: teams), so F cannot open it; re-enter by the button
+        await page.click(enterSel);
+      } else {
+        await page.evaluate(() => document.activeElement && document.activeElement.blur());
+        await page.keyboard.press('f');
+      }
       await settle(page, 400);
       s = await readState(page, stage, btn);
-      eq(s.fs, stageName, `${label}: F re-enters — the stage element was display:none when the key was pressed`);
+      eq(s.fs, stageName, `${label}: ${fOnlyLeaves ? 'the enter button re-enters' : 'F re-enters — the stage element was display:none when the key was pressed'}`);
     }
 
     await page.keyboard.press('f');
@@ -271,6 +276,69 @@ await driveStage(browser, {
   btn: '#projectorCloseBtn',
   enterBtn: '#projectorBtn',
   hudded: false,
+});
+
+/* ── 017 — Gallery Walk QR, rotation projector (Path 5 P5-1) ──────────────
+   Devon's call of 2026-10-21: the home-made `inset: 0` overlay moved onto the
+   shared fullscreen. 001's shape: a display:none view the tool un-hides, a
+   toolbar button that enters, the view's own Exit button inside the subtree. */
+await driveStage(browser, {
+  label: '017 projector',
+  url: BASE + '/Tools/017-gallery-walk-qr.html',
+  stage: '#projectorView',
+  stageName: 'projectorView',
+  btn: '#pjExit',
+  enterBtn: '#projectorBtn',
+  hudded: false,
+});
+
+/* ── 064 — Trading Card Maker, review game (Path 5 P5-1) ──────────────────
+   001's shape again, with a sample deck loaded first so the game can start: the
+   editor's Start button un-hides the overlay and enters, "Pause & close" is the
+   exit button inside it, and F only ever leaves (a game needs its teams chosen,
+   so F cannot start one). */
+await driveStage(browser, {
+  label: '064 game',
+  url: BASE + '/Tools/064-historical-trading-card-maker.html',
+  stage: '#gameOverlay',
+  stageName: 'gameOverlay',
+  btn: '#gmCloseBtn',
+  enterBtn: '#gmStartBtn',
+  hudded: false,
+  fOnlyLeaves: true,
+  prep: async page => {
+    await page.click('#sampleDeckBtn');
+    await settle(page, 300);
+  },
+});
+
+/* ── 030 — Review Game Board (Path 5 P5-1) ───────────────────────────────
+   The body is the stage, as on 004 and 010: the board and both of its overlays
+   (clue, round) are inside it. A board has to exist for the toolbar's button to
+   show, so the prep builds one by hand the way smoke-dark-rollout's does. */
+await driveStage(browser, {
+  label: '030 board',
+  url: BASE + '/Tools/030-review-game-board.html',
+  stage: 'body',
+  stageName: 'body',
+  btn: '#fullscreenBtn',
+  hudded: false,
+  prep: async page => {
+    page.on('dialog', d => d.accept());
+    await page.click('#addCategoryBtn');
+    await settle(page, 250);
+    const blocks = page.locator('.category-block');
+    for (let i = 0, n = await blocks.count(); i < n; i++) {
+      const block = blocks.nth(i);
+      await block.locator('.cat-name-input').fill('Category ' + (i + 1));
+      for (let j = 0, m = await block.locator('.clue-question').count(); j < m; j++) {
+        await block.locator('.clue-question').nth(j).fill('Question ' + (j + 1) + '?');
+        await block.locator('.clue-answer').nth(j).fill('Answer ' + (j + 1));
+      }
+    }
+    await page.click('#buildFromManualBtn');
+    await settle(page, 800);
+  },
 });
 
 /* ── 004 — Classroom Timer (Path 5 P3) ────────────────────────────────────

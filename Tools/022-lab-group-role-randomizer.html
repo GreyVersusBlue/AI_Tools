@@ -30,6 +30,7 @@
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/grouping.js"></script>
 <script src="../_shared/student-flags.js"></script>
+<script src="../_shared/undo.js"></script>
 <!-- Path 6 P4's roster chain: share.js receives 002's groups (?labgroups=),
      and the registry and handoff table send this page's groups to 005 as a
      seating section. This page has no share sheet of its own; only
@@ -406,10 +407,10 @@
   ];
   var MEMBER_LABEL = 'Team Member';
 
-  // Snapshot of the state needed to undo the most recent shuffle. Kept out of
-  // `state` (and so out of localStorage/export) on purpose — undo is a
-  // same-session convenience, not part of a roster's saved data.
-  var undoSnapshot = null;
+  // Snapshots of the state needed to undo each shuffle, newest last (_shared/undo.js).
+  // Kept out of `state` (and so out of localStorage/export) on purpose — undo is
+  // a same-session convenience, not part of a roster's saved data.
+  var undoStack = UndoStack.create({ limit: 30, onChange: function (u) { if (els.undoBtn) els.undoBtn.disabled = !u.canUndo(); } });
 
   var els = {};
   ['toolbar', 'rosterSwitch', 'newRosterBtn', 'deleteRosterBtn', 'exportRosterBtn', 'importRosterBtn', 'importRosterFile',
@@ -1157,7 +1158,7 @@
       }
     }
 
-    undoSnapshot = { lastGroups: deepClone(state.lastGroups), groupHistory: state.groupHistory, checkoutLog: deepClone(state.checkoutLog), absent: deepClone(state.absent), lastExcludedForSafety: deepClone(state.lastExcludedForSafety) };
+    undoStack.push({ lastGroups: state.lastGroups, groupHistory: state.groupHistory, checkoutLog: state.checkoutLog, absent: state.absent, lastExcludedForSafety: state.lastExcludedForSafety });
 
     var groups = makeGroups(names);
     var violations = findApartViolations(groups);
@@ -1200,26 +1201,24 @@
     els.warnArea.innerHTML = warnings.length ? warnings.map(function (w) { return '<div class="warn-box">' + w + '</div>'; }).join('') : '';
     renderResults(result);
     renderHistoryHint();
-    els.undoBtn.disabled = false;
   }
 
   els.shuffleBtn.addEventListener('click', shuffleAll);
 
   els.undoBtn.addEventListener('click', function () {
+    var undoSnapshot = undoStack.undo();
     if (!undoSnapshot) return;
     state.lastGroups = undoSnapshot.lastGroups;
     setRoleMemory(undoSnapshot.groupHistory);
     state.checkoutLog = undoSnapshot.checkoutLog || [];
     state.absent = undoSnapshot.absent || [];
     state.lastExcludedForSafety = undoSnapshot.lastExcludedForSafety || [];
-    undoSnapshot = null;
     saveCurrent();
     var violations = state.lastGroups ? findApartViolations(state.lastGroups.map(function (g) { return g.members.map(function (m) { return m.name; }); })) : [];
     els.warnArea.innerHTML = violations.length ? '<div class="warn-box">⚠ This restored grouping still leaves ' + violations.length +
       ' keep-apart pair' + (violations.length === 1 ? '' : 's') + ' together.</div>' : '';
     renderResults(state.lastGroups);
     renderHistoryHint();
-    els.undoBtn.disabled = true;
     showMsg('Restored the previous groups and roles.', true);
   });
 
@@ -1631,8 +1630,7 @@
     els.warnArea.innerHTML = '';
     renderResults(state.lastGroups);
     renderHistoryHint();
-    undoSnapshot = null;
-    els.undoBtn.disabled = true;
+    undoStack.clear();
   }
 
   /** Roles used to be a plain array of strings; normalize either shape into

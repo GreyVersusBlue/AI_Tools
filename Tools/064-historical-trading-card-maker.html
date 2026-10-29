@@ -35,6 +35,7 @@
      tool's own (.pk-cards-own) and the rules below still size the card. The
      page is Letter with 0.3 in margins, from PrintKit.setPage() below. -->
 <script src="../_shared/print-kit.js"></script>
+<script src="../_shared/stage.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -259,6 +260,11 @@
     background: #11141b; color: #f3f5f8; padding: .9rem 1.1rem 1.6rem;
   }
   .gm-overlay[hidden] { display: none; }
+  /* The game's fullscreen is _shared/stage.js's (Path 5 P5-1). Its refused-
+     fullscreen fallback paints `var(--paper)` from a `.stage-fallback.is-fullscreen`
+     rule injected into <head> after this <style>, so a same-weight `.gm-overlay`
+     background loses; an id-level rule keeps the board dark in both themes. */
+  #gameOverlay.is-fullscreen { background: #11141b; color: #f3f5f8; }
   .gm-bar { display: flex; flex-wrap: wrap; gap: .5rem .9rem; align-items: center; }
   .gm-round { font-size: 1.05rem; font-weight: 700; letter-spacing: .02em; }
   .gm-scores { display: flex; flex-wrap: wrap; gap: .35rem; flex: 1; }
@@ -1639,16 +1645,41 @@
 
   function saveAndRender() { HtcmGame.save(game); renderGame(); }
 
+  /* The overlay is `hidden` until a game opens, and an element that is
+     display:none cannot be fullscreened, so it is un-hidden first and then
+     handed to the stage. `fullscreenKey: false` with `f` in the hotkey map
+     instead of the helper's own key, for the same reason, and F only ever
+     leaves: a game needs its team setup, so F cannot start one. The stage's
+     onChange is the one place the view is torn down (Escape in real fullscreen
+     is the browser's; Escape on the fallback is the helper's), and it pauses
+     the game, as "Pause & close" does. */
+  var gameStage = Stage.mount(els.gameOverlay, {
+    exitButton: els.gmCloseBtn,   // "Pause & close": the onChange below saves
+    fullscreenKey: false,
+    hotkeys: { f: function () { if (gameStage.isActive()) gameStage.exit(); } },
+    onChange: function (on) {
+      if (on || els.gameOverlay.hidden) return;
+      if (game) HtcmGame.save(game); // paused, not ended; Resume picks it back up
+      closeGame();
+    }
+  });
+
   function openGame() {
     els.gameOverlay.hidden = false;
     document.body.style.overflow = 'hidden';
     sizeGameCards();
     renderGame();
+    gameStage.enter();
   }
   function closeGame() {
     els.gameOverlay.hidden = true;
     document.body.style.overflow = '';
     updateGameSetup();
+  }
+  /** Leave the game view: through the stage when it is up, so the browser's
+      fullscreen is released too; straight away if it never got that far. */
+  function leaveGame() {
+    if (gameStage.isActive()) gameStage.exit(); else closeGame();
   }
 
   els.gmStartBtn.addEventListener('click', function () {
@@ -1692,19 +1723,14 @@
     gameShowFacts = !gameShowFacts;
     renderGame();
   });
-  els.gmCloseBtn.addEventListener('click', function () {
-    if (game) HtcmGame.save(game); // paused, not ended — Resume picks it back up
-    closeGame();
-  });
   els.gmEndBtn.addEventListener('click', function () {
     if (!window.confirm('End the game and clear the scoreboard?')) return;
     HtcmGame.clear();
     game = null;
-    closeGame();
+    leaveGame();
   });
   document.addEventListener('keydown', function (ev) {
     if (els.gameOverlay.hidden || !game) return;
-    if (ev.key === 'Escape') { ev.preventDefault(); HtcmGame.save(game); closeGame(); return; }
     if (ev.target && /^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName)) return;
     if (ev.key === 'Enter' || ev.key === ' ') {
       if (els.gmPrimaryBtn.style.display !== 'none') { ev.preventDefault(); els.gmPrimaryBtn.click(); }

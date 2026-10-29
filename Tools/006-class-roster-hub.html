@@ -32,6 +32,7 @@
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
 <script src="../_shared/export.js"></script>
+<script src="../_shared/paste-table.js"></script>
 <!-- Device-to-device transfer ("Move Everything to Another Device"): manual-
      signaling WebRTC pairing, no server — see _shared/webrtc-pair.js's header
      for why. The QR decoder is shared site-wide; the qrcode.js encoder above
@@ -376,6 +377,7 @@
         </div>
       </div>
       <label class="check" id="importReplaceWrap"><input type="checkbox" id="importReplace"> Replace the current list instead of adding to it</label>
+      <p class="hint" id="importRaggedNote" role="status" hidden></p>
       <div id="importPreviewWrap"></div>
       <div id="importDiffWrap"></div>
       <p class="hint" id="importSummary"></p>
@@ -614,7 +616,7 @@
    'rolloverBtn', 'archiveList', 'archiveEmptyHint',
    'importOverlay', 'importCloseBtn', 'importCancelBtn', 'importConfirmBtn', 'importHasHeader', 'importFlip',
    'importReplace', 'mapMode', 'mapNameCol', 'mapFirstCol', 'mapLastCol', 'mapOneWrap', 'mapFirstWrap', 'mapLastWrap',
-   'importPreviewWrap', 'importSummary', 'importDiffWrap',
+   'importPreviewWrap', 'importRaggedNote', 'importSummary', 'importDiffWrap',
    'importSplit', 'splitWrap', 'splitCol', 'splitPrefix', 'importReplaceWrap', 'splitHint',
    'confirmOverlay', 'confirmCloseBtn', 'confirmCancelBtn', 'confirmOkBtn', 'confirmTitle', 'confirmBody', 'confirmDeps',
    'handoffBtn', 'handoffOverlay', 'handoffCloseBtn', 'handoffIntro', 'handoffStartSendBtn', 'handoffStartReceiveBtn',
@@ -1019,11 +1021,20 @@
   }
 
   // ── CSV / spreadsheet import with column mapping ─────────────────────────
-  /* The delimited-text parsing moved to _shared/roster.js so the bulk importer,
-     the share-target handler and every tool that later offers "paste a
-     spreadsheet region" agree on quoting, delimiter detection and header
-     sniffing. What stays here is everything that touches the mapping dialog. */
-  var parseTable = Roster.parseDelimited;
+  /* The delimited-text reading is _shared/paste-table.js (Path 16 P2), the site's one pasted-table
+     parser: a tab if the first line has one, else a comma, else a tab; quoted cells; every row
+     padded to the widest. `ragged` names the rows that were short, which the dialog says. What
+     stays here is everything that touches the mapping dialog. */
+  function parseTable(text) {
+    var p = PasteTable.parse(text, { candidates: ['\t', ','], firstLine: true, fallback: '\t' });
+    return { rows: p.rows, cols: p.width, ragged: p.ragged };
+  }
+  /* "3 rows have fewer cells than the widest (lines 4, 9, 12): the missing cells are blank." */
+  function describeRagged(ragged) {
+    if (!ragged || !ragged.length) return '';
+    var lines = ragged.slice(0, 5).map(function (g) { return g.line; }).join(', ') + (ragged.length > 5 ? ' and ' + (ragged.length - 5) + ' more' : '');
+    return ragged.length + (ragged.length === 1 ? ' row has' : ' rows have') + ' fewer cells than the widest (line' + (ragged.length === 1 ? ' ' : 's ') + lines + '), so the missing cells are blank.';
+  }
   var looksLikeHeader = Roster.looksLikeHeader;
   var flipLastFirst = Roster.flipLastFirst;
   var guessColumn = Roster.guessColumn;
@@ -1052,6 +1063,9 @@
     if (!t.rows.length) { showMsg('Could not find anything to import in that file.'); return; }
     importTable = t;
     importName = suggestedName || '';
+    var raggedText = describeRagged(t.ragged);
+    els.importRaggedNote.textContent = raggedText;
+    els.importRaggedNote.hidden = !raggedText;
     var header = looksLikeHeader(t.rows[0]);
     els.importHasHeader.checked = header;
     document.getElementById('importTitle').textContent = 'Import names' + (sourceLabel ? ' from ' + sourceLabel : '');

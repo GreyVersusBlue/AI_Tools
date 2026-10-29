@@ -154,6 +154,9 @@
   }
   #viewport.dragging { cursor: grabbing; }
   #viewport.adding { cursor: crosshair; }
+  #viewport:focus-visible { outline: 3px solid var(--accent, #1f3550); outline-offset: 2px; }
+  #viewerStatus { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  #baseCanvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   #stage { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
   #stage img { display: block; max-width: none; user-select: none; -webkit-user-drag: none; }
   #viewerEmpty:not([hidden]) {
@@ -365,7 +368,7 @@
     cursor: grab;
   }
   #locatorInset.dragging { cursor: grabbing; }
-  #locatorInset img { display: block; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+  #locatorInset img, #locatorInset canvas { display: block; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
   #locatorRect { position: absolute; border: 2px solid var(--err); background: rgba(163,55,43,.12); pointer-events: none; }
 
   #attribution { font-size: 0.78rem; color: var(--muted); margin-top: 10px; }
@@ -506,6 +509,8 @@
         <label class="baseMapCheck"><input type="checkbox" id="baseMapBorders" checked data-no-pan> Show borders</label>
         <label class="baseMapCheck" id="baseMapReliefLabel"><input type="checkbox" id="baseMapRelief" data-no-pan> Shaded relief</label>
         <button id="btnBaseMap" class="small primary">Use this base map</button>
+        <button id="btnBaseMapFile" class="small" title="Use a GeoJSON or TopoJSON boundary file of your own (a district, a watershed, a historical border) as the base map. You can also drop the file anywhere on this strip.">Your own file&hellip;</button>
+        <input type="file" id="baseMapFile" accept=".geojson,.topojson,.json,application/geo+json,application/json" hidden aria-label="Boundary file (GeoJSON or TopoJSON)">
         <button id="btnChoroToggle" class="small toggle" title="Shade each state or country according to a number you paste in — population, rainfall, votes, anything with one value per place.">Shade by data&hellip;</button>
       </div>
       <p class="hint" id="baseMapHint">Drawn here on your own machine from map data that ships with this tool &mdash; no internet, no searching, and the map arrives already calibrated, so the lat/long grid, scale bar, distance tool and label sets all work straight away.</p>
@@ -790,7 +795,9 @@
       </div>
     </div>
     <div id="tiledPrintPages" aria-hidden="true"></div>
-    <div id="viewport" class="paper-sheet">
+    <div id="viewport" class="paper-sheet" tabindex="0" role="group" aria-roledescription="map" aria-label="Map. Arrow keys pan, plus and minus zoom, 0 fits the map.">
+      <canvas id="baseCanvas" aria-hidden="true" hidden></canvas>
+      <div id="viewerStatus" role="status" aria-live="polite"></div>
       <div id="stage">
         <img id="mapImg" alt="" hidden>
         <div id="gridLayer"></div>
@@ -824,6 +831,7 @@
       </div>
       <div id="locatorInset" hidden>
         <img id="locatorImg" alt="">
+        <canvas id="locatorCanvas" hidden></canvas>
         <div id="locatorRect"></div>
       </div>
       <div id="viewerEmpty">Search above and pick a map to get started.</div>
@@ -856,6 +864,7 @@ import { createStore } from './blank-map-generator/bmg-store.js';
 import { searchMaps, searchByRegion, fetchMapImage } from './blank-map-generator/bmg-commons.js';
 import { CONTINENTS } from './blank-map-generator/bmg-geography.js';
 import { createViewer } from './blank-map-generator/bmg-viewer.js';
+import { loadSource as loadLiveSource, drawBaseMap, drawExtent, parseBaseMapId } from './blank-map-generator/bmg-live.js';
 import { createLabelLayer, labelColorHex, labelFontSizePx, labelSwatchSvg, LABEL_COLORS } from './blank-map-generator/bmg-labels.js';
 import {
   createMarkerLayer, markerIconSvg, markerAnchor, markerSizePx, markerColorHex, numberedOrder,
@@ -884,6 +893,8 @@ import {
   renderBaseMapCanvas, NATURAL_EARTH_ATTRIBUTION,
 } from './blank-map-generator/bmg-vector.js';
 import { buildRegionIndex, hitTestRegion, compactRings, largestRing } from './blank-map-generator/bmg-hittest.js';
+import { parseBoundaryFile } from './blank-map-generator/bmg-dropped.js';
+import { saveDropped, restoreDropped, listDropped } from './blank-map-generator/bmg-geo-store.js';
 
 const store = createStore();
 let project = store.getActiveProject();
@@ -905,9 +916,84 @@ function save() {
   recordHistoryPoint();
 }
 
+// The base map on screen, drawn from the vectors at the view's own scale (Path 20 P3), so a zoomed
+// border stays a hairline instead of an upsampled smear. Built-in maps, shaded or not: a Wikimedia map
+// and an upload stay the raster in #mapImg (which is also still what every export
+// draws, and what the stage is sized by). The canvas sits under #stage, so the grid, regions and
+// lines drawn in stage units line up as they did over the image.
+const liveBase = (() => {
+  const canvas = el('baseCanvas');
+  let source = null, queued = false, token = 0;
+  function draw() {
+    queued = false;
+    if (!source) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const cssW = viewport.clientWidth, cssH = viewport.clientHeight;
+    const w = Math.max(1, Math.round(cssW * dpr)), h = Math.max(1, Math.round(cssH * dpr));
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
+    drawBaseMap(canvas.getContext('2d'), source, viewer.getView(), cssW, cssH, { dpr, strokePx: 1 });
+  }
+  function schedule() {
+    if (source && !queued) { queued = true; requestAnimationFrame(draw); }
+  }
+  /** The locator's picture: one drawBaseMap call at the fit view, 150 px on its long side, so the inset is vectors too. */
+  function drawLocator() {
+    const lc = el('locatorCanvas');
+    if (!source) { lc.hidden = true; el('locatorImg').hidden = false; return; }
+    const s = 150 / Math.max(source.width, source.height);
+    const cssW = Math.round(source.width * s), cssH = Math.round(source.height * s);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    lc.width = Math.max(1, Math.round(cssW * dpr));
+    lc.height = Math.max(1, Math.round(cssH * dpr));
+    drawBaseMap(lc.getContext('2d'), source, { x: 0, y: 0, scale: cssW / source.width }, cssW, cssH, { dpr, strokePx: 1 });
+    lc.hidden = false;
+    el('locatorImg').hidden = true;
+  }
+  function hide() {
+    token++; source = null;
+    drawLocator();
+    canvas.hidden = true;
+    mapImg.style.visibility = '';
+  }
+  /** Shows the id's map live when it is one this can draw; otherwise leaves (or puts back) the picture. */
+  async function show(id, record, fills) {
+    const mine = ++token;
+    el('locatorCanvas').hidden = true; el('locatorImg').hidden = false;   // the old map's inset must not outlive it
+    const p = parseBaseMapId(id);
+    if (!p || !p.preset) { hide(); return; }
+    let src;
+    try {
+      // A shaded map needs its colours: the caller that just built them passes them; a project opened from
+      // storage works them out again from the pasted rows, and only counts if they are the shading the id names.
+      if (p.choroKey && !fills) {
+        const again = await buildActiveChoropleth(p.preset);
+        fills = again && again.ok && again.key === p.choroKey ? again.fills : null;
+        if (!fills) { if (mine === token) hide(); return; }
+      }
+      src = await loadLiveSource({ preset: p.preset, style: p.style, borders: p.borders, relief: p.relief, fills: p.choroKey ? fills : null });
+    } catch (e) { if (mine === token) hide(); return; }
+    if (mine !== token || src.width !== record.width || src.height !== record.height) { if (mine === token) hide(); return; }
+    source = src;
+    canvas.hidden = false;
+    draw();
+    drawLocator();
+    mapImg.style.visibility = 'hidden';
+  }
+  new ResizeObserver(schedule).observe(viewport);
+  /** Draws the base map into an export's context in place of drawImage(mapImg): same view, same projection, the context's own scale as dpr. */
+  function drawInto(ctx, cssW, cssH, strokePx) {
+    drawBaseMap(ctx, source, viewer.getView(), cssW, cssH, { dpr: ctx.getTransform().a, strokePx: strokePx || 1 });
+  }
+  /** The lat/long window on screen, or null when the picture is not drawn from the vectors. */
+  function extent() { return source ? drawExtent(source, viewer.getView(), viewport.clientWidth, viewport.clientHeight) : null; }
+  return { show, hide, schedule, draw, drawInto, extent, get active() { return !!source; }, toCanvas() { return canvas; } };
+})();
+
 const viewer = createViewer(viewport, stage, {
   onChange(v) {
     project.view = v;
+    liveBase.schedule();
     save();
     updateZoomReadout(v.scale);
     labelLayer.reposition();
@@ -2283,6 +2369,37 @@ viewport.addEventListener('dblclick', e => {
   finishShape();
 });
 
+// Keyboard pan and zoom with the map itself focused (Path 20 P3). A selected label or marker keeps the
+// arrows for nudging (the document handler below), so those are left alone here. The view is announced
+// 500 ms after the last change; a map with no extent to report says the zoom only.
+const fmtDeg = (v, pos, neg) => Math.abs(Math.round(v)) + '\u00b0' + (v >= 0 ? pos : neg);
+let statusTimer = 0;
+function announceView() {
+  clearTimeout(statusTimer);
+  statusTimer = setTimeout(() => {
+    const v = viewer.getView(), ex = liveBase.extent();
+    el('viewerStatus').textContent = 'Zoom ' + Math.round(v.scale * 100) + '%' + (ex
+      ? ', showing ' + fmtDeg(ex.west, 'E', 'W') + ' to ' + fmtDeg(ex.east, 'E', 'W') + ' and ' + fmtDeg(ex.south, 'N', 'S') + ' to ' + fmtDeg(ex.north, 'N', 'S')
+      : '');
+  }, 500);
+}
+viewport.addEventListener('keydown', e => {
+  if (e.target !== viewport || e.ctrlKey || e.metaKey || e.altKey || !currentSize.width) return;
+  const view = viewer.getView(), rect = viewport.getBoundingClientRect();
+  const arrow = { ArrowLeft: [1, 0], ArrowRight: [-1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[e.key];
+  if (arrow) {
+    if (labelLayer.getSelectedId() || markerLayer.getSelectedId()) return;
+    const f = e.shiftKey ? 0.5 : 0.1;
+    viewer.setView({ x: view.x + arrow[0] * rect.width * f, y: view.y + arrow[1] * rect.height * f, scale: view.scale });
+  } else if (e.key === '+' || e.key === '=') viewer.zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1.25);
+  else if (e.key === '-' || e.key === '_') viewer.zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1 / 1.25);
+  else if (e.key === '0' || e.key === 'Home') viewer.fit(currentSize.width, currentSize.height);
+  else return;
+  e.preventDefault();
+  announceView();
+});
+viewport.addEventListener('wheel', announceView, { passive: true });
+
 const NUDGE_KEYS = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
 
 document.addEventListener('keydown', e => {
@@ -2577,7 +2694,34 @@ function syncReliefControl() {
 el('baseMapSelect').addEventListener('change', renderBaseMapHint);
 renderBaseMapHint();
 
+/**
+ * A project that names a built-in map this browser has never drawn (a shared link, a file from another
+ * device, a cleared cache) gets the map back from the vectors: the id says which one, and a shaded id is
+ * worked out again from the project's own pasted rows. Null when the id is not a built-in map, the data
+ * no longer gives the shading the id names, or the record would carry a different id.
+ */
+async function rebuildBuiltInRecord(id) {
+  try {
+    const p = parseBaseMapId(id);
+    if (!p || !p.preset) return null;
+    let fills = null;
+    if (p.choroKey) {
+      const again = await buildActiveChoropleth(p.preset);
+      if (!(again && again.ok && again.key === p.choroKey)) return null;
+      fills = again.fills;
+    }
+    const record = await buildBaseMapRecord(p.preset, { style: p.style, borders: p.borders, fills, choroKey: p.choroKey, relief: p.relief });
+    if (record.id !== id) return null;
+    await cache.putCachedMap(record).catch(() => {});
+    return record;
+  } catch (e) { return null; }
+}
+
 async function useBuiltInBaseMap() {
+  if (!(await ensureDroppedLoaded(el('baseMapSelect').value))) {
+    setStatus('That file is not stored in this browser any more. Choose “Your own file…” and drop it again.', true);
+    return;
+  }
   const preset = findPreset(el('baseMapSelect').value);
   if (!preset) return;
   const style = el('baseMapStyleSelect').value;
@@ -2615,7 +2759,7 @@ async function useBuiltInBaseMap() {
     project.choropleth.legendRows = shaded
       ? choro.legendRows.map(r => ({ key: r.key, label: r.label, hex: r.hex }))
       : [];
-    displayMap(record, { keepAnnotations, choroApplied: shaded });
+    displayMap(record, { keepAnnotations, choroApplied: shaded, liveFills: shaded ? choro.fills : null });
     setStatus('');
   } catch (err) {
     setStatus(`Couldn't draw that base map (${escapeHtml(err.message)}).`, true);
@@ -2624,6 +2768,87 @@ async function useBuiltInBaseMap() {
   }
 }
 el('btnBaseMap').addEventListener('click', useBuiltInBaseMap);
+
+// --- Your own boundary file (Path 20 P2) -----------------------------------
+// A dropped or chosen GeoJSON / TopoJSON file becomes a base map through the same path
+// as a built-in one: bmg-dropped.js reads and checks it, bmg-geo-store.js keeps the clean
+// copy in gvb-media (not the cache), bmg-vector.js draws it as a preset of its own, and
+// useBuiltInBaseMap() does the rest. Nothing is fetched, and nothing runs at page load:
+// the stored files are listed only when the base map list is first opened.
+let droppedListed = false;
+
+function addDroppedOption(preset) {
+  let group = el('baseMapSelect').querySelector('optgroup[data-yours]');
+  if (!group) {
+    group = document.createElement('optgroup');
+    group.label = 'Your files';
+    group.dataset.yours = '1';
+    el('baseMapSelect').appendChild(group);
+  }
+  let opt = Array.from(group.children).find(o => o.value === preset.key);
+  if (!opt) {
+    opt = document.createElement('option');
+    opt.value = preset.key;
+    group.appendChild(opt);
+  }
+  opt.textContent = preset.label;
+}
+
+async function listStoredDropped() {
+  if (droppedListed) return;
+  droppedListed = true;
+  const stored = await listDropped();
+  stored.forEach(f => addDroppedOption({ key: f.key, label: f.title }));
+}
+['focus', 'pointerdown'].forEach(ev => el('baseMapSelect').addEventListener(ev, listStoredDropped, { once: true }));
+
+/** Makes sure a chosen "Your files" entry has its geometry loaded; false if it is not stored here any more. */
+async function ensureDroppedLoaded(key) {
+  if (!/^custom-/.test(key) || findPreset(key)) return true;
+  const preset = await restoreDropped(key);
+  if (preset) addDroppedOption(preset);
+  return !!preset;
+}
+
+async function useDroppedFile(file) {
+  if (!file) return;
+  setStatus('<span class="spinner"></span>Reading ' + escapeHtml(file.name) + '&hellip;');
+  let text;
+  try { text = await file.text(); } catch (e) { setStatus("Couldn't read that file.", true); return; }
+  const parsed = parseBoundaryFile(text, file.name);
+  if (!parsed.ok) { setStatus(escapeHtml(parsed.message), true); return; }
+  let kept = true;
+  let preset;
+  try { preset = await saveDropped(parsed); } catch (err) {
+    kept = false;
+    preset = findPreset(parsed.key);
+    setShareNote(err.message.replace('this image', 'this file'), true);
+  }
+  addDroppedOption(preset);
+  el('baseMapSelect').value = preset.key;
+  renderBaseMapHint();
+  await useBuiltInBaseMap();
+  const notes = parsed.warnings.slice();
+  if (!kept) notes.push('It is not kept on this device, so it will need dropping again after you close the page.');
+  if (notes.length) setShareNote(preset.label + ': ' + notes.join(' '), !kept);
+}
+
+el('btnBaseMapFile').addEventListener('click', () => el('baseMapFile').click());
+el('baseMapFile').addEventListener('change', () => {
+  const file = el('baseMapFile').files && el('baseMapFile').files[0];
+  el('baseMapFile').value = '';
+  useDroppedFile(file);
+});
+{
+  const strip = document.querySelector('.baseMapStrip');
+  const hasFiles = e => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+  strip.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+  strip.addEventListener('drop', e => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    useDroppedFile(e.dataTransfer.files && e.dataTransfer.files[0]);
+  });
+}
 
 // --- Choropleth: shade the base map from pasted data ---------------------
 // The teacher pastes "place, number" rows; bmg-choropleth.js parses, matches
@@ -3053,6 +3278,7 @@ function displayMap(record, opts = {}) {
   mapImg.src = currentObjectUrl;
   mapImg.hidden = false;
   currentRecord = record;
+  liveBase.show(record.id, record, opts.liveFills);
   el('viewerEmpty').hidden = true;
   locator.setImage(currentObjectUrl, record.width, record.height);
 
@@ -3531,7 +3757,8 @@ async function drawPngLocator(ctx, cssW, cssH) {
   if (!lw || !lh) return;
   ctx.strokeStyle = '#fff';
   ctx.lineWidth = 2;
-  ctx.drawImage(el('locatorImg'), lx, ly, lw, lh);
+  const lcv = el('locatorCanvas');
+  ctx.drawImage(lcv.hidden ? el('locatorImg') : lcv, lx, ly, lw, lh);
   ctx.strokeRect(lx, ly, lw, lh);
   const rectEl = el('locatorRect');
   const rx = lx + parseFloat(rectEl.style.left || '0');
@@ -3614,7 +3841,10 @@ async function drawMapContent(ctx, cssW, cssH, opts = {}) {
   ctx.fillRect(0, 0, cssW, cssH);
 
   const { x, y, scale } = viewer.getView();
-  ctx.drawImage(mapImg, -x / scale, -y / scale, cssW / scale, cssH / scale, 0, 0, cssW, cssH);
+  // A plain built-in map is drawn from the vectors at the export's own scale (Path 20 P3), so a zoomed
+  // border stays a hairline on paper; every other map is still the raster picture.
+  if (liveBase.active) liveBase.drawInto(ctx, cssW, cssH, opts.strokePx);
+  else ctx.drawImage(mapImg, -x / scale, -y / scale, cssW / scale, cssH / scale, 0, 0, cssW, cssH);
 
   if (project.gridEnabled && isCalibrated(project.calibration)) {
     const { vLines, hLines } = computeGraticule(project.calibration, currentSize.width, currentSize.height);
@@ -4412,7 +4642,7 @@ async function printTiledPages(cols, rows) {
     posterCanvas.width = posterW;
     posterCanvas.height = posterH;
     const pctx = posterCanvas.getContext('2d');
-    await drawMapContent(pctx, posterW, posterH);
+    await drawMapContent(pctx, posterW, posterH, { strokePx: 2 });
     // Compass/scale bar drawn directly onto page 1's region (top-left
     // tile) at a fixed offset — not the real on-screen drag position,
     // which wouldn't mean anything relative to this virtual poster view.
@@ -4507,6 +4737,7 @@ function showEmptyMapState(mapMissing) {
   currentSize = { width: 0, height: 0 };
   mapImg.hidden = true;
   mapImg.removeAttribute('src');
+  liveBase.hide();
   el('viewerEmpty').hidden = false;
   el('viewerEmpty').textContent = mapMissing
     ? "This project's map isn't cached in this browser anymore — search above and re-download it to keep annotating."
@@ -4551,7 +4782,14 @@ async function loadActiveProjectIntoUI(opts) {
   syncWorksheetControls();
   refreshLabelSetSelect();
   if (project.mapId) {
-    const cached = await cache.getCachedMap(project.mapId).catch(() => null);
+    // A map drawn from a dropped file needs the file's shapes back for click-to-shade and data
+    // shading; the picture itself comes from the cache either way.
+    const droppedKey = /^vector:(custom-[0-9a-f]{16}):/.exec(project.mapId);
+    if (droppedKey && !findPreset(droppedKey[1])) {
+      const preset = await restoreDropped(droppedKey[1]).catch(() => null);
+      if (preset) addDroppedOption(preset);
+    }
+    const cached = (await cache.getCachedMap(project.mapId).catch(() => null)) || (await rebuildBuiltInRecord(project.mapId));
     if (cached) { displayMap(cached); return; }
     showEmptyMapState(true);
     return;
@@ -4669,6 +4907,8 @@ function arrivalSentence(filed, how) {
   const mapId = String(project && project.mapId || '');
   let tail = '';
   if (mapId.startsWith('upload:')) tail = ' Its map was an uploaded picture, which does not travel: upload the same image here and the labels stay where they are.';
+  else if (/^vector:custom-/.test(mapId)) tail = ' Its map was drawn from a boundary file dropped on another device, which does not travel: drop the same file here with “Your own file…” and the labels stay where they are.';
+  else if (/^vector:/.test(mapId) && currentRecord && currentRecord.id === mapId) tail = '';
   else if (mapId) tail = ' If the map itself does not appear, pick the same base map or search result again; the labels stay where they are.';
   return `${how} and saved it here as “${filed}”. Nothing you already had was replaced.${tail}`;
 }
@@ -4705,7 +4945,7 @@ Share.mount(el('shareBtn'), {
     const current = store.listProjects().find(p => p.id === store.getActiveId());
     return `${current ? current.name : 'map'} map project`;
   },
-  note: 'Opening the link or code anywhere saves this project there as a new project; it never replaces one already on that device. The labels, markers, regions, lines and settings travel. The map picture does not: a built-in or Wikimedia map is picked again there, and a map you uploaded has to be uploaded again.',
+  note: 'Opening the link or code anywhere saves this project there as a new project; it never replaces one already on that device. The labels, markers, regions, lines and settings travel. The map picture does not travel: a built-in map is drawn again there from the same boundaries, a Wikimedia map is picked again, and a map you uploaded has to be uploaded again.',
   successMessage: 'Link copied. Opening it anywhere saves this map project there as a new project.',
   sendState: () => timelinePlaces(),
   onMessage: (text, isError) => setShareNote(text, isError),

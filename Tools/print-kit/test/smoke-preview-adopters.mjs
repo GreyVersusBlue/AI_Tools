@@ -44,6 +44,7 @@
 //   Tools/040-vocab-flashcard-generator.html
 //   Tools/018-qr-scavenger-hunt-builder.html
 //   Tools/017-gallery-walk-qr.html
+//   Tools/escape-room-builder/monitor.html (019's teacher monitor)
 //   Tools/016-qr-code-generator.html
 //
 // Exits 1 on any failure.
@@ -189,6 +190,21 @@ function hunt(pp, n, t, long) {
   if (long) stations.splice(1, 0, LONG_STATION);
   const teams = Array.from({ length: t }, (_, i) => ({ name: 'Crew ' + (i + 1), code: 'T' + String(i + 1).padStart(3, 'X'), marks: {}, attempts: {}, hintsUsed: {}, penaltyMs: 0 }));
   return { name: 'Test hunt', stations, cardsPerPage: String(pp), ecLevel: 'Q', showNumber: true, run: { teams, stagger: true } };
+}
+
+
+// 019's teacher monitor: a saved room and the record the monitor kept of its play
+const T0_MON = Date.UTC(2026, 9, 28, 14, 0, 0);
+function monitorRoom(n, t) {
+  const stations = Array.from({ length: n }, (_, i) => ({
+    id: 'st' + String(i).padStart(2, '0') + 'x',
+    clue: 'Clue ' + (i + 1), answers: ['answer' + (i + 1)], hint: '', hintCost: 0, next: null,
+  }));
+  const teams = Array.from({ length: t }, (_, ti) => ({
+    name: 'Crew ' + (ti + 1), code: '', attempts: {}, hintsUsed: {}, penaltyMs: 0,
+    marks: Object.fromEntries(stations.map((st, i) => [st.id, { at: T0_MON + (i + 1) * 60000 + ti * 7000 }])),
+  }));
+  return { room: { name: 'Test room', roomId: 'r1', storyIntro: '', stations }, record: { v: 1, at: T0_MON + 3600000, raceStartAt: T0_MON, teams } };
 }
 
 // 017
@@ -447,6 +463,7 @@ const TOOLS = [
       { preview: 'preview-teams-btn', print: 'print-teams-btn', what: ' team cards', label: 'Preview Team Cards', tab: '#tab-run', piece: '#print-teams-area .pk-card', rest: true },
       { preview: 'preview-routes-btn', print: 'print-routes-btn', what: ' route cards', label: 'Preview Route Cards', tab: '#tab-run', piece: '#print-routes-area .pk-card', rest: true },
       { preview: 'preview-answersheets-btn', print: 'print-answersheets-btn', what: ' answer sheets', label: 'Preview Answer Sheets', tab: '#tab-run', piece: '#print-answersheets-area .pk-card', rest: true },
+      { preview: 'preview-debrief-btn', print: 'print-debrief-btn', what: ' debrief pages', label: 'Preview Debrief', tab: '#tab-run', piece: '#print-debrief-area .pk-card', rest: true },
     ],
     store: s => s.hunt ? [['qr-scavenger-hunt-sets', JSON.stringify({ current: s.hunt.name, sets: { [s.hunt.name]: s.hunt } })]] : [],
     rest: () => [...document.querySelectorAll('.print-only.active')].map(x => x.id).join(','),
@@ -458,6 +475,23 @@ const TOOLS = [
       { name: 'four to a page, 30 stations, 12 teams', hunt: hunt(4, 30, 12), pages: [8, 2, 8, 3, 6, 12] },
       { name: 'six to a page, 6 stations, 2 teams', hunt: hunt(6, 6, 2), pages: [1, 1, 1, 1, 1, 1] },
       { name: 'nine to a page, 14 stations (one long), 9 teams', hunt: hunt(9, 13, 9, true) },
+    ],
+  },
+  {
+    n: '019', file: 'escape-room-builder/monitor.html', paper: LETTER, calls: 1,
+    wiring: [/PrintKit\.preview\(\{ trigger: els\.previewDebriefBtn, onPrint: function \(\) \{ els\.printDebriefBtn\.click\(\); \} \}\)/],
+    buttons: [
+      { preview: 'previewDebriefBtn', print: 'printDebriefBtn', what: ' debrief pages', label: 'Preview Debrief', piece: '#printArea .pk-card' },
+    ],
+    store: s => s.mon ? [
+      ['escape-room-builder:rooms', JSON.stringify({ v: 1, data: { current: s.mon.room.name, sets: { [s.mon.room.name]: s.mon.room } } })],
+      ['escape-room-builder:monitor-record', JSON.stringify({ v: 1, data: s.mon.record })],
+    ] : [],
+    off: { mon: null, buttons: ['previewDebriefBtn'] },
+    states: [
+      { name: '4 stops, 2 crews', mon: monitorRoom(4, 2), pages: 4 },
+      { name: '12 stops, 9 crews', mon: monitorRoom(12, 9) },
+      { name: '1 stop, 1 crew', mon: monitorRoom(1, 1), pages: 2 },
     ],
   },
   {

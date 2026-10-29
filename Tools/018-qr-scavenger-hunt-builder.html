@@ -26,7 +26,11 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/media-db.js"></script>
+<script src="escape-room-builder/er-image.js"></script>
+<script src="../_shared/stations.js"></script>
 <script src="../_shared/print-kit.js"></script>
+<script src="../_shared/stations-debrief.js"></script>
 <script src="../_shared/export.js"></script>
 
 <link rel="stylesheet" href="../_shared/ink-paper.css">
@@ -35,6 +39,7 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <link rel="stylesheet" href="../_shared/print-kit.css">
+<link rel="stylesheet" href="../_shared/stations-debrief.css">
 <style>
   /* On _shared/ink-paper.css's tokens since AI-35, so the page follows the
      teacher's theme like the rest of the site; it used to be dark-only, on
@@ -93,6 +98,10 @@
   .row-actions { display: flex; gap: 0.25rem; justify-content: center; }
   .detail-row td { padding: 0 0.3rem 0.6rem; }
   .detail-inner { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; }
+  [hidden] { display: none !important; }
+  .choice-editor .branch-label { display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; white-space: nowrap; margin: 0; }
+  .choice-editor .branch-label select { width: auto; max-width: 12rem; }
+  #branch-info { color: var(--danger); font-weight: 600; }
   .choice-editor .choice-line { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
   .choice-editor .choice-line:last-of-type { margin-bottom: 0.6rem; }
   .choice-editor input[type="text"] { flex: 1; }
@@ -105,6 +114,7 @@
   .remove-row-btn { width: 1.8rem; height: 1.8rem; font-size: 0.85rem; }
   .remove-row-btn:hover { background: var(--danger); color: var(--accent-ink); border-color: var(--danger); }
   .move-row-btn:hover:not(:disabled) { background: var(--surface2); color: var(--text); border-color: var(--accent); }
+  .move-row-btn.req-on { background: var(--accent); color: var(--bg, #fff); border-color: var(--accent); }
   .move-row-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
   button { cursor: pointer; font-family: inherit; font-size: 0.875rem; font-weight: 600; border-radius: 8px; padding: 0.6rem 1.1rem; border: none; transition: opacity 0.15s, transform 0.1s; }
@@ -203,6 +213,13 @@
     display: flex; flex-direction: column; align-items: center; text-align: center;
   }
   .print-station-grid .p-card canvas { width: 100%; height: auto; max-width: 320px; }
+  /* A station's picture (Path 18 P3): above the code, on the card, never clipped. */
+  .print-station-grid .p-card .p-img { max-width: 100%; max-height: 1.6in; object-fit: contain; margin: 0 0 8px; background: #fff; }
+  .preview-card .pv-img { width: 52px; height: 52px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line-strong); background: #fff; flex-shrink: 0; }
+  .station-image-row { display: flex; align-items: center; gap: .6rem; }
+  .station-image-thumb { display: flex; align-items: center; gap: .5rem; }
+  .station-image-thumb img { width: 2.6rem; height: 2.6rem; object-fit: cover; border-radius: 6px; border: 1px solid var(--line-strong); background: #fff; }
+  .station-image-missing { font-size: .78rem; color: var(--err); border: 1px dashed var(--err); border-radius: 6px; padding: .35rem .5rem; }
   .print-station-grid .p-card .p-num { font-size: 0.75rem; letter-spacing: 0.08em; color: #555; text-transform: uppercase; }
   .print-station-grid .p-card .p-label { font-size: 1.25rem; font-weight: 700; margin: 4px 0 8px; }
   .print-station-grid .p-card .p-extra { font-size: 0.82rem; color: #333; margin: -2px 0 8px; }
@@ -216,8 +233,6 @@
   .print-station-grid .p-card .p-clue-text { font-size: 0.98rem; color: #111; margin: 2px 0 8px; line-height: 1.45; }
   .print-station-grid .p-card .p-code-word { font-family: monospace; font-weight: 700; font-size: 1.05rem; letter-spacing: 0.08em; border: 1.5px dashed #999; border-radius: 6px; padding: 6px 12px; margin-top: 8px; }
   .print-station-grid .p-card .p-code-word span { text-transform: uppercase; }
-  /* The kit lets a long word wrap anywhere on a card, which also lets a table
-     squeeze its columns; the sheet's columns keep the widths their words ask for. */
   table.p-answersheet { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 8px; text-align: left; overflow-wrap: break-word; }
   table.p-answersheet th, table.p-answersheet td { border: 1px solid #999; padding: 5px 7px; vertical-align: top; }
   table.p-answersheet th { background: #eee; }
@@ -286,6 +301,9 @@
         </div>
       </div>
       <div class="hint">A QR content value that looks like a bare web address (like "example.com/clue") gets "https://" added automatically. Anything that doesn't look like a link is encoded as plain text as-is.</div>
+      <div class="hint" id="required-info">Every station counts toward finishing. Press the star on a row to make it required: a team then finishes when it has reached every starred station, and the others are bonus stops.</div>
+      <div class="hint">On a multiple-choice station, "Then go to" sends a team to a particular station when you pick that choice at check-in: the choice counts as an accepted answer and Live Run shows where that team goes next. Choices without a branch work as before.</div>
+      <div class="hint" id="branch-info" role="status" hidden></div>
     </div>
 
     <div class="card">
@@ -351,6 +369,8 @@
         <button class="btn-secondary" id="print-routes-btn" type="button">🖨️ Print Route Cards</button>
         <button type="button" class="btn-secondary" id="preview-answersheets-btn">Preview Answer Sheets</button>
         <button class="btn-secondary" id="print-answersheets-btn" type="button">📝 Print Answer Sheets</button>
+        <button type="button" class="btn-secondary" id="preview-debrief-btn">Preview Debrief</button>
+        <button class="btn-secondary" id="print-debrief-btn" type="button">🖨️ Print Debrief</button>
       </div>
       <div class="hint">Each team gets a check-in code (shown next to its name) so it can check itself in below without you hunting through a roster — print the cards so teams can carry or show their code. Answer Sheets print one per team, blank, in that team's own route order — for a day with no devices, pair them with the Build tab's Clue Cards and check them against the Print Answer Key.</div>
       <label class="stagger-row" for="stagger-starts" style="margin-top:0.7rem;">
@@ -433,6 +453,9 @@
   <div class="print-only" id="print-clues-area">
     <div class="print-station-grid" id="print-clues-grid"></div>
   </div>
+  <div class="print-only" id="print-debrief-area">
+    <div class="sd-grid" id="print-debrief-grid"></div>
+  </div>
   <div class="print-only" id="print-answersheets-area">
     <div class="print-station-grid" id="print-answersheets-grid"></div>
   </div>
@@ -453,8 +476,9 @@
    'cards-preview', 'print-station-area', 'print-station-grid', 'print-answer-area', 'answer-key-body', 'msg',
    'tab-build', 'tab-run', 'build-view', 'run-view', 'run-hunt-info', 'teams-body', 'add-team-btn',
    'print-teams-btn', 'print-teams-area', 'print-teams-grid',
-   'print-routes-btn', 'print-routes-area', 'print-routes-grid', 'stagger-starts', 'stagger-info',
+   'branch-info', 'print-routes-btn', 'print-routes-area', 'print-routes-grid', 'stagger-starts', 'stagger-info',
    'print-answersheets-btn', 'print-answersheets-area', 'print-answersheets-grid',
+   'print-debrief-btn', 'print-debrief-area', 'print-debrief-grid',
    'checkin-station', 'checkin-station-info', 'checkin-code', 'checkin-submit-btn', 'checkin-hint-btn', 'checkin-hint-panel',
    'checkin-answer-panel', 'checkin-feedback',
    'timer-display', 'timer-start-btn', 'timer-pause-btn', 'timer-reset-btn', 'clear-progress-btn', 'undo-clear-btn',
@@ -529,6 +553,8 @@
   // (transient UI state, not persisted — keyed by station object identity so
   // reordering/moving rows doesn't lose track of which one was open).
   var hintEditorsOpen = new WeakSet();
+  var HI = EscapeRoomImage.forNamespace('scavenger-hunt', 'qr-scavenger-hunt-builder');   // station pictures: their own media namespace, so 019's clean-up never reaches them
+  var imagesSettled = false;   // false until boot has read this browser's pictures, so a reference is not called missing early
 
   // ── Persisted hunts, keyed by name (this can include external links, same
   // trust level as any other locally-saved tool state in this toolkit) ─────
@@ -548,6 +574,7 @@
   }
   function save() {
     if (!state) return;
+    Stations.ensureIds(state);   // Path 18 P1: every station carries a stable id on disk
     var store = loadStore();
     store.sets[state.name] = state;
     store.current = state.name;
@@ -620,9 +647,15 @@
     var loaded = store.sets[name];
     if (!loaded) return;
     if (!Array.isArray(loaded.stations)) loaded.stations = [];
-    state = loaded;
+    // Path 18 P2: the hunt goes through Stations.read/write once, so every station has an id and
+    // a run saved with index keys (marks, attempts, hints, the check-in station) comes back keyed by id.
+    var before = JSON.stringify(loaded);
+    var set = Stations.read(loaded);
+    state = set ? Stations.write(set) : loaded;
     ensureAtLeastOneRow();
     ensureRun();
+    Stations.ensureIds(state);
+    if (JSON.stringify(state) !== before) save();   // ids drawn on first read are saved then, so a reload prints the same ones
     applyStateToForm();
     refreshSwitcher();
     scheduleRender();
@@ -653,20 +686,65 @@
         '<td class="actions-cell"><div class="row-actions">' +
           '<button type="button" class="move-row-btn" data-move="-1" title="Move up"' + (i === 0 ? ' disabled' : '') + '>&#8593;</button>' +
           '<button type="button" class="move-row-btn" data-move="1" title="Move down"' + (i === state.stations.length - 1 ? ' disabled' : '') + '>&#8595;</button>' +
-          '<button type="button" class="move-row-btn" data-hint-toggle="' + i + '" title="Add/edit a hint (optional, has a time penalty)">&#128161;</button>' +
+          '<button type="button" class="move-row-btn' + (isRequired(s) ? ' req-on' : '') + '" data-required-toggle="' + i + '" aria-pressed="' + (isRequired(s) ? 'true' : 'false') + '" title="' + (isRequired(s) ? 'Required: a team must reach this station to finish. Press to make it a bonus stop.' : 'Press to require this station; a team then finishes when it has reached every required station.') + '" aria-label="Station ' + (i + 1) + ' is ' + (isRequired(s) ? 'required' : 'not required') + '">' + (isRequired(s) ? '&#9733;' : '&#9734;') + '</button>' +
+          '<button type="button" class="move-row-btn" data-hint-toggle="' + i + '" title="Add/edit a hint or a picture (both optional)" aria-label="Hint or picture for station ' + (i + 1) + '">&#128161;</button>' +
           '<button type="button" class="remove-row-btn" data-remove="' + i + '" title="Remove station">&#10005;</button>' +
         '</div></td>' +
         '</tr>';
-      var showDetail = s.qType === 'choice' || s.qType === 'numeric' || hintEditorsOpen.has(s) || !!(s.hint && s.hint.trim());
+      var showDetail = s.qType === 'choice' || s.qType === 'numeric' || hintEditorsOpen.has(s) || !!(s.hint && s.hint.trim()) || !!s.image;
       if (showDetail) row += renderDetailRow(s, i);
       return row;
     }).join('');
+    renderBranchInfo();
   }
+
+  // Path 18 P3: the free-order required set. state.required lists station ids; empty means every
+  // station is required, which is how a hunt always counted.
+  function isRequired(s) { return Array.isArray(state.required) && state.required.indexOf(s.id) !== -1; }
 
   function renderQTypeSelect(s, i) {
     return '<select class="f-qtype" data-idx="' + i + '" aria-label="Answer type for station ' + (i + 1) + '">' + Q_TYPES.map(function (t) {
       return '<option value="' + t + '"' + (s.qType === t ? ' selected' : '') + '>' + Q_TYPE_LABELS[t] + '</option>';
     }).join('') + '</select>';
+  }
+
+  // Path 18 P3: per-answer branching. A choice station keeps `branches: { byAnswer: { <choice text>: <station id> } }`
+  // (the schema's shape, read by Stations.branchOf and checked by Stations.branchProblems); a choice with a branch is an
+  // accepted answer that sends the team to that station, a choice without one works as it always did.
+  function branchTarget(s, text) {
+    var by = s.branches && s.branches.byAnswer, t = null;
+    if (!by || !text) return null;
+    Object.keys(by).forEach(function (k) { if (k === text) t = by[k]; });
+    return t;
+  }
+  function setBranch(s, text, targetId) {
+    if (!s.branches || !s.branches.byAnswer) s.branches = { byAnswer: {} };
+    if (targetId) s.branches.byAnswer[text] = targetId; else delete s.branches.byAnswer[text];
+    if (!Object.keys(s.branches.byAnswer).length) delete s.branches;
+  }
+  function renderBranchSelect(s, i, ci) {
+    var valid = validStations(), cur = branchTarget(s, s.choices[ci]);
+    var opts = '<option value="">No branch</option>' + valid.filter(function (v) { return v.id !== s.id; }).map(function (v) {
+      var n = valid.indexOf(v) + 1;
+      return '<option value="' + escapeAttr(v.id) + '"' + (cur === v.id ? ' selected' : '') + '>Station ' + n + (v.label !== 'Station ' + (v.idx + 1) ? ' \u2014 ' + escapeHtml(v.label) : '') + '</option>';
+    }).join('');
+    return '<label class="branch-label">Then go to <select class="f-branch" data-idx="' + i + '" data-ci="' + ci + '" aria-label="Then go to, after choice ' + String.fromCharCode(65 + ci) + ' at station ' + (i + 1) + '">' + opts + '</select></label>';
+  }
+  /** Sentences for whatever is wrong with this hunt's branches (Stations.branchProblems), [] when nothing. */
+  function branchProblems(candidate) { return Stations.branchProblems(Stations.read(candidate || state)); }
+  function renderBranchInfo() {
+    var p = branchProblems();
+    els.branchInfo.hidden = !p.length;
+    els.branchInfo.textContent = p.length ? 'A branch needs fixing: ' + p.join(' ') : '';
+  }
+  /** Tries a change to station `s` against Stations.branchProblems; on a refusal puts it back and says why. */
+  function tryBranchEdit(s, edit, undo) {
+    var before = branchProblems().length;
+    edit();
+    var after = branchProblems();
+    if (after.length > before) { undo(); showMsg(after[after.length - 1]); return false; }
+    clearMsg();
+    return true;
   }
 
   function renderDetailRow(s, i) {
@@ -678,6 +756,7 @@
           return '<div class="choice-line">' +
             '<input type="radio" class="f-choice-correct" aria-label="Choice ' + String.fromCharCode(65 + ci) + ' is the correct answer for station ' + (i + 1) + '" name="correct-' + i + '" data-idx="' + i + '" data-ci="' + ci + '"' + (s.correctChoice === ci ? ' checked' : '') + '>' +
             '<input type="text" class="f-choice-text" data-idx="' + i + '" data-ci="' + ci + '" value="' + escapeAttr(c) + '" placeholder="Choice ' + String.fromCharCode(65 + ci) + '">' +
+            renderBranchSelect(s, i, ci) +
             (s.choices.length > 2 ? '<button type="button" class="btn-choice-remove" data-idx="' + i + '" data-ci="' + ci + '" title="Remove choice">&#10005;</button>' : '') +
             '</div>';
         }).join('') +
@@ -690,6 +769,16 @@
         '</div>';
     }
     body += '<div style="' + (body ? 'margin-top:0.6rem;' : '') + '">' +
+      '<label>Picture on the card (optional — printed above the code)</label>' +
+      '<div class="station-image-row">' + (s.image
+        ? '<div class="station-image-thumb">' +
+            (imagesSettled && HI.isMissing(s.image)
+              ? '<span class="station-image-missing">Picture missing from this browser</span>'
+              : '<img src="' + escapeAttr(HI.src(s.image)) + '" alt="">') +
+            '<button type="button" class="btn-link" data-remove-image="' + i + '" aria-label="Remove the picture for station ' + (i + 1) + '">Remove</button></div>'
+        : '<input type="file" class="f-image" accept="image/*" data-idx="' + i + '" aria-label="Picture for station ' + (i + 1) + '">') +
+      '</div></div>' +
+      '<div style="margin-top:0.6rem;">' +
       '<label>Hint (optional — a team can request this during check-in, for a time penalty)</label>' +
       '<textarea class="f-hint" data-idx="' + i + '" style="min-height:50px;" placeholder="e.g. Look near the flagpole">' + escapeHtml(s.hint) + '</textarea>' +
       '<div class="control-row" style="margin-top:0.5rem;">' +
@@ -711,8 +800,12 @@
       save();
       scheduleRender();
     } else if (t.classList.contains('f-choice-text')) {
-      state.stations[parseInt(t.dataset.idx, 10)].choices[parseInt(t.dataset.ci, 10)] = t.value;
+      var cs = state.stations[parseInt(t.dataset.idx, 10)], cci = parseInt(t.dataset.ci, 10);
+      var oldText = cs.choices[cci], oldTarget = branchTarget(cs, oldText);
+      cs.choices[cci] = t.value;
+      if (oldTarget) { setBranch(cs, oldText, null); if (t.value) setBranch(cs, t.value, oldTarget); }   // a branch follows its choice's wording
       save();
+      renderBranchInfo();
       scheduleRender();
     } else if (t.classList.contains('f-numeric-answer')) {
       state.stations[parseInt(t.dataset.idx, 10)].numericAnswer = t.value;
@@ -733,18 +826,40 @@
 
   els.stationsBody.addEventListener('change', function (e) {
     var t = e.target;
+    if (t.classList.contains('f-image')) {
+      var file = t.files && t.files[0];
+      var si = parseInt(t.dataset.idx, 10);
+      if (!file || !state.stations[si]) return;
+      HI.fromFile(file).then(function (image) {
+        if (!state.stations[si]) return;
+        state.stations[si].image = image;
+        renderRows(); save(); scheduleRender();
+      }, function (err) { showMsg((err && err.message) || 'Could not load that picture.'); });
+      return;
+    }
     if (t.classList.contains('f-qtype')) {
       var tr = t.closest('tr');
       var i = parseInt(tr.dataset.idx, 10);
       state.stations[i].qType = t.value;
+      if (t.value !== 'choice') delete state.stations[i].branches;   // only a choice station branches
       if (t.value === 'choice' && !state.stations[i].choices.length) state.stations[i].choices = ['', ''];
       renderRows();
       save();
       scheduleRender();
     } else if (t.classList.contains('f-choice-correct')) {
-      state.stations[parseInt(t.dataset.idx, 10)].correctChoice = parseInt(t.dataset.ci, 10);
+      var cst = state.stations[parseInt(t.dataset.idx, 10)], prevCorrect = cst.correctChoice;
+      if (!tryBranchEdit(cst, function () { cst.correctChoice = parseInt(t.dataset.ci, 10); }, function () { cst.correctChoice = prevCorrect; renderRows(); })) return;
       save();
+      renderBranchInfo();
       scheduleRender();
+    } else if (t.classList.contains('f-branch')) {
+      var bst = state.stations[parseInt(t.dataset.idx, 10)], bci = parseInt(t.dataset.ci, 10);
+      var btext = bst.choices[bci], prevTarget = branchTarget(bst, btext);
+      if (!btext.trim()) { t.value = ''; showMsg('Give choice ' + String.fromCharCode(65 + bci) + ' some text before sending it somewhere.'); return; }
+      if (!tryBranchEdit(bst, function () { setBranch(bst, btext, t.value); }, function () { setBranch(bst, btext, prevTarget); renderRows(); })) return;
+      save();
+      renderBranchInfo();
+      refreshRunView();
     }
   });
 
@@ -754,7 +869,14 @@
     var addChoiceBtn = e.target.closest('.btn-choice-add');
     var removeChoiceBtn = e.target.closest('.btn-choice-remove');
     var hintToggleBtn = e.target.closest('[data-hint-toggle]');
+    var requiredBtn = e.target.closest('[data-required-toggle]');
     var recodeStationBtn = e.target.closest('[data-recode-station]');
+    var removeImageBtn = e.target.closest('[data-remove-image]');
+    if (removeImageBtn) {
+      var ri = parseInt(removeImageBtn.dataset.removeImage, 10);
+      if (state.stations[ri]) { delete state.stations[ri].image; renderRows(); save(); scheduleRender(); }
+      return;
+    }
     if (recodeStationBtn) {
       var rsi = parseInt(recodeStationBtn.dataset.recodeStation, 10);
       // The station's own current word stays in the exclusion list on purpose:
@@ -766,6 +888,16 @@
       state.stations[rsi].codeWord = generateCodeWord(usedWords);
       renderRows();
       save();
+      return;
+    }
+    if (requiredBtn) {
+      var rq = state.stations[parseInt(requiredBtn.dataset.requiredToggle, 10)];
+      if (!rq) return;
+      var list = Array.isArray(state.required) ? state.required.slice() : [];
+      var at = list.indexOf(rq.id);
+      if (at === -1) list.push(rq.id); else list.splice(at, 1);
+      if (list.length) state.required = list; else delete state.required;
+      renderRows(); save(); refreshRunView();
       return;
     }
     if (hintToggleBtn) {
@@ -786,7 +918,11 @@
       save();
       scheduleRender();
     } else if (removeBtn) {
-      state.stations.splice(parseInt(removeBtn.dataset.remove, 10), 1);
+      var gone = state.stations.splice(parseInt(removeBtn.dataset.remove, 10), 1)[0];
+      state.stations.forEach(function (o) {
+        if (!o.branches || !o.branches.byAnswer) return;
+        Object.keys(o.branches.byAnswer).forEach(function (k) { if (gone && o.branches.byAnswer[k] === gone.id) setBranch(o, k, null); });
+      });
       ensureAtLeastOneRow();
       renderRows();
       save();
@@ -800,6 +936,7 @@
       var ri = parseInt(removeChoiceBtn.dataset.idx, 10), rci = parseInt(removeChoiceBtn.dataset.ci, 10);
       var st = state.stations[ri];
       if (st.choices.length > 2) {
+        setBranch(st, st.choices[rci], null);
         st.choices.splice(rci, 1);
         if (st.correctChoice === rci) st.correctChoice = 0;
         else if (st.correctChoice > rci) st.correctChoice -= 1;
@@ -889,10 +1026,12 @@
   function validStations() {
     state.stations.forEach(ensureStationDefaults);
     ensureStationCodeWords();
+    Stations.ensureIds(state);   // a row added since the last save has no id yet; it is saved with the next save()
     return state.stations
       .map(function (s, i) {
         return {
           idx: i,
+          id: s.id,
           label: (s.label || '').trim() || ('Station ' + (i + 1)),
           content: normalizeContent(s.content),
           note: (s.note || '').trim(),
@@ -904,6 +1043,8 @@
           hint: (s.hint || '').trim(),
           hintPenalty: parseFloat(s.hintPenalty) || 0,
           codeWord: s.codeWord,
+          branches: s.branches,
+          image: s.image ? HI.src(s.image) : '',
         };
       })
       .filter(function (s) { return s.content.length > 0; });
@@ -950,7 +1091,7 @@
         var qr = buildQR(s.content, ecLevel);
         var card = document.createElement('div');
         card.className = 'preview-card paper-sheet';
-        card.innerHTML = '<canvas></canvas><div class="meta"><div class="badge">STATION ' + (n + 1) + (s.qType !== 'text' ? ' · ' + Q_TYPE_LABELS[s.qType] : '') + '</div>' +
+        card.innerHTML = '<canvas></canvas>' + (s.image ? '<img class="pv-img" alt="" src="' + escapeAttr(s.image) + '">' : '') + '<div class="meta"><div class="badge">STATION ' + (n + 1) + (s.qType !== 'text' ? ' · ' + Q_TYPE_LABELS[s.qType] : '') + '</div>' +
           '<div class="label">' + escapeHtml(s.label) + '</div>' +
           '<div class="content">' + escapeHtml(s.content) + '</div></div>';
         els.cardsPreview.appendChild(card);
@@ -1004,6 +1145,8 @@
       var card = pEl('div', 'p-card');
       if (showNum) card.appendChild(pEl('div', 'p-num', 'Station ' + (n + 1)));
       card.appendChild(pEl('div', 'p-label', s.label));
+      var pic = printStationImage(s);
+      if (pic) card.appendChild(pic);
       var extra = printStationExtra(s);
       if (extra) card.appendChild(extra);
       var canvas = card.appendChild(document.createElement('canvas'));
@@ -1012,6 +1155,17 @@
       } catch (e) { /* already reported in the live preview */ }
       return card;
     });
+  }
+
+  /** The station's picture for a card: an <img> of the stored data URL, or nothing (a reference with no
+      picture behind it in this browser prints no frame). */
+  function printStationImage(s) {
+    if (!s.image) return null;
+    var img = document.createElement('img');
+    img.className = 'p-img';
+    img.alt = '';
+    img.src = s.image;
+    return img;
   }
 
   function printStationExtra(s) {
@@ -1040,6 +1194,8 @@
       var card = pEl('div', 'p-card');
       if (showNum) card.appendChild(pEl('div', 'p-num', 'Station ' + (n + 1)));
       card.appendChild(pEl('div', 'p-label', s.label));
+      var cpic = printStationImage(s);
+      if (cpic) card.appendChild(cpic);
       if (s.content) card.appendChild(pEl('div', 'p-clue-text', s.content));
       var extra = printStationExtra(s);
       if (extra) card.appendChild(extra);
@@ -1049,6 +1205,30 @@
       card.appendChild(pEl('div', 'p-route-note', 'Write this word on your team’s answer sheet to prove you found this station.'));
       return card;
     });
+  }
+
+  // The teacher's answer key says where each branched choice sends a team ("Choice B ... goes to Station 4").
+  function branchLines(s) {
+    var by = s.branches && s.branches.byAnswer, out = [];
+    if (!by || s.qType !== 'choice') return out;
+    var valid = validStations();
+    (s.choices || []).forEach(function (text, ci) {
+      var t = branchTarget(s, text);
+      if (!t) return;
+      var dest = 'the end';
+      if (t !== 'end') {
+        var n = -1;
+        valid.forEach(function (v, vi) { if (v.id === t) n = vi; });
+        if (n < 0) return;
+        dest = 'Station ' + (n + 1) + (valid[n].label !== 'Station ' + (valid[n].idx + 1) ? ' (' + valid[n].label + ')' : '');
+      }
+      out.push('Choice ' + String.fromCharCode(65 + ci) + (text ? ' \u201c' + text + '\u201d' : '') + ' sends the team to ' + dest + '.');
+    });
+    return out;
+  }
+  // True when any station has a branch that still points at a station on the cards.
+  function hasBranches() {
+    return validStations().some(function (s) { return branchLines(s).length > 0; });
   }
 
   function buildAnswerKey() {
@@ -1062,6 +1242,10 @@
         answer.appendChild(document.createElement('br'));
         answer.appendChild(pEl('span', 'p-key-hint', 'Hint (−' + s.hintPenalty + ' min if used): ' + s.hint));
       }
+      branchLines(s).forEach(function (line) {
+        answer.appendChild(document.createElement('br'));
+        answer.appendChild(pEl('span', 'p-key-hint p-key-branch', line));
+      });
       tr.appendChild(answer);
       tr.appendChild(pEl('td', '', s.codeWord || '—'));
       body.appendChild(tr);
@@ -1147,7 +1331,7 @@
 
   // ── Live Run mode: teams, race timer, station marks, leaderboard ────────
   // Optional and additive — none of this touches the printable station set.
-  // state.run = { teams: [{name, code, marks: {stationIdx: {at, correct, attempts}}, attempts: {stationIdx: count}}],
+  // state.run = { teams: [{name, code, marks: {stationId: {at, correct, attempts}}, attempts: {stationId: count}}],
   //               timerRunning, timerStartedAt, timerElapsedMs, raceStartAt, checkinStation }
   var pendingCheckin = null; // { teamIdx, stationIdx } — set while a choice/numeric check-in is mid-answer
 
@@ -1181,7 +1365,14 @@
     if (typeof state.run.timerStartedAt !== 'number') state.run.timerStartedAt = null;
     if (typeof state.run.timerElapsedMs !== 'number') state.run.timerElapsedMs = 0;
     if (typeof state.run.raceStartAt !== 'number') state.run.raceStartAt = null;
-    if (typeof state.run.checkinStation !== 'number') state.run.checkinStation = 0;
+    if (typeof state.run.checkinStation !== 'string') state.run.checkinStation = null;   // a station id; null means the first
+    state.run.by = 'id';
+  }
+
+  /** Position of the check-in station in the valid list (the first when it is unset or gone). */
+  function checkinIdx(valid) {
+    for (var i = 0; i < valid.length; i++) if (valid[i].id === state.run.checkinStation) return i;
+    return 0;
   }
 
   function setMode(mode) {
@@ -1244,9 +1435,16 @@
       (distinct < teams.length ? ' — there are more teams than stations, so some will share a starting point.' : '.');
   }
 
+  // A bonus stop on a route card, only once the teacher has starred some stations as required.
+  function routeTag(st, pr) {
+    return pr.explicit && pr.required.indexOf(st.id) === -1 ? ' (bonus)' : '';
+  }
+
   function buildPrintRoutes() {
     var teams = state.run.teams;
     var stations = validStations();
+    var pr = Stations.progress(Stations.read(state), {});
+    var branched = hasBranches();
     PrintKit.renderCards(els.printRoutesGrid, teams, cardGrid('2'), function (t, i) {
       var card = pEl('div', 'p-card');
       card.appendChild(pEl('div', 'p-num', 'Route card'));
@@ -1254,12 +1452,21 @@
       card.appendChild(pEl('div', 'p-extra p-team-code', 'Code: ' + t.code));
       var list = pEl('ol', 'p-route');
       teamRoute(i, teams.length, stations).forEach(function (st, ri) {
-        list.appendChild(pEl('li', ri === 0 ? 'first' : '', st.label));
+        list.appendChild(pEl('li', ri === 0 ? 'first' : '', st.label + routeTag(st, pr)));
       });
       card.appendChild(list);
       card.appendChild(pEl('div', 'p-route-note', 'Start at the first station on this list and work down it. ' +
-        'Your list is in a different order from the other teams’.'));
+        'Your list is in a different order from the other teams’.' +
+        (branched ? ' At some stops your answer decides where you go next: follow what your teacher tells you.' : '')));
       return card;
+    });
+  }
+
+  // Path 18 P4: the debrief. One page set per team, from what the run already holds
+  // (Stations.debrief); the sheet itself is _shared/stations-debrief.js, which 019's monitor draws too.
+  function buildPrintDebrief() {
+    StationsDebrief.render(els.printDebriefGrid, Stations.debrief(Stations.read(state), state.run), {
+      grid: cardGrid('1'), title: 'Hunt debrief', formatElapsed: formatElapsed, formatPenaltyMinutes: formatPenaltyMinutes
     });
   }
 
@@ -1284,6 +1491,7 @@
   function buildPrintAnswerSheets() {
     var teams = state.run.teams;
     var stations = validStations();
+    var pr = Stations.progress(Stations.read(state), {});
     PrintKit.renderCards(els.printAnswersheetsGrid, teams, cardGrid('2'), function (t, i) {
       var card = pEl('div', 'p-card');
       card.appendChild(pEl('div', 'p-num', 'Answer Sheet'));
@@ -1296,7 +1504,7 @@
       teamRoute(i, teams.length, stations).forEach(function (st, ri) {
         var tr = body.appendChild(document.createElement('tr'));
         tr.appendChild(pEl('td', '', ri + 1));
-        var station = tr.appendChild(pEl('td', '', st.label));
+        var station = tr.appendChild(pEl('td', '', st.label + routeTag(st, pr)));
         var extra = answerSheetExtra(st);
         if (extra) station.appendChild(pEl('span', 'p-as-hint', extra));
         tr.appendChild(pEl('td', 'p-as-blank'));
@@ -1391,12 +1599,20 @@
     printSection(els.printAnswersheetsArea);
   });
 
+  els.printDebriefBtn.addEventListener('click', function () {
+    if (!state || !state.run.teams.length) return;
+    if (!validStations().length) { showMsg('Add at least one station with content before printing the debrief.'); return; }
+    buildPrintDebrief();
+    printSection(els.printDebriefArea);
+  });
+
   wirePreview('preview-stations-btn', els.printStationsBtn);
   wirePreview('preview-answers-btn', els.printAnswersBtn);
   wirePreview('preview-clues-btn', els.printCluesBtn);
   wirePreview('preview-teams-btn', els.printTeamsBtn);
   wirePreview('preview-routes-btn', els.printRoutesBtn);
   wirePreview('preview-answersheets-btn', els.printAnswersheetsBtn);
+  wirePreview('preview-debrief-btn', els.printDebriefBtn);
 
   els.staggerStarts.addEventListener('change', function () {
     state.run.stagger = els.staggerStarts.checked;
@@ -1429,30 +1645,31 @@
       return;
     }
     els.checkinStation.disabled = false;
-    var current = state.run.checkinStation;
-    if (current >= valid.length) current = 0;
+    var current = checkinIdx(valid);
     els.checkinStation.innerHTML = valid.map(function (s, i) {
       return '<option value="' + i + '"' + (i === current ? ' selected' : '') + '>' + (i + 1) + '. ' + escapeHtml(s.label) + '</option>';
     }).join('');
-    state.run.checkinStation = current;
+    state.run.checkinStation = valid[current].id;
     updateCheckinStationInfo();
   }
 
   function updateCheckinStationInfo() {
     var valid = validStations();
-    var s = valid[state.run.checkinStation];
+    var ci = checkinIdx(valid);
+    var s = valid[ci];
     if (!s) { els.checkinStationInfo.textContent = ''; els.checkinHintBtn.disabled = true; return; }
     var descr = s.qType === 'text' ? 'open-ended — checking in marks it reached.'
       : s.qType === 'photo' ? 'photo proof — check their photo, then check them in.'
       : s.qType === 'choice' ? 'multiple choice — you\'ll pick the letter they answer.'
       : 'a numeric answer — you\'ll enter the number they give.';
-    els.checkinStationInfo.textContent = 'Set the helper here to Station ' + (state.run.checkinStation + 1) + '. This station is ' + descr;
+    els.checkinStationInfo.textContent = 'Set the helper here to Station ' + (ci + 1) + '. This station is ' + descr;
     els.checkinHintBtn.disabled = !s.hint;
     els.checkinHintBtn.title = s.hint ? ('Show this station’s hint to a team (−' + s.hintPenalty + ' min penalty on first use)') : 'This station has no hint set';
   }
 
   els.checkinStation.addEventListener('change', function () {
-    state.run.checkinStation = parseInt(els.checkinStation.value, 10) || 0;
+    var pick = validStations()[parseInt(els.checkinStation.value, 10) || 0];
+    state.run.checkinStation = pick ? pick.id : null;
     pendingCheckin = null;
     renderCheckinAnswerPanel();
     els.checkinHintPanel.textContent = '';
@@ -1474,15 +1691,14 @@
     if (!state.run.teams.length) { setCheckinFeedback('Add a team first.', true); return; }
     var valid = validStations();
     if (!valid.length) { setCheckinFeedback('Add stations in Build mode first.', true); return; }
-    var stationIdx = state.run.checkinStation || 0;
-    if (stationIdx >= valid.length) stationIdx = 0;
+    var stationIdx = checkinIdx(valid);
     var code = raw.toUpperCase();
     var teamIdx = -1;
     state.run.teams.forEach(function (t, i) { if (t.code === code) teamIdx = i; });
     if (teamIdx === -1) { setCheckinFeedback('No team matches code “' + raw + '”.', true); focusCheckinCode(); return; }
     var team = state.run.teams[teamIdx];
     var station = valid[stationIdx];
-    if (Object.prototype.hasOwnProperty.call(team.marks, stationIdx)) {
+    if (Object.prototype.hasOwnProperty.call(team.marks, station.id)) {
       setCheckinFeedback((team.name || 'That team') + ' already checked in at Station ' + (stationIdx + 1) + '.', false);
       focusCheckinCode();
       return;
@@ -1493,7 +1709,7 @@
       setCheckinFeedback('Enter ' + (team.name || 'their') + ' answer below.', false);
       return;
     }
-    team.marks[stationIdx] = { at: Date.now(), correct: true };
+    team.marks[station.id] = { at: Date.now(), correct: true };
     save();
     renderTeamProgress();
     renderLeaderboard();
@@ -1511,8 +1727,7 @@
     if (!state.run.teams.length) { setCheckinFeedback('Add a team first.', true); return; }
     var valid = validStations();
     if (!valid.length) { setCheckinFeedback('Add stations in Build mode first.', true); return; }
-    var stationIdx = state.run.checkinStation || 0;
-    if (stationIdx >= valid.length) stationIdx = 0;
+    var stationIdx = checkinIdx(valid);
     var station = valid[stationIdx];
     if (!station.hint) { setCheckinFeedback('This station has no hint set.', true); return; }
     var raw = els.checkinCode.value.trim();
@@ -1523,12 +1738,12 @@
     if (teamIdx === -1) { setCheckinFeedback('No team matches code “' + raw + '”.', true); return; }
     var team = state.run.teams[teamIdx];
     if (!team.hintsUsed || typeof team.hintsUsed !== 'object') team.hintsUsed = {};
-    var alreadyUsed = Object.prototype.hasOwnProperty.call(team.hintsUsed, stationIdx);
+    var alreadyUsed = Object.prototype.hasOwnProperty.call(team.hintsUsed, station.id);
     var penaltyNote;
     if (alreadyUsed) {
       penaltyNote = 'already used — no additional penalty.';
     } else {
-      team.hintsUsed[stationIdx] = { at: Date.now(), penaltyMin: station.hintPenalty };
+      team.hintsUsed[station.id] = { at: Date.now(), penaltyMin: station.hintPenalty };
       team.penaltyMs = (team.penaltyMs || 0) + station.hintPenalty * 60000;
       penaltyNote = station.hintPenalty > 0 ? ('−' + station.hintPenalty + ' minute penalty applied to ' + (team.name || 'their') + ' time.') : 'no time penalty configured for this hint.';
       save();
@@ -1551,7 +1766,8 @@
     if (s.qType === 'choice') {
       var letters = 'ABCDEF';
       html += '<div class="checkin-choices">' + s.choices.map(function (c, ci) {
-        return '<button type="button" class="btn-secondary checkin-choice-btn" data-choice="' + ci + '">' + letters[ci] + '. ' + escapeHtml((c || '').trim() || '(blank)') + '</button>';
+        var bt = branchTarget(state.stations[s.idx], c), bn = bt ? valid.map(function (v) { return v.id; }).indexOf(bt) : -1;
+        return '<button type="button" class="btn-secondary checkin-choice-btn" data-choice="' + ci + '">' + letters[ci] + '. ' + escapeHtml((c || '').trim() || '(blank)') + (bn !== -1 ? ' \u2192 Station ' + (bn + 1) : '') + '</button>';
       }).join('') + '</div>';
     } else if (s.qType === 'numeric') {
       html += '<div class="checkin-numeric"><input type="number" step="any" id="checkin-numeric-input" placeholder="Their answer">' +
@@ -1582,7 +1798,11 @@
     }
     var s = validStations()[pendingCheckin.stationIdx];
     if (choiceBtn) {
-      evaluateCheckin(parseInt(choiceBtn.dataset.choice, 10) === s.correctChoice);
+      var picked = parseInt(choiceBtn.dataset.choice, 10), canon = Stations.read(state);
+      var cstn = canon.stations.filter(function (c) { return c.id === s.id; })[0];
+      var target = cstn ? Stations.branchOf(canon, cstn, s.choices[picked]) : null;
+      if (target) evaluateCheckin(true, target);   // a branched choice is an accepted answer that sends the team on
+      else evaluateCheckin(picked === s.correctChoice);
     } else if (numSubmit) {
       var val = parseFloat(document.getElementById('checkin-numeric-input').value);
       var target = parseFloat(s.numericAnswer);
@@ -1591,21 +1811,24 @@
     }
   });
 
-  function evaluateCheckin(correct) {
+  function evaluateCheckin(correct, branchTo) {
     var team = state.run.teams[pendingCheckin.teamIdx];
     var stationIdx = pendingCheckin.stationIdx;
+    var sid = validStations()[stationIdx].id;
     if (correct) {
-      var attemptsSoFar = team.attempts[stationIdx] || 0;
-      team.marks[stationIdx] = { at: Date.now(), correct: true, attempts: attemptsSoFar };
+      var attemptsSoFar = team.attempts[sid] || 0;
+      team.marks[sid] = { at: Date.now(), correct: true, attempts: attemptsSoFar };
+      if (branchTo) team.marks[sid].branch = branchTo;   // the route a team was sent on; clearing the mark clears it
       pendingCheckin = null;
       save();
       renderCheckinAnswerPanel();
       renderTeamProgress();
       renderLeaderboard();
-      setCheckinFeedback((team.name || 'Team') + ' checked in at Station ' + (stationIdx + 1) + ' — correct!', false);
+      var sentTo = branchTo ? validStations().map(function (v) { return v.id; }).indexOf(branchTo) : -1;
+      setCheckinFeedback((team.name || 'Team') + ' checked in at Station ' + (stationIdx + 1) + (sentTo !== -1 ? ' — correct! Send them to Station ' + (sentTo + 1) + '.' : ' — correct!'), false);
       focusCheckinCode();
     } else {
-      team.attempts[stationIdx] = (team.attempts[stationIdx] || 0) + 1;
+      team.attempts[sid] = (team.attempts[sid] || 0) + 1;
       save();
       renderTeamProgress();
       setCheckinFeedback('Not correct yet — ' + (team.name || 'the team') + ' can try again.', true);
@@ -1618,6 +1841,17 @@
   }
   function focusCheckinCode() { els.checkinCode.focus(); }
 
+  /** The station a team's latest branched check-in sent it to, if that station is still playable and the team has not reached it; else null. */
+  function branchNext(team, valid) {
+    var best = null;
+    Object.keys(team.marks).forEach(function (sid) {
+      var m = team.marks[sid];
+      if (m && m.branch && (!best || m.at >= best.at)) best = m;
+    });
+    if (!best || Object.prototype.hasOwnProperty.call(team.marks, best.branch)) return null;
+    return valid.some(function (v) { return v.id === best.branch; }) ? best.branch : null;
+  }
+
   function renderTeamProgress() {
     var valid = validStations();
     var total = valid.length;
@@ -1629,20 +1863,22 @@
       els.teamProgressList.innerHTML = '<p class="empty-hint">Add at least one team above to track progress.</p>';
       return;
     }
+    var canon = Stations.read(state);   // progress() takes the canonical set, not the on-disk shape
     els.teamProgressList.innerHTML = state.run.teams.map(function (t, ti) {
       var btns = '';
-      var solvedCount = 0;
-      var nextIdx = -1;
+      var pr = Stations.progress(canon, t.marks);
       for (var j = 0; j < total; j++) {
-        var solved = Object.prototype.hasOwnProperty.call(t.marks, j);
-        var attempts = t.attempts[j] || 0;
-        if (solved) solvedCount++;
-        else if (nextIdx === -1) nextIdx = j;
+        var solved = Object.prototype.hasOwnProperty.call(t.marks, valid[j].id);
+        var attempts = t.attempts[valid[j].id] || 0;
+        var bonus = pr.explicit && pr.required.indexOf(valid[j].id) === -1;
         var cls = 'station-btn' + (solved ? ' solved' : (attempts > 0 ? ' attempted' : ''));
-        var title = 'Station ' + (j + 1) + (solved ? ' — reached' : attempts > 0 ? ' — ' + attempts + ' attempt' + (attempts === 1 ? '' : 's') + ' so far' : '');
+        var title = 'Station ' + (j + 1) + (bonus ? ' (bonus)' : '') + (solved ? ' — reached' : attempts > 0 ? ' — ' + attempts + ' attempt' + (attempts === 1 ? '' : 's') + ' so far' : '');
         btns += '<button type="button" class="' + cls + '" data-team="' + ti + '" data-station="' + j + '" title="' + escapeAttr(title) + '">' + (j + 1) + '</button>';
       }
-      var statusLine = solvedCount >= total ? 'All stations complete!' : 'Next up: Station ' + (nextIdx + 1) + ' — ' + escapeHtml(valid[nextIdx].label);
+      var nextIdx = -1, sentBy = branchNext(t, valid);
+      valid.forEach(function (v, vi) { if (v.id === (sentBy || pr.nextId)) nextIdx = vi; });
+      var statusLine = pr.finished ? (pr.explicit ? 'All required stations complete!' : 'All stations complete!') : 'Next up: Station ' + (nextIdx + 1) + ' — ' + escapeHtml(valid[nextIdx].label) + (sentBy ? ' (sent there by a branch)' : '');
+      if (pr.explicit && pr.bonus) statusLine += ' · ' + pr.bonus + ' bonus';
       var hintCount = t.hintsUsed ? Object.keys(t.hintsUsed).length : 0;
       if (hintCount) statusLine += ' · ' + hintCount + ' hint' + (hintCount === 1 ? '' : 's') + ' used (−' + formatPenaltyMinutes(t.penaltyMs || 0) + ' min)';
       return '<div class="team-progress"><div class="tp-name">' + escapeHtml(t.name || ('Team ' + (ti + 1))) + '<span class="tp-code">' + escapeHtml(t.code || '') + '</span></div>' +
@@ -1655,7 +1891,9 @@
     if (!btn) return;
     var team = state.run.teams[parseInt(btn.dataset.team, 10)];
     if (!team) return;
-    var si = parseInt(btn.dataset.station, 10);
+    var pickedStation = validStations()[parseInt(btn.dataset.station, 10)];
+    if (!pickedStation) return;
+    var si = pickedStation.id;
     if (Object.prototype.hasOwnProperty.call(team.marks, si)) delete team.marks[si];
     else team.marks[si] = { at: Date.now(), correct: true };
     save();
@@ -1670,15 +1908,18 @@
   function renderLeaderboard() {
     var valid = validStations();
     var total = valid.length;
+    var canon = Stations.read(state);
     var rows = state.run.teams.map(function (t, i) {
       var markTimes = Object.keys(t.marks).map(function (k) { return t.marks[k].at; });
+      var pr = Stations.progress(canon, t.marks);
       var nextIdx = -1;
-      for (var j = 0; j < total; j++) { if (!Object.prototype.hasOwnProperty.call(t.marks, j)) { nextIdx = j; break; } }
+      valid.forEach(function (v, vi) { if (v.id === pr.nextId) nextIdx = vi; });
       var lastMark = markTimes.length ? Math.max.apply(Math, markTimes) : null;
       var penaltyMs = t.penaltyMs || 0;
       return {
         name: t.name || ('Team ' + (i + 1)),
         count: markTimes.length,
+        done: pr.done, required: pr.total, bonus: pr.bonus, explicit: pr.explicit, finished: pr.finished,
         lastMark: lastMark,
         effectiveMark: lastMark == null ? null : lastMark + penaltyMs,
         penaltyMs: penaltyMs,
@@ -1686,20 +1927,14 @@
         nextLabel: nextIdx === -1 ? null : (nextIdx + 1) + '. ' + valid[nextIdx].label,
       };
     });
-    rows.sort(function (a, b) {
-      if (b.count !== a.count) return b.count - a.count;
-      if (a.effectiveMark == null && b.effectiveMark == null) return 0;
-      if (a.effectiveMark == null) return 1;
-      if (b.effectiveMark == null) return -1;
-      return a.effectiveMark - b.effectiveMark;
-    });
+    rows = Stations.rank(rows);   // the order is stations.js's, shared with 019's monitor
     if (!rows.length) {
       els.leaderboardBody.innerHTML = '<tr><td colspan="6" class="empty-hint">No teams yet.</td></tr>';
       return;
     }
     els.leaderboardBody.innerHTML = rows.map(function (r, i) {
       var status;
-      if (total && r.count >= total) {
+      if (total && r.finished) {
         status = (state.run.raceStartAt && r.lastMark) ? 'Finished in ' + formatElapsed((r.effectiveMark - state.run.raceStartAt)) : 'Finished';
       } else if (r.count > 0) {
         status = 'In progress';
@@ -1708,7 +1943,7 @@
       }
       var heading = r.nextLabel ? escapeHtml(r.nextLabel) : '—';
       var hints = r.hintCount ? (r.hintCount + ' (−' + formatPenaltyMinutes(r.penaltyMs) + ' min)') : '—';
-      return '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(r.name) + '</td><td>' + r.count + ' / ' + total + '</td><td>' + heading + '</td><td>' + hints + '</td><td>' + status + '</td></tr>';
+      return '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(r.name) + '</td><td>' + r.done + ' / ' + r.required + (r.explicit && r.bonus ? ' (+' + r.bonus + ' bonus)' : '') + '</td><td>' + heading + '</td><td>' + hints + '</td><td>' + status + '</td></tr>';
     }).join('');
   }
 
@@ -1921,21 +2156,7 @@
   }
 
   Share.mount(els.shareBtn, {
-    getState: function () {
-      if (!state) return null;
-      return {
-        name: state.name,
-        cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,
-        stations: state.stations.map(function (s) {
-          return {
-            label: s.label, content: s.content, note: s.note,
-            qType: s.qType, choices: (s.choices || []).slice(), correctChoice: s.correctChoice,
-            numericAnswer: s.numericAnswer, tolerance: s.tolerance,
-            hint: s.hint || '', hintPenalty: s.hintPenalty || '0', codeWord: s.codeWord || ''
-          };
-        })
-      };
-    },
+    getState: function () { return Stations.shareState(state, { kind: 'hunt' }); },
     param: SHARE_PARAM,
     tool: 'qr-scavenger-hunt-builder',
     title: 'Share this hunt',
@@ -1955,28 +2176,7 @@
       the way ensureStationDefaults() would, and no run — the receiving device
       builds its own through ensureRun(). */
   function normalizeHunt(obj) {
-    return {
-      name: uniqueHuntName(String(obj.name || '').trim() || 'Shared Hunt'),
-      cardsPerPage: String(obj.cardsPerPage || '4'),
-      ecLevel: String(obj.ecLevel || 'Q'),
-      showNumber: obj.showNumber !== false,
-      stations: obj.stations.map(function (s) {
-        var st = blankStation();
-        if (!s || typeof s !== 'object') return st;
-        st.label = String(s.label || '');
-        st.content = String(s.content || '');
-        st.note = String(s.note || '');
-        st.qType = Q_TYPES.indexOf(s.qType) !== -1 ? s.qType : 'text';
-        st.choices = Array.isArray(s.choices) ? s.choices.map(function (c) { return String(c == null ? '' : c); }) : [];
-        st.correctChoice = parseInt(s.correctChoice, 10) || 0;
-        st.numericAnswer = String(s.numericAnswer == null ? '' : s.numericAnswer);
-        st.tolerance = String(s.tolerance == null ? '0' : s.tolerance);
-        st.hint = String(s.hint || '');
-        st.hintPenalty = String(s.hintPenalty == null ? '0' : s.hintPenalty);
-        st.codeWord = String(s.codeWord || '');
-        return st;
-      })
-    };
+    return Stations.fromShare(obj, { kind: 'hunt', uniqueName: uniqueHuntName });
   }
 
   /** Files an arriving hunt into the store and points `current` at it, so the
@@ -2022,6 +2222,29 @@
       newHunt('My Hunt');
     }
   }
+
+  /* Station pictures (Path 18 P3), settled once at boot as 019 does with its clue images: read the ones
+     the saved hunts point at into memory, move any inline picture into the store, then delete stored
+     pictures no hunt points at. A reference with nothing behind it is said on its station, not shown
+     as an empty frame. __huntImagesSettled is for the suite. */
+  function settleImages() {
+    var latest = null;
+    function allHunts() {
+      latest = loadStore();
+      if (state) latest.sets[state.name] = state;
+      return Object.keys(latest.sets).map(function (k) { return latest.sets[k]; });
+    }
+    return HI.hydrate(HI.imagesIn(allHunts()))
+      .then(function () { return HI.migrate(allHunts); })
+      .then(function (moved) {
+        if (moved) saveStore(latest);
+        imagesSettled = true;
+        if (state) { renderRows(); scheduleRender(); }
+        return HI.gc(HI.imagesIn(allHunts()).filter(HI.isRef));
+      })
+      ['catch'](function () { imagesSettled = true; });
+  }
+  settleImages().then(function () { window.__huntImagesSettled = true; });
 
 })();
 </script>

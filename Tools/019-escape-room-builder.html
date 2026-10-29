@@ -32,7 +32,7 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
-<script src="escape-room-builder/er-match.js"></script>
+<script src="../_shared/stations.js"></script>
 <script src="../_shared/media-db.js"></script>
 <script src="escape-room-builder/er-image.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
@@ -551,8 +551,9 @@
   }
   function save() {
     if (!state) return;
+    Stations.ensureIds(state);   // Path 18 P1: every station carries a stable id on disk
     var store = loadStore();
-    store.sets[state.name] = state;
+    store.sets[state.name] = Stations.toDisk(state);   // each go-to is stored as the target's id (v385)
     store.current = state.name;
     saveStore(store);
   }
@@ -595,6 +596,27 @@
     scheduleRender();
   }
 
+  // A station's "go to" is stored as a position, so a move or a delete used to leave every link pointing at
+  // whatever now stood there. Capture each link as the target's id before the change, put it back as that
+  // station's new position after (a target that was deleted becomes "next in order").
+  function captureLinks() {
+    Stations.ensureIds(state);
+    var links = {};
+    state.stations.forEach(function (st) {
+      if (typeof st.next === 'number' && state.stations[st.next]) links[st.id] = state.stations[st.next].id;
+    });
+    return links;
+  }
+  function restoreLinks(links) {
+    var byId = {};
+    state.stations.forEach(function (st, k) { byId[st.id] = k; });
+    state.stations.forEach(function (st) {
+      if (typeof st.next !== 'number') return;
+      var target = links[st.id];
+      st.next = (target && Object.prototype.hasOwnProperty.call(byId, target)) ? byId[target] : null;
+    });
+  }
+
   function loadSetByName(name) {
     var store = loadStore();
     var loaded = store.sets[name];
@@ -603,8 +625,13 @@
     if (!loaded.roomId) loaded.roomId = makeRoomId();
     if (typeof loaded.storyIntro !== 'string') loaded.storyIntro = '';
     if (typeof loaded.packetCardsPerPage !== 'string') loaded.packetCardsPerPage = '2';
-    state = loaded;
+    // Path 18 P2: the room goes through Stations.read/write once, so every station has an id on disk
+    var before = JSON.stringify(loaded);
+    var set = Stations.read(loaded);
+    state = set ? Stations.write(set) : loaded;
     ensureAtLeastOneStation();
+    Stations.ensureIds(state);
+    if (JSON.stringify(Stations.toDisk(state)) !== before) save();   // ids drawn on first read are saved then, so a reload prints the same ones
     applyStateToForm();
     refreshSwitcher();
     scheduleRender();
@@ -784,7 +811,7 @@
   //    shared media store; the station holds an `idb:` reference. See
   //    escape-room-builder/er-image.js for why, and for the fallback. The
   //    image still travels inside the student link as a data URL, so it has
-  //    to stay small; a station's QR code never carries it (stationPayloadFor). ──
+  //    to stay small; a station's QR code never carries it (Stations.playPayload). ──
   els.stationsList.addEventListener('change', function (e) {
     if (!e.target.classList.contains('f-image')) return;
     var cardEl = e.target.closest('.station-card');
@@ -824,14 +851,18 @@
       var dir = parseInt(moveBtn.dataset.move, 10);
       var j = i + dir;
       if (j < 0 || j >= state.stations.length) return;
+      var links = captureLinks();
       var tmp = state.stations[i];
       state.stations[i] = state.stations[j];
       state.stations[j] = tmp;
+      restoreLinks(links);
       renderStations();
       save();
       scheduleRender();
     } else if (removeBtn) {
+      var links = captureLinks();
       state.stations.splice(i, 1);
+      restoreLinks(links);
       ensureAtLeastOneStation();
       renderStations();
       save();
@@ -922,103 +953,27 @@
     return detail;
   }
 
-  // Build the room payload actually encoded into the link/QR data. Indices
-  // are remapped to the compacted (valid-only) list so "next" still points
-  // at the right station even if some rows were left blank.
-  function buildRoomPayload(valid) {
-    var idxMap = {};
-    valid.forEach(function (s, n) { idxMap[s.idx] = n; });
-    var room = {
-      id: state.roomId,
-      title: state.name || 'Escape Room',
-      stations: valid.map(function (s) {
-        var next = null;
-        if (s.next === 'end') next = null;
-        else if (typeof s.next === 'number' && idxMap.hasOwnProperty(s.next)) next = idxMap[s.next];
-        var out = { clue: s.clue, answers: s.answers, hint: s.hint || '', next: next };
-        if (s.image) out.image = s.image; // omitted unless set, keeps links the same size without one
-        if (s.type && s.type !== 'text') out.type = s.type;
-        if (s.type === 'cipher') out.cipherShift = s.cipherShift;
-        if (s.hintCost) out.hintCost = s.hintCost;
-        if (s.awardLetter) out.awardLetter = s.awardLetter;
-        if (s.maxAttempts) out.maxAttempts = s.maxAttempts;
-        // Numeric tolerance only ever applies to the free-text matching path —
-        // guarded to text type so it can't be set on digit/cipher stations.
-        if (s.type === 'text' && s.numericTolerance !== null && s.numericTolerance !== undefined) {
-          out.numericTolerance = s.numericTolerance;
-        }
-        return out;
-      }),
-    };
-    // Omitted entirely unless enabled, so the link is byte-for-byte the same
-    // as before when this option is off (matches the randomizeStart pattern).
-    if (state.countdownEnabled) {
-      var minutes = Math.max(1, parseInt(state.countdownMinutes, 10) || 20);
-      room.timerMinutes = minutes;
-    }
-    return room;
+  // The room payload encoded into every link and code now comes from _shared/stations.js
+  // (Path 18 P2): today's payload plus `v: 2`, the playable stations' `ids`, and `next: 'end'`
+  // kept for "End here". `curSet()` is the canonical record of the room as it stands on screen.
+  function curSet() {
+    Stations.ensureIds(state);   // a row added since the last save has no id yet; it is saved with the next save()
+    return Stations.read(state);
+  }
+  function buildRoomPayload() {
+    return Stations.playPayload(curSet(), { station: null, imageSrc: ER.src });
   }
 
-  // ── Room encoding — base64(encodeURIComponent(JSON)) via btoa(unescape(...)),
-  // which is unicode-safe and denser than raw encodeURIComponent JSON would be
-  // in the QR code. lock.html decodes with the matching atob/decodeURIComponent
-  // pair. ───────────────────────────────────────────────────────────────────
-  function encodeRoom(room) {
-    return btoa(unescape(encodeURIComponent(JSON.stringify(room))));
+  // The link in the box: the whole room, images included (lock.html?r=...).
+  function playerLink() {
+    return Stations.playUrl(curSet(), null, { imageSrc: ER.src });
   }
 
-  // `startHere` marks this station's own code as a valid entry point — lock.html
-  // uses it to seed a first-time player's progress at this station instead of
-  // the fixed first one, for rotations where teams start at different stations
-  // at once. Omitted entirely unless the "randomize starting station" toggle is
-  // on, so the link is byte-for-byte the same as before when it's off.
-  function playerLinkFor(room, stationIdx, startHere) {
-    var encoded = encodeRoom(room);
-    var url = new URL('escape-room-builder/lock.html', window.location.href);
-    url.searchParams.set('r', encoded);
-    if (typeof stationIdx === 'number') url.searchParams.set('s', String(stationIdx));
-    if (startHere && typeof stationIdx === 'number') url.searchParams.set('start', '1');
-    return url.href;
-  }
-
-  // ── A printed station's own code ──────────────────────────────────────────
-  // Each station's QR code used to carry the whole room, images and all, so
-  // one photo (tens of KB as a data URL, against the ~1.6 KB a code holds at
-  // error correction Q) made every station's code fail to build (#282). A
-  // station's code now carries that station and nothing else it can show:
-  // its own entry, minus the image, and a stub for every other station. The
-  // stubs keep only what lock.html reads off stations the player is not
-  // standing at — how many there are (the "Station 2 of 5" badge, the gate,
-  // the monitor's total), which of them award a letter (the strip's empty
-  // slots; the letter itself is learned by solving that station, so it is
-  // '?' here) and what their hints cost (the running score). The payload is
-  // still a room in the same `r` format, so a phone holding an older cached
-  // lock.html plays it too, and every code printed before this still works.
-  // The picture is printed on the station's card instead; `imageOnCard`
-  // tells lock.html to say so. The student link above is unchanged — it is a
-  // link, not a code, and still carries the whole room.
-  function stationPayloadFor(room, n) {
-    var out = {
-      id: room.id,
-      title: room.title,
-      stations: room.stations.map(function (st, i) {
-        var copy = {};
-        if (i !== n) {
-          if (st.hintCost) copy.hintCost = st.hintCost;
-          if (st.awardLetter) copy.awardLetter = '?';
-          return copy;
-        }
-        Object.keys(st).forEach(function (k) { if (k !== 'image') copy[k] = st[k]; });
-        if (st.image) copy.imageOnCard = 1;
-        return copy;
-      }),
-    };
-    if (room.timerMinutes) out.timerMinutes = room.timerMinutes;
-    return out;
-  }
-
-  function stationLinkFor(room, n, startHere) {
-    return playerLinkFor(stationPayloadFor(room, n), n, startHere);
+  // A printed station's own code (#282, #320): that station's entry minus its image plus a stub for
+  // every other station, in the same `r` format. `startHere` marks the code as an entry point and is
+  // omitted unless the "randomize starting station" toggle is on.
+  function stationLinkFor(set, n, startHere) {
+    return Stations.playUrl(set, n, { start: !!startHere, imageSrc: ER.src });
   }
 
   // ── QR generation (same offline library + drawing approach as the QR ────
@@ -1092,15 +1047,15 @@
       return;
     }
 
-    var room = buildRoomPayload(valid);
-    els.playerLink.value = playerLinkFor(room);
+    var set = curSet();
+    els.playerLink.value = playerLink();
     renderAnswerPreview(valid);
 
     var failures = [];
     els.cardsPreview.innerHTML = '';
     valid.forEach(function (s, n) {
       try {
-        var link = stationLinkFor(room, n, els.randomizeStart.checked);
+        var link = stationLinkFor(set, n, els.randomizeStart.checked);
         var qr = buildQR(link, ecLevel);
         var card = document.createElement('div');
         card.className = 'preview-card';
@@ -1115,7 +1070,10 @@
       }
     });
 
-    var problems = [];
+    // The payload budget (Path 18 P2): a code too dense to read at the printed size is refused by station
+    // number, with what to shorten, instead of printing a code a phone cannot scan.
+    var overBudget = Stations.budget(set, { ecLevel: ecLevel, start: els.randomizeStart.checked, imageSrc: ER.src }).filter(function (r) { return !r.ok; });
+    var problems = overBudget.map(function (r) { return r.reason; });
     if (failures.length) {
       problems.push('Could not build a QR code for: ' + failures.join(', ') + '. Try shortening that station’s clue, answers or hint, or lowering error correction.');
     }
@@ -1124,7 +1082,7 @@
     if (problems.length) showMsg(problems.join(' '));
 
     els.previewNote.textContent = valid.length + ' station' + (valid.length === 1 ? '' : 's') + ' ready.';
-    els.printCodesBtn.disabled = false;
+    els.printCodesBtn.disabled = overBudget.length > 0;
     els.printAnswersBtn.disabled = false;
     els.testRunBtn.disabled = false;
     els.printPacketBtn.disabled = false;
@@ -1140,13 +1098,14 @@
      also writes progress into localStorage for that room.
 
      This walks the SAME payload students get (`buildRoomPayload`) through the
-     SAME matcher they hit (`er-match.js`, shared with lock.html), and writes
+     SAME matcher they hit (`_shared/stations.js`, shared with lock.html), and writes
      nothing anywhere: it is a dry run, not a game.
   ---------------------------------------------------------------------- */
   var testRun = null; // { room, idx, visited: [], misses, revealed }
 
   function trStationNext(room, idx) {
     var st = room.stations[idx];
+    if (st.next === 'end') return null;   // "End here (finish room)": the player ends the room there
     var next = (typeof st.next === 'number') ? st.next : idx + 1;
     return (next === null || next >= room.stations.length) ? null : next;
   }
@@ -1291,7 +1250,7 @@
     var valid = validStations();
     if (!valid.length) return;
     testRun = {
-      room: buildRoomPayload(valid),
+      room: buildRoomPayload(),
       idx: 0,
       visited: [0],
       misses: {},
@@ -1340,7 +1299,7 @@
     if (!valid.length) return;
     var ecLevel = els.ecLevel.value;
     var showNum = els.showNumber.checked;
-    var room = buildRoomPayload(valid);
+    var set = curSet();
     els.printQrGrid.className = 'print-qr-grid pp-' + els.cardsPerPage.value;
     els.printQrGrid.innerHTML = '';
     valid.forEach(function (s, n) {
@@ -1350,11 +1309,11 @@
       var typeTag = s.type === 'cipher' ? ' · Cipher' : (s.type === 'digits' ? ' · Digit Lock' : '');
       card.innerHTML = (showNum ? '<div class="p-num">Station ' + (n + 1) + typeTag + '</div>' : '') +
         '<div class="p-name">' + escapeHtml(state.name || 'Escape Room') + '</div><canvas></canvas>' +
-        // The picture its code leaves out (see stationPayloadFor).
+        // The picture its code leaves out (see Stations.playPayload).
         (s.image ? '<img class="p-img" src="' + escapeAttr(s.image) + '" alt="Clue picture for station ' + (n + 1) + '">' : '');
       els.printQrGrid.appendChild(card);
       try {
-        drawQR(card.querySelector('canvas'), buildQR(stationLinkFor(room, n, els.randomizeStart.checked), ecLevel), 600);
+        drawQR(card.querySelector('canvas'), buildQR(stationLinkFor(set, n, els.randomizeStart.checked), ecLevel), 600);
       } catch (err) { /* already reported in the live preview */ }
     });
   }
@@ -1453,7 +1412,7 @@
   els.printPacketBtn.addEventListener('click', function () {
     var valid = validStations();
     if (valid.length) {
-      var unreachable = unreachableStations(buildRoomPayload(valid));
+      var unreachable = unreachableStations(buildRoomPayload());
       if (unreachable.length) {
         showMsg('Heads up: station' + (unreachable.length === 1 ? ' ' : 's ') + unreachable.join(', ') +
           ' — nothing in the chain routes to ' + (unreachable.length === 1 ? 'it' : 'them') +
@@ -1506,7 +1465,7 @@
       var store = loadStore();
       delete store.sets[oldName];
       state.name = newName;
-      store.sets[newName] = state;
+      store.sets[newName] = Stations.toDisk(state);
       store.current = newName;
       saveStore(store);
       refreshSwitcher();
@@ -1582,26 +1541,7 @@
   }
 
   Share.mount(els.shareBtn, {
-    getState: function () {
-      if (!state) return null;
-      return {
-        name: state.name, storyIntro: state.storyIntro || '',
-        cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel,
-        showNumber: state.showNumber !== false, randomizeStart: !!state.randomizeStart,
-        countdownEnabled: !!state.countdownEnabled, countdownMinutes: state.countdownMinutes,
-        packetCardsPerPage: state.packetCardsPerPage || '2',
-        stations: state.stations.map(function (st) {
-          return {
-            clue: st.clue, answers: st.answers, hint: st.hint || '', next: st.next,
-            image: ER.src(st.image), type: st.type || 'text',
-            hintCost: st.hintCost || 0, awardLetter: st.awardLetter || '',
-            cipherPlain: st.cipherPlain || '', cipherShift: st.cipherShift || 0,
-            maxAttempts: st.maxAttempts || 0,
-            numericTolerance: st.numericTolerance === undefined ? null : st.numericTolerance
-          };
-        })
-      };
-    },
+    getState: function () { return Stations.shareState(state, { kind: 'room', imageSrc: ER.src }); },
     param: SHARE_PARAM,
     tool: 'escape-room-builder',
     title: 'Share this room',
@@ -1620,41 +1560,7 @@
   /** An arrival as a room this device can hold, with a new roomId and every
       station field defaulted the way newSet() would leave it. */
   function normalizeRoom(obj) {
-    var minutes = parseInt(obj.countdownMinutes, 10);
-    return {
-      name: uniqueRoomName(String(obj.name || '').trim() || 'Shared Escape Room'),
-      roomId: makeRoomId(),
-      storyIntro: typeof obj.storyIntro === 'string' ? obj.storyIntro : '',
-      cardsPerPage: String(obj.cardsPerPage || '4'),
-      ecLevel: String(obj.ecLevel || 'Q'),
-      showNumber: obj.showNumber !== false,
-      randomizeStart: !!obj.randomizeStart,
-      countdownEnabled: !!obj.countdownEnabled,
-      countdownMinutes: (isFinite(minutes) && minutes > 0) ? minutes : 20,
-      packetCardsPerPage: String(obj.packetCardsPerPage || '2'),
-      stations: obj.stations.map(function (st) {
-        st = (st && typeof st === 'object') ? st : {};
-        var next = null;
-        if (st.next === 'end') next = 'end';
-        else if (typeof st.next === 'number') next = st.next;
-        /* A puzzle type this build does not have would render a station with
-           no answer field at all, so an unknown one falls back to plain text —
-           the same shape 074 gave an unknown hazard symbol. */
-        var tol = Number(st.numericTolerance);
-        return {
-          clue: String(st.clue || ''), answers: String(st.answers || ''), hint: String(st.hint || ''),
-          next: next, image: ER.isInline(st.image) ? st.image : '',   // never another browser's idb: reference
-          type: STATION_TYPES.indexOf(st.type) !== -1 ? st.type : 'text',
-          hintCost: parseInt(st.hintCost, 10) || 0,
-          awardLetter: String(st.awardLetter || ''),
-          cipherPlain: String(st.cipherPlain || ''),
-          cipherShift: parseInt(st.cipherShift, 10) || 0,
-          maxAttempts: parseInt(st.maxAttempts, 10) || 0,
-          numericTolerance: (st.numericTolerance === null || st.numericTolerance === undefined ||
-            !isFinite(tol)) ? null : tol
-        };
-      })
-    };
+    return Stations.fromShare(obj, { kind: 'room', uniqueName: uniqueRoomName, roomId: makeRoomId, isInline: ER.isInline });
   }
 
   /** Files an arriving room into the store and points `current` at it, so the
@@ -1670,7 +1576,7 @@
           room.stations.push({ clue: '', answers: '', hint: '', next: null, image: '', type: 'text', hintCost: 0, awardLetter: '', cipherPlain: '', cipherShift: 0, maxAttempts: 0, numericTolerance: null });
         }
         var store = loadStore();
-        store.sets[room.name] = room;
+        store.sets[room.name] = Stations.toDisk(room);
         store.current = room.name;
         saveStore(store);
         setShareNote('Loaded a shared room as \u201c' + room.name + '\u201d, ' + room.stations.length +
