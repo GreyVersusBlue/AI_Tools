@@ -6846,6 +6846,30 @@ day; the cross-week, cross-period view teachers actually want does not.
 - **P4 — Question-attached picks.** A pick is `{student, question}` when a prompt
   bank is loaded (Exit Ticket, Number Talks, the question bank of Path 12), logged
   together.
+  **Design (AI-23, 2026-10-29; written before any code, read against 007 at v457).** *What exists.* A pick can already carry
+  a typed prompt: with "Enable random task prompts" on, `np-ui.js` `pickRandomPrompt()` takes one line of `np_prompts` at
+  random (or the one "Same question, next student" held), shows it on the winner modal under TASK and stores it as
+  `prompt` on the `np_history` entry (300 characters, which print, CSV and `np-equity`'s `withPrompt` already read).
+  *The addition.* A second source for that same slot: the teacher's own question bank. The Prompts tab gets a "Questions
+  from" chooser (`QuestionBank.sources({ peek: true, named: true })` less the read-only seed sets, so the bank and the
+  named sets with at least one question; 007 loads `_shared/question-bank.js` and none of the seed data files, which would be
+  weight on a front-of-room page for questions the teacher did not write). "My typed prompts" stays the opening choice and
+  behaves exactly as today. Chosen, a pick draws the next question from a shuffled bag of that source (no repeat until
+  every question has been asked, and never the same one twice running across a refill), the winner modal shows its
+  **question text only** (never the answer: it is a projected board), and the entry gets `prompt` (the text, as ever) and
+  a new additive field `qid`, the bank's id for it, so a later reader can find the question again. *What is kept:* `qid`
+  only when the id is the teacher's own (a `seed:` id is never stored, the rule of `question-bank.js`), 80 characters at
+  most; `np-store`'s history repair keeps it and drops anything else as before; no answer, no choices, no picture is
+  copied, and the question is not copied to 007 at all, so a bank question edited or deleted later leaves the old
+  entry's `prompt` as it was said. The chosen source is a page variable, not a setting: nothing is stored about it
+  (the default taken; remembering it is one `np_options` field if Devon wants it). *Where.* `np-question-source.js`, a pure
+  module (`toPrompt`, `usable`, `createBag(items, rng)`, `idFor(items, text)`), held by `test:name-picker-qsource`; `np-ui.js`
+  gets two optional host hooks, `drawQuestion()` and `qidFor(text)`, called only when present, so the host `parity-ui.mjs`
+  runs (no hooks) stays byte-for-byte what it was; the page wires the chooser and passes the hooks. The registry row for 007
+  gains `reads: ['gvb-question-bank']`. `qidFor` looks the sticky "same question" text up again, so a repeat keeps its id.
+  *Not in P4:* showing the answer to the teacher (a teacher-only view is its own design), Exit Ticket and Number Talks as
+  sources (their prompts live in `gvb-exit-ticket:customPrompts` and are not bank questions; that is P5's hand-off to
+  read, or a bank import on their side), and a per-question equity cut (who has been asked which question).
 - **P5 — Artifacts and remotes.** Team Draft hands off to Group Generator and the
   bracket (Path 13) instead of ending in a board; phone remote via Path 8; theme
   packs importable as JSON so a unit-themed board is a file.
