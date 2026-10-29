@@ -3,7 +3,9 @@
    state of createDraft(); the page asks it to clear() on a new roster or an erase and to renderBoard(). The host
    supplies what the old code read from the page: names(), isAbsent(n), scatterNames(), playBeep, playWinSound,
    showConfetti, fireworkShow, crazy(), escapeHtml, document, window, clearCards(), updateCountDisplay().
-   Held to the inline code it replaced by test/parity-draft.mjs. */
+   Held to the inline code it replaced by test/parity-draft.mjs.
+   Two optional host members, doneButtons() (html for the finished board's button row) and bindDone(document), let the
+   page add hand-off buttons; a host without them draws and behaves exactly as before. */
 
 export function createDraft(host){
   let draftTeams=[],draftTurnIndex=0,draftStarted=false,draftTeamCount=2;
@@ -96,7 +98,7 @@ export function createDraft(host){
     }).join('');
     const remainingHtml=complete?'':`<div class="draft-remaining-label">👉 ${escapeHtml(draftTeams[draftTurnIndex].name)}'s turn — click a student to draft them</div>
     <div class="draft-remaining">${remaining.map(n=>`<button class="draft-tile" data-draft-pick="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join('')}</div>`;
-    const doneHtml=complete?`<div class="draft-complete"><h3>🎉 Draft complete!</h3><div class="button-row" style="justify-content:center;"><button id="draftPrintBtn">🖨️ Print Rosters</button><button id="draftExportBtn">⬇️ Export</button><button id="draftRestartBtn">↺ New Draft (Same Teams)</button></div></div>`:'';
+    const doneHtml=complete?`<div class="draft-complete"><h3>🎉 Draft complete!</h3><div class="button-row" style="justify-content:center;"><button id="draftPrintBtn">🖨️ Print Rosters</button><button id="draftExportBtn">⬇️ Export</button><button id="draftRestartBtn">↺ New Draft (Same Teams)</button>${host.doneButtons?host.doneButtons():''}</div></div>`:'';
     return `<div class="draft-reconfigure"><button id="draftReconfigureBtn">⚙️ Reconfigure Teams</button></div><div class="draft-teams-bar">${teamsHtml}</div>${remainingHtml}${doneHtml}`;
   }
   function bindDraftSetupEvents(){
@@ -124,6 +126,8 @@ export function createDraft(host){
     if(exportBtn)exportBtn.addEventListener('click',exportDraftReport);
     const restartBtn=document.getElementById('draftRestartBtn');
     if(restartBtn)restartBtn.addEventListener('click',resetDraft);
+    /* optional: the page's own buttons for the finished board (Path 15 P5's hand-offs); absent, the board is as it was */
+    if(host.bindDone&&draftRemaining().length===0)host.bindDone(document);
   }
   function renderDraftBoard(){
     const board=document.getElementById('board');

@@ -67,6 +67,7 @@
     "Tools/name-picker/test/smoke-dashboard.mjs",
     "Tools/name-picker/test/qsource.test.mjs",
     "Tools/name-picker/test/smoke-qsource.mjs",
+    "Tools/name-picker/test/smoke-handoff.mjs",
     "Tools/name-picker/test/smoke-rollup.mjs",
     "Tools/name-picker/test/smoke-modes.mjs",
     "Tools/name-picker/test/smoke-sound.mjs",

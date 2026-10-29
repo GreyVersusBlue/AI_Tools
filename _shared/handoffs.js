@@ -32,6 +32,9 @@
        browser history only to move it between two tabs of one browser —
        the same trade 003 -> 037 declined. Across devices, 006's and 007's
        own roster links already exist and are a teacher's deliberate choice.
+       (A different thing, added with Path 15 P5: 007's finished Team Draft IS
+       an entry to 002 and to 020, because what travels is a result — team
+       names and who is on each — not the class roster.)
      002 -> 022 (groups -> lab roles) IS an entry. It carries exactly what
        002's own sheet already publishes — group labels and who is in each —
        and nothing 002's sheet does not. 022 keeps the groups as made and
@@ -324,6 +327,66 @@
           layouts: [],
           history: []
         };
+      }
+    },
+    {
+      from: 'name-picker',
+      to: 'group-team-generator',
+      label: 'Send teams to the Group / Team Generator',
+      note: 'the drafted teams, as groups',
+      /* No sheet row: 007's sheet shares a roster. The Team Draft board's own
+         button calls Handoffs.open(). */
+      sheet: false,
+      sent: 'Sent the teams to the Group / Team Generator in a new tab. They are saved there as a new grouping; editing it does not change the draft.',
+      /* 007's state for this entry is { name, teams: [{ name, picks }] } — the
+         Team Draft's finished teams, which is a RESULT (a team name and who is
+         on it), the same thing 002's own sheet publishes. It is not the class
+         roster (which still reaches 002 through roster.js, not a link): no pick
+         count, absence, flag, preferred name or history travels. Arrives as 002's
+         ordinary ?groups= payload; 002 is unchanged. */
+      transform: function (state) {
+        var teams = (state && Array.isArray(state.teams) ? state.teams : []);
+        var groups = teams.map(function (t, i) {
+          return { label: clip(t && t.name, 80) || ('Team ' + (i + 1)), members: nameGroups([t && t.picks])[0] || [] };
+        }).filter(function (g) { return g.members.length; });
+        return {
+          v: 1,
+          title: clip(state && state.name, 200) || 'Team Draft',
+          groups: groups
+        };
+      }
+    },
+    {
+      from: 'name-picker',
+      to: 'bracket-tournament-generator',
+      label: 'Send teams to the Bracket Generator',
+      note: 'a bracket with the teams as entrants',
+      sheet: false,
+      sent: 'Sent the teams to the Bracket / Tournament Generator in a new tab, as a bracket with the teams as entrants and their members listed. It is saved there as a new bracket; editing it does not change the draft.',
+      /* Same state as above. The bracket is built by _shared/bracket.js's own
+         buildBracket (no second builder), in the order the teams were drafted
+         (seed mode 'asEntered', so the link is the same every time). Team names
+         are the entrants and must be distinct, so a repeat gets " (2)"; the
+         members go in the `members` field 020 already reads. A page that sends
+         this must have loaded _shared/bracket.js. */
+      transform: function (state) {
+        if (!global.Bracket || typeof global.Bracket.buildBracket !== 'function') {
+          throw new Error('handoffs.js needs _shared/bracket.js loaded to build a bracket');
+        }
+        var teams = (state && Array.isArray(state.teams) ? state.teams : []);
+        var seen = Object.create(null), names = [], members = {};
+        teams.forEach(function (t, i) {
+          var base = clip(t && t.name, 60) || ('Team ' + (i + 1)), nm = base, n = 2;
+          while (seen[nm.toLowerCase()]) nm = base + ' (' + (n++) + ')';
+          seen[nm.toLowerCase()] = true;
+          names.push(nm);
+          var who = nameGroups([t && t.picks])[0] || [];
+          if (who.length) members[nm] = who.map(function (w) { return w.slice(0, 60); }).slice(0, 40);
+        });
+        if (names.length < 2) throw new Error('A bracket needs at least two teams.');
+        var b = global.Bracket.buildBracket((clip(state && state.name, 120) || 'Team Draft') + ' — Bracket', names, 'asEntered');
+        if (Object.keys(members).length) b.members = members;
+        return b;
       }
     },
     {

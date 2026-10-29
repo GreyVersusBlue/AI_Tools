@@ -36,7 +36,7 @@ const eq = (a, b, label) =>
 
 const read = f => fs.readFileSync(path.join(SITE, ...f.split('/')), 'utf8');
 
-function make({ noRegistry = false } = {}) {
+function make({ noRegistry = false, withBracket = false } = {}) {
   const opened = [];
   const win = {
     location: { href: 'https://aspermylessonplan.com/Tools/052-cognates-false-friends-builder.html' },
@@ -50,6 +50,7 @@ function make({ noRegistry = false } = {}) {
   const ctx = vm.createContext(win);
   vm.runInContext(read('_shared/state-link.js'), ctx, { filename: 'state-link.js' });
   if (!noRegistry) vm.runInContext(read('_shared/tool-registry.js'), ctx, { filename: 'tool-registry.js' });
+  if (withBracket) vm.runInContext(read('_shared/bracket.js'), ctx, { filename: 'bracket.js' });
   vm.runInContext(read('_shared/handoffs.js'), ctx, { filename: 'handoffs.js' });
   return win;
 }
@@ -205,8 +206,11 @@ console.log('\nhandoffs — groups to lab roles, lab groups to a seating chart')
 
   /* 006/007 -> 002 is decided NOT to be a link: 002 reads the same saved
      class lists through roster.js on the same device. */
-  eq(H.all.filter(h => h.to === 'group-team-generator').length, 0,
-    '006/007 -> 002 is NOT a link: the roster already reaches 002 through roster.js, with no URL');
+  eq(H.all.filter(h => h.to === 'group-team-generator' && h.from !== 'name-picker').length, 0,
+    '006 -> 002 is NOT a link: the roster already reaches 002 through roster.js, with no URL');
+  /* 007's Team Draft is the one exception (Path 15 P5): a finished draft is a result, not the roster. */
+  eq(H.all.filter(h => h.to === 'group-team-generator').map(h => h.from), ['name-picker'],
+    'the only other sender to 002 is 007\'s Team Draft');
 
   /* 002 -> 022: exactly 002's own share payload, cleaned. */
   const lab = one('group-team-generator', 'lab-group-role-randomizer');
@@ -300,6 +304,60 @@ console.log('\nhandoffs — custom trivia to the question bank');
 }
 
 /* ── 4. refusals ────────────────────────────────────────────────────────── */
+/* ── 3d. Team Draft's teams to 002 and to 020 (Path 15 P5) ──────────────── */
+console.log('\nhandoffs — Team Draft to groups and to a bracket');
+{
+  const win = make({ withBracket: true });
+  const H = win.Handoffs;
+  const to = (slug) => H.all.filter(h => h.from === 'name-picker' && h.to === slug);
+  const draft = { name: 'Period 3 draft', teams: [
+    { name: 'Red', picks: ['Ada', ' Bram ', '', 'Cleo'] }, { name: 'Blue', picks: ['Dov', 'Esme'] }, { name: 'Empty', picks: [] },
+    { name: 'Red', picks: ['Fitz'] }],
+    roster: 'must not travel', absent: ['Zed'], history: [1, 2, 3] };
+
+  const g = to('group-team-generator');
+  eq(g.length, 1, '007 -> 002 is declared once');
+  eq(g[0].sheet, false, 'with no sheet row: the Team Draft board has its own button');
+  const gp = g[0].transform(draft);
+  eq(gp, { v: 1, title: 'Period 3 draft', groups: [
+    { label: 'Red', members: ['Ada', 'Bram', 'Cleo'] }, { label: 'Blue', members: ['Dov', 'Esme'] }, { label: 'Red', members: ['Fitz'] }] },
+    'team names and who is on each travel; a blank name and an empty team do not');
+  ok(!/must not travel|Zed|history/.test(JSON.stringify(gp)), 'and nothing else of the page does');
+  eq(g[0].transform({}).title, 'Team Draft', 'an unnamed draft still has a title');
+  const gu = H.url(g[0], draft).url;
+  ok(gu.indexOf('/Tools/002-group-team-generator.html?groups=') !== -1, '002\'s page and ?groups= come off the registry');
+  const looks = (o) => !!o && typeof o === 'object' && Array.isArray(o.groups) && o.groups.length && o.groups.every(x => x && Array.isArray(x.members));
+  ok(looks(gp), 'the payload passes 002\'s own looksLikeSharePayload');
+  ok(!looks(g[0].transform({ teams: [{ name: 'A', picks: [] }] })), 'a draft with nobody on any team makes a payload 002 refuses (the button must not offer it)');
+
+  const b = to('bracket-tournament-generator');
+  eq(b.length, 1, '007 -> 020 is declared once');
+  eq(b[0].sheet, false, 'with no sheet row');
+  const bp = b[0].transform(draft);
+  eq(bp.name, 'Period 3 draft — Bracket', 'the bracket is named after the draft');
+  const entrants = bp.slots[0].filter(x => x);
+  eq(entrants, ['Red', 'Blue', 'Empty', 'Red (2)'], 'the teams are the entrants, in the order drafted, a repeated name made distinct');
+  eq(bp.slots.length, 3, 'four teams make a two-round bracket (round 0, semifinals... final)');
+  eq(bp.members, { Red: ['Ada', 'Bram', 'Cleo'], Blue: ['Dov', 'Esme'], 'Red (2)': ['Fitz'] }, 'members ride in the field 020 reads, only for teams that have some');
+  const ref = win.Bracket.buildBracket('Period 3 draft — Bracket', ['Red', 'Blue', 'Empty', 'Red (2)'], 'asEntered');
+  eq({ ...bp, members: undefined }, { ...ref, members: undefined }, 'and the bracket is exactly what Bracket.buildBracket builds, with no second builder');
+  eq(JSON.stringify(b[0].transform(draft)), JSON.stringify(bp), 'the same draft gives the same link every time');
+  const odd = b[0].transform({ teams: [{ name: 'A', picks: ['x'] }, { name: 'B', picks: [] }, { name: 'C', picks: ['y'] }] });
+  eq(odd.slots[0].length, 4, 'three teams get a bye in a four-slot first round');
+  ok(odd.slots[0].filter(x => x === null).length === 1, 'exactly one bye');
+  ok(H.url(b[0], draft).url.indexOf('/Tools/020-bracket-tournament-generator.html?bracket=') !== -1, '020\'s page and ?bracket= come off the registry');
+  let msg = null;
+  try { b[0].transform({ teams: [{ name: 'Solo', picks: ['a'] }] }); } catch (e) { msg = e.message; }
+  ok(msg && /at least two teams/.test(msg), 'one team is refused with the reason: ' + JSON.stringify(msg));
+  const r = H.open(b[0], { teams: [{ name: 'Solo', picks: ['a'] }] });
+  eq(r.ok, false, 'and open() turns that into a result, opening nothing');
+  eq(win.__opened, [], '(no tab)');
+  const bare = make();
+  const rr = bare.Handoffs.open(bare.Handoffs.all.find(h => h.to === 'bracket-tournament-generator'), draft);
+  eq(rr.ok, false, 'a page that did not load bracket.js gets a sentence, not a crash');
+  ok(/bracket\.js/.test(rr.message), 'naming the file: ' + JSON.stringify(rr.message));
+}
+
 console.log('\nhandoffs — refusals');
 {
   const win = make();

@@ -60,6 +60,7 @@
     "Tools/name-picker/test/smoke-dashboard.mjs": 40,
     "Tools/name-picker/test/qsource.test.mjs": 2,
     "Tools/name-picker/test/smoke-qsource.mjs": 40,
+    "Tools/name-picker/test/smoke-handoff.mjs": 40,
     "Tools/name-picker/test/smoke-rollup.mjs": 40,
     "Tools/name-picker/test/smoke-modes.mjs": 120,
     "Tools/name-picker/test/smoke-sound.mjs": 12,

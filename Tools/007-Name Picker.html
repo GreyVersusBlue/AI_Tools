@@ -31,6 +31,9 @@
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/tool-registry.js"></script>
+<script src="../_shared/bracket.js"></script>
+<script src="../_shared/handoffs.js"></script>
 <script src="../_shared/share.js"></script>
 <script src="../_shared/question-bank.js"></script>
 <script src="../_shared/chart-svg.js"></script>
@@ -840,7 +843,18 @@ const draft=createDraft({
   names:()=>names, isAbsent:n=>isAbsent(n), scatterNames:()=>scatterNames(),
   playBeep:(...a)=>playBeep(...a), playWinSound:(...a)=>playWinSound(...a), showConfetti:()=>showConfetti(),
   fireworkShow:()=>fireworkShow(), crazy:()=>crazyMode, escapeHtml:s=>escapeHtml(s),
-  clearCards:()=>{nameCards=[];}, updateCountDisplay:()=>updateCountDisplay()
+  clearCards:()=>{nameCards=[];}, updateCountDisplay:()=>updateCountDisplay(),
+  /* Path 15 P5: the finished board hands its teams to 002 (groups) or 020 (a bracket) through _shared/handoffs.js.
+     Names and team names only; the sheet's own roster share is untouched. */
+  doneButtons:()=>window.Handoffs?'<button id="draftToGroupsBtn">👥 Send to Groups</button><button id="draftToBracketBtn">🏆 Send to Bracket</button><span id="draftSendNote" class="muted-text" role="status" aria-live="polite"></span>':'',
+  bindDone:doc=>{
+    const send=(id,to)=>{const b=doc.getElementById(id);if(!b)return;b.addEventListener('click',()=>{
+      const entry=window.Handoffs.from('name-picker').find(h=>h.to===to);
+      const r=window.Handoffs.open(entry,{name:currentRosterName?currentRosterName+' draft':'Team Draft',teams:draft.teams().map(t=>({name:t.name,picks:t.picks.slice()}))});
+      const note=doc.getElementById('draftSendNote');if(note)note.textContent=r.message;
+    });};
+    send('draftToGroupsBtn','group-team-generator');send('draftToBracketBtn','bracket-tournament-generator');
+  }
 });
 
 /* === Reduced motion, undo, dated absences, equity, roster details === */
