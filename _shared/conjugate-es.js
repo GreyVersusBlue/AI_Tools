@@ -93,7 +93,7 @@
   var REG = {};
   ('hablar comer vivir caminar estudiar trabajar escuchar mirar tomar comprar beber aprender cantar bailar ' +
     'buscar sacar tocar llegar pagar cruzar escoger recoger dirigir leer creer construir huir incluir ' +
-    'conocer parecer ofrecer producir conducir traducir vencer seguir').split(' ').forEach(function (v) { REG[v] = true; });
+    'conocer parecer ofrecer producir conducir traducir vencer seguir levantar lavar llamar duchar bañar').split(' ').forEach(function (v) { REG[v] = true; });
 
   var EV = ['é', 'ás', 'á', 'emos', 'éis', 'án'], CV = ['ía', 'ías', 'ía', 'íamos', 'íais', 'ían'];
   var VOW = 'aeiouáéíóú';

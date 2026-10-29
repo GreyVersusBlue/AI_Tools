@@ -77,7 +77,7 @@
   var REG = {};
   ('parler aimer habiter chanter danser étudier regarder écouter travailler manger commencer payer essayer employer ' +
     'finir choisir réussir grandir vendre attendre répondre entendre perdre ' +
-    'appuyer nettoyer conduire produire traduire construire détruire').split(' ').forEach(function (v) { REG[v] = true; });
+    'appuyer nettoyer conduire produire traduire construire détruire laver').split(' ').forEach(function (v) { REG[v] = true; });
   // conduire and its family are records ('-duire'); the names above only mark them known
 
   var IMP = ['ais', 'ais', 'ait', 'ions', 'iez', 'aient'];

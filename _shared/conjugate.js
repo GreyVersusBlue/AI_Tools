@@ -549,6 +549,12 @@
     register: register, languages: languages, classify: classify, lookup: lookup,
     conjugate: conjugate, table: table, match: match, merge: merge, validate: validate,
     normalize: normalize, stripAccents: stripAccents, status: STATUS,
+    // every verb the pack holds a record for or names as regular (a '-family' record is not a verb), sorted
+    inventory: function (lang) {
+      var p = packs[lang]; if (!p) return [];
+      var all = Object.keys(p.records).concat(Object.keys(p.regulars)).filter(function (v) { return v.charAt(0) !== '-'; });
+      return all.filter(function (v, i) { return all.indexOf(v) === i; }).sort(function (a, b) { return a.localeCompare(b, lang); });
+    },
     participle: function (lang, verb) { var c = resolve(lang, verb); return c && c.cls ? participleOf(c) : ''; },
     gerund: function (lang, verb) { var c = resolve(lang, verb); return c && c.cls ? gerundOf(c) : ''; }
   };

@@ -23,6 +23,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import * as corpus from '../print-corpus.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const site = path.join(here, '..', '..', '..');
@@ -553,10 +554,35 @@ const BROKEN = [
   ['a derived tense keeps duplicates', '_shared/conjugate.js', "if (c.forms.indexOf(j.text) < 0) c.forms.push(j.text);", "c.forms.push(j.text);"]
 ];
 
+// the check sheet for the language teacher (print-corpus.mjs)
+function sheetChecks() {
+  const f = [];
+  const { loadEngine, corpusVerbs, checkSheet } = corpus;
+  const C = loadEngine();
+  for (const lang of ['es', 'fr']) {
+    const verbs = corpusVerbs(C, lang);
+    const html = checkSheet(C, lang, verbs);
+    const pages = html.split('<section>').length - 1;
+    if (pages !== verbs.length) f.push(`${lang} sheet: ${pages} pages for ${verbs.length} verbs`);
+    if (verbs.length < (lang === 'es' ? 60 : 50)) f.push(`${lang} sheet lists only ${verbs.length} verbs`);
+    if ((html.match(/UNREVIEWED/g) || []).length !== pages) f.push(`${lang} sheet: not every page says UNREVIEWED`);
+    if ((html.match(/Read by:/g) || []).length !== pages) f.push(`${lang} sheet: not every page has a line to sign`);
+    for (const must of lang === 'es' ? ['tener', 'pensar', 'llover', 'conocer', 'levantar'] : ['être', 'acheter', 'payer', 'mourir', 'falloir', 'manger']) {
+      if (!verbs.includes(must)) f.push(`${lang} sheet leaves out ${must}`);
+    }
+  }
+  const one = checkSheet(C, 'es', ['tener']);
+  if (!/tengo/.test(one) || !/Participle: <b>tenido/.test(one) || !/Gerund: <b>teniendo/.test(one)) f.push('the sheet for tener does not show its forms');
+  if (!/<sup>irr tener<\/sup>/.test(one)) f.push('the sheet does not tag an irregular form with its rule');
+  if (!/not on the pattern list/.test(checkSheet(C, 'es', ['zumbar']))) f.push('the sheet does not mark an unknown verb');
+  return f;
+}
+
 let failures = [];
 const note = (label, list) => { for (const f of list) failures.push(label + ': ' + f); };
 note('parity', parity(load()));
 note('suite', suite(load()));
+note('sheet', sheetChecks());
 
 let broken = 0;
 for (const [label, file, from, to] of BROKEN) {
