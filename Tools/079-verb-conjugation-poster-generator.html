@@ -570,7 +570,8 @@
     });
     els.calloutStatus.textContent = c.verbs.length + ' of ' + CALLOUT_MAX + ' verbs chosen' +
       (full ? ' (the most a box holds; untick one to pick another)' : '') +
-      (c.on && !c.verbs.length ? '. Nothing will print until you pick at least one.' : '.');
+      (c.on && !c.verbs.length ? '. Nothing will print until you pick at least one.' : '.') +
+      ' Unreviewed: no language teacher has read these forms yet.';
   }
 
   function setCallout(next, keepList) {
