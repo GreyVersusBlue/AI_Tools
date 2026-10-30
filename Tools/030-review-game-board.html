@@ -589,6 +589,10 @@
     body.printing-sheet > *:not(#printArea) { display: none !important; }
     body.printing-sheet #printArea { position: static; padding: 0; }
   }
+  /* Phone width (AI-30, rank 66). */
+  @media (max-width: 480px) {
+    .clue-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
 </style>
 </head>
 <body>

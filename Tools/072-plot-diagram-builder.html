@@ -140,6 +140,11 @@
     background: rgba(255,255,255,.06); border-radius: 10px; padding: .6rem .7rem;
   }
   .present-stage-text.empty { color: #6b7688; font-style: italic; }
+  /* Phone width (AI-30, rank 66): the mountain keeps its shape and the card scrolls. */
+  @media (max-width: 480px) {
+    .card:has(> .mountain-wrap) { overflow-x: auto; }
+    .mountain-wrap { min-width: 720px; }
+  }
 </style>
 </head>
 <body>

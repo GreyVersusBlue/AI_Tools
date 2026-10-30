@@ -39,3 +39,15 @@
    own look, and is not this. */
 .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem; border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
 .share-note.error { background: var(--err-bg); border-color: var(--err); }
+
+/* Phone width (AI-30, rank 66). Nothing here applies above 480px, so desktop
+   and print are untouched. A form control with a wide intrinsic size (a
+   <select> whose longest option is a sentence, a text input's default 20ch)
+   and a flex row that will not wrap are what held a card, a toolbar or the
+   whole page wider than a 360px screen; they may now shrink to their box. */
+@media (max-width: 480px) {
+  .card, .toolbar, .app-header, .layout > * { min-width: 0; max-width: 100%; }
+  .toolbar > select, .card > select, .card select, .toolbar select,
+  .card > input:not([type="checkbox"]):not([type="radio"]),
+  .card textarea { max-width: 100%; }
+}
