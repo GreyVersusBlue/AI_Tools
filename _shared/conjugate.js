@@ -80,7 +80,8 @@
     var r = p.reflexive;
     if (r) {
       if (r.suffix && s.length >= 4 && s.slice(-r.suffix.length) === r.suffix) {
-        var b = s.slice(0, -r.suffix.length);
+        // Italian lavarsi is lavare + si: `restore` puts back the vowel the -si dropped
+        var b = s.slice(0, -r.suffix.length) + (r.restore || '');
         if (classEnding(p, b)) return { base: b, reflexive: true };
       }
       var pre = r.prefixes || [];
@@ -450,7 +451,13 @@
 
   function render(ctx, form, slot, opts) {
     var s = form;
-    if (ctx.reflexive && ctx.p.reflexivePronouns) s = joinWord(ctx, ctx.p.reflexivePronouns[slot], s);
+    if (ctx.reflexive && ctx.p.reflexivePronouns) {
+      if (ctx.p.reflexivePlacement === 'after') {
+        // German: the pronoun follows the finite verb (ich wasche mich, ich habe mich gewaschen, ich ziehe mich an)
+        var sp = s.indexOf(' ');
+        s = sp < 0 ? s + ' ' + ctx.p.reflexivePronouns[slot] : s.slice(0, sp) + ' ' + ctx.p.reflexivePronouns[slot] + s.slice(sp);
+      } else s = joinWord(ctx, ctx.p.reflexivePronouns[slot], s);
+    }
     if (opts.pronouns && ctx.p.subjects) s = joinWord(ctx, ctx.p.subjects[slot], s);
     return s;
   }
@@ -512,6 +519,10 @@
       var i = s.indexOf(' ');
       if (i > 0 && pr.words.indexOf(s.slice(0, i)) >= 0) s = s.slice(i + 1);
     } while (s !== prev);
+    // a pack that puts the reflexive pronoun after the verb: a missing or extra one is the same close answer
+    if (p.reflexivePlacement === 'after') {
+      s = s.split(' ').filter(function (w, k) { return k === 0 || p.reflexivePronouns.indexOf(w) < 0; }).join(' ');
+    }
     return s;
   }
 

@@ -548,7 +548,17 @@ function suite(win) {
   eq(forms('de', 'basteln', 'present'), w('bastle bastelst bastelt basteln bastelt basteln'), 'de unlisted -eln verb');
   eq(C.conjugate('de', 'basteln', 'present').known, false, 'de unlisted verb is not known');
   eq(kinds('de', 'basteln', 'perfect'), Array(6).fill('assumed'), 'de unlisted verb is assumed');
-  ok(C.conjugate('de', 'sich waschen', 'present').complete === false, 'de refuses a reflexive infinitive');
+  const dmatch = (t, e) => C.match(t, e, { lang: 'de' }).verdict;
+  // reflexive verbs (the pronoun follows the finite verb; goldens typed by the session, the teacher's to check)
+  cells('de', 'sich waschen', 'present', 'wasche mich | wäschst dich | wäscht sich | waschen uns | wascht euch | waschen sich');
+  cells('de', 'sich waschen', 'perfect', 'habe mich gewaschen | hast dich gewaschen | hat sich gewaschen | haben uns gewaschen | habt euch gewaschen | haben sich gewaschen');
+  cells('de', 'sich waschen', 'future', 'werde mich waschen | wirst dich waschen | wird sich waschen | werden uns waschen | werdet euch waschen | werden sich waschen');
+  cells('de', 'sich anziehen', 'present', 'ziehe mich an | ziehst dich an | zieht sich an | ziehen uns an | zieht euch an | ziehen sich an');
+  cells('de', 'sich anziehen', 'perfect', 'habe mich angezogen | hast dich angezogen | hat sich angezogen | haben uns angezogen | habt euch angezogen | haben sich angezogen');
+  eq(forms('de', 'sich freuen', 'present', { pronouns: true })[0], 'ich freue mich', 'de reflexive with a subject');
+  eq(C.conjugate('de', 'sich waschen', 'present').reflexive, true, 'de reflexive is flagged');
+  eq(C.classify('de', 'sich waschen'), { 'class': 'en', stem: 'wasch', reflexive: true, base: 'waschen' }, 'classify sich waschen');
+  eq(dmatch('wasche', 'wasche mich'), 'close', 'de a missing reflexive pronoun is close');
   // matching: ü typed as u (P19-8), ß typed as ss, a missing umlaut, the pronoun
   const dm = (t, e) => C.match(t, e, { lang: 'de' });
   eq([dm('uber', 'über').verdict === 'correct' ? 'close' : 'x', dm('fahrt', 'fährt').verdict, dm('ich mache', 'mache').verdict, dm('isst', 'isst').verdict], ['close', 'close', 'close', 'correct'], 'de match verdicts (ü is handled below)');
@@ -592,8 +602,14 @@ function suite(win) {
   eq(forms('it', 'zompare', 'present'), w('zompo zompi zompa zompiamo zompate zompano'), 'it unlisted -are verb is regular');
   eq(forms('it', 'pulire', 'present')[0], 'pulisco', 'it pulire carries the -isc- flag');
   eq(forms('it', 'servire', 'present')[0], 'servo', 'it servire does not');
-  eq(C.classify('it', 'lavarsi'), null, 'it reflexive is not a class');
-  eq(C.conjugate('it', 'lavarsi', 'present').complete, false, 'it refuses a reflexive infinitive');
+  eq(C.classify('it', 'lavarsi'), { 'class': 'are', stem: 'lav', reflexive: true, base: 'lavare' }, 'classify lavarsi');
+  cells('it', 'lavarsi', 'present', 'mi lavo | ti lavi | si lava | ci laviamo | vi lavate | si lavano');
+  cells('it', 'lavarsi', 'passato-prossimo', 'mi sono lavato | ti sei lavato | si è lavato | ci siamo lavati | vi siete lavati | si sono lavati');
+  cells('it', 'lavarsi', 'future', 'mi laverò | ti laverai | si laverà | ci laveremo | vi laverete | si laveranno');
+  cells('it', 'mettersi', 'present', 'mi metto | ti metti | si mette | ci mettiamo | vi mettete | si mettono');
+  cells('it', 'vestirsi', 'present', 'mi vesto | ti vesti | si veste | ci vestiamo | vi vestite | si vestono');
+  eq(C.conjugate('it', 'alzarsi', 'passato-prossimo', { pronouns: true }).forms[3], 'noi ci siamo alzati', 'it reflexive with a subject');
+  eq(C.match('lavo', 'mi lavo', { lang: 'it' }).verdict, 'close', 'it a missing reflexive pronoun is close');
   eq(C.conjugate('it', 'parlare', 'present', { pronouns: true }).forms[2], 'lui parla', 'it subject');
   eq(C.match('perche', 'perché', { lang: 'it' }).verdict, 'close', 'it accent is close');
   eq(C.match('e', 'è', { lang: 'it' }).verdict, 'close', 'it è without the accent is close');
@@ -651,7 +667,7 @@ function suite(win) {
     ok(fut[0].slice(0, -1) === cond[0].slice(0, -2), `it ${v}: the condizionale stem is the futuro's (${fut[0]} / ${cond[0]})`);
   }
   // and the German future and conditional end in the infinitive
-  for (const v of C.inventory('de')) ok(forms('de', v, 'future')[0].endsWith(' ' + v) && forms('de', v, 'conditional')[0].endsWith(' ' + v), `de ${v}: the future and conditional end in the infinitive`);
+  for (const v of C.inventory('de')) ok(forms('de', v, 'future')[0].endsWith(' ' + v.replace(/^sich /, '')) && forms('de', v, 'conditional')[0].endsWith(' ' + v.replace(/^sich /, '')), `de ${v}: the future and conditional end in the infinitive`);
 
   // the six declared tenses are what Devon asked for ("The six", 2026-10-07)
   eq(C.languages().find((l) => l.id === 'es').tenses.map((t) => t.id), ['present', 'preterite', 'imperfect', 'future', 'conditional', 'subjunctive'], 'Spanish tense ids');
@@ -773,6 +789,14 @@ const BROKEN = [
   ['Italian condizionale endings', '_shared/conjugate-it.js', "endings: { all: ['ei', 'esti', 'ebbe', 'emmo', 'este', 'ebbero'] }", "endings: { all: ['ei', 'esti', 'ebbe', 'emmo', 'este', 'ebbe'] }"],
   ['Italian fare imperfect stem', '_shared/conjugate-it.js', "imperfect: 'fac'", "imperfect: 'far'"],
   ['Italian uscire present', '_shared/conjugate-it.js', "present: pr('esco esci esce", "present: pr('uscio esci esce"],
+  ['German reflexive pronoun goes first', '_shared/conjugate-de.js', "reflexivePlacement: 'after'", "reflexivePlacement: 'before'"],
+  ['German reflexive pronouns', '_shared/conjugate-de.js', "['mich', 'dich', 'sich', 'uns', 'euch', 'sich']", "['mich', 'dich', 'sich', 'uns', 'euch', 'euch']"],
+  ['German reflexive perfect takes sein', '_shared/conjugate-de.js', "reflexiveAux: 'haben'", "reflexiveAux: 'sein'"],
+  ['Italian lavarsi loses its vowel', '_shared/conjugate-it.js', "restore: 'e'", "restore: ''"],
+  ['Italian reflexive takes avere', '_shared/conjugate-it.js', "reflexiveAux: 'essere'", "reflexiveAux: 'avere'"],
+  ['Italian reflexive pronouns', '_shared/conjugate-it.js', "['mi', 'ti', 'si', 'ci', 'vi', 'si']", "['mi', 'ti', 'si', 'ci', 'ti', 'si']"],
+  ['reflexive pronoun placement is ignored', '_shared/conjugate.js', "if (ctx.p.reflexivePlacement === 'after') {", "if (false) {"],
+  ['a restore vowel is ignored', '_shared/conjugate.js', "+ (r.restore || '');", ";"],
   ['a derived tense keeps duplicates', '_shared/conjugate.js', "if (c.forms.indexOf(j.text) < 0) c.forms.push(j.text);", "c.forms.push(j.text);"]
 ];
 

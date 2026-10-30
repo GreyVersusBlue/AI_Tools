@@ -20,7 +20,8 @@
  * for noi/voi/loro (sono andato, siamo andati), every such cell noted "agreement": the Italian
  * counterpart of the French choice (Devon, 2026-10-21, P19-2), taken here without asking.
  *
- * NOT BUILT: reflexive verbs (lavarsi), the imperative, the passato remoto, the gerund.
+ * Reflexive verbs (lavarsi, alzarsi) carry the pronoun in front and take essere. NOT BUILT: the passato remoto,
+ * the gerund, a pronoun joined to an infinitive (voglio lavarmi).
  *
  * NOTHING HERE HAS BEEN READ BY A LANGUAGE TEACHER. Records were written from the standard
  * paradigm as remembered, not copied from a table. A teacher reads the sheet
@@ -78,7 +79,7 @@
 
   var REG = {};
   ('parlare mangiare cominciare cercare pagare studiare lavorare abitare ascoltare comprare giocare viaggiare ' +
-    'cantare ballare amare aspettare chiamare lasciare incontrare ' +
+    'cantare ballare amare aspettare chiamare lasciare incontrare lavare alzare svegliare divertire ' +
     'vendere credere ripetere ricevere ' +
     'dormire sentire').split(' ').forEach(function (v) { REG[v] = true; });
 
@@ -87,7 +88,11 @@
     id: 'it', name: 'Italian', reviewed: false,
     persons: ['io', 'tu', 'lui / lei', 'noi', 'voi', 'loro'],
     subjects: ['io', 'tu', 'lui', 'noi', 'voi', 'loro'],
-    pronouns: { words: ['io', 'tu', 'lui', 'lei', 'noi', 'voi', 'loro'] },
+    pronouns: { words: ['io', 'tu', 'lui', 'lei', 'noi', 'voi', 'loro', 'mi', 'ti', 'si', 'ci', 'vi'] },
+    // lavarsi is lavare + si; the pronoun goes before the verb (mi lavo, mi sono lavato) and every compound
+    // takes essere, with the same masculine agreement as other essere verbs
+    reflexive: { suffix: 'si', restore: 'e' },
+    reflexivePronouns: ['mi', 'ti', 'si', 'ci', 'vi', 'si'], reflexiveAux: 'essere',
     agreementAux: 'essere', agreementPlural: [/o$/, 'i'],
     classes: {
       are: { name: '-are', example: 'parlare', suffixes: ['are'], cut: 3, futureSuffix: 'er', participle: { add: 'ato' }, not: /\s/ },
@@ -116,6 +121,8 @@
       // cercare: cerchi, cerchiamo, cercherò; pagare: paghi
       { id: 'c>ch', cls: ['are'], stem: /[cg]$/, next: /^[ie]/, stemRepl: [/$/, 'h'] }
     ],
+    // reflexive verbs are a -si ending on a verb the pack knows; listed so the check sheet prints them
+    examples: ['lavarsi', 'alzarsi', 'vestirsi', 'divertirsi', 'mettersi'],
     records: R,
     regulars: REG
   });

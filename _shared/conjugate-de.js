@@ -16,8 +16,8 @@
  * to a verb this pack knows: the engine moves the prefix to the end of a finite form (ich mache
  * auf) and puts it between ge- and the stem in the participle (aufgemacht).
  *
- * NOT BUILT: reflexive verbs (sich waschen; the pronoun's place differs from Spanish and French),
- * the imperative, the passive, the plusquamperfekt. A word with a space in it is refused.
+ * Reflexive verbs (sich waschen, sich anziehen) put the accusative pronoun after the finite verb. NOT BUILT: a
+ * dative reflexive (sich etwas vorstellen).
  *
  * NOTHING HERE HAS BEEN READ BY A LANGUAGE TEACHER. The records were written from the standard
  * paradigm as remembered, not copied from a table; the forms in Tools/conjugate/test are the
@@ -112,7 +112,7 @@
   var REG = {};
   ('machen spielen lernen arbeiten wohnen kaufen sagen fragen hören lieben leben brauchen öffnen reisen tanzen ' +
     'sammeln wandern studieren besuchen verkaufen erklären bezahlen holen räumen schauen zählen stellen setzen ' +
-    'legen packen putzen suchen zeigen bauen lachen antworten warten rechnen').split(' ')
+    'legen packen putzen suchen zeigen bauen lachen antworten warten rechnen freuen').split(' ')
     .forEach(function (v) { REG[v] = true; });
 
   var E_RE = /(?:[dt]|(?:[^aeiouäöüyhlrmn]|ch)[mn])$/; // a stem that takes an e before -st, -t, -te...
@@ -122,6 +122,10 @@
     id: 'de', name: 'German', reviewed: false,
     persons: ['ich', 'du', 'er / sie / es', 'wir', 'ihr', 'sie / Sie'],
     subjects: ['ich', 'du', 'er', 'wir', 'ihr', 'sie'],
+    // sich waschen: the accusative pronoun after the finite verb (ich wasche mich). Reflexive verbs take
+    // haben in the Perfekt; a dative reflexive (sich etwas vorstellen: mir) is not built.
+    reflexive: { prefixes: ['sich '] },
+    reflexivePronouns: ['mich', 'dich', 'sich', 'uns', 'euch', 'sich'], reflexivePlacement: 'after', reflexiveAux: 'haben',
     pronouns: { words: ['ich', 'du', 'er', 'sie', 'es', 'wir', 'ihr'] },
     separable: { prefixes: ['zusammen', 'zurück', 'vorbei', 'weiter', 'wieder', 'statt', 'fort', 'fest', 'heim', 'los', 'mit', 'nach', 'teil', 'weg', 'vor', 'her', 'hin', 'ab', 'an', 'auf', 'aus', 'bei', 'ein', 'um', 'zu'] },
     classes: {
@@ -168,7 +172,7 @@
       { id: 'eln', tenses: ['present', 'subjunctive'], cls: ['eln'], stem: /el$/, next: /^$/, stemRepl: [/el$/, 'le'] }
     ],
     // separable verbs are not records (they are a prefix on one); these are listed so the check sheet prints them
-    examples: 'aufmachen zumachen einkaufen anrufen mitkommen ankommen aufstehen ansehen abholen mitbringen einladen zurückkommen'.split(' '),
+    examples: 'aufmachen zumachen einkaufen anrufen mitkommen ankommen aufstehen ansehen abholen mitbringen einladen zurückkommen sich_waschen sich_anziehen sich_freuen'.split(' ').map(function (v) { return v.replace('_', ' '); }),
     records: R,
     regulars: REG
   });
