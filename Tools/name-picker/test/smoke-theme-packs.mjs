@@ -6,6 +6,7 @@
 // survives a reload, exports back to the same file and goes when removed. A pack with a url() colour or a property
 // outside the whitelist imports nothing and says why.
 
+import os from 'node:os';
 import fs from 'node:fs';
 import path from 'node:path';
 import { serve, launch, prepPage, settle, downloadText, a11yScan } from '../../board-check/harness.mjs';
@@ -16,7 +17,7 @@ const BASE = `http://127.0.0.1:${PORT}`;
 let passed = 0, failed = 0;
 const ok = (c, l) => { if (c) passed++; else { failed++; console.log('  FAIL ' + l); } };
 
-const dir = fs.mkdtempSync(path.join(process.env.HOME + '/.cache/selector-scratch/AI-23/', 'packs-'));
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'np-packs-'));
 const write = (name, obj) => { const f = path.join(dir, name); fs.writeFileSync(f, typeof obj === 'string' ? obj : JSON.stringify(obj)); return f; };
 const rome = { ...THEMES.classroom, '--bg': '#112233' };
 const goodFile = write('rome.json', { v: 1, name: 'Ancient Rome', themes: { forum: rome } });
