@@ -235,6 +235,22 @@ const plainHtml = await page.evaluate(() => { const b = [...document.querySelect
 ok(plainHtml.includes('pattern-row'), 'the select row is there for every entry');
 await a11yScan(page, { impact: 'serious' }).then(r => ok(!r || (Array.isArray(r) ? r.length === 0 : !r.violations || r.violations.length === 0), 'the editor is clean under axe')).catch(e => ok(false, 'axe: ' + e.message));
 
+/* ── 8. tenses beyond the six are offered ─────────────────────────────── */
+console.log('039 — the tense menu offers the extra tenses, after the six');
+await page.click('#addConjBtn'); await settle(page, 100);
+const last = '.conj-entry:last-of-type';
+await page.selectOption(last + ' .pattern-row select:nth-of-type(1)', 'es'); await settle(page, 100);
+const tenseOpts = await page.$$eval(last + ' .pattern-row select:nth-of-type(2) option', os => os.map(o => o.value));
+eq(tenseOpts, ['', 'present', 'preterite', 'imperfect', 'future', 'conditional', 'subjunctive', 'present-perfect', 'imperfect-subjunctive', 'command'], 'Spanish: the six, then the present perfect, the -ra subjunctive and the command');
+await page.fill(last + ' input[placeholder^="Infinitive"]', 'hablar');
+await page.selectOption(last + ' .pattern-row select:nth-of-type(2)', 'command');
+await page.click(last + ' .pattern-row button'); await settle(page, 150);
+const cmd = await page.$$eval(last + ' .forms-grid input', els => els.map(e => e.value));
+eq(cmd.slice(0, 6), ['', 'habla', 'hable', 'hablemos', 'hablad', 'hablen'], 'Fill writes a command, with the first person singular row left empty');
+eq(await page.inputValue(last + ' input[placeholder^="Tense"]'), 'Command (affirmative)', 'and names the tense label');
+await page.selectOption(last + ' .pattern-row select:nth-of-type(1)', 'de'); await settle(page, 100);
+ok((await page.$$eval(last + ' .pattern-row select:nth-of-type(2) option', os => os.map(o => o.value))).includes('imperative'), 'German offers the imperative');
+
 await browser.close(); server.close();
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
