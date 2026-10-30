@@ -48,6 +48,9 @@ function load(patch) {
 
 const w = (s) => (s.includes(' | ') ? s.split(' | ') : s.split(' '));
 
+// a form is lowercase NFC; the German formal pronoun after an imperative (machen Sie) is the one capital
+const lowerOk = (f) => { const g = f.replace(/\bSie\b/g, 'sie'); return g === g.toLowerCase() && f === f.normalize('NFC'); };
+
 function suite(win) {
   const C = win.Conjugate;
   const fails = [];
@@ -388,6 +391,43 @@ function suite(win) {
   cells('fr', 'avoir', 'command', ' | aie |  | ayons | ayez | ');
   cells('fr', 'manger', 'command', ' | mange |  | mangeons | mangez | ');
   eq(C.conjugate('fr', 'se lever', 'command').complete, false, 'fr a reflexive impératif is refused');
+  // Latin: the subjunctive, the passive, the deponents
+  eq(extras('la'), ['present-subjunctive', 'imperfect-subjunctive', 'present-passive', 'imperfect-passive', 'future-passive'], 'la extra tenses');
+  eq(six('la'), ['present', 'imperfect', 'future', 'perfect', 'pluperfect', 'future-perfect'], 'la the six do not move');
+  cells('la', 'amare', 'present-subjunctive', 'amem | amēs | amet | amēmus | amētis | ament');
+  cells('la', 'monere', 'present-subjunctive', 'moneam | moneās | moneat | moneāmus | moneātis | moneant');
+  cells('la', 'regere', 'present-subjunctive', 'regam | regās | regat | regāmus | regātis | regant');
+  cells('la', 'capere', 'present-subjunctive', 'capiam | capiās | capiat | capiāmus | capiātis | capiant');
+  cells('la', 'audire', 'present-subjunctive', 'audiam | audiās | audiat | audiāmus | audiātis | audiant');
+  cells('la', 'esse', 'present-subjunctive', 'sim | sīs | sit | sīmus | sītis | sint');
+  cells('la', 'amare', 'imperfect-subjunctive', 'amārem | amārēs | amāret | amārēmus | amārētis | amārent');
+  cells('la', 'monere', 'imperfect-subjunctive', 'monērem | monērēs | monēret | monērēmus | monērētis | monērent');
+  cells('la', 'dicere', 'imperfect-subjunctive', 'dīcerem | dīcerēs | dīceret | dīcerēmus | dīcerētis | dīcerent');
+  cells('la', 'audire', 'imperfect-subjunctive', 'audīrem | audīrēs | audīret | audīrēmus | audīrētis | audīrent');
+  cells('la', 'esse', 'imperfect-subjunctive', 'essem | essēs | esset | essēmus | essētis | essent');
+  cells('la', 'amare', 'present-passive', 'amor | amāris | amātur | amāmur | amāminī | amantur');
+  cells('la', 'monere', 'present-passive', 'moneor | monēris | monētur | monēmur | monēminī | monentur');
+  cells('la', 'regere', 'present-passive', 'regor | regeris | regitur | regimur | regiminī | reguntur');
+  cells('la', 'capere', 'present-passive', 'capior | caperis | capitur | capimur | capiminī | capiuntur');
+  cells('la', 'audire', 'present-passive', 'audior | audīris | audītur | audīmur | audīminī | audiuntur');
+  cells('la', 'amare', 'imperfect-passive', 'amābar | amābāris | amābātur | amābāmur | amābāminī | amābantur');
+  cells('la', 'regere', 'imperfect-passive', 'regēbar | regēbāris | regēbātur | regēbāmur | regēbāminī | regēbantur');
+  cells('la', 'amare', 'future-passive', 'amābor | amāberis | amābitur | amābimur | amābiminī | amābuntur');
+  cells('la', 'regere', 'future-passive', 'regar | regēris | regētur | regēmur | regēminī | regentur');
+  cells('la', 'audire', 'future-passive', 'audiar | audiēris | audiētur | audiēmur | audiēminī | audientur');
+  cells('la', 'ferre', 'present-passive', 'feror | ferris | fertur | ferimur | feriminī | feruntur');
+  eq(forms('la', 'esse', 'present-passive'), Array(6).fill(''), 'la esse has no passive');
+  eq(forms('la', 'stare', 'present-passive'), Array(6).fill(''), 'la stare has no passive');
+  cells('la', 'loqui', 'present', 'loquor | loqueris | loquitur | loquimur | loquiminī | loquuntur');
+  cells('la', 'loqui', 'imperfect', 'loquēbar | loquēbāris | loquēbātur | loquēbāmur | loquēbāminī | loquēbantur');
+  cells('la', 'loqui', 'future', 'loquar | loquēris | loquētur | loquēmur | loquēminī | loquentur');
+  cells('la', 'conari', 'present', 'cōnor | cōnāris | cōnātur | cōnāmur | cōnāminī | cōnantur');
+  cells('la', 'vereri', 'present', 'vereor | verēris | verētur | verēmur | verēminī | verentur');
+  cells('la', 'mori', 'present', 'morior | moreris | moritur | morimur | moriminī | moriuntur');
+  cells('la', 'sequi', 'future', 'sequar | sequēris | sequētur | sequēmur | sequēminī | sequentur');
+  eq(forms('la', 'loqui', 'perfect'), Array(6).fill(''), 'la a deponent perfect is not built, so it is empty');
+  eq(C.conjugate('la', 'loqui', 'perfect').notes.map((n) => n.kind), Array(6).fill('defective'), 'la a deponent perfect says none');
+  eq(forms('la', 'amare', 'present')[0], 'amō', 'la a deponent record does not touch an active verb');
   eq(C.conjugate('es', 'hablar', 'present', { slots: [0, 2] }).forms, ['hablo', '', 'habla', '', '', ''], 'opts.slots');
 
   // (7) defective
@@ -502,7 +542,8 @@ function suite(win) {
   const allEs = ESV.concat('enviar esquiar guiar confiar variar continuar actuar graduar pensar cerrar empezar comenzar entender perder sentar defender encender negar sentir preferir mentir contar encontrar recordar almorzar costar mostrar mover dormir pedir servir repetir vestir seguir competir'.split(' '));
   const allFr = FRV.concat('partir sortir dormir servir sentir ouvrir offrir couvrir souffrir acheter lever mener préférer espérer répéter appeler jeter envoyer arriver entrer monter descendre rester tomber retourner passer rentrer'.split(' '));
   const sweep = (lang, list) => {
-    const ids = C.languages().find((l) => l.id === lang).tenses.map((t) => t.id);
+    const info = C.languages().find((l) => l.id === lang);
+    const ids = info.tenses.concat(info.extraTenses).map((t) => t.id);
     for (const v of new Set(list)) {
       if (v.charAt(0) === '-' || SKIP_INV.has(v)) continue;
       const rec = C.lookup(lang, v);
@@ -512,10 +553,11 @@ function suite(win) {
       ok(!!C.participle(lang, v), `${lang} ${v}: has a participle`);
       for (const t of ids) {
         const r = C.conjugate(lang, v, t);
+        if (r.problem === 'not built for a reflexive verb') continue;
         ok(r.complete, `${lang} ${v} ${t}: complete`);
         r.forms.forEach((f, i) => {
           if (r.notes.some((n) => n.slot === i && n.kind === 'defective')) return;
-          ok(f && f === f.toLowerCase() && f === f.normalize('NFC'), `${lang} ${v} ${t} slot ${i}: lowercase NFC, not empty (${f})`);
+          ok(f && lowerOk(f), `${lang} ${v} ${t} slot ${i}: lowercase NFC, not empty (${f})`);
         });
       }
     }
@@ -731,7 +773,7 @@ function suite(win) {
     const names = [...read(`_shared/conjugate-${lang}.js`).matchAll(/\brec\('([^']+)'/g)].map((x) => x[1]);
     const seen = new Set();
     for (const n of names) { if (lang === 'it' && ['dormire', 'aprire', 'offrire', 'partire'].includes(n)) continue; ok(!seen.has(n), `${lang}: ${n} is declared twice`); seen.add(n); }
-    const inv = C.inventory(lang), ids = L.tenses.map((t) => t.id);
+    const inv = C.inventory(lang), ids = L.tenses.concat(L.extraTenses).map((t) => t.id);
     ok(inv.length >= (lang === 'la' ? 55 : 70), `${lang} has a real inventory (${inv.length})`);
     for (const v of inv) {
       const rec = C.lookup(lang, v);
@@ -739,8 +781,9 @@ function suite(win) {
       if (lang !== 'la') ok(!!C.participle(lang, v), `${lang} ${v}: has a participle`);
       for (const t of ids) {
         const r = C.conjugate(lang, v, t);
+        if (r.problem === 'not built for a reflexive verb') continue;
         ok(r.complete && r.known, `${lang} ${v} ${t}: complete and known`);
-        r.forms.forEach((f, i) => ok(f && f === f.toLowerCase() && f === f.normalize('NFC'), `${lang} ${v} ${t} slot ${i}: lowercase NFC, not empty (${f})`));
+        r.forms.forEach((f, i) => { if (r.notes.some((n) => n.slot === i && n.kind === 'defective')) return; ok(f && lowerOk(f), `${lang} ${v} ${t} slot ${i}: lowercase NFC, not empty (${f})`); });
       }
     }
   }
@@ -912,6 +955,17 @@ const BROKEN = [
   ['French sois', '_shared/conjugate-fr.js', "command: pr('. sois . soyons soyez .')", "command: pr('. es . soyons soyez .')"],
   ['French impératif has a vous slot', '_shared/conjugate-fr.js', "{ from: 'present', slot: 3 }, { from: 'present', slot: 4 }, null]", "{ from: 'present', slot: 3 }, { from: 'present', slot: 3 }, null]"],
   ['a pick cell ignores byClass', '_shared/conjugate.js', "spec.byClass && spec.byClass[ctx.cls] != null ? spec.byClass[ctx.cls] : spec.slot", "spec.slot"],
+  ['Latin present subjunctive of -are', '_shared/conjugate-la.js', "a: ['em', 'ēs', 'et', 'ēmus', 'ētis', 'ent']", "a: ['am', 'ās', 'at', 'āmus', 'ātis', 'ant']"],
+  ['Latin imperfect subjunctive of -ere (3rd)', '_shared/conjugate-la.js', "c: ['erem', 'erēs', 'eret', 'erēmus', 'erētis', 'erent']", "c: ['ārem', 'erēs', 'eret', 'erēmus', 'erētis', 'erent']"],
+  ['Latin present passive of the 3rd conjugation', '_shared/conjugate-la.js', "c: ['or', 'eris', 'itur', 'imur', 'iminī', 'untur']", "c: ['or', 'ēris', 'itur', 'imur', 'iminī', 'untur']"],
+  ['Latin future passive of the 3rd conjugation', '_shared/conjugate-la.js', "c: ['ar', 'ēris', 'ētur', 'ēmur', 'ēminī', 'entur']", "c: ['abor', 'ēris', 'ētur', 'ēmur', 'ēminī', 'entur']"],
+  ['Latin imperfect passive', '_shared/conjugate-la.js', "a: ['ābar', 'ābāris', 'ābātur', 'ābāmur', 'ābāminī', 'ābantur']", "a: ['ābar', 'ābāris', 'ābātur', 'ābāmur', 'ābāminī', 'ābuntur']"],
+  ['Latin esse gets a passive', '_shared/conjugate-la.js', "rec('esse', { 'class': 'c', defective: { tenses: ['present-passive', 'imperfect-passive', 'future-passive'] }, ", "rec('esse', { 'class': 'c', "],
+  ['Latin sim', '_shared/conjugate-la.js', "pr('sim sīs sit", "pr('sum sīs sit"],
+  ['Latin ferre passive', '_shared/conjugate-la.js', "pr('feror ferris fertur", "pr('feror ferēris fertur"],
+  ['Latin deponents are active', '_shared/conjugate.js', "if (rec.deponent && tdef.deponentAs)", "if (false)"],
+  ['Latin loquor is a 1st conjugation verb', '_shared/conjugate-la.js', "dep('loqui', 'c', 'loqu')", "dep('loqui', 'a', 'loqu')"],
+  ['Latin a deponent perfect is guessed', '_shared/conjugate-la.js', "function dep(inf, cls, stem) { return rec(inf, { 'class': cls, stem: stem, deponent: true, defective: { tenses: NOT_BUILT } }); }", "function dep(inf, cls, stem) { return rec(inf, { 'class': cls, stem: stem, deponent: true }); }"],
   ['a derived tense keeps duplicates', '_shared/conjugate.js', "if (c.forms.indexOf(j.text) < 0) c.forms.push(j.text);", "c.forms.push(j.text);"]
 ];
 

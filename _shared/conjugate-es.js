@@ -85,8 +85,9 @@
   rec('jugar', { stemChange: 'u>ue' });
 
   // defective
-  rec('llover', { stemChange: 'o>ue', defective: { slots: [2] } });
-  rec('nevar', { stemChange: 'e>ie', defective: { slots: [2] } });
+  // the -ra subjunctive is built on the ellos preterite, which a weather verb lacks: its one form is typed
+  rec('llover', { stemChange: 'o>ue', defective: { slots: [2] }, forms: { 'imperfect-subjunctive': { 2: 'lloviera' } } });
+  rec('nevar', { stemChange: 'e>ie', defective: { slots: [2] }, forms: { 'imperfect-subjunctive': { 2: 'nevara' } } });
   rec('soler', { stemChange: 'o>ue', defective: { tenses: ['future', 'conditional'] } });
 
   // regular verbs the pack knows (spelling changers are among them: the rules do the work)
