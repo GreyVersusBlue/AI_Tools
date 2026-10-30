@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v477';
+const CACHE_VERSION = 'v478';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -309,6 +309,7 @@ const PRECACHE_URLS = [
   "Tools/006-class-roster-hub.html",
   "Tools/051-classroom-label-maker.html",
   "Tools/classroom-label-maker/speak.html",
+  "Tools/classroom-label-maker/clm-pron.js",
   "Tools/classroom-timer/ct-app.js",
   "Tools/classroom-timer/ct-board-core.js",
   "Tools/classroom-timer/ct-board.js",
@@ -577,6 +578,7 @@ const PRECACHE_URLS = [
   "_shared/grouping.js",
   "_shared/geo-project.js",
   "_shared/word-list.js",
+  "_shared/speak.js",
   "_shared/conjugate.js",
   "_shared/conjugate-es.js",
   "_shared/conjugate-de.js",

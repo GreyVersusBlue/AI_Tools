@@ -29,6 +29,13 @@ const browser = await launch();
 console.log('Vocabulary Flashcards — Frayer / fill in the blank / review schedule / word wall system');
 
 const page = await prepPage(browser, BASE, { width: 1360, height: 980 });
+// a speech engine that logs what it is asked to say (no real voice is tried)
+await page.addInitScript(() => {
+  window.__said = [];
+  window.__voices = [];
+  Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: { getVoices: () => window.__voices, cancel() {}, speak(u) { window.__said.push([u.text, u.lang]); }, addEventListener() {}, removeEventListener() {} } });
+  window.SpeechSynthesisUtterance = function (t) { this.text = t; };
+});
 await page.goto(URL_PAGE, { waitUntil: 'networkidle' });
 await settle(page, 300);
 page.on('dialog', (d) => d.accept());
@@ -163,6 +170,31 @@ ok(dlg && /Every unit is retired/.test(dlg), 'with every unit retired, Print say
 await page.selectOption('#wallPart', 'takedown'); await settle(page, 250);
 await printCount();
 ok(/Tides \(6 cards\)/.test(await printText()), 'and the take-down list has all six');
+
+/* ── the self-quiz reads a card aloud (Path 19 P5) ── */
+await page.fill('#wordInput', WORDS); await page.dispatchEvent('#wordInput', 'input'); await settle(page, 250);
+await mode('quiz');
+ok(await page.isHidden('#hearBtn'), 'with no language chosen there is no Hear button');
+await page.selectOption('#quizLang', 'es-ES'); await settle(page, 250);
+ok(/no es-ES voice/.test(await page.textContent('#quizLangNote')), 'with no Spanish voice the page says so');
+await page.click('#hearBtn');
+eq(await page.evaluate(() => window.__said), [['tide', 'es-ES']], 'Hear says the term showing');
+await page.click('.quiz-card'); await settle(page, 200);
+await page.click('#hearBtn');
+eq(await page.evaluate(() => window.__said[1]), ['the rise and fall of the sea', 'es-ES'], 'and, flipped, the definition');
+eq(await page.evaluate(() => JSON.parse(localStorage.getItem('gvb-vocab-flashcards:data:Shorelines')).study.speakLang), 'es-ES', 'the choice is kept with the list');
+await page.evaluate(() => { window.__voices = [{ lang: 'es_MX', name: 'v' }]; });
+await page.selectOption('#quizLang', 'fr-FR'); await page.selectOption('#quizLang', 'es-ES'); await settle(page, 250);
+eq(await page.textContent('#quizLangNote'), '', 'with a Spanish voice there is no warning');
+await page.selectOption('#quizLang', ''); await settle(page, 250);
+ok(await page.isHidden('#hearBtn'), 'Off removes the button');
+// a list given a language in Word Lists starts there, without writing a study field
+await page.evaluate(() => { WordList.setLang('Shorelines', 'fr'); });
+await page.evaluate(() => { const st = JSON.parse(localStorage.getItem('gvb-vocab-flashcards:data:Shorelines')); delete st.study; localStorage.setItem('gvb-vocab-flashcards:data:Shorelines', JSON.stringify(st)); });
+await page.reload({ waitUntil: 'networkidle' }); await settle(page, 400);
+await mode('quiz');
+eq(await page.inputValue('#quizLang'), 'fr-FR', "a list with a language in Word Lists starts the quiz in it");
+ok(await page.evaluate(() => !('study' in JSON.parse(localStorage.getItem('gvb-vocab-flashcards:data:Shorelines')))), 'and that choice is not written until the teacher makes one');
 
 /* ── the controls of each new tab are accessible (the sitewide sweep sees only the tab at rest) ── */
 for (const m of ['frayer', 'cloze', 'schedule', 'wallsystem']) {

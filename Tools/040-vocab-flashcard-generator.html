@@ -44,6 +44,7 @@
 <!-- The Word Lists hub (Path 19 P1): word-list.js is the shared store of named word lists; paste-table.js reads a pasted table for it. -->
 <script src="../_shared/paste-table.js"></script>
 <script src="../_shared/word-list.js"></script>
+<script src="../_shared/speak.js"></script>
 <script src="../_shared/question-bank.js"></script>
 <script src="cultural-trivia-card-generator/ctcg-bank.js"></script>
 <script src="geography-bee-quiz-generator/gbq-bank.js"></script>
@@ -401,6 +402,17 @@
 
         <div id="quizOptions" style="display:none;">
           <p class="hint" style="margin:0 0 .6rem;">Click a card to flip between the term and its definition, or use Prev/Next to move through the list on a screen with a student.</p>
+          <label for="quizLang">Read aloud in</label>
+          <select id="quizLang">
+            <option value="">Off</option>
+            <option value="en-US">English</option>
+            <option value="es-ES">Spanish</option>
+            <option value="fr-FR">French</option>
+            <option value="de-DE">German</option>
+            <option value="it-IT">Italian</option>
+            <option value="la">Latin</option>
+          </select>
+          <p class="hint" id="quizLangNote" style="margin:.3rem 0 .6rem;"></p>
         </div>
 
         <div id="wsOptions" style="display:none;">
@@ -616,7 +628,7 @@
    'importBridgeRow','addFromListSelect','addFromListBtn',
    'flashOptions','wallOptions','quizOptions','wsOptions','cwOptions','bingoOptions','matchOptions',
    'frayerOptions','clozeOptions','srOptions','wallSysOptions','frayerFill','frayerPerPage','clozeBank','srPart','srDay','srDayWrap','srPerDay','srSteps','srStart',
-   'wallPart','unitAll','unitAllBtn','unitRows','unitNames','unitRetire',
+   'quizLang','quizLangNote','wallPart','unitAll','unitAllBtn','unitRows','unitNames','unitRetire',
    'flashCols','flashRows','cardSizePreset','flashLayout','wallPerPage','wallShowDef',
    'sortOrder','shuffleOrder','showGuides','bingoCount','bingoField',
    'printBtn','previewBtn','alignTestBtn','previewAlignTestBtn','alignTestHint','previewArea','previewNote','printNote','sheetView','printArea',
@@ -692,7 +704,7 @@
     var cur = studyClean({
       frayerFill: els.frayerFill.value, frayerPerPage: parseInt(els.frayerPerPage.value, 10), clozeBank: els.clozeBank.checked,
       srStart: els.srStart.value, srPerDay: els.srPerDay.value, srSteps: els.srSteps.value, srPart: els.srPart.value, srDay: els.srDay.value,
-      wallPart: els.wallPart.value, retiredUnits: studyClean(state.study).retiredUnits
+      wallPart: els.wallPart.value, speakLang: els.quizLang.value === speakDefault() ? '' : els.quizLang.value, retiredUnits: studyClean(state.study).retiredUnits
     });
     if (state.study || JSON.stringify(cur) !== JSON.stringify(studyClean(null))) state.study = cur;
   }
@@ -711,6 +723,7 @@
       srPart: src.srPart === 'day' ? 'day' : 'plan',
       srDay: Math.max(1, Math.min(120, parseInt(src.srDay, 10) || 1)),
       wallPart: src.wallPart === 'index' || src.wallPart === 'takedown' ? src.wallPart : 'cards',
+      speakLang: typeof src.speakLang === 'string' && /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/.test(src.speakLang) ? src.speakLang : '',
       retiredUnits: Array.isArray(src.retiredUnits)
         ? src.retiredUnits.filter(function (u) { return typeof u === 'string' && u.trim(); }).map(function (u) { return u.trim().slice(0, 40); }).slice(0, 100)
         : []
@@ -1380,7 +1393,24 @@
     renderPreview();
   }
 
+  /* ---------- hear a card (Path 19 P5) ----------
+     The self-quiz can say the side that is showing, with this device's voice for the language
+     chosen under the quiz settings (_shared/speak.js). The choice is the list's `study.speakLang`,
+     and until it is chosen it follows the language the list was given in Word Lists. */
+  function speakDefault() {
+    var id = hubDo(function () { return WordList.getLang(state.name); }) || '';
+    return Speak.langTag(id);
+  }
+  function speakTag() { return studyClean(state.study).speakLang || speakDefault(); }
+  function renderSpeakNote() {
+    var tag = els.quizLang.value;
+    els.quizLangNote.textContent = !tag ? '' : !Speak.supported() ? 'This browser cannot read words aloud.'
+      : Speak.hasVoice(tag) ? '' : 'This device has no ' + tag + ' voice, so it may read with another one.';
+  }
+  Speak.onVoices(function () { if (state) renderSpeakNote(); });
+
   function renderQuiz(items) {
+    renderSpeakNote();
     els.printNote.style.display = 'none';
     quizIndex = Math.min(quizIndex, items.length - 1);
     var item = items[quizIndex];
@@ -1408,6 +1438,15 @@
     var nav = document.createElement('div');
     nav.className = 'quiz-nav';
     nav.appendChild(prevBtn);
+    var tag = speakTag();
+    if (tag && Speak.supported()) {
+      var hear = document.createElement('button');
+      hear.type = 'button'; hear.className = 'secondary'; hear.id = 'hearBtn';
+      hear.textContent = '\ud83d\udd0a Hear it';
+      hear.setAttribute('aria-label', 'Hear the ' + (quizFlipped ? 'definition' : 'term') + ' read aloud');
+      hear.addEventListener('click', function () { Speak.say(quizFlipped ? item.definition : item.term, tag); });
+      nav.appendChild(hear);
+    }
     nav.appendChild(nextBtn);
 
     var counter = document.createElement('div');
@@ -1698,6 +1737,7 @@
     els.frayerFill.value = st.frayerFill; els.frayerPerPage.value = String(st.frayerPerPage); els.clozeBank.checked = st.clozeBank;
     els.srStart.value = st.srStart; els.srPerDay.value = st.srPerDay; els.srSteps.value = st.srSteps;
     els.srPart.value = st.srPart; els.srDay.value = st.srDay; els.wallPart.value = st.wallPart;
+    els.quizLang.value = st.speakLang || speakDefault();
     document.querySelectorAll('.mode-tab').forEach(function (t) { t.classList.toggle('active', t.dataset.mode === state.mode); });
     syncModeOptionVisibility();
     refreshImportBridge();
@@ -1784,7 +1824,7 @@
   els.showGuides.addEventListener('change', renderPreview);
   els.bingoCount.addEventListener('input', function () { currentPreviewIndex = 0; renderPreview(); });
   els.bingoField.addEventListener('change', renderPreview);
-  [els.frayerFill, els.frayerPerPage, els.clozeBank, els.srPart, els.wallPart, els.srStart].forEach(function (c) {
+  [els.frayerFill, els.frayerPerPage, els.clozeBank, els.srPart, els.wallPart, els.srStart, els.quizLang].forEach(function (c) {
     c.addEventListener('change', function () { currentPreviewIndex = 0; renderPreview(); syncModeOptionVisibility(); });
   });
   [els.srDay, els.srPerDay, els.srSteps].forEach(function (c) {

@@ -151,7 +151,7 @@
           namespaces: [
             { ns: 'seating', student: true },
             { ns: 'cam' }, { ns: 'class-screen' }, { ns: 'dbq' }, { ns: 'escape-room' }, { ns: 'fsb' }, { ns: 'htcm' },
-            { ns: 'ppg' }, { ns: 'psa' }, { ns: 'rgb' }, { ns: 'scavenger-hunt' }, { ns: 'stviz-trace' }, { ns: 'tlb' },
+            { ns: 'labels' }, { ns: 'ppg' }, { ns: 'psa' }, { ns: 'rgb' }, { ns: 'scavenger-hunt' }, { ns: 'stviz-trace' }, { ns: 'tlb' },
           ] },
       ],
       /* _shared/roster.js writes both of these on a tool's behalf, so a
