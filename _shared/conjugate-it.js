@@ -35,13 +35,13 @@
   var ESS = { auxiliary: 'essere' };
 
   // ---- the irregulars --------------------------------------------------------
-  rec('essere', { 'class': 'ere', forms: { present: pr('sono sei è siamo siete sono'), imperfect: pr('ero eri era eravamo eravate erano'), subjunctive: pr('sia sia sia siamo siate siano') }, stems: { future: 'sar' }, participle: 'stato', auxiliary: 'essere' });
-  rec('avere', { 'class': 'ere', forms: { present: pr('ho hai ha abbiamo avete hanno'), subjunctive: pr('abbia abbia abbia abbiamo abbiate abbiano') }, stems: { future: 'avr' } });
-  rec('andare', { forms: { present: pr('vado vai va andiamo andate vanno'), subjunctive: pr('vada vada vada andiamo andiate vadano') }, stems: { future: 'andr' }, auxiliary: 'essere' });
-  rec('stare', { forms: { present: pr('sto stai sta stiamo state stanno'), subjunctive: pr('stia stia stia stiamo stiate stiano') }, stems: { future: 'star' }, participle: 'stato', auxiliary: 'essere' });
-  rec('dare', { forms: { present: pr('do dai dà diamo date danno'), subjunctive: pr('dia dia dia diamo diate diano') }, stems: { future: 'dar' } });
-  rec('fare', { 'class': 'ere', forms: { present: pr('faccio fai fa facciamo fate fanno'), subjunctive: pr('faccia faccia faccia facciamo facciate facciano') }, stems: { imperfect: 'fac', future: 'far' }, participle: 'fatto' });
-  rec('dire', { 'class': 'ere', forms: { present: pr('dico dici dice diciamo dite dicono'), subjunctive: pr('dica dica dica diciamo diciate dicano') }, stems: { imperfect: 'dic', future: 'dir' }, participle: 'detto' });
+  rec('essere', { 'class': 'ere', forms: { command: { 1: 'sii', 4: 'siate' }, 'imperfect-subjunctive': pr('fossi fossi fosse fossimo foste fossero'), present: pr('sono sei è siamo siete sono'), imperfect: pr('ero eri era eravamo eravate erano'), subjunctive: pr('sia sia sia siamo siate siano') }, stems: { future: 'sar' }, participle: 'stato', auxiliary: 'essere' });
+  rec('avere', { 'class': 'ere', forms: { command: { 1: 'abbi', 4: 'abbiate' }, present: pr('ho hai ha abbiamo avete hanno'), subjunctive: pr('abbia abbia abbia abbiamo abbiate abbiano') }, stems: { future: 'avr' } });
+  rec('andare', { forms: { command: { 1: "va' / vai" }, present: pr('vado vai va andiamo andate vanno'), subjunctive: pr('vada vada vada andiamo andiate vadano') }, stems: { future: 'andr' }, auxiliary: 'essere' });
+  rec('stare', { forms: { command: { 1: "sta' / stai" }, 'imperfect-subjunctive': pr('stessi stessi stesse stessimo steste stessero'), present: pr('sto stai sta stiamo state stanno'), subjunctive: pr('stia stia stia stiamo stiate stiano') }, stems: { future: 'star' }, participle: 'stato', auxiliary: 'essere' });
+  rec('dare', { forms: { command: { 1: "da' / dai" }, 'imperfect-subjunctive': pr('dessi dessi desse dessimo deste dessero'), present: pr('do dai dà diamo date danno'), subjunctive: pr('dia dia dia diamo diate diano') }, stems: { future: 'dar' } });
+  rec('fare', { 'class': 'ere', forms: { command: { 1: "fa' / fai" }, present: pr('faccio fai fa facciamo fate fanno'), subjunctive: pr('faccia faccia faccia facciamo facciate facciano') }, stems: { imperfect: 'fac', future: 'far' }, participle: 'fatto' });
+  rec('dire', { 'class': 'ere', forms: { command: { 1: "di'" }, present: pr('dico dici dice diciamo dite dicono'), subjunctive: pr('dica dica dica diciamo diciate dicano') }, stems: { imperfect: 'dic', future: 'dir' }, participle: 'detto' });
   rec('bere', { forms: { present: pr('bevo bevi beve beviamo bevete bevono'), subjunctive: pr('beva beva beva beviamo beviate bevano') }, stems: { imperfect: 'bev', future: 'berr' }, participle: 'bevuto' });
   rec('venire', { forms: { present: pr('vengo vieni viene veniamo venite vengono'), subjunctive: pr('venga venga venga veniamo veniate vengano') }, stems: { future: 'verr' }, participle: 'venuto', auxiliary: 'essere' });
   rec('uscire', { forms: { present: pr('esco esci esce usciamo uscite escono'), subjunctive: pr('esca esca esca usciamo usciate escano') }, auxiliary: 'essere' });
@@ -50,7 +50,7 @@
   rec('potere', { forms: { present: pr('posso puoi può possiamo potete possono'), subjunctive: pr('possa possa possa possiamo possiate possano') }, stems: { future: 'potr' } });
   rec('volere', { forms: { present: pr('voglio vuoi vuole vogliamo volete vogliono'), subjunctive: pr('voglia voglia voglia vogliamo vogliate vogliano') }, stems: { future: 'vorr' } });
   rec('dovere', { forms: { present: pr('devo devi deve dobbiamo dovete devono'), subjunctive: pr('debba debba debba dobbiamo dobbiate debbano') }, stems: { future: 'dovr' } });
-  rec('sapere', { forms: { present: pr('so sai sa sappiamo sapete sanno'), subjunctive: pr('sappia sappia sappia sappiamo sappiate sappiano') }, stems: { future: 'sapr' } });
+  rec('sapere', { forms: { command: { 1: 'sappi', 4: 'sappiate' }, present: pr('so sai sa sappiamo sapete sanno'), subjunctive: pr('sappia sappia sappia sappiamo sappiate sappiano') }, stems: { future: 'sapr' } });
   rec('vedere', { stems: { future: 'vedr' }, participle: 'visto' });
   rec('rimanere', { forms: { present: pr('rimango rimani rimane rimaniamo rimanete rimangono'), subjunctive: pr('rimanga rimanga rimanga rimaniamo rimaniate rimangano') }, stems: { future: 'rimarr' }, participle: 'rimasto', auxiliary: 'essere' });
   rec('tenere', { forms: { present: pr('tengo tieni tiene teniamo tenete tengono'), subjunctive: pr('tenga tenga tenga teniamo teniate tengano') }, stems: { future: 'terr' } });
@@ -112,6 +112,14 @@
         endings: { all: ['ei', 'esti', 'ebbe', 'emmo', 'este', 'ebbero'] } },
       { id: 'subjunctive', name: 'Congiuntivo presente', mood: 'subjunctive', kind: 'simple',
         endings: { are: ['i', 'i', 'i', 'iamo', 'iate', 'ino'], ere: ['a', 'a', 'a', 'iamo', 'iate', 'ano'], ire: ['a', 'a', 'a', 'iamo', 'iate', 'ano'], isc: ['isca', 'isca', 'isca', 'iamo', 'iate', 'iscano'] } }
+    ],
+    // beyond the six: the congiuntivo imperfetto (the stem of the imperfetto, so fare gives facessi) and the
+    // affirmative imperativo (tu, Lei, noi, voi, Loro; a negative one is not built)
+    extraTenses: [
+      { id: 'imperfect-subjunctive', name: 'Congiuntivo imperfetto', mood: 'subjunctive', kind: 'simple', stemsAlias: 'imperfect',
+        endings: { are: ['assi', 'assi', 'asse', 'assimo', 'aste', 'assero'], ere: ['essi', 'essi', 'esse', 'essimo', 'este', 'essero'], ire: ['issi', 'issi', 'isse', 'issimo', 'iste', 'issero'], isc: ['issi', 'issi', 'isse', 'issimo', 'iste', 'issero'] } },
+      { id: 'command', name: 'Imperativo', mood: 'imperative', kind: 'pick', noReflexive: true,
+        pick: [null, { from: 'present', slot: 1, byClass: { are: 2 } }, { from: 'subjunctive', slot: 2 }, { from: 'present', slot: 3 }, { from: 'present', slot: 4 }, { from: 'subjunctive', slot: 5 }] }
     ],
     spelling: [
       // mangiare: mangi, mangiamo, mangerò, cominceremo

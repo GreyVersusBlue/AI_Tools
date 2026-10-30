@@ -358,6 +358,36 @@ function suite(win) {
   eq(C.conjugate('de', 'können', 'imperative').notes.map((n) => n.kind), Array(6).fill('defective'), 'de a modal has no imperative');
   eq(C.conjugate('de', 'sein', 'passive').forms, Array(6).fill(''), 'de sein has no passive');
   eq(C.conjugate('de', 'sich waschen', 'imperative').complete, false, 'de a reflexive imperative is refused, not guessed');
+  // Italian: the congiuntivo imperfetto and the imperativo
+  eq(extras('it'), ['imperfect-subjunctive', 'command'], 'it extra tenses');
+  eq(six('it'), ['present', 'passato-prossimo', 'imperfect', 'future', 'conditional', 'subjunctive'], 'it the six do not move');
+  cells('it', 'parlare', 'imperfect-subjunctive', 'parlassi | parlassi | parlasse | parlassimo | parlaste | parlassero');
+  cells('it', 'vendere', 'imperfect-subjunctive', 'vendessi | vendessi | vendesse | vendessimo | vendeste | vendessero');
+  cells('it', 'finire', 'imperfect-subjunctive', 'finissi | finissi | finisse | finissimo | finiste | finissero');
+  cells('it', 'fare', 'imperfect-subjunctive', 'facessi | facessi | facesse | facessimo | faceste | facessero');
+  cells('it', 'essere', 'imperfect-subjunctive', 'fossi | fossi | fosse | fossimo | foste | fossero');
+  cells('it', 'dare', 'imperfect-subjunctive', 'dessi | dessi | desse | dessimo | deste | dessero');
+  cells('it', 'lavarsi', 'imperfect-subjunctive', 'mi lavassi | ti lavassi | si lavasse | ci lavassimo | vi lavaste | si lavassero');
+  cells('it', 'parlare', 'command', ' | parla | parli | parliamo | parlate | parlino');
+  cells('it', 'vendere', 'command', ' | vendi | venda | vendiamo | vendete | vendano');
+  cells('it', 'finire', 'command', ' | finisci | finisca | finiamo | finite | finiscano');
+  cells('it', 'essere', 'command', " | sii | sia | siamo | siate | siano");
+  cells('it', 'dire', 'command', " | di' | dica | diciamo | dite | dicano");
+  cells('it', 'fare', 'command', " | fa' | faccia | facciamo | fate | facciano");
+  eq(C.conjugate('it', 'andare', 'command').alts[1], ['vai'], 'it andare has va\' and vai');
+  eq(C.conjugate('it', 'lavarsi', 'command').complete, false, 'it a reflexive imperativo is refused');
+  // French: the impératif
+  eq(extras('fr'), ['command'], 'fr extra tenses');
+  eq(six('fr'), ['present', 'passe-compose', 'imperfect', 'future', 'conditional', 'subjunctive'], 'fr the six do not move');
+  cells('fr', 'parler', 'command', ' | parle |  | parlons | parlez | ');
+  cells('fr', 'finir', 'command', ' | finis |  | finissons | finissez | ');
+  cells('fr', 'vendre', 'command', ' | vends |  | vendons | vendez | ');
+  cells('fr', 'aller', 'command', ' | va |  | allons | allez | ');
+  cells('fr', 'ouvrir', 'command', ' | ouvre |  | ouvrons | ouvrez | ');
+  cells('fr', 'être', 'command', ' | sois |  | soyons | soyez | ');
+  cells('fr', 'avoir', 'command', ' | aie |  | ayons | ayez | ');
+  cells('fr', 'manger', 'command', ' | mange |  | mangeons | mangez | ');
+  eq(C.conjugate('fr', 'se lever', 'command').complete, false, 'fr a reflexive impératif is refused');
   eq(C.conjugate('es', 'hablar', 'present', { slots: [0, 2] }).forms, ['hablo', '', 'habla', '', '', ''], 'opts.slots');
 
   // (7) defective
@@ -872,6 +902,16 @@ const BROKEN = [
   ['German nimm', '_shared/conjugate-de.js', "imperative: pr('. nimm . . . .')", "imperative: pr('. nehm . . . .')"],
   ['German a modal gets an imperative', '_shared/conjugate-de.js', "rec('können', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, ", "rec('können', { "],
   ['German a separable imperative puts the prefix before wir', '_shared/conjugate.js', "f + tdef.append[slot]; });\n    }\n    // the separable", "tdef.append[slot] + f; });\n    }\n    // the separable"],
+  ['Italian imperfetto del congiuntivo of -are', '_shared/conjugate-it.js', "are: ['assi', 'assi', 'asse', 'assimo', 'aste', 'assero']", "are: ['assi', 'assi', 'asse', 'assimo', 'aste', 'asse']"],
+  ['Italian fossi', '_shared/conjugate-it.js', "pr('fossi fossi fosse", "pr('sia fossi fosse"],
+  ['Italian fare congiuntivo imperfetto stem', '_shared/conjugate-it.js', "stemsAlias: 'imperfect',\n        endings: { are: ['assi'", "\n        endings: { are: ['assi'"],
+  ['Italian tu imperative of -are', '_shared/conjugate-it.js', "byClass: { are: 2 }", "byClass: { are: 1 }"],
+  ['Italian sii', '_shared/conjugate-it.js', "command: { 1: 'sii', 4: 'siate' }", "command: { 1: 'sei', 4: 'siate' }"],
+  ['Italian di\'', '_shared/conjugate-it.js', "command: { 1: \"di'\" }", "command: { 1: 'dici' }"],
+  ['French impératif keeps the -s of -er verbs', '_shared/conjugate-fr.js', "drop: { cls: ['er', 'ir-er'], end: 's' }", "drop: { cls: ['ir-er'], end: 's' }"],
+  ['French sois', '_shared/conjugate-fr.js', "command: pr('. sois . soyons soyez .')", "command: pr('. es . soyons soyez .')"],
+  ['French impératif has a vous slot', '_shared/conjugate-fr.js', "{ from: 'present', slot: 3 }, { from: 'present', slot: 4 }, null]", "{ from: 'present', slot: 3 }, { from: 'present', slot: 3 }, null]"],
+  ['a pick cell ignores byClass', '_shared/conjugate.js', "spec.byClass && spec.byClass[ctx.cls] != null ? spec.byClass[ctx.cls] : spec.slot", "spec.slot"],
   ['a derived tense keeps duplicates', '_shared/conjugate.js', "if (c.forms.indexOf(j.text) < 0) c.forms.push(j.text);", "c.forms.push(j.text);"]
 ];
 

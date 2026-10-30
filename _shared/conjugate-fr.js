@@ -23,8 +23,8 @@
   function prefixed(o, list) { o.prefixes = list; return o; }
 
   // ---- the irregulars --------------------------------------------------------
-  rec('être', { 'class': 're', forms: { present: pr('suis es est sommes êtes sont'), subjunctive: pr('sois sois soit soyons soyez soient') }, stems: { imperfect: 'ét', future: 'ser' }, participle: 'été' });
-  rec('avoir', { 'class': 're', forms: { present: pr('ai as a avons avez ont'), subjunctive: pr('aie aies ait ayons ayez aient') }, stems: { future: 'aur' }, participle: 'eu' });
+  rec('être', { 'class': 're', forms: { command: pr('. sois . soyons soyez .'), present: pr('suis es est sommes êtes sont'), subjunctive: pr('sois sois soit soyons soyez soient') }, stems: { imperfect: 'ét', future: 'ser' }, participle: 'été' });
+  rec('avoir', { 'class': 're', forms: { command: pr('. aie . ayons ayez .'), present: pr('ai as a avons avez ont'), subjunctive: pr('aie aies ait ayons ayez aient') }, stems: { future: 'aur' }, participle: 'eu' });
   rec('aller', { forms: { present: pr('vais vas va allons allez vont') }, stems: { future: 'ir', subjunctive: ['aill', 'all'] }, auxiliary: 'être' });
   prefixed(rec('faire', { 'class': 're', forms: { present: pr('fais fais fait faisons faites font') }, stems: { future: 'fer', subjunctive: 'fass' }, participle: 'fait' }), ['dé', 're', 'contre', 'satis']);
   rec('dire', { 'class': 're', forms: { present: pr('dis dis dit disons dites disent') }, participle: 'dit', prefixes: ['re'] });
@@ -35,7 +35,7 @@
   rec('pouvoir', { 'class': 'oir', forms: { present: pr('peux peux peut pouvons pouvez peuvent') }, stems: { future: 'pourr', subjunctive: 'puiss' }, participle: 'pu' });
   rec('vouloir', { 'class': 'oir', forms: { present: pr('veux veux veut voulons voulez veulent') }, stems: { future: 'voudr', subjunctive: ['veuill', 'voul'] }, participle: 'voulu' });
   rec('devoir', { 'class': 'oir', forms: { present: pr('dois dois doit devons devez doivent') }, stems: { future: 'devr' }, participle: 'dû' });
-  rec('savoir', { 'class': 'oir', forms: { present: pr('sais sais sait savons savez savent') }, stems: { future: 'saur', subjunctive: 'sach' }, participle: 'su' });
+  rec('savoir', { 'class': 'oir', forms: { command: pr('. sache . sachons sachez .'), present: pr('sais sais sait savons savez savent') }, stems: { future: 'saur', subjunctive: 'sach' }, participle: 'su' });
   rec('voir', { 'class': 'oir', forms: { present: pr('vois vois voit voyons voyez voient') }, stems: { future: 'verr' }, participle: 'vu', prefixes: ['re', 'entre'] });
   rec('recevoir', { 'class': 'oir', forms: { present: pr('reçois reçois reçoit recevons recevez reçoivent') }, stems: { future: 'recevr' }, participle: 'reçu' });
   rec('valoir', { 'class': 'oir', forms: { present: pr('vaux vaux vaut valons valez valent') }, stems: { future: 'vaudr', subjunctive: ['vaill', 'val'] }, participle: 'valu' });
@@ -129,6 +129,12 @@
         stemsAlias: 'future', endings: { all: IMP } },
       { id: 'subjunctive', name: 'Subjonctif présent', mood: 'subjunctive', kind: 'derived',
         derived: { from: 'present', pick: [5, 5, 5, 3, 3, 5], cut: [3, 3, 3, 3, 3, 3] }, endings: { all: ['e', 'es', 'e', 'ions', 'iez', 'ent'] } }
+    ],
+    // beyond the six: the affirmative impératif (tu, nous, vous; a negative one and the pronoun that follows
+    // it, lève-toi, are not built). The imparfait du subjonctif is literary and is not built.
+    extraTenses: [
+      { id: 'command', name: 'Impératif', mood: 'imperative', kind: 'pick', noReflexive: true,
+        pick: [null, { from: 'present', slot: 1, drop: { cls: ['er', 'ir-er'], end: 's' } }, null, { from: 'present', slot: 3 }, { from: 'present', slot: 4 }, null] }
     ],
     spelling: [
       { id: 'c>ç', cls: ['er'], stem: /c$/, next: /^[aouâ]/, stemRepl: [/c$/, 'ç'] },
