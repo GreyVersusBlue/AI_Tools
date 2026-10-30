@@ -225,6 +225,7 @@
   <div class="present-content" id="presentContent"></div>
 </div>
 
+<script src="../_shared/sample-data.js"></script>
 <script>
 (function () {
   'use strict';
@@ -576,6 +577,28 @@
       createNewDiagram('My Diagram');
     }
   }
+
+  /* ---------- sample (P15, _shared/sample-data.js) ----------
+     An invented story. This page saves into the current diagram as you type, so the
+     sample is saved there like anything typed; Clear sample blanks the fields again. */
+  var SAMPLE_FIELDS = {
+    storyTitle: 'The Lantern at Marrow Cove', storyAuthor: 'Sample story',
+    elChar: 'Odessa, a ferry keeper\'s daughter, and old Mr. Pell, who tends the cove light',
+    elSetting: 'A fishing village on a stormy coast, one autumn',
+    elConflict: 'The cove light goes dark on the night the fleet is out, and Odessa must relight it herself',
+    elTheme: 'Courage can be quiet: doing the needed thing even when you are afraid',
+    '[data-stage="exposition"]': 'Odessa helps Mr. Pell tend the cove light each evening and wishes she were braver.',
+    '[data-stage="rising"]': 'A storm rolls in, the fleet is out, and Mr. Pell slips on the stairs.',
+    '[data-stage="climax"]': 'Alone in the dark tower, Odessa climbs to the lamp and strikes the flint.',
+    '[data-stage="falling"]': 'The light steadies and the boats find their way in, one by one.',
+    '[data-stage="resolution"]': 'Mr. Pell hands Odessa the keys, and she is not afraid to take them.'
+  };
+  if (window.SampleData) SampleData.mount({
+    before: els.storyTitle.closest('.card'),
+    label: 'Load a sample story',
+    what: 'This page saves as you type, so it is saved to the current diagram until you clear it.',
+    fields: SAMPLE_FIELDS
+  });
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

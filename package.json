@@ -358,6 +358,7 @@
     "test:vocab-study-logic": "node Tools/vocab-flashcard-generator/test/study-logic.test.mjs",
     "test:speak": "node Tools/speak/test/speak.test.mjs",
     "test:speak-adopters": "node Tools/speak/test/smoke-adopters.mjs",
+    "test:sample-data": "node Tools/sample-data/test/smoke-adopters.mjs",
     "test:label-pron": "node Tools/classroom-label-maker/test/smoke-pron.mjs",
     "test:vocab-study": "node Tools/vocab-flashcard-generator/test/smoke-study.mjs",
     "test:vocab-print": "node Tools/vocab-flashcard-generator/test/smoke-print.mjs",

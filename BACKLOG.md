@@ -817,7 +817,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 56 | Path 19 P3 — polish that is left (everything in the design is built, v469-v486): negative commands and a command or infinitive with its pronoun attached (levántate, lavarmi), German dative reflexives (sich etwas vorstellen) and Konjunktiv II proper (wäre, käme), compound subjunctives and the pluperfect for Spanish, French and Italian, Latin's perfect passive, deponent perfect and imperative, a better rule than the German ge- exception list, and Devon's questions G4, I4 and L4 in the P3 bullet. Each is one data entry or one small engine rule; none is wanted by a course yet. No table is called reviewed until the language teacher has read the check sheet | 079 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 59 | Path 20 P1, what is left — the curriculum gazetteer only if a second tool wants it (the port shipped in v401; 062's `gbq-map.js` switched to `_shared/geo-project.js` in v424) | `_shared/` | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 60 | Path 20 P4, what is left — the way back from Timeline Builder into a map project (needs a route 015 does not accept; Devon's call on where an event's year goes on a map), and the slice sheet in the print preview (the kit's `preview()` does not cover 046's canvas export); time slices themselves shipped in v433 | 046, 015 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
-| 65 | First-run "Load sample data" across the tools that open to an empty form (P15) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 65 | First-run "Load sample data" across the tools that open to an empty form (P15); 059, 072, 049 done in v488, the rest of the survey below is left | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 66 | Phone-sized layout pass beyond 005 — cap or collapse oversized toolbars site-wide | site | 1–2 | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 67 | `_shared/levels.js` — one home for Academic / Honors / Honors GT and the level footer tag | `_shared/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 68 | A shared plain-language social-studies glossary (056 ships ~60 entries; 028 and 040 want the same) | `_shared/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
@@ -1299,6 +1299,14 @@ Most tools open to an empty form. A teacher evaluating whether a tool is
 worth their prep period gets more from a **"Load sample data"** button that
 fills the tool with a realistic example they can immediately print, plus a
 short "what this is for" line. `blank-map-generator` (Recently used),
+
+**Survey, 2026-10-30 (AI-30, v488).** Build one with `_shared/sample-data.js` (`SampleData.mount({ before, label, fields, isEmpty, fill, clear, snapshot, what })`; 059, 072 and 049 are the models; `npm run test:sample-data` takes a row per adopter). Classes:
+- *Has one:* 006 (sample class), 015, 028, 054, 056, 064, 089; 063 fills at random.
+- *Done in v488:* 059, 072, 049.
+- *Needs a sample, no student names (do next):* 041, 073, 082, 025, 029, 038, 023, 024, 042, 021, 019, 013, 014, 043, 065, 083, 084 (question fields only), 085, 078, 020, 030, 002.
+- *Needs a sample, and the content is people:* 068, 075, 036, 048, 077, 033, 027, 008, 001 (a made-up name can still read as a student on a printout; decide the wording first, e.g. "Student A").
+- *Not applicable (state is the display, or no form):* 004, 005, 007, 009, 010, 011, 012, 016, 031, 034, 035, 037, 039, 040, 044, 045, 046, 050-053, 055, 057, 058, 060-062, 066, 067, 069-071, 074, 076, 079-081, 086-088, 090 (already show content or a generator with defaults).
+This list is a first read, not a per-page audit; check each form before building. Rule for every adopter: Load only while empty, never overwrites, stores only what the page's own save-as-you-go stores (say so), invented content only.
 
 ---
 

@@ -49,6 +49,7 @@ const SITE_GLOBALS = {
   WebRTCPair: 'readonly',
   StudentDetails: 'readonly',
   StudentFlags: 'readonly',
+  SampleData: 'readonly',
   UndoStack: 'readonly',
   SchoolDay: 'readonly',
   BinderStale: 'readonly',

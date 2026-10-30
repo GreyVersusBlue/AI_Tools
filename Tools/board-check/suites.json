@@ -140,6 +140,7 @@
     "Tools/vocab-flashcard-generator/test/smoke-study.mjs",
     "Tools/speak/test/speak.test.mjs",
     "Tools/speak/test/smoke-adopters.mjs",
+    "Tools/sample-data/test/smoke-adopters.mjs",
     "Tools/classroom-label-maker/test/smoke-pron.mjs",
     "Tools/qr-code-generator/test/smoke-roster.mjs",
     "Tools/qr-code-generator/test/smoke-checkout.mjs",
