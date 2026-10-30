@@ -167,6 +167,7 @@
 
 <div id="printArea"></div>
 
+<script src="../_shared/sample-data.js"></script>
 <script>
 (function () {
   'use strict';
@@ -969,6 +970,32 @@
     refreshAll();
   }
   init();
+
+  /* ---------- sample (P15, _shared/sample-data.js) ----------
+     Three invented sources (a book, a website on example.org, a book). This page saves the list
+     as you go, so a loaded sample is stored like sources you add; Clear sample removes exactly
+     those three. */
+  var SAMPLE_SOURCES = [
+    { id: 'sample-src-1', type: 'book', fields: { author: 'Example, Sample', title: 'A Short History of Bridges', publisher: 'Example Press', city: 'Springfield', year: '2015' } },
+    { id: 'sample-src-2', type: 'website', fields: { author: '', title: 'How Bridges Carry Weight', container: 'Example Engineering Library', publisher: '', pubMonth: 'March', pubDay: '4', pubYear: '2021', url: 'https://example.org/bridges', accessMonth: 'October', accessDay: '30', accessYear: '2026' } },
+    { id: 'sample-src-3', type: 'book', fields: { author: 'Placeholder, Pat', title: 'Rivers and Roads', publisher: 'Sample Books', city: 'Rivertown', year: '2009' } }
+  ];
+  function sampleIds() { return SAMPLE_SOURCES.map(function (x) { return x.id; }); }
+  if (window.SampleData) SampleData.mount({
+    before: els.typeSelect.closest('.card'),
+    label: 'Load three sample sources',
+    what: 'This page saves the list as you go, so the sources are saved until you clear them.',
+    isEmpty: function () { return !doc.sources.length; },
+    snapshot: function () { return doc.sources.map(function (x) { return x.id; }).join(); },
+    fill: function () {
+      doc.sources = JSON.parse(JSON.stringify(SAMPLE_SOURCES));
+      saveDoc(doc); renderList();
+    },
+    clear: function () {
+      doc.sources = doc.sources.filter(function (x) { return sampleIds().indexOf(x.id) === -1; });
+      saveDoc(doc); renderList();
+    }
+  });
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

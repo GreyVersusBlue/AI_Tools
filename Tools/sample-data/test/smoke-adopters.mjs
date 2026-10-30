@@ -2,7 +2,7 @@
 //
 //   node Tools/sample-data/test/smoke-adopters.mjs        (port 8623)
 //
-// For 059, 072 and 049, each loading _shared/sample-data.js:
+// For 059, 072, 049, 043, 042, 082, 038 and 084, each loading _shared/sample-data.js:
 //   1. on a clean device the bar shows its Load button, and just opening the page stores nothing
 //      the tool did not already store (the page's own keys are the same before and after a reload
 //      without a press);
@@ -38,13 +38,43 @@ const TOOLS = [
     blank: async (p) => (await p.textContent('#bookCount')) === '0',
     filled: async (p) => (await p.textContent('#bookCount')) === '6',
     type: async (p) => { await p.click('#booksWrap [data-del]'); } },  // the sample is the six books: changing the list ends the sample
+  { id: '043', file: '043-field-trip-permission-slip.html',
+    seed: { 'gvb-field-trip:list': '["Mine"]', 'gvb-field-trip:current': 'Mine',
+      'gvb-field-trip:data:Mine': JSON.stringify({ name: 'Mine', destination: 'My own place', mode: 'single', collected: {}, chaperones: [], chaperoneAssignments: {} }) },
+    blank: async (p) => await p.inputValue('#destination') === '' && await p.inputValue('#purpose') === '',
+    filled: async (p) => (await p.inputValue('#destination')).length > 10 && (await p.inputValue('#dueDate')) === '2027-03-01',
+    type: async (p) => p.fill('#destination', 'Typed over it') },
+  { id: '042', file: '042-certificate-award-maker.html',
+    seed: { 'gvb-certificate-maker:list': '["Mine"]', 'gvb-certificate-maker:current': 'Mine',
+      'gvb-certificate-maker:data:Mine': JSON.stringify({ name: 'Mine', studentName: '', reason: 'My own reason', signature: '' }) },
+    blank: async (p) => await p.inputValue('#reason') === '' && await p.inputValue('#signature') === '',
+    filled: async (p) => (await p.inputValue('#reason')).length > 10 && (await p.inputValue('#studentName')) === 'Sample Student',
+    type: async (p) => p.fill('#reason', 'Typed over it') },
+  { id: '082', file: '082-citation-generator.html',
+    seed: { 'citegen:list': '["Mine"]', 'citegen:current': 'Mine',
+      'citegen:data:Mine': JSON.stringify({ name: 'Mine', style: 'mla', sources: [{ id: 'x1', type: 'book', fields: { author: 'Mine, A', title: 'My book', publisher: 'P', city: '', year: '2001' } }] }) },
+    blank: async (p) => (await p.locator('#listWrap .entry').count()) === 0,
+    filled: async (p) => (await p.locator('#listWrap .entry').count()) === 3,
+    type: async (p) => { p.once('dialog', (d) => d.accept()); await p.click('#listWrap .entry button[data-act="delete"]'); } },
+  { id: '038', file: '038-data-chart-builder.html',
+    seed: null,
+    blank: async (p) => await p.inputValue('#data-input') === '',
+    filled: async (p) => (await p.inputValue('#data-input')).startsWith('Month') && await p.locator('#preview-table-wrap').isVisible(),
+    type: async (p) => p.fill('#data-input', 'a\tb\n1\t2') },
+  { id: '084', file: '084-socratic-seminar-prep-organizer.html',
+    seed: { 'socsem:list': '["Mine"]', 'socsem:current': 'Mine',
+      'socsem:data:Mine': JSON.stringify({ name: 'Mine', question: 'My own question?', source: '', date: '', roster: [], order: [], groups: {}, tallies: {} }) },
+    blank: async (p) => await p.inputValue('#questionInput') === '' && await p.inputValue('#sourceInput') === '',
+    filled: async (p) => (await p.inputValue('#questionInput')).length > 10 && (await p.inputValue('#dateInput')) === 'Friday, period 3',
+    type: async (p) => p.fill('#questionInput', 'Typed over it') },
 ];
 
 const server = await serve(PORT);
 const browser = await launch();
 const open = async (t, seed, hook) => {
   const page = await prepPage(browser, BASE, { width: 1100, height: 900 });
-  if (seed) await page.addInitScript(([k, v]) => { if (!localStorage.getItem('__seeded')) { localStorage.setItem(k, v); localStorage.setItem('__seeded', '1'); } }, [t.key, seed]);
+  const seeds = !seed ? null : typeof seed === 'string' ? { [t.key]: seed } : seed;
+  if (seeds) await page.addInitScript((kv) => { if (!localStorage.getItem('__seeded')) { for (const k in kv) localStorage.setItem(k, kv[k]); localStorage.setItem('__seeded', '1'); } }, seeds);
   await page.goto(`${BASE}/Tools/${t.file}`);
   await settle(page, 300);
   if (hook) await hook(page);

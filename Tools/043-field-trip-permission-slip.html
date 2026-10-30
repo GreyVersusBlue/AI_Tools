@@ -458,6 +458,7 @@
   </div>
 </div>
 
+<script src="../_shared/sample-data.js"></script>
 <script>
 (function () {
   'use strict';
@@ -1725,6 +1726,26 @@
   } else {
     newTrip('New Field Trip');
   }
+
+  /* ---------- sample (P15, _shared/sample-data.js) ----------
+     An invented trip with no chaperone and no student. The trip saves as you type, so a loaded
+     sample is saved to the open trip; Clear sample blanks the same fields. The name is left alone. */
+  var SAMPLE_TRIP = {
+    schoolTeacher: 'Sample Middle School, 7th Grade Science',
+    destination: 'City Science Museum, 100 Example Street',
+    tripStartDate: '2027-03-12', tripEndDate: '2027-03-12', departureTime: '08:30', returnTime: '14:45',
+    purpose: 'Students will tour the planetarium and take part in a hands-on physics workshop that supports our unit on forces and motion.',
+    cost: '$12', whatToBring: 'Sack lunch, water bottle, closed-toe shoes, a jacket for the weather.',
+    emergencyInstructions: 'In an emergency the school will call the numbers on file.',
+    dueDate: '2027-03-01'
+  };
+  if (window.SampleData) SampleData.mount({
+    before: els.tripName.closest('.card'),
+    label: 'Load a sample trip',
+    what: 'The trip saves as you type, so it is saved until you clear it.',
+    fields: SAMPLE_TRIP,
+    isEmpty: function () { return Object.keys(SAMPLE_TRIP).every(function (k) { return !els[k].value.trim(); }) && !els.chaperoneName.value.trim(); }
+  });
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

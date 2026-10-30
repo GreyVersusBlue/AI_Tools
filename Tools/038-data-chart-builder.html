@@ -361,6 +361,7 @@
 <script src="../_shared/chart-svg.js"></script>
 <script src="../_shared/paste-table.js"></script>
 <script src="data-chart-builder/dcb-fit.js"></script>
+<script src="../_shared/sample-data.js"></script>
 <script>
 (function () {
   "use strict";
@@ -1275,6 +1276,17 @@
   refreshSavedDatasetsSelect();
   importSharedChart();
 
+  /* ---------- sample (P15, _shared/sample-data.js) ----------
+     Invented monthly rainfall for an invented town. This page never stores the pasted box
+     (it can hold student data), so a loaded sample stores nothing unless the teacher presses Save. */
+  if (window.SampleData) SampleData.mount({
+    before: els.dataInput.closest('.card'),
+    label: 'Load sample data',
+    what: 'Nothing is saved unless you press Save.',
+    fields: {
+      'data-input': 'Month\tRainfall (cm)\tTemperature (C)\nJan\t8\t4\nFeb\t7\t5\nMar\t9\t9\nApr\t11\t14\nMay\t10\t19\nJun\t6\t24'
+    }
+  });
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>
