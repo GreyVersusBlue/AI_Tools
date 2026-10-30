@@ -28,6 +28,7 @@
 <!-- The site's word lists (Path 19 P2): this page reads 040's lists from them and writes its vocabulary to them. -->
 <script src="../_shared/store.js"></script>
 <script src="../_shared/word-list.js"></script>
+<script src="../_shared/speak.js"></script>
 <script src="../_shared/conjugate.js"></script>
 <script src="../_shared/conjugate-es.js"></script>
 <script src="../_shared/conjugate-de.js"></script>
@@ -491,15 +492,12 @@
     { code: 'vi-VN', label: 'Vietnamese' }, { code: 'pl-PL', label: 'Polish' },
     { code: 'tr-TR', label: 'Turkish' }, { code: 'sv-SE', label: 'Swedish' }
   ];
-  var ttsSupported = 'speechSynthesis' in window;
+  var ttsSupported = Speak.supported();
 
   function speak(text) {
     if (!ttsSupported || !text) return;
     try {
-      window.speechSynthesis.cancel();
-      var u = new SpeechSynthesisUtterance(text);
-      u.lang = (state && state.ttsLang) || 'es-ES';
-      window.speechSynthesis.speak(u);
+      Speak.say(text, (state && state.ttsLang) || 'es-ES');
     } catch (e) { /* no-op if speech synthesis is unavailable/blocked */ }
   }
 

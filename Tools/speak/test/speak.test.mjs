@@ -67,5 +67,23 @@ ok(T.say('x'), 'no language still speaks');
 eq(log.pop().slice(2), [undefined, undefined], 'with no language and no voice');
 T.stop(); eq(log.pop(), 'cancel', 'stop cancels');
 
+// state, pause and resume (044's Read aloud), and the callbacks say() hands to the utterance
+eq(none.state(), 'unsupported', 'state: unsupported with no speechSynthesis');
+none.pause(); none.resume();
+const ss = fake.speechSynthesis; ss.speaking = false; ss.paused = false;
+ss.pause = () => { ss.paused = true; log.push('pause'); }; ss.resume = () => { ss.paused = false; log.push('resume'); };
+eq(T.state(), 'idle', 'state: idle');
+ss.speaking = true; eq(T.state(), 'speaking', 'state: speaking');
+T.pause(); eq([T.state(), log.pop()], ['paused', 'pause'], 'pause pauses and state says paused');
+T.resume(); eq([T.state(), log.pop()], ['speaking', 'resume'], 'resume resumes');
+ss.speaking = false;
+let ended = 0, failed = 0, last = null;
+ss.speak = u => { last = u; log.push(['speak', u.text, u.lang, u.voice && u.voice.name]); };
+T.say('long text', '', { onEnd: () => ended++, onError: () => failed++ });
+last.onend(); last.onerror();
+eq([ended, failed], [1, 1], 'say hands onEnd and onError to the utterance');
+eq(last.lang, undefined, 'and with no tag sets no language');
+T.say('plain', 'es'); eq(last.onend, undefined, 'without opts no callbacks are set');
+
 if (failures) { console.error(failures + ' of ' + checks + ' checks failed'); process.exit(1); }
 console.log('speak: ' + checks + ' checks passed');

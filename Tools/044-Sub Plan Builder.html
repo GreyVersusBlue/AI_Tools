@@ -16,6 +16,7 @@
 <script src="../_shared/share.js"></script>
 <script src="../_shared/media-db.js"></script>
 <script src="../_shared/seating-read.js"></script>
+<script src="../_shared/speak.js"></script>
 <script src="packet-builder/sections.js"></script>
 <script src="packet-builder/providers.js"></script>
 <style>
@@ -1228,7 +1229,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
 
   function openQuickCopyModal() {
     const text = buildPlainTextPlan();
-    const speechSupported = 'speechSynthesis' in window;
+    const speechSupported = Speak.supported();
     const overlay = document.createElement('div');
     overlay.className = 'qc-overlay';
     overlay.innerHTML = `
@@ -1247,14 +1248,8 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     document.body.appendChild(overlay);
     el('qcText').value = text;
 
-    let utterance = null;
     let syncTimer = null;
-    const speechState = () => {
-      if (!speechSupported) return 'unsupported';
-      if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) return 'speaking';
-      if (window.speechSynthesis.paused) return 'paused';
-      return 'idle';
-    };
+    const speechState = () => Speak.state();
     const syncReadBtn = () => {
       if (!speechSupported) return;
       const state = speechState();
@@ -1263,15 +1258,11 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     const readToggle = () => {
       const state = speechState();
       if (state === 'speaking') {
-        window.speechSynthesis.pause();
+        Speak.pause();
       } else if (state === 'paused') {
-        window.speechSynthesis.resume();
+        Speak.resume();
       } else {
-        window.speechSynthesis.cancel();
-        utterance = new SpeechSynthesisUtterance(text);
-        utterance.onend = syncReadBtn;
-        utterance.onerror = syncReadBtn;
-        window.speechSynthesis.speak(utterance);
+        Speak.say(text, '', { onEnd: syncReadBtn, onError: syncReadBtn });
       }
       setTimeout(syncReadBtn, 30);
     };
@@ -1284,7 +1275,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
       overlay.remove();
       document.removeEventListener('keydown', escHandler);
       if (syncTimer) clearInterval(syncTimer);
-      if (speechSupported) window.speechSynthesis.cancel();
+      if (speechSupported) Speak.stop();
     };
     const escHandler = (e) => { if (e.key === 'Escape') cleanup(); };
     document.addEventListener('keydown', escHandler);

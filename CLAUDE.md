@@ -663,8 +663,8 @@ files must be added there too.
   `study` field on the list's record, present only once a setting differs from its default** (`smoke-bank.mjs` pins the stored record; do not add
   fields to it that every list gets). A word's unit is a `unit:<name>` tag on the word in Word Lists. `npm run test:vocab-study-logic`,
   `npm run test:vocab-study`.
-- **Reading a word aloud is `_shared/speak.js`** (`Speak`, Path 19 P5, v478), used by 040's self-quiz and 051; 039, 014 and 044 still have their own
-  copies. A teacher's recording of a word is 051's `clm-pron.js` (MediaRecorder into `gvb-media`, namespace `labels`): it plays on that device and is not in
+- **Reading a word aloud is `_shared/speak.js`** (`Speak`, Path 19 P5, v478), used by 040's self-quiz, 051 and, since v486, 039, 014 and 044
+  (`npm run test:speak-adopters`, port 8621); a page does not call `speechSynthesis` itself (a11y.js, which reads a whole page, is the one exception). A teacher's recording of a word is 051's `clm-pron.js` (MediaRecorder into `gvb-media`, namespace `labels`): it plays on that device and is not in
   the label's QR. `npm run test:speak`, `npm run test:label-pron`.
 - **A pasted spreadsheet region is read by `_shared/paste-table.js`** (`PasteTable`, Path 16 P2, v404): `splitLine`,
   `pickDelimiter`, `parse` (rows padded, short rows named in `ragged`), `columnReport` (the cells that stopped a column reading

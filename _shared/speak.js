@@ -1,9 +1,8 @@
 /* speak.js — read a word aloud with the browser's own voices (Path 19 P5). Publishes window.Speak.
 
-   The site had no shared speech helper: 039, 014 and 044 each carry their own few lines of
-   speechSynthesis and a11y.js reads a whole page, so the vocabulary tools that want one word
-   spoken (040's self-quiz, 051's labels) call this instead of writing a fourth copy. It does not
-   replace those three, which stay as they are.
+   The one place a page asks the browser to speak: 040's self-quiz, 051's labels, 039's Listen
+   buttons, 014's Speak buttons and 044's Read aloud all call it (the last three carried their own
+   few lines until Path 19 P3). a11y.js reads a whole page and keeps its own, which is not this.
 
    Nothing here leaves the browser: speechSynthesis is the device's own voice (some browsers
    fetch a voice from their vendor; that is the browser's doing, not the page's, and is why a
@@ -14,8 +13,11 @@
      Speak.voicesFor(tag)        the voices on this device for the tag's language, best match first
      Speak.hasVoice(tag)         whether there is one (false until the browser has listed its voices)
      Speak.onVoices(fn)          calls fn once the voices are listed (now, if they already are)
-     Speak.say(text, tag)        speaks; false when it could not start; cancels what was being said
+     Speak.say(text, tag, opts)  speaks; false when it could not start; cancels what was being said.
+                                 opts: { onEnd, onError } called when the utterance ends or fails
      Speak.stop()
+     Speak.state()               'unsupported' | 'speaking' | 'paused' | 'idle'
+     Speak.pause() / resume()    for a long text (044's Read aloud)
    The pure half (primary, langTag, matchVoices) takes its voices as an argument, so a Node suite
    can run it against a fake list. */
 (function (root) {
@@ -54,11 +56,13 @@
     if (s.addEventListener) s.addEventListener('voiceschanged', function once() { s.removeEventListener('voiceschanged', once); fn(); });
   }
 
-  function say(text, tag) {
+  function say(text, tag, opts) {
     var s = synth(), t = String(text == null ? '' : text).trim();
     if (!s || !t) return false;
     s.cancel();
     var u = new root.SpeechSynthesisUtterance(t);
+    if (opts && opts.onEnd) u.onend = opts.onEnd;
+    if (opts && opts.onError) u.onerror = opts.onError;
     var want = langTag(tag) || String(tag || '');
     if (want) {
       u.lang = want;
@@ -70,7 +74,15 @@
   }
 
   function stop() { var s = synth(); if (s) s.cancel(); }
+  function state() {
+    var s = synth();
+    if (!s) return 'unsupported';
+    if (s.speaking && !s.paused) return 'speaking';
+    return s.paused ? 'paused' : 'idle';
+  }
+  function pause() { var s = synth(); if (s) s.pause(); }
+  function resume() { var s = synth(); if (s) s.resume(); }
 
   root.Speak = { supported: supported, langTag: langTag, primary: primary, matchVoices: matchVoices,
-    voicesFor: voicesFor, hasVoice: hasVoice, onVoices: onVoices, say: say, stop: stop };
+    voicesFor: voicesFor, hasVoice: hasVoice, onVoices: onVoices, say: say, stop: stop, state: state, pause: pause, resume: resume };
 })(typeof window !== 'undefined' ? window : globalThis);
