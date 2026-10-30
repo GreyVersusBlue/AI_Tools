@@ -354,6 +354,8 @@
     "test:safety-label-preview": "node Tools/science-safety-label-maker/test/smoke-preview.mjs",
     "test:safety-label-two-symbols": "node Tools/science-safety-label-maker/test/smoke-two-symbols.mjs",
     "test:classroom-label-print": "node Tools/classroom-label-maker/test/smoke-print.mjs",
+    "test:vocab-study-logic": "node Tools/vocab-flashcard-generator/test/study-logic.test.mjs",
+    "test:vocab-study": "node Tools/vocab-flashcard-generator/test/smoke-study.mjs",
     "test:vocab-print": "node Tools/vocab-flashcard-generator/test/smoke-print.mjs",
     "test:vocab-imposition": "node Tools/vocab-flashcard-generator/test/smoke-imposition.mjs",
     "test:vocab-bank-logic": "node Tools/vocab-flashcard-generator/test/bank-logic.test.mjs",

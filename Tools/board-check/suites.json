@@ -136,6 +136,8 @@
     "Tools/rubric-builder/test/smoke-gdv-handoff.mjs",
     "Tools/vocab-flashcard-generator/test/printables-logic.test.mjs",
     "Tools/vocab-flashcard-generator/test/smoke-printables.mjs",
+    "Tools/vocab-flashcard-generator/test/study-logic.test.mjs",
+    "Tools/vocab-flashcard-generator/test/smoke-study.mjs",
     "Tools/qr-code-generator/test/smoke-roster.mjs",
     "Tools/qr-code-generator/test/smoke-checkout.mjs",
     "Tools/command-center/test/smoke-seating-panel.mjs",
