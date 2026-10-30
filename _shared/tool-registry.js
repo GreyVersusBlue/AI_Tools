@@ -117,7 +117,7 @@
       title: 'Shared — accessibility and theme preference',
       file: '_shared/a11y.js',
       category: 'platform',
-      backupLabel: 'Shared — theme preference',
+      backupLabel: 'Shared — theme preference and school colours',
       keys: [
         /* Two write probes, both shared code's, both removed the instant they
            are written, both declared so a backup can recognise one rather than
@@ -130,6 +130,7 @@
         { k: '__gvb_save_probe__', transient: true },
         { k: '__gvb_store_probe__', transient: true },
         { k: 'gvb-a11y-prefs' },
+        { k: 'gvb-brand:settings.v1' }, // the school accent: a setting, not student data
         { k: 'gvb-home-cats' },
         { k: 'gvb-tools-theme', legacy: true },
       ],

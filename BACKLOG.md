@@ -87,6 +87,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-29 (v487), ranks 61 and 62 (Track B1 and B2) DELETED, and ranks 63 and 64 (Track V) DELETED as cut at Devon's word; ranks 77 and 84 (built by Path 19 P3 and P5) deleted too, gaps not renumbered.** The school accent: `_shared/a11y.js`'s fenced `/* === brand === */` block reads `gvb-brand:settings.v1` (`{v:1, accent, accent2?}`, a setting in 009's backup, not student data) and writes one screen-only `<style id="gvb-brand-style">` before first paint (`--accent`, `--accent-2`, `--accent-ink`, the Industry tools' ten-step `--color-accent-*` scales, an accent lifted to read on the dark paper); no key means no element and no pixel changes (001, 003, 005, 044 byte-identical in both themes; 007 is nondeterministic run to run on its own). `window.BRAND_OPT_OUT` (007), `window.Brand` (`get`/`set`/`reset`/`onChange`), live across tabs; the widget's **School branding** section (colour inputs, second colour automatic unless unticked, a warning that never blocks, Reset school colours with no reload). **No logo** (Devon, 2026-10-21). Suite `test:brand` (8622), **next free suite port: 8623.** Detail and the questions in `HISTORY.md`.
 - **AI-27 (v479-v486), rank 56 (Path 19 P3) rewritten to what is left; Path 19 is otherwise built.** Reflexive verbs in German and Italian; **tenses beyond the six** as `extraTenses` on a pack (offered in 039's menu and on the check sheet, never in a default list: Spanish present perfect, -ra subjunctive and command; German Plusquamperfekt, passive and imperative; Italian congiuntivo imperfetto and imperativo; French impératif; Latin subjunctive, passive and deponents); Latin prefix compounds and the German ge- exceptions; **079's `irregulars.js` computed from the engine** (byte-identical; the typed literals frozen in `_079-irregulars-frozen.json`); and 039, 014 and 044 on `_shared/speak.js` (`speak.js` joins `SHELL_URLS`). Suite `test:speak-adopters` (8621), **next free suite port: 8622**. Every table is still unreviewed.
 - **AI-27 (v477-v478), ranks 57 and 58 (Path 19 P4 and P5) DELETED, gaps not renumbered.** P4: four new tabs in 040 on a pure `Tools/vocab-flashcard-generator/vfg-study.js` (`VfgStudy`): a **Frayer model** page per word (blank, or the list's definition and example filled in; one or two to a page), **fill in the blank** from each word's `example` (a word bank, an answer key, and a list of the words left out and why), a **review schedule** (new words per teaching day, reviews at 1, 3, 7, 14 days by default, a plan table or one day's drill sheet with a key; dated from a typed first day with weekends skipped, otherwise only numbered), and the **word wall as a system** (a `unit:<name>` tag on the word in Word Lists; cards a unit at a time, an A-to-Z index with unit and card number, retire a unit and print a take-down list). All through `PrintKit` and its preview. P5: `_shared/speak.js` (`Speak`), a small speechSynthesis helper, used by 040's self-quiz (**Hear it**, in a language chosen per list) and by 051's word table (Hear), and teacher **recordings** in 051 (`Tools/classroom-label-maker/clm-pron.js`, MediaRecorder into `gvb-media`, namespace `labels`, per language and word; plays in 051 on this device; **not** in the label's QR). Suites `test:vocab-study-logic`, `test:vocab-study` (8619), `test:speak`, `test:label-pron` (8620), **next free suite port: 8621**. Rank 56 is untouched.
 - **AI-27 (v476), rank 56 (Path 19 P3) rewritten again, increment 3 built: German, Italian and Latin.** `_shared/conjugate-de.js`, `-it.js`, `-la.js` (loaded by 039 and 079 in Devon's order es, de, it, la, fr). German: Präsens, Perfekt, Präteritum, Futur I, Konjunktiv II as würde + infinitive, Konjunktiv I; strong/mixed/modal records, separable prefixes (`mache auf`, `aufgemacht`), haben/sein. Italian: the usual six, the -er-/-ir- future, `class: 'isc'` per verb for -isc-, masculine agreement with essere (plural for noi/voi/loro). Latin: the six active indicative tenses by principal parts (perfect stem on the record, `rec.stem` for a long vowel). Engine changes are additive; Spanish and French goldens, 079 parity and the 20 old broken copies pass unchanged, 47 new broken copies caught. Every table is unreviewed; the goldens were typed by the session, not copied from a source. No new suite port (**next free: 8619**). The questions for Devon are in the P3 bullet.
@@ -816,10 +817,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 56 | Path 19 P3 — polish that is left (everything in the design is built, v469-v486): negative commands and a command or infinitive with its pronoun attached (levántate, lavarmi), German dative reflexives (sich etwas vorstellen) and Konjunktiv II proper (wäre, käme), compound subjunctives and the pluperfect for Spanish, French and Italian, Latin's perfect passive, deponent perfect and imperative, a better rule than the German ge- exception list, and Devon's questions G4, I4 and L4 in the P3 bullet. Each is one data entry or one small engine rule; none is wanted by a course yet. No table is called reviewed until the language teacher has read the check sheet | 079 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 59 | Path 20 P1, what is left — the curriculum gazetteer only if a second tool wants it (the port shipped in v401; 062's `gbq-map.js` switched to `_shared/geo-project.js` in v424) | `_shared/` | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 60 | Path 20 P4, what is left — the way back from Timeline Builder into a map project (needs a route 015 does not accept; Devon's call on where an event's year goes on a map), and the slice sheet in the print preview (the kit's `preview()` does not cover 046's canvas export); time slices themselves shipped in v433 | 046, 015 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
-| 61 | Track B1 — brand engine in `a11y.js`: school accent and logo, pre-paint, with an opt-out flag | `_shared/` | 1 | | [Track B](#track-b--custom-theme--branding-pass) |
-| 62 | Track B2 — school-branding settings UI in the a11y widget, with a contrast warning | `_shared/` | 1 | | [Track B](#track-b--custom-theme--branding-pass) |
-| 63 | Track V1 — `_shared/voice.js` (opt-in, push-to-talk, disclosed) + Name Picker commands | `_shared/` | 1 | | [Track V](#track-v--voice-command-input) |
-| 64 | Track V2 — voice commands in 008 Behavior & Points Tracker | 008 | ½ | | [Track V](#track-v--voice-command-input) |
 | 65 | First-run "Load sample data" across the tools that open to an empty form (P15) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 66 | Phone-sized layout pass beyond 005 — cap or collapse oversized toolbars site-wide | site | 1–2 | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 67 | `_shared/levels.js` — one home for Academic / Honors / Honors GT and the level footer tag | `_shared/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
@@ -832,14 +829,12 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 74 | Cover page, headers, and page numbers across the merged document | 031 | ½ | | [031 Word Doc Merger](#031--word-doc-merger) |
 | 75 | Printable parent reading report — one page per student, batch-printed for conferences | 033 | ½ | | [033 Silent Reading (SSR) Log Tracker](#033--silent-reading-ssr-log-tracker) |
 | 76 | Chart annotation layer — arrows, text callouts and shaded regions so a printed figure makes an argument | 038 | ½ | | [038 Data Table → Chart Builder](#038--data-table--chart-builder) |
-| 77 | Conjugation pattern engine — generate the full regular table from an infinitive and verb class | 039 | ½ | | [039 Vocab & Conjugation Drill Generator](#039--vocab--conjugation-drill-generator) |
 | 78 | Local math notation renderer — fractions, radicals, exponents, subscripts, Greek letters | 041 | ½ | | [041 Formula Reference Sheet Builder](#041--formula-reference-sheet-builder) |
 | 79 | Templates as data — layout, fonts, borders and colors as template objects, so new designs need no code | 042 | ½ | | [042 Certificate & Award Maker](#042--certificate--award-maker) |
 | 80 | Evergreen emergency binder — date-independent sections only, with a staleness reminder | 045 | ½ | | [045 Sub Binder / Day Bundle Generator](#045--sub-binder--day-bundle-generator) |
 | 81 | Rubric-scored critique variant — an optional per-step point scale and teacher score column | 047 | ½ | | [047 Art Critique Worksheet Generator](#047--art-critique-worksheet-generator) |
 | 82 | Bulk photo import — a whole folder at once, downscaled and auto-matched by filename | 048 | ½ | | [048 Student Art Portfolio Label & QR Tag Maker](#048--student-art-portfolio-label--qr-tag-maker) |
 | 83 | Spreadsheet book-list import via the shared SheetJS build, with a genre-balance warning | 049 | ½ | | [049 Book Tasting Menu Generator](#049--book-tasting-menu-generator) |
-| 84 | Teacher-recorded audio fallback via MediaRecorder, so labels work with no target-language voice | 051 | ½ | | [051 Classroom Label Maker (Target Language)](#051--classroom-label-maker-target-language) |
 | 85 | Practice worksheet variants — matching, fill-in-the-blank and "trap or true cognate" with answer keys | 052 | ½ | | [052 Cognates & False Friends Reference List Builder](#052--cognates--false-friends-reference-list-builder) |
 | 86 | Export into Review Game Board — a board built straight from 053’s questions, with categories and points. **Since v269 the sheet’s “Send to Quiz / Review Game Board” row puts a teacher’s own questions in 030’s bank by link (Path 6 P4), up to about fifty; since v297 a longer list is offered as a bank file instead (“Save a bank file instead”), which 030’s “Share the bank” import reads, shows first and only adds from (Devon, 2026-10-07: “yes, the file”). Left: the ready-made board (which categories and points it gets is not decided)** | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
 | 87 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
@@ -9209,6 +9204,21 @@ too long: 036 and 044 have no student-names field for a picker to fill.
 
 ### Track B — Custom Theme / Branding Pass
 
+> **BUILT 2026-10-30 (AI-29, v487): B1 and B2, without a logo.** This text is the record; what was
+> built differs from it as follows. **Logo: dropped** (Devon, 2026-10-21, "No logo"): no
+> `gvb-brand:logo.v1`, `setLogo`, `.brand-logo`, file input or quota path, and the open question about
+> letterhead is closed. **No school name** (the track found no use for it). **Counts re-verified:**
+> `a11y.js` is on 87 of the 90 pages (not 73/81); the three without it are 035 (its own theme, by
+> Devon's decision), 086 and 089. Five pages load `theme.css` (005, 011, 029, 031, 036). Only 044
+> defines its own `--accent`, and the brand beats it. **Applied as a screen-only `<style>`, not as
+> inline properties on `<html>`**, so printing is unchanged and the reset is removing one element. `accent2` is
+> stored only when the teacher overrides it. `--accent-ink` (text on an accent fill) is set from the colour's
+> luminance, which the track had missed. In dark the accent is lifted until it clears 4.5:1 on the dark
+> paper; on the pages still on a11y.css's invert filter the hue shifts as the stock accents already do.
+> A `.paper-sheet` or `#printArea` on screen shows the brand in light theme and prints stock (kept as the
+> default; see HISTORY). 009 backs the key up through the registry row of `_shared/a11y.js`.
+
+
 **Decision: extend `_shared/a11y.js` — do not create a separate `brand.js`.** a11y.js is
 already the site's presentation-prefs owner: synchronous pre-paint execution on 73/81
 tools, prefs persistence, storage-event tab sync, an injected floating settings widget,
@@ -9287,8 +9297,8 @@ handlers can tell the two apart.
   Probably acceptable (it already shifts the stock accents); verify and document in B1.
 - **Industry derivation**: derived `--color-accent-*` steps won't perfectly match the
   hand-tuned `_ds` scale. Accepted — those 5 tools are the minority.
-- **Open question (for Devon)**: should printed output eventually include the logo as
-  letterhead? Deferred; print exclusion is the v1 default.
+- ~~**Open question (for Devon)**: should printed output eventually include the logo as
+  letterhead?~~ Closed: no logo at all (Devon, 2026-10-21).
 
 ---
 
@@ -9381,6 +9391,10 @@ stored snapshots, avoiding stale-data confusion and quota use.
 ---
 
 ### Track V — Voice Command Input
+
+> **CUT. Devon, 2026-10-07: "Drop voice commands"** (it would send spoken student names to the browser
+> maker's speech service). Never build it; ranks 63 and 64 are deleted. The text below stays as the record.
+
 
 **Privacy stance (decided 2026-08-11):** the browser's `SpeechRecognition` (Chrome)
 ships microphone audio to the vendor's servers for transcription — a real exception to

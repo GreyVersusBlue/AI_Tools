@@ -9,6 +9,27 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-29: Track B, the school accent (B1 and B2), without a logo (2026-10-30, v487)
+
+**What shipped.** One commit on local `main`, `CACHE_VERSION` v487. `_shared/a11y.js` has a fenced `/* === brand === */` block that reads `gvb-brand:settings.v1` before first paint and, if it holds a v1 record with a `#rrggbb` accent, appends one `<style id="gvb-brand-style">` to `<head>`: `--accent`, `--accent-2`, `--accent-ink` (white or near-black by luminance), the Industry tools' `--color-accent-50..900` and `--color-accent-2-50..900` scales (step 600 is the exact colour, the rest an HSL ramp round it), and a second rule for dark that lifts the accent until it clears 4.5:1 on `#14171c`. All inside `@media screen`. No key means no element: nothing is created, written or changed. `window.BRAND_OPT_OUT` (set inline by 007), `window.Brand` (`get`, `set`, `reset`, `onChange`, `derive`, `contrast`), and a `storage` handler so a second tab follows a set, a reset and a cleared store. The widget has a **School branding** group: a colour input, a second colour that is automatic until "Pick the second colour for me" is unticked, a warning (a `role="status"` paragraph) when the accent is under 4.5:1 on the light paper that never blocks, and **Reset school colours**, which removes the key and the style live. The key is a row in `_shared/tool-registry.js` (the `a11y.js` row), so 009 backs it up as a setting and the rollover does not touch it. Suite `test:brand` (`Tools/theme/test/smoke-brand.mjs`, port 8622, 74 assertions; three mutants checked: dropping the opt-out, dropping the `@media screen`, dropping the version test).
+
+**Devon's answers that shaped it.** *No logo* (2026-10-21): no `gvb-brand:logo.v1`, `setLogo`, `.brand-logo`, file input or quota path; the letterhead question is closed. *Drop voice commands* (2026-10-07): Track V is marked cut in `BACKLOG.md` with its text kept as the record, and ranks 63 and 64 are deleted. Ranks 77 and 84 were deleted because Path 19 P3 and P5 built them. Gaps left, ranks not renumbered (the repo's practice since AI-28).
+
+**What differs from the track's text.** Counts: `a11y.js` is on 87 of 90 pages, not 73/81 (035, 086 and 089 do not load it); five pages load `theme.css`. The track set inline properties on `<html>`; a `<style>` was used instead because (a) the print block in `ink-paper.css` re-declares `--accent` at a selector an inline property would beat, so printing would have changed, and (b) the reset is removing one element. `accent2` is stored only when overridden. No school name: the track found no use for it.
+
+**Verified.** With no key, 001, 003, 005 and 044 are byte-identical before and after in light and dark (Playwright full-page PNG, `cmp`); 007 differs between two runs of the same code, so it was not a usable baseline. A corrupt value, `v: 0`, no version, a non-hex accent, a CSS-injection string, an array, a bare string and a blocked `localStorage` all end in the stock accent with no page error. Keyboard: the panel opens on Enter, focus lands on the first control, Tab reaches the new controls and skips the disabled second colour, Escape closes and returns focus.
+
+**Not verified / limits.**
+- **A sheet on screen can show the brand where paper does not.** `#printArea` and `.paper-sheet` redeclare the light tokens only in dark theme and in print; in light theme a sheet that uses `var(--accent)` shows the school colour on screen and prints the stock navy. Making the preview match would mean re-declaring the stock values there, and `--accent-light` does not exist on the five Industry pages and 044. The default taken: screen-only, printed output untouched, as the task said. Question for Devon below.
+- On the pages still on a11y.css's invert filter (no native dark) the accent's hue shifts in dark, as the stock accents already do; observed in principle, not screenshotted.
+- The ten-step scale is an approximation round the chosen colour, not the hand-tuned oklch scale; a very dark or very pale accent gives steps that are not monotonic.
+- Not checked on a phone, with a screen reader, or with a real colour-picker dialog (the suite sets the input's value and fires `input`).
+- 009's export and import of the key was not driven; the registry guard (`check:registry`) and the existing restore suites were.
+
+**Question for Devon (default taken).** Should the school colour print? Default: no, printed output is unchanged. If yes, drop the `@media screen` wrapper in `brandCss()` and a sheet previews and prints the same.
+
+---
+
 ## AI-27: Path 19 P3 increment 4, reflexives, the tenses beyond the six, the gaps, 079's call-outs, one speech helper (2026-10-30, v479-v486)
 
 **What shipped.** Six commits on local `main`, one `CACHE_VERSION` each (v479 reflexives `147b4f8`; v480 Spanish extras `e12ef90`; v481 German `f124e9d`; v482 Italian and French `84e7755`; v483 Latin `b2df270`; v484 gaps `047b2a2`; v485 079's call-outs `6361ba8`; v486 speech `40b1d0d`; plus one test-only commit for 039's smoke). **Every table still says unreviewed**; every golden form below was typed by the session from its own knowledge and is the teacher's to check, not a source.

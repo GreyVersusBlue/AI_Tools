@@ -326,6 +326,7 @@
     "Tools/service-worker/test/smoke-storage-persist.mjs",
     "Tools/theme/test/smoke-theme.mjs",
     "Tools/theme/test/smoke-dark-rollout.mjs",
+    "Tools/theme/test/smoke-brand.mjs",
     "Tools/store/test/envelope.test.mjs",
     "Tools/store/test/smoke-quota-banner.mjs",
     "Tools/tool-registry/test/registry-shape.test.mjs",

@@ -241,6 +241,11 @@ copy of the boilerplate:
   follows. Leave it alone; do not adopt a11y.js there cold. `test:theme`'s
   `OWN_THEME` list names it and fails if any other page writes `data-theme`
   without a11y.js, or if 035 stops (delete the entry then).
+- **The school accent is the `/* === brand === */` block in `a11y.js`** (Track B, v487): one optional key,
+  `gvb-brand:settings.v1`, applied as a screen-only `<style id="gvb-brand-style">` before first paint, so no key
+  means no element and no change. A page with a palette of its own sets `window.BRAND_OPT_OUT = true` before the
+  script (007 does); never set `--accent` on `<html>` yourself and never add a logo (Devon, 2026-10-21). Read it
+  through `window.Brand`. `npm run test:brand`.
 - `<script src="../_shared/sw-register.js" defer></script>` — service-worker
   registration, the update bar, the deferred precache pass, and (since v180) the
   request for persistent storage. It exists and is precached; link it rather than
