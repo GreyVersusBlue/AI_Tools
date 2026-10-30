@@ -69,11 +69,28 @@
   c3('canere', 'cecin'); c3('bibere', 'bib'); c3('trahere', 'trāx'); c3('cedere', 'cess', 'cēd'); c3('claudere', 'claus');
   c3('defendere', 'dēfend', 'dēfend'); c3('pellere', 'pepul'); c3('cognoscere', 'cognōv'); c3('relinquere', 'relīqu');
   c3('constituere', 'constitu');
+  // compounds formed by prefix keep the verb's whole record (addūcere is ad + dūcere: perfect addūxī). The prefix
+  // lists are the assimilated forms a first-year text meets (com- for committere, ap- for apponere). A compound that
+  // weakens its vowel (conficere from facere, accipere from capere) is a record of its own, below.
+  function pf(r, list) { r.prefixes = list; return r; }
+  pf(R.ducere, ['ab', 'ad', 'con', 'de', 'e', 'in', 'per', 'pro', 're', 'sub', 'trans']);
+  pf(R.mittere, ['ad', 'com', 'dī', 'e', 'im', 'inter', 'per', 'prae', 're', 'sub', 'trans']);
+  pf(R.scribere, ['ad', 'con', 'de', 'in', 'per', 'prae', 're', 'sub', 'trans']);
+  pf(R.ponere, ['ap', 'com', 'de', 'ex', 'im', 'inter', 'op', 'prae', 'pro', 're', 'sup', 'trans']);
+  pf(R.dicere, ['ab', 'ad', 'con', 'e', 'in', 'inter', 'prae']);
+  pf(R.trahere, ['abs', 'at', 'con', 'de', 'ex', 're', 'sub']);
+  pf(R.vincere, ['con', 'de', 'e']);
+  pf(R.cedere, ['ac', 'con', 'dis', 'ex', 'in', 'inter', 'pro', 're', 'se', 'sub']);
+  pf(R.movere, ['ad', 'com', 'e', 'per', 'pro', 're']);
+  pf(R.videre, ['in', 'per', 'prae', 'pro']);
   // third conjugation in -iō
+  io('conficere', 'confēc'); io('efficere', 'effēc'); io('perficere', 'perfēc'); io('interficere', 'interfēc'); io('reficere', 'refēc');
+  io('recipere', 'recēp'); io('suscipere', 'suscēp'); io('excipere', 'excēp'); io('percipere', 'percēp'); io('concipere', 'concēp');
   io('capere', 'cēp'); io('facere', 'fēc'); io('iacere', 'iēc'); io('fugere', 'fūg'); io('accipere', 'accēp'); io('cupere', 'cupīv'); io('rapere', 'rapu');
   // ---- fourth conjugation ---------------------------------------------------------------
   ('audire dormire munire finire servire').split(' ').forEach(function (v) { i4(v); });
   i4('scire', 'scīv'); i4('venire', 'vēn'); i4('invenire', 'invēn'); i4('aperire', 'aperu'); i4('sentire', 'sēns');
+  pf(R.venire, ['ad', 'circum', 'con', 'e', 'inter', 'per', 'prae', 'pro', 'sub']);
 
   // the perfect system on a stem: -ī -istī -it -imus -istis -ērunt, and eram.., erō..
   function perfectEnds(pre) { return [pre + 'ī', pre + 'istī', pre + 'it', pre + 'imus', pre + 'istis', pre + 'ērunt']; }
@@ -144,6 +161,8 @@
           io: ['iar', 'iēris', 'iētur', 'iēmur', 'iēminī', 'ientur'], i: ['iar', 'iēris', 'iētur', 'iēmur', 'iēminī', 'ientur']
         } }
     ],
+    // compounds by prefix are not records (they are a prefix on one); listed so the check sheet prints them
+    examples: 'adducere committere describere apponere accedere convenire'.split(' '),
     records: R,
     regulars: {}
   });

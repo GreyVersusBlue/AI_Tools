@@ -25,8 +25,9 @@
  * (node Tools/conjugate/print-corpus.mjs de) before any table is called reviewed.
  *
  * Known gaps: the participle's "no ge-" test is a prefix heuristic (be-, emp-, ent-, er-, ge-,
- * miss-, ver-, zer- before four more letters, and -ieren), so bellen, ernten and a few like them
- * come out wrong; a verb the pack does not list is accepted as regular and marked unchecked.
+ * miss-, ver-, zer- before four more letters, and -ieren) with a short list of verbs that only look prefixed
+ * (bellen, betteln, ernten...), so a verb like them that is not on the list still comes out wrong; a verb
+ * the pack does not list is accepted as regular and marked unchecked.
  */
 (function () {
   'use strict';
@@ -99,6 +100,8 @@
   strong('verstehen', 'verstand', 'verstanden');
   strong('vergessen', 'vergaß', 'vergessen', { stemChange: 'e>i' });
   strong('verlieren', 'verlor', 'verloren');
+  strong('beißen', 'biss', 'gebissen');
+  strong('gelten', 'galt', 'gegolten', { forms: { present: pr('gelte giltst gilt gelten geltet gelten') } });
   strong('laden', 'lud', 'geladen', { forms: { present: pr('lade lädst lädt laden ladet laden') } });
   // mixed verbs: a new stem, weak endings (brachte, kannte)
   mixed('bringen', 'brach', 'gebracht');
@@ -117,6 +120,8 @@
 
   var E_RE = /(?:[dt]|(?:[^aeiouäöüyhlrmn]|ch)[mn])$/; // a stem that takes an e before -st, -t, -te...
   var INSEP = /^(?:be|emp|ent|er|ge|miss|ver|zer).{4}/;
+  // verbs that begin like a prefixed one and are not (bellen is bell-en, not be-llen): they take ge- in the participle
+  var NOT_PREFIXED = ['bellen', 'betteln', 'ernten', 'gerben'];
 
   window.Conjugate.register({
     id: 'de', name: 'German', reviewed: false,
@@ -127,7 +132,7 @@
     reflexive: { prefixes: ['sich '] },
     reflexivePronouns: ['mich', 'dich', 'sich', 'uns', 'euch', 'sich'], reflexivePlacement: 'after', reflexiveAux: 'haben',
     pronouns: { words: ['ich', 'du', 'er', 'sie', 'es', 'wir', 'ihr'] },
-    separable: { prefixes: ['zusammen', 'zurück', 'vorbei', 'weiter', 'wieder', 'statt', 'fort', 'fest', 'heim', 'los', 'mit', 'nach', 'teil', 'weg', 'vor', 'her', 'hin', 'ab', 'an', 'auf', 'aus', 'bei', 'ein', 'um', 'zu'] },
+    separable: { prefixes: ['auseinander', 'entgegen', 'zusammen', 'herunter', 'hinunter', 'heraus', 'herein', 'herauf', 'hinaus', 'hinein', 'hinauf', 'voraus', 'nieder', 'zurück', 'vorbei', 'weiter', 'wieder', 'statt', 'fort', 'fest', 'heim', 'los', 'mit', 'nach', 'teil', 'weg', 'vor', 'her', 'hin', 'ab', 'an', 'auf', 'aus', 'bei', 'ein', 'um', 'zu'] },
     classes: {
       en: { name: '-en', example: 'machen', suffixes: ['en'], not: /\s/ },
       eln: { name: '-eln', example: 'sammeln', suffixes: ['eln'], cut: 1, not: /\s/ },
@@ -145,7 +150,7 @@
     // inseparable prefix or on -ieren. The engine puts a separable prefix in front of what this returns.
     participleOf: function (ctx) {
       var inf = ctx.base, stem = ctx.stem;
-      var noGe = /ieren$/.test(inf) || INSEP.test(inf);
+      var noGe = /ieren$/.test(inf) || (INSEP.test(inf) && NOT_PREFIXED.indexOf(inf) < 0);
       return (noGe ? '' : 'ge') + stem + (E_RE.test(stem) ? 'e' : '') + 't';
     },
     tenses: [

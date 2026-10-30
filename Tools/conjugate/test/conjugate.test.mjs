@@ -361,6 +361,30 @@ function suite(win) {
   eq(C.conjugate('de', 'können', 'imperative').notes.map((n) => n.kind), Array(6).fill('defective'), 'de a modal has no imperative');
   eq(C.conjugate('de', 'sein', 'passive').forms, Array(6).fill(''), 'de sein has no passive');
   eq(C.conjugate('de', 'sich waschen', 'imperative').complete, false, 'de a reflexive imperative is refused, not guessed');
+  // the gaps of increment 3: verbs that only look prefixed, a longer separable prefix, Latin compounds by prefix
+  eq(forms('de', 'bellen', 'perfect')[2], 'hat gebellt', 'de bellen is bell-en, not be-llen');
+  eq(forms('de', 'ernten', 'perfect')[0], 'habe geerntet', 'de ernten takes ge- and the e');
+  eq(forms('de', 'betteln', 'perfect')[0], 'habe gebettelt', 'de betteln takes ge-');
+  eq(forms('de', 'bestellen', 'perfect')[0], 'habe bestellt', 'de bestellen still has no ge-');
+  eq(forms('de', 'beißen', 'perfect')[0], 'habe gebissen', 'de beißen is strong');
+  eq(forms('de', 'gelten', 'present')[2], 'gilt', 'de gelten changes its vowel');
+  eq(forms('de', 'entgegenkommen', 'perfect')[0], 'bin entgegengekommen', 'de entgegen- is a separable prefix');
+  eq(forms('de', 'entgegenkommen', 'present')[2], 'kommt entgegen', 'de entgegenkommen puts it last');
+  eq(forms('de', 'herauskommen', 'present')[0], 'komme heraus', 'de heraus- is a separable prefix');
+  cells('la', 'adducere', 'present', 'addūcō | addūcis | addūcit | addūcimus | addūcitis | addūcunt');
+  cells('la', 'adducere', 'perfect', 'addūxī | addūxistī | addūxit | addūximus | addūxistis | addūxērunt');
+  cells('la', 'committere', 'perfect', 'commīsī | commīsistī | commīsit | commīsimus | commīsistis | commīsērunt');
+  cells('la', 'describere', 'perfect', 'descrīpsī | descrīpsistī | descrīpsit | descrīpsimus | descrīpsistis | descrīpsērunt');
+  cells('la', 'apponere', 'future', 'apponam | apponēs | apponet | apponēmus | apponētis | apponent');
+  cells('la', 'accedere', 'perfect', 'accessī | accessistī | accessit | accessimus | accessistis | accessērunt');
+  cells('la', 'convenire', 'perfect', 'convēnī | convēnistī | convēnit | convēnimus | convēnistis | convēnērunt');
+  cells('la', 'conficere', 'present', 'conficiō | conficis | conficit | conficimus | conficitis | conficiunt');
+  cells('la', 'conficere', 'perfect', 'confēcī | confēcistī | confēcit | confēcimus | confēcistis | confēcērunt');
+  cells('la', 'recipere', 'perfect', 'recēpī | recēpistī | recēpit | recēpimus | recēpistis | recēpērunt');
+  cells('la', 'adducere', 'imperfect-subjunctive', 'addūcerem | addūcerēs | addūceret | addūcerēmus | addūcerētis | addūcerent');
+  eq(C.conjugate('la', 'adducere', 'perfect').known, true, 'la a compound by prefix is known through its verb');
+  eq(C.conjugate('la', 'adducere', 'present').notes[0].kind, 'derived', 'la a compound by prefix is noted as derived');
+  eq(C.conjugate('la', 'xducere', 'perfect').known, false, 'la a prefix not on the list is not a compound');
   // Italian: the congiuntivo imperfetto and the imperativo
   eq(extras('it'), ['imperfect-subjunctive', 'command'], 'it extra tenses');
   eq(six('it'), ['present', 'passato-prossimo', 'imperfect', 'future', 'conditional', 'subjunctive'], 'it the six do not move');
@@ -966,6 +990,13 @@ const BROKEN = [
   ['Latin deponents are active', '_shared/conjugate.js', "if (rec.deponent && tdef.deponentAs)", "if (false)"],
   ['Latin loquor is a 1st conjugation verb', '_shared/conjugate-la.js', "dep('loqui', 'c', 'loqu')", "dep('loqui', 'a', 'loqu')"],
   ['Latin a deponent perfect is guessed', '_shared/conjugate-la.js', "function dep(inf, cls, stem) { return rec(inf, { 'class': cls, stem: stem, deponent: true, defective: { tenses: NOT_BUILT } }); }", "function dep(inf, cls, stem) { return rec(inf, { 'class': cls, stem: stem, deponent: true }); }"],
+  ['German bellen gets no ge-', '_shared/conjugate-de.js', "var NOT_PREFIXED = ['bellen', 'betteln', 'ernten', 'gerben'];", "var NOT_PREFIXED = [];"],
+  ['German beißen is weak', '_shared/conjugate-de.js', "strong('beißen', 'biss', 'gebissen');", "rec('beißen', {});"],
+  ['German entgegen- is not a prefix', '_shared/conjugate-de.js', "'auseinander', 'entgegen', ", "'auseinander', "],
+  ['Latin ducere compounds are gone', '_shared/conjugate-la.js', "pf(R.ducere, ['ab', 'ad',", "pf(R.ducere, ['xx',"],
+  ['Latin a prefix does not carry the lexical stem', '_shared/conjugate.js', "if (rec.stem != null) out.stem = prefix + rec.stem;", ""],
+  ['Latin mittere prefix com-', '_shared/conjugate-la.js', "pf(R.mittere, ['ad', 'com',", "pf(R.mittere, ['ad', 'con',"],
+  ['Latin conficere keeps the short a', '_shared/conjugate-la.js', "io('conficere', 'confēc')", "io('conficere', 'confec')"],
   ['a derived tense keeps duplicates', '_shared/conjugate.js', "if (c.forms.indexOf(j.text) < 0) c.forms.push(j.text);", "c.forms.push(j.text);"]
 ];
 
