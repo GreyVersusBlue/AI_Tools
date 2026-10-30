@@ -581,6 +581,7 @@ const PRECACHE_URLS = [
   "_shared/conjugate-de.js",
   "_shared/conjugate-fr.js",
   "_shared/conjugate-it.js",
+  "_shared/conjugate-la.js",
   "_shared/question-bank.js",
   "_shared/countdown.js",
   "_shared/qr-draw.js",

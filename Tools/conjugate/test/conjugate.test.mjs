@@ -1,5 +1,5 @@
 // conjugate.test.mjs — pure-logic tests for _shared/conjugate.js and its two packs
-// (Path 19 P3, increments 1 and 3: Spanish, French, German, Italian).
+// (Path 19 P3, increments 1 and 3: Spanish, French, German, Italian, Latin).
 //
 //   node Tools/conjugate/test/conjugate.test.mjs      (or: npm run test:conjugate)
 //
@@ -29,7 +29,7 @@ import * as corpus from '../print-corpus.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const site = path.join(here, '..', '..', '..');
 const read = (f) => fs.readFileSync(path.join(site, f), 'utf8');
-const FILES = ['_shared/conjugate.js', '_shared/conjugate-es.js', '_shared/conjugate-de.js', '_shared/conjugate-it.js', '_shared/conjugate-fr.js'];
+const FILES = ['_shared/conjugate.js', '_shared/conjugate-es.js', '_shared/conjugate-de.js', '_shared/conjugate-it.js', '_shared/conjugate-la.js', '_shared/conjugate-fr.js'];
 
 function load(patch) {
   const ctx = { window: {} };
@@ -598,8 +598,32 @@ function suite(win) {
   eq(C.match('perche', 'perché', { lang: 'it' }).verdict, 'close', 'it accent is close');
   eq(C.match('e', 'è', { lang: 'it' }).verdict, 'close', 'it è without the accent is close');
 
+  // Latin: the six active indicative tenses, by principal parts. Macrons are the least certain part of this table.
+  const LA = {
+    amare: ['amō amās amat amāmus amātis amant', 'amābam amābās amābat amābāmus amābātis amābant', 'amābō amābis amābit amābimus amābitis amābunt', 'amāvī amāvistī amāvit amāvimus amāvistis amāvērunt', 'amāveram amāverās amāverat amāverāmus amāverātis amāverant', 'amāverō amāveris amāverit amāverimus amāveritis amāverint'],
+    monere: ['moneō monēs monet monēmus monētis monent', 'monēbam monēbās monēbat monēbāmus monēbātis monēbant', 'monēbō monēbis monēbit monēbimus monēbitis monēbunt', 'monuī monuistī monuit monuimus monuistis monuērunt', 'monueram monuerās monuerat monuerāmus monuerātis monuerant', 'monuerō monueris monuerit monuerimus monueritis monuerint'],
+    regere: ['regō regis regit regimus regitis regunt', 'regēbam regēbās regēbat regēbāmus regēbātis regēbant', 'regam regēs reget regēmus regētis regent', 'rēxī rēxistī rēxit rēximus rēxistis rēxērunt', 'rēxeram rēxerās rēxerat rēxerāmus rēxerātis rēxerant', 'rēxerō rēxeris rēxerit rēxerimus rēxeritis rēxerint'],
+    capere: ['capiō capis capit capimus capitis capiunt', 'capiēbam capiēbās capiēbat capiēbāmus capiēbātis capiēbant', 'capiam capiēs capiet capiēmus capiētis capient', 'cēpī cēpistī cēpit cēpimus cēpistis cēpērunt', 'cēperam cēperās cēperat cēperāmus cēperātis cēperant', 'cēperō cēperis cēperit cēperimus cēperitis cēperint'],
+    audire: ['audiō audīs audit audīmus audītis audiunt', 'audiēbam audiēbās audiēbat audiēbāmus audiēbātis audiēbant', 'audiam audiēs audiet audiēmus audiētis audient', 'audīvī audīvistī audīvit audīvimus audīvistis audīvērunt', 'audīveram audīverās audīverat audīverāmus audīverātis audīverant', 'audīverō audīveris audīverit audīverimus audīveritis audīverint'],
+    dicere: ['dīcō dīcis dīcit dīcimus dīcitis dīcunt', 'dīcēbam dīcēbās dīcēbat dīcēbāmus dīcēbātis dīcēbant', 'dīcam dīcēs dīcet dīcēmus dīcētis dīcent', 'dīxī dīxistī dīxit dīximus dīxistis dīxērunt', 'dīxeram dīxerās dīxerat dīxerāmus dīxerātis dīxerant', 'dīxerō dīxeris dīxerit dīxerimus dīxeritis dīxerint'],
+    esse: ['sum es est sumus estis sunt', 'eram erās erat erāmus erātis erant', 'erō eris erit erimus eritis erunt', 'fuī fuistī fuit fuimus fuistis fuērunt', 'fueram fuerās fuerat fuerāmus fuerātis fuerant', 'fuerō fueris fuerit fuerimus fueritis fuerint'],
+    posse: ['possum potes potest possumus potestis possunt', 'poteram poterās poterat poterāmus poterātis poterant', 'poterō poteris poterit poterimus poteritis poterunt', 'potuī potuistī potuit potuimus potuistis potuērunt', 'potueram potuerās potuerat potuerāmus potuerātis potuerant', 'potuerō potueris potuerit potuerimus potueritis potuerint'],
+    ire: ['eō īs it īmus ītis eunt', 'ībam ībās ībat ībāmus ībātis ībant', 'ībō ībis ībit ībimus ībitis ībunt', 'iī īstī iit iimus īstis iērunt', 'ieram ierās ierat ierāmus ierātis ierant', 'ierō ieris ierit ierimus ieritis ierint'],
+    dare: ['dō dās dat damus datis dant', 'dabam dabās dabat dabāmus dabātis dabant', 'dabō dabis dabit dabimus dabitis dabunt', 'dedī dedistī dedit dedimus dedistis dedērunt', 'dederam dederās dederat dederāmus dederātis dederant', 'dederō dederis dederit dederimus dederitis dederint'],
+    videre: ['videō vidēs videt vidēmus vidētis vident', 'vidēbam vidēbās vidēbat vidēbāmus vidēbātis vidēbant', 'vidēbō vidēbis vidēbit vidēbimus vidēbitis vidēbunt', 'vīdī vīdistī vīdit vīdimus vīdistis vīdērunt', 'vīderam vīderās vīderat vīderāmus vīderātis vīderant', 'vīderō vīderis vīderit vīderimus vīderitis vīderint'],
+    scribere: ['scrībō scrībis scrībit scrībimus scrībitis scrībunt', 'scrībēbam scrībēbās scrībēbat scrībēbāmus scrībēbātis scrībēbant', 'scrībam scrībēs scrībet scrībēmus scrībētis scrībent', 'scrīpsī scrīpsistī scrīpsit scrīpsimus scrīpsistis scrīpsērunt', 'scrīpseram scrīpserās scrīpserat scrīpserāmus scrīpserātis scrīpserant', 'scrīpserō scrīpseris scrīpserit scrīpserimus scrīpseritis scrīpserint'],
+    venire: ['veniō venīs venit venīmus venītis veniunt', 'veniēbam veniēbās veniēbat veniēbāmus veniēbātis veniēbant', 'veniam veniēs veniet veniēmus veniētis venient', 'vēnī vēnistī vēnit vēnimus vēnistis vēnērunt', 'vēneram vēnerās vēnerat vēnerāmus vēnerātis vēnerant', 'vēnerō vēneris vēnerit vēnerimus vēneritis vēnerint']
+  };
+  for (const [inf, rows] of Object.entries(LA)) ['present', 'imperfect', 'future', 'perfect', 'pluperfect', 'future-perfect'].forEach((t, i) => cells('la', inf, t, rows[i]));
+  eq(forms('la', 'amāre', 'present'), w('amō amās amat amāmus amātis amant'), 'la a macron on the infinitive is read');
+  eq(forms('la', 'audīre', 'present')[1], 'audīs', 'la a macron on a fourth-conjugation infinitive is read');
+  eq(forms('la', 'zonare', 'perfect'), w('zonāvī zonāvistī zonāvit zonāvimus zonāvistis zonāvērunt'), 'la an unlisted -are verb guesses -āvī');
+  eq(kinds('la', 'zonare', 'perfect'), Array(6).fill('assumed'), 'la and is marked unchecked');
+  eq(C.match('amo', 'amō', { lang: 'la' }).verdict, 'close', 'la a missing macron is close');
+  eq(C.match('ego amo', 'amō', { lang: 'la' }).verdict, 'close', 'la a pronoun is close');
+
   // the pack, per language
-  for (const lang of ['de', 'it']) {
+  for (const lang of ['de', 'it', 'la']) {
     const L = C.languages().find((l) => l.id === lang);
     eq(L.tenses.length, 6, `${lang} declares six tenses`);
     ok(L.reviewed === false && L.status === 'unreviewed', `${lang} is unreviewed`);
@@ -609,11 +633,11 @@ function suite(win) {
     const seen = new Set();
     for (const n of names) { if (lang === 'it' && ['dormire', 'aprire', 'offrire', 'partire'].includes(n)) continue; ok(!seen.has(n), `${lang}: ${n} is declared twice`); seen.add(n); }
     const inv = C.inventory(lang), ids = L.tenses.map((t) => t.id);
-    ok(inv.length >= (lang === 'de' ? 70 : 70), `${lang} has a real inventory (${inv.length})`);
+    ok(inv.length >= (lang === 'la' ? 55 : 70), `${lang} has a real inventory (${inv.length})`);
     for (const v of inv) {
       const rec = C.lookup(lang, v);
       if (rec) eq(C.validate(lang, rec), [], `${lang} ${v} validates`);
-      ok(!!C.participle(lang, v), `${lang} ${v}: has a participle`);
+      if (lang !== 'la') ok(!!C.participle(lang, v), `${lang} ${v}: has a participle`);
       for (const t of ids) {
         const r = C.conjugate(lang, v, t);
         ok(r.complete && r.known, `${lang} ${v} ${t}: complete and known`);
@@ -634,7 +658,8 @@ function suite(win) {
   eq(C.languages().find((l) => l.id === 'fr').tenses.map((t) => t.id), ['present', 'passe-compose', 'imperfect', 'future', 'conditional', 'subjunctive'], 'French tense ids');
   eq(C.languages().find((l) => l.id === 'de').tenses.map((t) => t.id), ['present', 'perfect', 'preterite', 'future', 'conditional', 'subjunctive'], 'German tense ids');
   eq(C.languages().find((l) => l.id === 'it').tenses.map((t) => t.id), ['present', 'passato-prossimo', 'imperfect', 'future', 'conditional', 'subjunctive'], 'Italian tense ids');
-  eq(C.languages().map((l) => l.id), ['es', 'de', 'it', 'fr'], 'languages come in Devon\'s order (Spanish, German, Italian, [Latin], French)');
+  eq(C.languages().map((l) => l.id), ['es', 'de', 'it', 'la', 'fr'], 'languages come in Devon\'s order (Spanish, German, Italian, Latin, French)');
+  eq(C.languages().find((l) => l.id === 'la').tenses.map((t) => t.id), ['present', 'imperfect', 'future', 'perfect', 'pluperfect', 'future-perfect'], 'Latin tense ids');
   ok(C.languages().find((l) => l.id === 'es').persons.length === 6 && C.languages().find((l) => l.id === 'fr').persons[4] === 'vous', 'six persons, vosotros shown');
 
   return fails;
@@ -722,6 +747,18 @@ const BROKEN = [
   ['German a separable verb needs no known remainder', '_shared/conjugate.js', "&& knownBase(p, inf.slice(pre.length))) {", ") {"],
   ['ß typed as ss is wrong', '_shared/conjugate.js', "t === e.replace(/\\u00df/g, 'ss')", "false"],
   ['German formal Sie is not the plural', '_shared/conjugate-de.js', "persons: ['ich', 'du', 'er / sie / es', 'wir', 'ihr', 'sie / Sie']", "persons: ['ich', 'du', 'er / sie / es', 'wir', 'ihr', 'sie']"],
+  ['Latin third-conjugation future is -bit', '_shared/conjugate-la.js', "c: ['am', 'ēs', 'et', 'ēmus', 'ētis', 'ent']", "c: ['ābō', 'ābis', 'ābit', 'ābimus', 'ābitis', 'ābunt']"],
+  ['Latin -io verbs lose their i', '_shared/conjugate-la.js', "io: ['iō', 'is', 'it', 'imus', 'itis', 'iunt']", "io: ['ō', 'is', 'it', 'imus', 'itis', 'unt']"],
+  ['Latin fourth-conjugation macrons', '_shared/conjugate-la.js', "i: ['iō', 'īs', 'it', 'īmus', 'ītis', 'iunt']", "i: ['iō', 'is', 'it', 'imus', 'itis', 'iunt']"],
+  ['Latin perfect endings', '_shared/conjugate-la.js', "pre + 'ērunt'", "pre + 'erunt'"],
+  ['Latin pluperfect uses the perfect stem', '_shared/conjugate-la.js', "stemsAlias: 'perfect', strongEndings: pluEnds('')", "strongEndings: pluEnds('')"],
+  ['Latin future perfect endings', '_shared/conjugate-la.js', "['erō', 'eris', 'erit', 'erimus', 'eritis', 'erint']", "['erō', 'eris', 'erit', 'erimus', 'eritis', 'erunt']"],
+  ['Latin dīcere loses its long vowel', '_shared/conjugate-la.js', "c3('dicere', 'dīx', 'dīc')", "c3('dicere', 'dīx')"],
+  ['Latin rēxī becomes regsī', '_shared/conjugate-la.js', "c3('regere', 'rēx')", "c3('regere', 'regs')"],
+  ['Latin a lexical stem is ignored', '_shared/conjugate.js', "rec && rec.stem != null ? rec.stem : ", ""],
+  ['Latin sum is regular', '_shared/conjugate-la.js', "present: pr('sum es est sumus estis sunt')", "present: pr('so es est sumus estis sunt')"],
+  ['Latin dare keeps its long a', '_shared/conjugate-la.js', "imperfect: pr('dabam dabās", "imperfect: pr('dābam dābās"],
+  ['Latin capere perfect', '_shared/conjugate-la.js', "io('capere', 'cēp')", "io('capere', 'cap')"],
   ['Italian -ciare keeps its i', '_shared/conjugate-it.js', "stemRepl: [/i$/, ''] },\n      // studiare", "stemRepl: [/x$/, ''] },\n      // studiare"],
   ['Italian -iare doubles its i', '_shared/conjugate-it.js', "{ id: 'ii>i', stem: /i$/, next: /^i/, stemRepl: [/i$/, ''] }", "{ id: 'ii>i', stem: /i$/, next: /^i/, stemRepl: [/x$/, ''] }"],
   ['Italian -care loses its h', '_shared/conjugate-it.js', "stemRepl: [/$/, 'h'] }", "stemRepl: [/$/, ''] }"],
@@ -744,15 +781,15 @@ function sheetChecks() {
   const f = [];
   const { loadEngine, corpusVerbs, checkSheet } = corpus;
   const C = loadEngine();
-  for (const lang of ['es', 'fr', 'de', 'it']) {
+  for (const lang of ['es', 'fr', 'de', 'it', 'la']) {
     const verbs = corpusVerbs(C, lang);
     const html = checkSheet(C, lang, verbs);
     const pages = html.split('<section>').length - 1;
     if (pages !== verbs.length) f.push(`${lang} sheet: ${pages} pages for ${verbs.length} verbs`);
-    if (verbs.length < (lang === 'es' ? 60 : lang === 'fr' ? 50 : 70)) f.push(`${lang} sheet lists only ${verbs.length} verbs`);
+    if (verbs.length < (lang === 'es' ? 60 : lang === 'fr' ? 50 : lang === 'la' ? 55 : 70)) f.push(`${lang} sheet lists only ${verbs.length} verbs`);
     if ((html.match(/UNREVIEWED/g) || []).length !== pages) f.push(`${lang} sheet: not every page says UNREVIEWED`);
     if ((html.match(/Read by:/g) || []).length !== pages) f.push(`${lang} sheet: not every page has a line to sign`);
-    for (const must of { es: ['tener', 'pensar', 'llover', 'conocer', 'levantar'], fr: ['être', 'acheter', 'payer', 'mourir', 'falloir', 'manger'], de: ['sein', 'fahren', 'aufmachen', 'ankommen', 'öffnen', 'sammeln'], it: ['essere', 'finire', 'cercare', 'mangiare', 'andare', 'dormire'] }[lang]) {
+    for (const must of { es: ['tener', 'pensar', 'llover', 'conocer', 'levantar'], fr: ['être', 'acheter', 'payer', 'mourir', 'falloir', 'manger'], de: ['sein', 'fahren', 'aufmachen', 'ankommen', 'öffnen', 'sammeln'], it: ['essere', 'finire', 'cercare', 'mangiare', 'andare', 'dormire'], la: ['esse', 'amare', 'regere', 'capere', 'audire', 'ire'] }[lang]) {
       if (!verbs.includes(must)) f.push(`${lang} sheet leaves out ${must}`);
     }
   }

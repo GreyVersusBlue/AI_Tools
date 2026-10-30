@@ -216,7 +216,8 @@
       : !!(lookupBase(p, inf) || has(p.regulars, inf) || (rec && rec.teacher && Object.keys(rec.teacher).length));
     return {
       lang: lang, p: p, rec: rec || null, base: inf, sep: sep, full: full, reflexive: reflexive, cls: cl, 'class': cdef,
-      stem: cdef ? inf.slice(0, inf.length - cut) : '', known: known, cutLen: cut,
+      // rec.stem is a lexical stem the infinitive does not show (Latin: dīcere -> dīc-)
+      stem: cdef ? (rec && rec.stem != null ? rec.stem : inf.slice(0, inf.length - cut)) : '', known: known, cutLen: cut,
       infBase: inf.replace(/í(r)$/, 'i$1')
     };
   }

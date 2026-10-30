@@ -64,7 +64,7 @@ const status = () => page.$eval('.conj-entry:first-of-type .pattern-status', e =
 
 /* ── 1. fill ─────────────────────────────────────────────────────────── */
 console.log('039 — fill from pattern');
-ok(await page.evaluate(() => typeof Conjugate === 'object' && Conjugate.languages().map(l => l.id).join() === 'es,de,it,fr'), 'the engine and all four packs are loaded, in Devon\'s order');
+ok(await page.evaluate(() => typeof Conjugate === 'object' && Conjugate.languages().map(l => l.id).join() === 'es,de,it,la,fr'), 'the engine and all five packs are loaded, in Devon\'s order');
 await page.click('#addConjBtn'); await settle(page, 100);
 eq(await page.$eval('.conj-entry .pattern-row select', s => s.value), 'es', 'a new entry takes the language of the set\'s preset');
 ok(await page.isDisabled('.conj-entry .pattern-row button'), 'Fill is disabled until there is an infinitive and a tense');
