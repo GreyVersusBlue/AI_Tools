@@ -24,6 +24,8 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
+<script src="../_shared/levels.js"></script>
+<script src="../_shared/ss-glossary.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
@@ -286,16 +288,9 @@
      the printed packet is byte-for-byte what this tool produced before
      levels existed. Academic adds support to the SAME questions; Honors GT
      opens the planning page up. */
-  var LEVELS = [
-    { key: 'academic', label: 'Academic' },
-    { key: 'honors', label: 'Honors' },
-    { key: 'gt', label: 'Honors GT' }
-  ];
-  function isLevel(k) { return LEVELS.some(function (l) { return l.key === k; }); }
-  function levelLabel(k) {
-    var found = LEVELS.filter(function (l) { return l.key === k; })[0];
-    return found ? found.label : 'Honors';
-  }
+  var LEVELS = Levels.LEVELS.map(function (l) { return { key: l.id, label: l.label }; });
+  function isLevel(k) { return Levels.isLevel(k); }
+  function levelLabel(k) { return Levels.label(k); }
 
   function uid() { return 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHtml(s) {
@@ -779,66 +774,7 @@
      deliberately small and general — a big word list would be guesswork
      dressed as certainty, and the fallback below handles everything else
      honestly. */
-  var GLOSSARY = {
-    abolition: 'ending something completely, especially slavery',
-    amendment: 'an official change or addition to a law or a constitution',
-    apprentice: 'a young worker learning a trade from someone skilled',
-    boycott: 'refusing to buy or use something as a protest',
-    census: 'an official count of the people who live somewhere',
-    citizen: 'an official member of a country, with rights and duties',
-    colony: 'a place ruled by a country far away from it',
-    commerce: 'the buying and selling of goods',
-    constitution: 'the set of rules that says how a government works',
-    debate: 'an argument between people who disagree, usually in public',
-    democracy: 'a system where the people choose their leaders',
-    depression: 'a long stretch when the economy is very bad and jobs are scarce',
-    discrimination: 'treating a group of people worse because of who they are',
-    economy: 'the way a place makes, sells, and uses money and goods',
-    emigrate: 'to leave your own country to live somewhere else',
-    empire: 'a group of countries or lands ruled by one government',
-    exports: 'goods a country sells to other countries',
-    factory: 'a building where goods are made, usually by machines',
-    famine: 'a time when there is not enough food and people starve',
-    federal: 'having to do with the national government',
-    immigrant: 'a person who moves to a new country to live there',
-    imports: 'goods a country buys from other countries',
-    industrial: 'having to do with factories and making goods in large amounts',
-    inspection: 'an official visit to check that rules are being followed',
-    inspector: 'a person whose job is to check that rules are being followed',
-    labor: 'work, especially hard physical work',
-    legislature: 'the part of a government that writes laws',
-    machinery: 'machines, or the moving parts inside them',
-    manufacture: 'to make goods, usually in a factory',
-    migration: 'people moving from one place to another to live',
-    monarchy: 'a country ruled by a king or queen',
-    negotiate: 'to talk with someone in order to reach an agreement',
-    overseer: 'a person in charge of watching and directing workers',
-    parliament: 'the group that makes the laws in Britain and some other countries',
-    petition: 'a written request signed by many people asking for a change',
-    poverty: 'being poor; not having enough money for basic needs',
-    prejudice: 'an unfair opinion about someone formed before you know them',
-    propaganda: 'information spread on purpose to make people think a certain way',
-    prosperity: 'a time when people have money and things are going well',
-    reform: 'a change made to fix something that is unfair or broken',
-    reformer: 'a person who works to fix something unfair or broken',
-    regulation: 'a rule made by a government to control how something is done',
-    representative: 'a person chosen to speak and vote for a group of people',
-    revolution: 'a big, often sudden change in government or in the way people live',
-    rural: 'having to do with the countryside, away from cities',
-    sanitation: 'keeping a place clean enough that people do not get sick',
-    segregation: 'keeping groups of people apart on purpose, usually by race',
-    strike: 'when workers stop working together to demand better treatment',
-    suffrage: 'the right to vote',
-    tariff: 'a tax a country puts on goods coming in from somewhere else',
-    tenement: 'a crowded, run-down apartment building in a city',
-    testimony: 'what a person says about what they saw or lived through',
-    textile: 'cloth, or having to do with making cloth',
-    treaty: 'a formal, written agreement between countries',
-    unemployment: 'not having a job when you want one',
-    union: 'a group of workers who join together to bargain with an employer',
-    urban: 'having to do with cities',
-    wages: 'the money a worker is paid for the work they do'
-  };
+  var GLOSSARY = SSGlossary.set('dbq');
 
   /* Long everyday words that look hard but aren't — kept out of the
      "check these words" fallback so it stays useful. */
@@ -857,12 +793,7 @@
       var w = bareWord(words[i]);
       if (!w || seen[w]) continue;
       seen[w] = 1;
-      var key = null;
-      if (GLOSSARY[w]) key = w;
-      else if (/ies$/.test(w) && GLOSSARY[w.slice(0, -3) + 'y']) key = w.slice(0, -3) + 'y';
-      else if (/(es|ed)$/.test(w) && GLOSSARY[w.slice(0, -2)]) key = w.slice(0, -2);
-      else if (/ing$/.test(w) && GLOSSARY[w.slice(0, -3)]) key = w.slice(0, -3);
-      else if (/s$/.test(w) && GLOSSARY[w.slice(0, -1)]) key = w.slice(0, -1);
+      var key = SSGlossary.stemKey('dbq', w);
       if (key) hits.push({ word: w, def: GLOSSARY[key] });
     }
     return hits;

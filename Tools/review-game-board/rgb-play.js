@@ -107,8 +107,7 @@
   function markWord(mark) { return WORDS[mark] || WORDS.n; }
 
   function names(list) {
-    if (list.length < 2) return list.join('');
-    return list.slice(0, -1).join(', ') + ' and ' + list[list.length - 1];
+    return window.ListSentence.join(list);
   }
 
   /** One sentence for the status line once a clue is scored:

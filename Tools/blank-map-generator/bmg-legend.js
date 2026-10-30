@@ -40,14 +40,10 @@ export function regionLegendKey(color, pattern) {
  * Hand-drawn regions have no names, so they get no generated caption and
  * keep the prompt they always had.
  */
+import "../../_shared/list-sentence.js";
+
 export function regionGroupCaption(names, max = 3) {
-  const list = (names || []).filter(Boolean);
-  if (!list.length) return "";
-  if (list.length <= max) {
-    if (list.length === 1) return list[0];
-    return `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}`;
-  }
-  return `${list.slice(0, max).join(", ")} and ${list.length - max} more`;
+  return globalThis.ListSentence.caption(names, max);
 }
 
 // And for lines: plain solid lines keep the bare color key; dashed/dotted

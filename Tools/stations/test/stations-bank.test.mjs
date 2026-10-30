@@ -26,6 +26,7 @@ function load(src) {
   vm.runInContext(read('_shared/vendor/qrcode/qrcode.js'), ctx);
   win.qrcode = ctx.qrcode;
   vm.runInContext(read('_shared/qr-draw.js'), ctx);
+  vm.runInContext(read('_shared/list-sentence.js'), ctx);
   vm.runInContext(STATIONS, ctx);
   vm.runInContext(src, ctx);
   return win;

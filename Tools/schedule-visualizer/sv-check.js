@@ -16,6 +16,7 @@
 // (npm run test:schedule-check).
 
 import { modLabels, bellDay, groupWeight } from './sv-model.js';
+import '../../_shared/list-sentence.js';
 
 export const KINDS = [
   'room-double', 'teacher-double',
@@ -404,10 +405,7 @@ export function readChecksStore(raw) {
 const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
 const word = (n) => WORDS[n] || String(n);
 
-function list(items) {
-  if (items.length <= 1) return items.join('');
-  return items.slice(0, -1).join(', ') + ' and ' + items[items.length - 1];
-}
+const list = (items) => globalThis.ListSentence.join(items);
 
 /** "Room 204" for a number, the name as typed otherwise. */
 function roomName(rn) {

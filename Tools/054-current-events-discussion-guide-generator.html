@@ -21,6 +21,7 @@
      greys below are paper and stay as they are. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/levels.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
@@ -438,17 +439,10 @@
      Academic adds scaffolding on top of the same questions (never fewer or
      easier ones); Honors GT opens the prompts up and adds a synthesis question.
      Order here is the order "Print all three levels" prints the piles in. */
-  var LEVELS = [
-    { id: 'academic', label: 'Academic' },
-    { id: 'honors', label: 'Honors' },
-    { id: 'gt', label: 'Honors GT' }
-  ];
-  var DEFAULT_LEVEL = 'honors';
-  function levelLabel(id) {
-    for (var i = 0; i < LEVELS.length; i++) if (LEVELS[i].id === id) return LEVELS[i].label;
-    return 'Honors';
-  }
-  function isLevel(id) { return LEVELS.some(function (l) { return l.id === id; }); }
+  var LEVELS = Levels.LEVELS;
+  var DEFAULT_LEVEL = Levels.DEFAULT;
+  function levelLabel(id) { return Levels.label(id); }
+  function isLevel(id) { return Levels.isLevel(id); }
 
   function emptyGuide(name) {
     return { name: name, title: '', source: '', url: '', articleText: '', summary: '', vocab: [], presetChecked: {}, customQuestions: [],

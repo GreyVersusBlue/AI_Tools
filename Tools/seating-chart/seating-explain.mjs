@@ -11,13 +11,14 @@
      level 'note'  a wish is not met, or a rule was set aside
 --------------------------------------------------------------------------- */
 import { normalizeRules } from './seating-solve.mjs';
+import '../../_shared/list-sentence.js';
 
 const many = (n, one, more) => (n === 1 ? one : more);
 
 /** "A", "A and B", "A, B and C". */
 export function nameList(list) {
   if (list.length <= 1) return list[0] || '';
-  return list.slice(0, -1).join(', ') + ' and ' + list[list.length - 1];
+  return globalThis.ListSentence.join(list);
 }
 
 const ZONE_WORDS = { front: 'the front row', back: 'the back row', edge: 'an end seat', notEdge: 'a seat with neighbours on both sides' };

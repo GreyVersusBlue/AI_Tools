@@ -905,7 +905,7 @@
   function numbers(ns) {
     var w = ns.map(function (n) { return String(n + 1); });
     if (w.length === 1) return 'Station ' + w[0];
-    return 'Stations ' + w.slice(0, -1).join(', ') + ' and ' + w[w.length - 1];
+    return 'Stations ' + global.ListSentence.join(w);
   }
   /** What is wrong with a set's per-answer branches on choice stations, as sentences for the editor
       (empty when nothing is). A branch makes that choice an accepted answer, so a team that picks it

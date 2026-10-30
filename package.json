@@ -74,6 +74,8 @@
     "test:gd-items": "node Tools/grade-distribution-visualizer/test/gd-items.test.mjs",
     "test:gd-items-smoke": "node Tools/grade-distribution-visualizer/test/smoke-items.mjs",
     "test:chart-svg-parity": "node Tools/grade-distribution-visualizer/test/chart-svg-parity.test.mjs",
+    "test:ss-glossary": "node Tools/ss-glossary/test/ss-glossary.test.mjs",
+    "test:list-sentence": "node Tools/list-sentence/test/list-sentence.test.mjs",
     "test:paste-table": "node Tools/paste-table/test/paste-table.test.mjs",
     "test:paste-table-bmg-parity": "node Tools/paste-table/test/paste-table-bmg-parity.test.mjs",
     "test:paste-table-038-parity": "node Tools/paste-table/test/paste-table-038-parity.test.mjs",

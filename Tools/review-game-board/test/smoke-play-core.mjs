@@ -26,7 +26,9 @@ const plain = v => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)))
 const eq = (a, b, label) => ok(isDeepStrictEqual(plain(a), plain(b)), `${label} (got ${JSON.stringify(a)}, want ${JSON.stringify(b)})`);
 
 const window = {};
-vm.runInContext(src('Tools/review-game-board/rgb-play.js'), vm.createContext({ window }));
+const playCtx = vm.createContext({ window });
+vm.runInContext(src('_shared/list-sentence.js'), playCtx);
+vm.runInContext(src('Tools/review-game-board/rgb-play.js'), playCtx);
 const P = window.ReviewBoardPlay;
 
 console.log('Review Game Board — play modes and printed sheets, pure half');

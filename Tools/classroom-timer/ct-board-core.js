@@ -13,6 +13,8 @@
 // then "Ready" would be a lie). A save with no `board` is a save from before
 // the board existed.
 
+import '../../_shared/list-sentence.js';
+
 export const MIN_TIMERS = 2;
 export const MAX_TIMERS = 4;
 export const MAX_LABEL = 40;
@@ -158,9 +160,7 @@ export function urgencyOf(fraction, amberPct, redPct) {
 /** What a screen reader hears when timers finish: one sentence per tick. */
 export function finishedMessage(labels) {
   if (!labels.length) return '';
-  const list = labels.length === 1 ? labels[0]
-    : labels.slice(0, -1).join(', ') + ' and ' + labels[labels.length - 1];
-  return list + ": time's up";
+  return globalThis.ListSentence.join(labels) + ": time's up";
 }
 
 export default { MIN_TIMERS, MAX_TIMERS, sanitizeBoard, defaultTimers, fromSaved, toSaved, stateOf, toggle, reset, setDuration, tick, minCountFor, anyRunning, urgencyOf, finishedMessage, totalMsOf };
