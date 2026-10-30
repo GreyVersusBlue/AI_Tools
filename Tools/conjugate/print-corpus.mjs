@@ -49,10 +49,27 @@ export function checkSheet(C, lang, verbs) {
       }).join('');
       return `<tr><th>${esc(person)}</th>${cells}</tr>`;
     }).join('');
+    // tenses beyond the six get a second table, so the six-column page a teacher already knows does not move
+    const xs = (info.extraTenses || []).map((x) => x.id);
+    let extraTable = '';
+    if (xs.length) {
+      const xt = C.table(lang, v, xs, { pronouns: true });
+      const xrows = info.persons.map((person, slot) => {
+        const cells = xt.tenses.map((te) => {
+          const note = (C.conjugate(lang, v, te.id).notes.filter((n) => n.slot === slot)[0]) || { kind: '', from: '' };
+          const alts = (te.alts[slot] || []).length ? ' / ' + te.alts[slot].join(' / ') : '';
+          return `<td>${esc(te.forms[slot] ? te.forms[slot] + alts : '\u2014')}${KIND[note.kind] ? ` <sup>${esc(KIND[note.kind])}${note.from && note.kind !== 'regular' ? ' ' + esc(note.from) : ''}</sup>` : ''}</td>`;
+        }).join('');
+        return `<tr><th>${esc(person)}</th>${cells}</tr>`;
+      }).join('');
+      extraTable = `<p class="more">More tenses (offered, not in a page's default list):</p>
+<table><thead><tr><th></th>${xt.tenses.map((te) => `<th>${esc(info.extraTenses.find((x) => x.id === te.id).name)}</th>`).join('')}</tr></thead><tbody>${xrows}</tbody></table>`;
+    }
     return `<section>
 <p class="warn">UNREVIEWED &mdash; no language teacher has read this table yet.</p>
 <h2>${esc(v)} <small>(${esc(info.name)}${t.known ? '' : ', not on the pattern list: assumed regular'})</small></h2>
 <table><thead><tr><th></th>${t.tenses.map((te) => `<th>${esc(info.tenses.find((x) => x.id === te.id).name)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
+${extraTable}
 ${t.participle || t.gerund ? `<p>Participle: <b>${esc(t.participle)}</b>${t.gerund ? ` &nbsp; Gerund: <b>${esc(t.gerund)}</b>` : ''}</p>` : '<p>Principal parts: the perfect stem on the record (a third-conjugation perfect is lexical, and the one to read first).</p>'}
 <p class="sign">Read by: ____________________ &nbsp; Date: __________ &nbsp; Correct &#9744; &nbsp; Corrections: ______________________________</p>
 </section>`;
@@ -61,7 +78,7 @@ ${t.participle || t.gerund ? `<p>Participle: <b>${esc(t.participle)}</b>${t.geru
 <style>
 body{font:11pt Georgia,serif;margin:1.2cm}section{break-after:page;page-break-after:always}h2{margin:.2em 0}small{font-weight:400;color:#444}
 table{border-collapse:collapse;width:100%}th,td{border:1px solid #888;padding:.25em .4em;text-align:left;font-size:10pt}thead th{background:#eee}
-sup{color:#555;font-size:7pt}.warn{font-weight:700;border:2px solid #000;padding:.2em .5em}.sign{margin-top:1.2em}
+sup{color:#555;font-size:7pt}.more{margin:.8em 0 .2em;font-weight:700}.warn{font-weight:700;border:2px solid #000;padding:.2em .5em}.sign{margin-top:1.2em}
 @media print{@page{size:landscape;margin:1cm}}
 </style></head><body>
 <h1>${esc(info.name)}: verb tables for a language teacher to check</h1>

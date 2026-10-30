@@ -642,6 +642,9 @@
     return Conjugate.languages().filter(function (l) { return l.id === id; })[0] || null;
   }
 
+  // the pack's usual six, then the tenses beyond them (commands, the present perfect, ...)
+  function allTenses(l) { return l ? l.tenses.concat(l.extraTenses || []) : []; }
+
   function defaultSlots(n) {
     var a = [];
     for (var i = 0; i < n; i++) a.push(i < 6 ? i : null);
@@ -661,7 +664,7 @@
     state.conjugations.forEach(function (c) {
       var l = langInfo(c.lang);
       if (!l) { c.lang = ''; c.tenseId = ''; }
-      else if (!l.tenses.some(function (t) { return t.id === c.tenseId; })) c.tenseId = '';
+      else if (!allTenses(l).some(function (t) { return t.id === c.tenseId; })) c.tenseId = '';
       if (c.verb) {
         var clean = wordListDo(function () { return WordList.cleanVerb(c.verb); });
         if (clean) c.verb = clean; else delete c.verb;
@@ -672,7 +675,7 @@
 
   function tenseName(lang, id) {
     var l = langInfo(lang);
-    var t = l && l.tenses.filter(function (x) { return x.id === id; })[0];
+    var t = l && allTenses(l).filter(function (x) { return x.id === id; })[0];
     return t ? t.name : '';
   }
 
@@ -844,7 +847,7 @@
           items.forEach(function (it) { var o = document.createElement('option'); o.value = it.id; o.textContent = it.name; sel.appendChild(o); });
           sel.value = value || '';
         };
-        var tensesOf = function () { var l = langInfo(entry.lang); return l ? l.tenses : []; };
+        var tensesOf = function () { return allTenses(langInfo(entry.lang)); };
         fillOptions(langSel, Conjugate.languages(), 'No pattern', entry.lang);
         fillOptions(tenseSel, tensesOf(), 'Tense', entry.tenseId);
         refreshPattern = function (justFilled) {

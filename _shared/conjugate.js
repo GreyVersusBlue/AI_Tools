@@ -31,6 +31,7 @@
   var PRIORITY = ['teacher', 'defective', 'assumed', 'irregular', 'stem', 'spelling', 'agreement', 'derived', 'regular'];
   var SLOTS = [0, 1, 2, 3, 4, 5];
   var STATUS = 'unreviewed';
+  var ACCENTED_MONO = { ten: 't\u00e9n', pon: 'p\u00f3n', ven: 'v\u00e9n' };
 
   function has(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
 
@@ -60,6 +61,7 @@
     pack.regulars = pack.regulars || {};
     pack.stemChanges = pack.stemChanges || {};
     pack.spelling = pack.spelling || [];
+    pack.extraTenses = pack.extraTenses || [];
     pack._derived = {};
     packs[pack.id] = pack;
   }
@@ -70,6 +72,8 @@
       return {
         id: id, name: p.name, persons: p.persons.slice(), reviewed: false, status: STATUS,
         tenses: p.tenses.map(function (t) { return { id: t.id, name: t.name, mood: t.mood }; }),
+        // tenses beyond the pack's usual six: offered, never in a default table or a page's default list
+        extraTenses: p.extraTenses.map(function (t) { return { id: t.id, name: t.name, mood: t.mood }; }),
         classes: Object.keys(p.classes).filter(function (c) { return p.classes[c].auto !== false; })
           .map(function (c) { return { id: c, name: p.classes[c].name, example: p.classes[c].example }; })
       };
@@ -129,13 +133,19 @@
         out.forms = {};
         Object.keys(rec.forms).forEach(function (t) {
           out.forms[t] = {};
-          Object.keys(rec.forms[t]).forEach(function (s) { out.forms[t][s] = prefix + rec.forms[t][s]; });
+          Object.keys(rec.forms[t]).forEach(function (s) {
+            var f = rec.forms[t][s];
+            // Spanish ten/pon/ven gain the accent once a prefix makes them two syllables (mantén, propón, prevén)
+            if (t === 'command' && ACCENTED_MONO[f]) f = ACCENTED_MONO[f];
+            out.forms[t][s] = prefix + f;
+          });
         });
       }
       if (rec.stems) {
         out.stems = {};
         Object.keys(rec.stems).forEach(function (t) { out.stems[t] = glue(prefix, rec.stems[t]); });
       }
+      if (rec.stem != null) out.stem = prefix + rec.stem;
       if (rec.participle) out.participle = prefix + rec.participle;
       if (rec.gerund) out.gerund = prefix + rec.gerund;
     }
@@ -225,6 +235,7 @@
 
   function tenseDef(p, id) {
     for (var i = 0; i < p.tenses.length; i++) if (p.tenses[i].id === id) return p.tenses[i];
+    for (var j = 0; j < p.extraTenses.length; j++) if (p.extraTenses[j].id === id) return p.extraTenses[j];
     return null;
   }
 
@@ -347,11 +358,32 @@
     for (var i = 0; i < src.forms.length; i++) {
       var f = src.forms[i];
       if (f.length <= cut) return fail();
-      var j = junction(ctx, f.slice(0, -cut), ends[slot], false);
+      var base = f.slice(0, -cut);
+      // Spanish -ra subjunctive: the nosotros form carries the accent on the vowel before it (habláramos)
+      if (dd.accent && dd.accent.indexOf(slot) >= 0) base = base.replace(/([aeiou])([^aeiou]*)$/, function (m, v, rest) { return 'áéíóú'['aeiou'.indexOf(v)] + rest; });
+      var j = junction(ctx, base, ends[slot], false);
       if (c.forms.indexOf(j.text) < 0) c.forms.push(j.text);
       if (j.alt && c.forms.indexOf(j.alt) < 0) c.forms.push(j.alt);
       if (j.kind && c.kinds.indexOf(j.kind) < 0) { c.kinds.push(j.kind); if (!c.from) c.from = j.from; }
     }
+    return c;
+  }
+
+  // A tense that borrows each slot from another (a command: tú from the present, usted from the subjunctive,
+  // vosotros from the infinitive). A slot with no entry has no such form.
+  function pickCell(ctx, tdef, slot) {
+    var spec = tdef.pick[slot];
+    if (!spec) return { forms: [], kinds: ['defective'], from: '', defective: true };
+    if (spec.infinitive) return { forms: [ctx.base.replace(spec.infinitive[0], spec.infinitive[1])], kinds: [], from: '' };
+    var sl = spec.byClass && spec.byClass[ctx.cls] != null ? spec.byClass[ctx.cls] : spec.slot;
+    var src = cellOf(ctx, tenseDef(ctx.p, spec.from), sl);
+    if (!src.forms.length) return fail();
+    var c = { forms: [], kinds: [], from: src.from };
+    src.kinds.forEach(function (k) { if (k !== 'teacher' && k !== 'regular' && c.kinds.indexOf(k) < 0) c.kinds.push(k); });
+    src.forms.forEach(function (f) {
+      var d = spec.drop;
+      c.forms.push(d && d.cls.indexOf(ctx.cls) >= 0 && f.slice(-d.end.length) === d.end ? f.slice(0, -d.end.length) : f);
+    });
     return c;
   }
 
@@ -399,6 +431,10 @@
 
   function cellOf(ctx, tdef, slot) {
     var c = cellOf1(ctx, tdef, slot);
+    // words that follow the verb (German imperative: machen wir, machen Sie), before a separable prefix
+    if (tdef.append && tdef.append[slot] && c.forms.length && c.kinds.indexOf('teacher') < 0) {
+      c.forms = c.forms.map(function (f) { return f + tdef.append[slot]; });
+    }
     // the separable prefix goes to the end of a finite form (ich mache auf); a teacher's own cell is whole already
     if (ctx.sep && c.forms.length && !c.whole && c.kinds.indexOf('teacher') < 0) {
       c.forms = c.forms.map(function (f) { return f + ' ' + ctx.sep; });
@@ -419,8 +455,13 @@
       return { forms: [], kinds: ['defective'], from: '', defective: true };
     }
     if (!ctx['class']) return fail();
+    // a slot the tense has no form for (a command has no first person singular)
+    if (tdef.none && tdef.none.indexOf(slot) >= 0) return { forms: [], kinds: ['defective'], from: '', defective: true };
+    // a deponent verb (Latin loquor) wears the passive endings of the tenses that have a passive twin
+    if (rec.deponent && tdef.deponentAs) tdef = tenseDef(ctx.p, tdef.deponentAs);
     if (tdef.kind === 'compound') return compoundCell(ctx, tdef, slot);
     if (tdef.kind === 'derived') return derivedCell(ctx, tdef, slot);
+    if (tdef.kind === 'pick') return pickCell(ctx, tdef, slot);
     if (tdef.kind === 'subjunctive') return subjunctiveCell(ctx, tdef, slot);
     return simpleCell(ctx, tdef, slot);
   }
@@ -474,6 +515,7 @@
     var tdef = tenseDef(ctx.p, tenseId);
     if (!tdef) return blank('no tense ' + tenseId);
     if (!ctx['class']) return blank('not a verb this pack knows');
+    if (tdef.noReflexive && ctx.reflexive) return blank('not built for a reflexive verb');
     var slots = opts.slots || SLOTS;
     var out = { forms: [], alts: [], notes: [], complete: true, known: ctx.known, reviewed: false, status: STATUS,
       lang: lang, tense: tenseId, infinitive: ctx.full || ctx.base, reflexive: ctx.reflexive };
@@ -590,7 +632,7 @@
     if (!record || !record.infinitive) problems.push('the verb has no infinitive');
     var ctx = record && record.infinitive ? resolve(lang, record) : null;
     if (ctx && !ctx.cls) problems.push(record.infinitive + ' does not end in a class this language has');
-    var ids = p.tenses.map(function (t) { return t.id; });
+    var ids = p.tenses.concat(p.extraTenses).map(function (t) { return t.id; });
     if (record && record.forms) Object.keys(record.forms).forEach(function (id) {
       if (ids.indexOf(id) < 0) { problems.push('forms names a tense this language does not have: ' + id); return; }
       var f = record.forms[id];

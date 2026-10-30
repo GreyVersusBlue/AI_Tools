@@ -305,6 +305,38 @@ function suite(win) {
   eq(pron('se laver', 'passe-compose'), ['je me suis lavé', "tu t'es lavé", "il s'est lavé", 'nous nous sommes lavé', 'vous vous êtes lavé', 'ils se sont lavé'], 'se laver in the passé composé');
   eq(C.conjugate('es', 'hablar', 'present', { pronouns: true }).forms[0], 'yo hablo', 'Spanish subject');
   eq(C.conjugate('es', 'levantarse', 'present', { pronouns: true }).forms[4], 'vosotros os levantáis', 'Spanish reflexive with subject');
+
+  // ---- tenses beyond the six: offered, never in a default list or table (goldens typed by the session; the teacher's to check)
+  const six = (lang) => C.languages().find((l) => l.id === lang).tenses.map((t) => t.id);
+  const extras = (lang) => C.languages().find((l) => l.id === lang).extraTenses.map((t) => t.id);
+  eq(six('es'), ['present', 'preterite', 'imperfect', 'future', 'conditional', 'subjunctive'], 'es the six do not move');
+  eq(C.table('es', 'hablar').tenses.map((t) => t.id), six('es'), 'a default table holds the six only');
+  eq(extras('es'), ['present-perfect', 'imperfect-subjunctive', 'command'], 'es extra tenses');
+  cells('es', 'hablar', 'present-perfect', 'he hablado | has hablado | ha hablado | hemos hablado | habéis hablado | han hablado');
+  cells('es', 'tener', 'present-perfect', 'he tenido | has tenido | ha tenido | hemos tenido | habéis tenido | han tenido');
+  cells('es', 'abrir', 'present-perfect', 'he abierto | has abierto | ha abierto | hemos abierto | habéis abierto | han abierto');
+  cells('es', 'levantarse', 'present-perfect', 'me he levantado | te has levantado | se ha levantado | nos hemos levantado | os habéis levantado | se han levantado');
+  cells('es', 'hablar', 'imperfect-subjunctive', 'hablara | hablaras | hablara | habláramos | hablarais | hablaran');
+  cells('es', 'comer', 'imperfect-subjunctive', 'comiera | comieras | comiera | comiéramos | comierais | comieran');
+  cells('es', 'ser', 'imperfect-subjunctive', 'fuera | fueras | fuera | fuéramos | fuerais | fueran');
+  cells('es', 'tener', 'imperfect-subjunctive', 'tuviera | tuvieras | tuviera | tuviéramos | tuvierais | tuvieran');
+  cells('es', 'decir', 'imperfect-subjunctive', 'dijera | dijeras | dijera | dijéramos | dijerais | dijeran');
+  cells('es', 'dormir', 'imperfect-subjunctive', 'durmiera | durmieras | durmiera | durmiéramos | durmierais | durmieran');
+  cells('es', 'leer', 'imperfect-subjunctive', 'leyera | leyeras | leyera | leyéramos | leyerais | leyeran');
+  cells('es', 'hablar', 'command', ' | habla | hable | hablemos | hablad | hablen');
+  cells('es', 'comer', 'command', ' | come | coma | comamos | comed | coman');
+  cells('es', 'pensar', 'command', ' | piensa | piense | pensemos | pensad | piensen');
+  cells('es', 'ser', 'command', ' | sé | sea | seamos | sed | sean');
+  cells('es', 'ir', 'command', ' | ve | vaya | vamos | id | vayan');
+  cells('es', 'decir', 'command', ' | di | diga | digamos | decid | digan');
+  cells('es', 'hacer', 'command', ' | haz | haga | hagamos | haced | hagan');
+  cells('es', 'mantener', 'command', ' | mantén | mantenga | mantengamos | mantened | mantengan');
+  cells('es', 'proponer', 'command', ' | propón | proponga | propongamos | proponed | propongan');
+  eq(C.conjugate('es', 'ir', 'command').alts[3], ['vayamos'], 'es ir nosotros command has both forms');
+  eq(C.conjugate('es', 'hablar', 'command').notes.map((n) => n.kind), ['defective', 'regular', 'regular', 'regular', 'regular', 'regular'], 'es a command has no first person singular');
+  eq(C.conjugate('es', 'levantarse', 'command').complete, false, 'es a reflexive command is refused, not guessed');
+  eq(C.conjugate('es', 'hablar', 'command').reviewed, false, 'es an extra tense is unreviewed too');
+  eq(C.validate('es', { infinitive: 'hablar', forms: { command: { 1: 'habla' } } }), [], 'a teacher may correct an extra tense');
   eq(C.conjugate('es', 'hablar', 'present', { slots: [0, 2] }).forms, ['hablo', '', 'habla', '', '', ''], 'opts.slots');
 
   // (7) defective
@@ -797,6 +829,16 @@ const BROKEN = [
   ['Italian reflexive pronouns', '_shared/conjugate-it.js', "['mi', 'ti', 'si', 'ci', 'vi', 'si']", "['mi', 'ti', 'si', 'ci', 'ti', 'si']"],
   ['reflexive pronoun placement is ignored', '_shared/conjugate.js', "if (ctx.p.reflexivePlacement === 'after') {", "if (false) {"],
   ['a restore vowel is ignored', '_shared/conjugate.js', "+ (r.restore || '');", ";"],
+  ['Spanish nosotros -ra loses its accent', '_shared/conjugate.js', "if (dd.accent && dd.accent.indexOf(slot) >= 0)", "if (false)"],
+  ['Spanish -ra endings', '_shared/conjugate-es.js', "['ra', 'ras', 'ra', 'ramos', 'rais', 'ran']", "['ra', 'ras', 'ra', 'ramos', 'rais', 'ra']"],
+  ['Spanish vosotros command', '_shared/conjugate-es.js', "{ infinitive: [/r$/, 'd'] }", "{ infinitive: [/r$/, 'r'] }"],
+  ['Spanish usted command is the indicative', '_shared/conjugate-es.js', "{ from: 'subjunctive', slot: 2 }, { from: 'subjunctive', slot: 3 }", "{ from: 'present', slot: 2 }, { from: 'subjunctive', slot: 3 }"],
+  ['Spanish hacer tú command', '_shared/conjugate-es.js', "command: pr('. haz . . . .')", "command: pr('. hace . . . .')"],
+  ['Spanish ir nosotros command', '_shared/conjugate-es.js', "3: 'vamos / vayamos'", "3: 'vayamos'"],
+  ['Spanish mantén loses its accent', '_shared/conjugate.js', "if (t === 'command' && ACCENTED_MONO[f]) f = ACCENTED_MONO[f];", ""],
+  ['Spanish present perfect uses haber in the past', '_shared/conjugate-es.js', "compound: { auxiliary: 'haber', tense: 'present' }", "compound: { auxiliary: 'haber', tense: 'preterite' }"],
+  ['a reflexive command is guessed', '_shared/conjugate.js', "if (tdef.noReflexive && ctx.reflexive)", "if (false)"],
+  ['an extra tense leaks into the default list', '_shared/conjugate.js', "tenses: p.tenses.map(function (t) { return { id: t.id, name: t.name, mood: t.mood }; }),", "tenses: p.tenses.concat(p.extraTenses).map(function (t) { return { id: t.id, name: t.name, mood: t.mood }; }),"],
   ['a derived tense keeps duplicates', '_shared/conjugate.js', "if (c.forms.indexOf(j.text) < 0) c.forms.push(j.text);", "c.forms.push(j.text);"]
 ];
 
