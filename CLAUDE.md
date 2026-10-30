@@ -18,7 +18,10 @@ every edit. The deduplication work that established them is summarised in
   WebRTC pairing). Extend this; never invent a parallel shared location.
 - `sw.js` — the hand-maintained service worker that precaches the whole site.
 - `index.html` + `README.md` — the landing page and tools table; both must be
-  updated when a tool is added.
+  updated when a tool is added. **index.html's tool rows are generated**
+  (AI-30): add the tool to `Tools/board-check/index-rows.json`, run
+  `npm run build:index`, and let `npm run check:index` hold the two together;
+  the category and page-wide counts are counted, never typed.
 
 ## Vendored third-party libraries
 

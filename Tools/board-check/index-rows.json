@@ -1,0 +1,1896 @@
+{
+ "categories": [
+  {
+   "key": "classroom-mgmt",
+   "open": true,
+   "d": "460ms",
+   "title": "Classroom Management &amp; Engagement",
+   "statedCount": 11,
+   "rows": [
+    {
+     "d": "480ms",
+     "href": "Tools/007-Name%20Picker.html",
+     "tool": "name-picker",
+     "tags": "random cold call participation groups shuffle roster who goes first",
+     "filterTags": "randomizer roster projector groups",
+     "per": "1",
+     "name": "Name Picker",
+     "pitch": "5 seconds. Pick a name, move on.",
+     "comment": "The wheel doesn&rsquo;t lie. Mostly.",
+     "chips": [
+      "randomizer",
+      "roster",
+      "projector"
+     ],
+     "grade": "A+",
+     "gradeTitle": "Comment: a pleasure to have in class.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t007"
+    },
+    {
+     "d": "550ms",
+     "href": "Tools/005-Seating%20Chart%20Generator.html",
+     "tool": "seating-chart",
+     "tags": "seating chart roster groups shuffle reshuffle desks layout pairs",
+     "filterTags": "seating roster groups printable",
+     "per": "2",
+     "name": "Seating Chart Generator",
+     "pitch": "Build it once, reshuffle whenever you need to.",
+     "comment": "Never once caused a diplomatic incident. Allegedly.",
+     "chips": [
+      "seating",
+      "roster",
+      "groups"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: works well with others. Rearranges them, actually.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t005"
+    },
+    {
+     "d": "1250ms",
+     "href": "Tools/004-Classroom%20Timer.html",
+     "tool": "classroom-timer",
+     "tags": "timer countdown transition random interval stopwatch round robin stations projector",
+     "filterTags": "timer projector randomizer",
+     "per": "12",
+     "name": "Classroom Timer",
+     "pitch": "Big-digit projector timer with countdown, transition, random-interval, stopwatch, and round-robin modes.",
+     "comment": "Readable from the back row. Even without your glasses.",
+     "chips": [
+      "timer",
+      "projector",
+      "randomizer"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: readable from the back row.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t004"
+    },
+    {
+     "d": "1296ms",
+     "href": "Tools/002-group-team-generator.html",
+     "tool": "group-team-generator",
+     "tags": "groups teams randomizer constraints balance random",
+     "filterTags": "groups randomizer roster",
+     "per": "16",
+     "name": "Group / Team Generator",
+     "pitch": "Random groups with constraints &mdash; keep certain students apart, balance skill levels.",
+     "comment": "Never puts the same two together twice. Mostly by request.",
+     "chips": [
+      "groups",
+      "randomizer",
+      "roster"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: never puts the same two together twice.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t002"
+    },
+    {
+     "d": "1308ms",
+     "href": "Tools/008-behavior-points-tracker.html",
+     "tool": "behavior-points-tracker",
+     "tags": "behavior points tracker classroom management incentives",
+     "filterTags": "behavior tracker roster",
+     "per": "17",
+     "name": "Behavior &amp; Points Tracker",
+     "pitch": "Tap a behavior, then tap a student &mdash; a running per-student point tally you can project during class.",
+     "comment": "Never forgets who was helping. Or who wasn&rsquo;t.",
+     "chips": [
+      "behavior",
+      "tracker",
+      "roster"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: never forgets who was helping, or who wasn't.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t008"
+    },
+    {
+     "d": "1380ms",
+     "href": "Tools/001-hall-pass-log.html",
+     "tool": "hall-pass-log",
+     "tags": "hall pass sign out log tracking",
+     "filterTags": "tracker behavior",
+     "per": "23",
+     "name": "Digital Hall Pass / Sign-Out Log",
+     "pitch": "Tap a destination, tap a student, and the live board tracks who&rsquo;s out and for how long &mdash; sign them back in and print the day&rsquo;s log.",
+     "comment": "Knows exactly how long &ldquo;just the bathroom&rdquo; really takes.",
+     "chips": [
+      "tracker",
+      "behavior"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: knows exactly how long &ldquo;just the bathroom&rdquo; really takes.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t001"
+    },
+    {
+     "d": "1388ms",
+     "href": "Tools/006-class-roster-hub.html",
+     "tool": "class-roster-hub",
+     "tags": "roster class list shared students sync",
+     "filterTags": "roster reference tracker",
+     "per": "24",
+     "name": "Class Roster Hub",
+     "pitch": "Build and save a class roster once &mdash; Name Picker, Seating Chart, Group/Team Generator, and four more tools can all load it straight in instead of starting over.",
+     "comment": "Types your roster once. Remembers it everywhere.",
+     "chips": [
+      "roster",
+      "reference",
+      "tracker"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: types your roster once, remembers it everywhere.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t006"
+    },
+    {
+     "d": "1404ms",
+     "href": "Tools/010-command-center-dashboard.html",
+     "tool": "command-center-dashboard",
+     "tags": "dashboard timer schedule today overview projector",
+     "filterTags": "projector timer schedule",
+     "per": "26",
+     "name": "Command Center (Daily Dashboard)",
+     "pitch": "A timer, today&rsquo;s school-calendar day type and pacing note, and a no-repeats roster quick-call, side by side on one projector page.",
+     "comment": "Runs the whole period without a single tab switch.",
+     "chips": [
+      "projector",
+      "timer",
+      "schedule"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: runs the whole period without a single tab switch.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t010"
+    },
+    {
+     "d": "1420ms",
+     "href": "Tools/087-class-screen.html",
+     "tool": "class-screen",
+     "tags": "board widgets projector timer stopwatch clock text youtube video traffic light noise meter microphone dice random name groups group maker drawing whiteboard picture image qr code work symbols background screens layout front of room",
+     "filterTags": "projector timer randomizer",
+     "per": "87",
+     "name": "Class Screen",
+     "pitch": "Build the projector board from widgets &mdash; timers, a clock, text, YouTube, a traffic light, work symbols, a noise meter, drawing, pictures, QR codes, dice, a name picker and a group maker &mdash; drag them anywhere, and keep one saved screen per class.",
+     "comment": "Everything on the board, nothing in a tab.",
+     "chips": [
+      "projector",
+      "timer",
+      "randomizer"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: everything on the board, nothing in a tab.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t087"
+    },
+    {
+     "d": "1304ms",
+     "href": "Tools/058-duty-roster-builder.html",
+     "tool": "duty-roster-builder",
+     "tags": "general duty roster hallway cafeteria bus rotation printable",
+     "filterTags": "schedule planning printable",
+     "per": "29",
+     "name": "Duty Roster Builder",
+     "pitch": "Build a rotating weekly hallway/cafeteria/bus duty assignment grid across staff and print it for the workroom board.",
+     "comment": "Nobody &ldquo;forgets&rdquo; cafeteria duty again.",
+     "chips": [
+      "schedule",
+      "planning",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: nobody forgets cafeteria duty again.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t058"
+    },
+    {
+     "d": null,
+     "href": "Tools/084-socratic-seminar-prep-organizer.html",
+     "tool": "socratic-seminar-prep-organizer",
+     "tags": "general socratic seminar discussion claim evidence rebuttal speaking order fishbowl tracker",
+     "filterTags": "discussion printable tracker",
+     "per": "84",
+     "name": "Socratic Seminar Prep &amp; Tracker",
+     "pitch": "Print a claim/evidence/rebuttal prep sheet for a central question, then run a live speaking-order and participation tracker with shuffle, drag-to-reorder, and an optional inner/outer fishbowl split.",
+     "comment": "Know who talked without a clipboard tally.",
+     "chips": [
+      "discussion",
+      "printable",
+      "tracker"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: know who talked without a clipboard tally.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "pin": "Socratic Seminar Prep",
+     "icon": "t084"
+    }
+   ]
+  },
+  {
+   "key": "scheduling-subs",
+   "open": false,
+   "d": "480ms",
+   "title": "Scheduling &amp; Substitute Planning",
+   "statedCount": 7,
+   "rows": [
+    {
+     "d": "620ms",
+     "href": "Tools/034-schedule-browser.html",
+     "tool": "schedule-browser",
+     "tags": "schedule teacher room period blocks a/b day lookup coverage substitute",
+     "filterTags": "schedule reference",
+     "per": "3",
+     "name": "Schedule Browser",
+     "pitch": "Look up any teacher, room, or period in seconds.",
+     "comment": "Knows where everyone is. Even you.",
+     "chips": [
+      "schedule",
+      "reference"
+     ],
+     "grade": "A+",
+     "gradeTitle": "Comment: always knows where everyone is supposed to be.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t034"
+    },
+    {
+     "d": "690ms",
+     "href": "Tools/035-schedule-visualizer.html",
+     "tool": "layout-visualizer",
+     "tags": "building map layout rooms clusters hallways floors wayfinding schedule",
+     "filterTags": "maps schedule reference",
+     "per": "4",
+     "name": "School Layout Visualizer",
+     "pitch": "See the whole building&rsquo;s schedule, hyperlinked.",
+     "comment": "Finds every hallway shortcut you&rsquo;ve been hiding.",
+     "chips": [
+      "maps",
+      "schedule",
+      "reference"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: sees the big picture.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t035"
+    },
+    {
+     "d": "1180ms",
+     "href": "Tools/032-School%20Calendar%20Visualizer.html",
+     "tool": "school-calendar-visualizer",
+     "tags": "calendar pacing holidays half days grading periods testing windows template",
+     "filterTags": "schedule planning charts",
+     "per": "11",
+     "name": "School Calendar Visualizer",
+     "pitch": "Build a full-year calendar template — holidays, half days, workdays, grading periods — and lay lesson pacing on top: paste a lesson list or import the county pacing spreadsheet, and bumps or snow days reflow the whole sequence.",
+     "comment": "Sees the whole year coming. Still not ready for it.",
+     "chips": [
+      "schedule",
+      "planning",
+      "charts"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: plans ahead.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t032"
+    },
+    {
+     "d": "1040ms",
+     "href": "Tools/044-Sub%20Plan%20Builder.html",
+     "tool": "sub-plan-builder",
+     "tags": "sub plans substitute lesson word docx emergency",
+     "filterTags": "sub-plans export printable",
+     "per": "9",
+     "name": "Sub Plan Builder",
+     "pitch": "Fill in the boilerplate once, then export a ready-to-print sub plan.",
+     "comment": "Covers your class. Doesn't cover for you.",
+     "chips": [
+      "sub-plans",
+      "export",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: leaves detailed instructions.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t044"
+    },
+    {
+     "d": "1396ms",
+     "href": "Tools/045-sub-binder-generator.html",
+     "tool": "sub-binder-generator",
+     "tags": "sub plans bundle print pdf combine emergency seating schedule",
+     "filterTags": "sub-plans export printable seating schedule",
+     "per": "25",
+     "name": "Sub Binder / Day Bundle Generator",
+     "pitch": "Pulls the standing details saved in Sub Plan Builder and the current Seating Chart into one two-page printable packet, plus today&rsquo;s lesson.",
+     "comment": "One stack for the sub. Not three separate tabs.",
+     "chips": [
+      "sub-plans",
+      "export",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: one stack for the sub, not three separate tabs.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t045"
+    },
+    {
+     "d": "1308ms",
+     "href": "Tools/076-sub-note-feedback-slip-generator.html",
+     "tool": "sub-note-feedback-slip",
+     "tags": "general substitute feedback note printable sub plan",
+     "filterTags": "sub-plans communication printable",
+     "per": "30",
+     "name": "Sub Note / Feedback Slip Generator",
+     "pitch": "A short printable slip a substitute fills out by hand before leaving for the day &mdash; what worked, what didn&rsquo;t, and any names to know for tomorrow.",
+     "comment": "The sub-day debrief that actually gets written.",
+     "chips": [
+      "sub-plans",
+      "communication",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: the sub-day debrief that actually gets written.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t076"
+    },
+    {
+     "d": "1312ms",
+     "href": "Tools/075-staff-directory-builder.html",
+     "tool": "staff-directory-builder",
+     "tags": "general staff directory extension list printable reference",
+     "filterTags": "reference printable communication",
+     "per": "31",
+     "name": "Staff Directory / Quick-Reference Builder",
+     "pitch": "Build a printable staff directory (name, room, extension, subject) for the workroom wall or a new teacher&rsquo;s binder.",
+     "comment": "Never asks &ldquo;what room are you in again?&rdquo; twice.",
+     "chips": [
+      "reference",
+      "printable",
+      "communication"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: never asks what room twice.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t075"
+    }
+   ]
+  },
+  {
+   "key": "assessment-grading",
+   "open": false,
+   "d": "500ms",
+   "title": "Assessment &amp; Grading",
+   "statedCount": 6,
+   "rows": [
+    {
+     "d": "760ms",
+     "href": "Tools/036-final_grade_checker.html",
+     "tool": "grade-checker",
+     "tags": "grades grading report cards math weights averages quarter exam gradebook export",
+     "filterTags": "grades reference export",
+     "per": "5",
+     "name": "Final Grade Checker",
+     "pitch": "Double-check the math before report cards go out.",
+     "comment": "Catches my math before the parents do.",
+     "chips": [
+      "grades",
+      "reference",
+      "export"
+     ],
+     "grade": "A+",
+     "gradeTitle": "Comment: shows all work.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t036"
+    },
+    {
+     "d": "1332ms",
+     "href": "Tools/003-rubric-builder.html",
+     "tool": "rubric-builder",
+     "tags": "rubric grading criteria printable",
+     "filterTags": "grades reference printable",
+     "per": "19",
+     "name": "Rubric Builder",
+     "pitch": "Build, save, and print grading rubrics &mdash; editable criteria and performance levels, from a template or from scratch.",
+     "comment": "Grades the assignment. Not you.",
+     "chips": [
+      "grades",
+      "reference",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: grades the assignment, not you.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t003"
+    },
+    {
+     "d": "1356ms",
+     "href": "Tools/037-grade-distribution-visualizer.html",
+     "tool": "grade-distribution-visualizer",
+     "tags": "grades distribution histogram stats gradebook",
+     "filterTags": "grades charts",
+     "per": "21",
+     "name": "Grade Distribution Visualizer",
+     "pitch": "Paste a gradebook export and see class-wide stats, a letter-grade breakdown, and a score histogram &mdash; a companion to the Final Grade Checker.",
+     "comment": "The curve, visualized. No promises about the curve itself.",
+     "chips": [
+      "grades",
+      "charts"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: the curve, visualized.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t037"
+    },
+    {
+     "d": "1320ms",
+     "href": "Tools/023-exit-ticket-generator.html",
+     "tool": "exit-ticket-generator",
+     "tags": "exit ticket bell ringer warm up printable",
+     "filterTags": "warm-up printable writing",
+     "per": "18",
+     "name": "Exit Ticket / Bell Ringer Generator",
+     "pitch": "A bank of short warm-up and exit-ticket prompts with a projector display, or print half- or quarter-sheet handouts for the whole class.",
+     "comment": "Three minutes of writing. Zero minutes of grading.",
+     "chips": [
+      "warm-up",
+      "printable",
+      "writing"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: three minutes of writing, zero minutes of grading.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t023"
+    },
+    {
+     "d": "1316ms",
+     "href": "Tools/077-testing-accommodations-card-generator.html",
+     "tool": "testing-accommodations-card-generator",
+     "tags": "general testing accommodations reference card printable",
+     "filterTags": "reference cards printable",
+     "per": "32",
+     "name": "Testing Accommodations Reference Card Generator",
+     "pitch": "Print small per-student reference cards (extended time, separate setting, read-aloud) to keep testing day accommodations straight &mdash; stays entirely local, like the Final Grade Checker.",
+     "comment": "No more sticky notes on the desk.",
+     "chips": [
+      "reference",
+      "cards",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: no more sticky notes on the desk.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t077"
+    },
+    {
+     "d": "1420ms",
+     "href": "Tools/089-progress-report-parser.html",
+     "tool": "progress-report-parser",
+     "tags": "progress report parser family parent student detail report pdf grades missing work class overview summative formative letter grade print csv",
+     "filterTags": "grades export printable",
+     "per": "89",
+     "name": "Progress Report Parser",
+     "pitch": "Drop in Student Detail Report PDFs and get a class overview plus a one-page, family-friendly progress report for each student, with your own grading rules, missing-work flags and a teacher note. PDFs are read in the browser.",
+     "comment": "Progress reports without the retyping.",
+     "chips": [
+      "grades",
+      "export",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: progress reports without the retyping.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4"
+    },
+    {
+     "d": "1420ms",
+     "href": "Tools/090-packet-builder.html",
+     "tool": "packet-builder",
+     "tags": "packet builder print pages combine sub plan emergency information binder preset order preview substitute bundle",
+     "filterTags": "printable planning",
+     "per": "90",
+     "name": "Packet Builder",
+     "pitch": "Choose which pages go in one printed packet &mdash; substitute information, emergency information and more &mdash; put them in order, preview the pages and print. Every page is read live from the tool that holds it.",
+     "comment": "One packet, in the order you want it.",
+     "chips": [
+      "printable",
+      "planning"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: one packet, in the order you want it.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4"
+    }
+   ]
+  },
+  {
+   "key": "games-rewards",
+   "open": false,
+   "d": "520ms",
+   "title": "Games, Review &amp; Rewards",
+   "statedCount": 6,
+   "rows": [
+    {
+     "d": "1260ms",
+     "href": "Tools/020-bracket-tournament-generator.html",
+     "tool": "bracket-tournament-generator",
+     "tags": "bracket tournament review game elimination groups teams",
+     "filterTags": "review-game groups printable projector",
+     "per": "13",
+     "name": "Bracket / Tournament Generator",
+     "pitch": "Build a single-elimination bracket, run it live, and pick winners as rounds finish.",
+     "comment": "Somebody has to lose in the first round. Sorry, Eve.",
+     "chips": [
+      "review-game",
+      "groups",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: handles elimination gracefully.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t020"
+    },
+    {
+     "d": "1272ms",
+     "href": "Tools/030-review-game-board.html",
+     "tool": "review-game-board",
+     "tags": "jeopardy review game quiz board projector excel import",
+     "filterTags": "review-game projector",
+     "per": "14",
+     "name": "Quiz / Review Game Board",
+     "pitch": "A Jeopardy-style board for the projector &mdash; type in questions or import them from a spreadsheet.",
+     "comment": "Daily Double energy, minus the Sony lawyers.",
+     "chips": [
+      "review-game",
+      "projector"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: knows the answer, in the form of a question.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t030"
+    },
+    {
+     "d": "1368ms",
+     "href": "Tools/018-qr-scavenger-hunt-builder.html",
+     "tool": "qr-scavenger-hunt-builder",
+     "tags": "qr code scavenger hunt stations answer key",
+     "filterTags": "qr review-game printable",
+     "per": "22",
+     "name": "QR Scavenger Hunt Builder",
+     "pitch": "Batch-generate a set of station QR codes plus an answer key.",
+     "comment": "Sends them all over the building. Keeps the answers to itself.",
+     "chips": [
+      "qr",
+      "review-game",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: keeps the answers to itself.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t018"
+    },
+    {
+     "d": "1412ms",
+     "href": "Tools/019-escape-room-builder.html",
+     "tool": "escape-room-builder",
+     "tags": "escape room puzzle lock qr code stations game",
+     "filterTags": "review-game qr projector",
+     "per": "27",
+     "name": "Digital Escape Room / Puzzle Lock Builder",
+     "pitch": "Chain QR-code puzzle stations into a linear or branching escape room &mdash; scanning one out of order sends a student back instead of giving away the clue.",
+     "comment": "The only lock in the building that&rsquo;s supposed to be picked.",
+     "chips": [
+      "review-game",
+      "qr",
+      "projector"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: the only lock in the building that&rsquo;s supposed to be picked.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t019"
+    },
+    {
+     "d": "1110ms",
+     "href": "Tools/016-qr-code-generator.html",
+     "tool": "qr-code-generator",
+     "tags": "qr code generator link station schoology forms logo",
+     "filterTags": "qr printable",
+     "per": "10",
+     "name": "QR Code Generator",
+     "pitch": "Turn a link or short text into a printable QR code, with an optional logo in the center.",
+     "comment": "Scans on the first try. Unlike the fire alarm.",
+     "chips": [
+      "qr",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: scans on the first try.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t016"
+    },
+    {
+     "d": "1284ms",
+     "href": "Tools/042-certificate-award-maker.html",
+     "tool": "certificate-award-maker",
+     "tags": "certificate award printable recognition batch",
+     "filterTags": "printable cards communication",
+     "per": "15",
+     "name": "Certificate &amp; Award Maker",
+     "pitch": "Pick a template and border, type in the details, print one certificate or a whole class set.",
+     "comment": "Everyone&rsquo;s a winner. Some more officially than others.",
+     "chips": [
+      "printable",
+      "cards",
+      "communication"
+     ],
+     "grade": "A+",
+     "gradeTitle": "Comment: everyone&rsquo;s a winner.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t042"
+    }
+   ]
+  },
+  {
+   "key": "docs-comm",
+   "open": false,
+   "d": "540ms",
+   "title": "Documents &amp; Communication",
+   "statedCount": 7,
+   "rows": [
+    {
+     "d": "830ms",
+     "href": "Tools/011-image-to-pdf.html",
+     "tool": "image-to-pdf",
+     "tags": "pdf images photos scans handouts merge combine documents",
+     "filterTags": "export printable",
+     "per": "6",
+     "name": "Image &rarr; PDF Assembler",
+     "pitch": "Turn a stack of photos into one clean PDF.",
+     "comment": "Turns chaos into one PDF. Occasionally sideways.",
+     "chips": [
+      "export",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: turns work in on time, stapled.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t011"
+    },
+    {
+     "d": "970ms",
+     "href": "Tools/031-docx-merger.html",
+     "tool": "docx-merger",
+     "tags": "word docx merge combine documents template letters",
+     "filterTags": "export communication",
+     "per": "8",
+     "name": "Word Doc Merger",
+     "pitch": "Combine multiple Word docs into one, in order.",
+     "comment": "Plays well with others. Literally.",
+     "chips": [
+      "export",
+      "communication"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: works well with others.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t031"
+    },
+    {
+     "d": "900ms",
+     "href": "Tools/029-prompt-builder.html",
+     "tool": "prompt-builder",
+     "tags": "prompt ai writing template builder chatgpt claude questions",
+     "filterTags": "planning writing reference",
+     "per": "7",
+     "name": "Prompt Builder",
+     "pitch": "Answer a few questions, get a ready-to-use AI prompt.",
+     "comment": "Better at asking questions than most staff meetings.",
+     "chips": [
+      "planning",
+      "writing",
+      "reference"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: asks good questions.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t029"
+    },
+    {
+     "d": "1344ms",
+     "href": "Tools/043-field-trip-permission-slip.html",
+     "tool": "field-trip-permission-slip",
+     "tags": "field trip permission slip printable",
+     "filterTags": "printable communication",
+     "per": "20",
+     "name": "Field Trip Permission Slip Generator",
+     "pitch": "Fill in the trip details once, then print one slip, a whole class set, or blank copies to hand-write &mdash; save the trip as a template for next year.",
+     "comment": "Fills in the fine print. You still chase the signatures.",
+     "chips": [
+      "printable",
+      "communication"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: fills in the fine print, you still chase the signatures.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t043"
+    },
+    {
+     "d": "1416ms",
+     "href": "Tools/068-parent-contact-log.html",
+     "tool": "parent-contact-log",
+     "tags": "general parent contact log communication tracker conference",
+     "filterTags": "communication tracker",
+     "per": "28",
+     "name": "Parent/Guardian Contact Log",
+     "pitch": "Log a call, email, or note home per student &mdash; date, method, and outcome &mdash; for quick reference before a conference or a difficult phone call.",
+     "comment": "Remembers so you don&rsquo;t have to, right before that call.",
+     "chips": [
+      "communication",
+      "tracker"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: remembers so you don't have to.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t068"
+    },
+    {
+     "d": null,
+     "href": "Tools/085-parent-communication-templates.html",
+     "tool": "parent-communication-templates",
+     "tags": "general parent communication template letter email missing work conference behavior positive note batch roster",
+     "filterTags": "communication printable letters",
+     "per": "85",
+     "name": "Parent Communication Template Generator",
+     "pitch": "Fill in the blanks on ready-made letters &mdash; positive notes, missing-work notices, conference requests, and more &mdash; then copy, print, or email one, or batch-fill the same letter for a whole roster at once.",
+     "comment": "A drafted email beats a blank compose window.",
+     "chips": [
+      "communication",
+      "printable",
+      "letters"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: a drafted email beats a blank compose window.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t085"
+    },
+    {
+     "d": null,
+     "href": "Tools/082-citation-generator.html",
+     "tool": "citation-generator",
+     "tags": "general citation generator mla apa chicago works cited references bibliography book website wikipedia",
+     "filterTags": "writing printable reference",
+     "per": "82",
+     "name": "Citation Generator",
+     "pitch": "Add books, articles, websites, Wikipedia pages, videos, and more, then print a Works Cited, References, or Bibliography page in MLA, APA, or Chicago style, alphabetized automatically.",
+     "comment": "No more &ldquo;how do I cite Wikipedia&rdquo; mid-class.",
+     "chips": [
+      "writing",
+      "printable",
+      "reference"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: no more how do I cite Wikipedia mid-class.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t082"
+    }
+   ]
+  },
+  {
+   "key": "math",
+   "open": false,
+   "d": "500ms",
+   "title": "Math",
+   "statedCount": 9,
+   "rows": [
+    {
+     "d": "1428ms",
+     "href": "Tools/012-graph-paper-generator.html",
+     "tool": "graph-paper-generator",
+     "tags": "math graph paper number line coordinate plane printable",
+     "filterTags": "printable math",
+     "per": "33",
+     "name": "Graph Paper &amp; Number Line Generator",
+     "pitch": "Printable graph paper, number lines, and coordinate planes, sized true-to-scale for printing.",
+     "comment": "Never draws outside the lines.",
+     "chips": [
+      "printable",
+      "math"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: never draws outside the lines.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t012"
+    },
+    {
+     "d": "1412ms",
+     "href": "Tools/026-math-drill-generator.html",
+     "tool": "math-drill-generator",
+     "tags": "math fluency drill facts timed printable",
+     "filterTags": "warm-up printable math",
+     "per": "34",
+     "name": "Math Fact Drill Sheet Generator",
+     "pitch": "Randomized timed drill sheets with a matching answer key &mdash; a fresh sheet every time.",
+     "comment": "Shows its work. All of it.",
+     "chips": [
+      "warm-up",
+      "printable",
+      "math"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: shows its work.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t026"
+    },
+    {
+     "d": "1424ms",
+     "href": "Tools/041-formula-sheet-builder.html",
+     "tool": "formula-sheet-builder",
+     "tags": "math formulas reference sheet printable",
+     "filterTags": "reference printable math",
+     "per": "35",
+     "name": "Formula Reference Sheet Builder",
+     "pitch": "Pick a topic template or start blank, customize the list, print a one-page reference sheet.",
+     "comment": "Keeps a formula sheet. Unlike some students.",
+     "chips": [
+      "reference",
+      "printable",
+      "math"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: keeps a formula sheet.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t041"
+    },
+    {
+     "d": "1432ms",
+     "href": "Tools/024-number-talks-board.html",
+     "tool": "number-talks-board",
+     "tags": "math number talks mental math routine projector strategies",
+     "filterTags": "warm-up projector math",
+     "per": "36",
+     "name": "Number Talks / Mental Math Routine Board",
+     "pitch": "Reveal a number string one expression at a time, then jot a few students&rsquo; strategies on a lightweight board as they share out.",
+     "comment": "Shows the string one piece at a time. Keeps the guessing to the students.",
+     "chips": [
+      "warm-up",
+      "projector",
+      "math"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: shows the string one piece at a time, keeps the guessing to the students.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t024"
+    },
+    {
+     "d": "1436ms",
+     "href": "Tools/080-virtual-manipulatives-board.html",
+     "tool": "virtual-manipulatives-board",
+     "tags": "math manipulatives base ten blocks fraction tiles algebra tiles number line projector",
+     "filterTags": "projector math",
+     "per": "37",
+     "name": "Virtual Manipulatives Board",
+     "pitch": "A projector-friendly board of draggable base-ten blocks, fraction tiles, algebra tiles, and a number line for demonstrating a concept live, with a one-click snapshot of whatever&rsquo;s on the board.",
+     "comment": "No more digging through the manipulatives bin.",
+     "chips": [
+      "projector",
+      "math"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: no more digging through the manipulatives bin.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t080"
+    },
+    {
+     "d": "1320ms",
+     "href": "Tools/081-word-problem-warmup-generator.html",
+     "tool": "word-problem-warmup-generator",
+     "tags": "math word problems warm up projector printable randomized",
+     "filterTags": "warm-up projector printable randomizer math",
+     "per": "38",
+     "name": "Word Problem Warm-Up Generator",
+     "pitch": "Templated word problems with randomized numbers per operation and grade band, for a projector display or a printable warm-up sheet.",
+     "comment": "Word problems, minus the writer&rsquo;s block.",
+     "chips": [
+      "warm-up",
+      "projector",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: minus the writer's block.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t081"
+    },
+    {
+     "d": "1324ms",
+     "href": "Tools/078-unit-conversion-chart-builder.html",
+     "tool": "unit-conversion-chart-builder",
+     "tags": "math unit conversion reference chart printable metric customary",
+     "filterTags": "reference printable math",
+     "per": "39",
+     "name": "Unit Conversion Reference Chart Builder",
+     "pitch": "A printable customary/metric conversion chart, customizable by unit set &mdash; the measurement-focused cousin of the Formula Reference Sheet Builder.",
+     "comment": "Metric panic, cured.",
+     "chips": [
+      "reference",
+      "printable",
+      "math"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: metric panic, cured.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t078"
+    },
+    {
+     "d": "1328ms",
+     "href": "Tools/066-math-find-the-mistake-generator.html",
+     "tool": "math-find-the-mistake-generator",
+     "tags": "math error analysis find the mistake warm up projector printable",
+     "filterTags": "warm-up projector printable math",
+     "per": "40",
+     "name": "Math &ldquo;Find the Mistake&rdquo; Warm-Up Generator",
+     "pitch": "Worked-out problems with one intentional error each, for students to spot and correct &mdash; reveal the fix on the projector or print as a worksheet.",
+     "comment": "Grades the teacher&rsquo;s (fake) work for once.",
+     "chips": [
+      "warm-up",
+      "projector",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: grades the teacher's fake work for once.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t066"
+    },
+    {
+     "d": "1332ms",
+     "href": "Tools/061-fraction-decimal-percent-drill-generator.html",
+     "tool": "fraction-decimal-percent-drill-generator",
+     "tags": "math fractions decimals percents conversion drill printable",
+     "filterTags": "warm-up printable math",
+     "per": "41",
+     "name": "Fraction&ndash;Decimal&ndash;Percent Conversion Drill Generator",
+     "pitch": "A randomized drill sheet just for converting between fractions, decimals, and percents, with a matching answer key.",
+     "comment": "Three ways to say the same number, drilled straight.",
+     "chips": [
+      "warm-up",
+      "printable",
+      "math"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: three ways to say the same number.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t061"
+    }
+   ]
+  },
+  {
+   "key": "ela",
+   "open": false,
+   "d": "540ms",
+   "title": "English / Language Arts",
+   "statedCount": 9,
+   "rows": [
+    {
+     "d": "1448ms",
+     "href": "Tools/040-vocab-flashcard-generator.html",
+     "tool": "vocab-flashcard-generator",
+     "tags": "ela vocabulary flashcards word wall printable",
+     "filterTags": "vocab cards printable ela",
+     "per": "42",
+     "name": "Vocabulary Flashcard &amp; Word Wall Generator",
+     "pitch": "Turn a word list into printable flashcards (front/back) or big word-wall cards.",
+     "comment": "Never mixes up its cards. Mostly.",
+     "chips": [
+      "vocab",
+      "cards",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: never mixes up its cards.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t040"
+    },
+    {
+     "d": "1456ms",
+     "href": "Tools/025-writing-prompt-generator.html",
+     "tool": "writing-prompt-generator",
+     "tags": "ela writing prompt generator genre",
+     "filterTags": "writing randomizer projector ela",
+     "per": "43",
+     "name": "Writing Prompt Generator",
+     "pitch": "200 prompts across 5 genres, split by middle school / high school &mdash; pick a genre, hit generate.",
+     "comment": "Never has writer's block.",
+     "chips": [
+      "writing",
+      "randomizer",
+      "projector"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: never has writer&rsquo;s block.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t025"
+    },
+    {
+     "d": "1468ms",
+     "href": "Tools/033-ssr-log-tracker.html",
+     "tool": "ssr-log-tracker",
+     "tags": "ela reading log ssr independent reading",
+     "filterTags": "reading tracker ela",
+     "per": "44",
+     "name": "Silent Reading (SSR) Log Tracker",
+     "pitch": "Track books and pages read during independent reading time, per student or for the whole class.",
+     "comment": "Knows who&rsquo;s still on chapter 3.",
+     "chips": [
+      "reading",
+      "tracker",
+      "ela"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: knows who&rsquo;s still on chapter 3.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t033"
+    },
+    {
+     "d": "1472ms",
+     "href": "Tools/027-novel-study-circles-manager.html",
+     "tool": "novel-study-reading-circles",
+     "tags": "ela novel study reading circles roles groups pacing",
+     "filterTags": "reading groups planning ela",
+     "per": "45",
+     "name": "Novel Study / Reading Circles Manager",
+     "pitch": "Splits a roster into reading circles and rotates discussion roles meeting after meeting, with a chapter checkpoint logged each time &mdash; the group cousin of the SSR Log Tracker.",
+     "comment": "Nobody&rsquo;s the Word Wizard two meetings running.",
+     "chips": [
+      "reading",
+      "groups",
+      "planning"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: nobody's the word wizard two meetings running.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t027"
+    },
+    {
+     "d": "1476ms",
+     "href": "Tools/055-daily-editing-warmup-generator.html",
+     "tool": "daily-editing-warmup-generator",
+     "tags": "ela editing daily oral language grammar warm up projector",
+     "filterTags": "warm-up writing projector ela",
+     "per": "46",
+     "name": "Daily Editing / DOL Warm-Up Generator",
+     "pitch": "A bank of broken sentences reveals one at a time on the projector with a click-to-show corrected version, plus a printable worksheet mode and a teacher-added custom sentence bank.",
+     "comment": "Catches the typo before third period does.",
+     "chips": [
+      "warm-up",
+      "writing",
+      "projector"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: catches the typo before third period does.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t055"
+    },
+    {
+     "d": "1336ms",
+     "href": "Tools/070-peer-feedback-checklist-generator.html",
+     "tool": "peer-feedback-checklist-generator",
+     "tags": "ela peer feedback editing checklist writing printable",
+     "filterTags": "writing printable ela",
+     "per": "47",
+     "name": "Peer Feedback / Editing Checklist Generator",
+     "pitch": "Build a custom peer-review checklist (grammar, structure, argument) tied to a specific writing assignment, printed as a half-sheet per student.",
+     "comment": "Turns &ldquo;it&rsquo;s good&rdquo; into actual feedback.",
+     "chips": [
+      "writing",
+      "printable",
+      "ela"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: turns it's good into actual feedback.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t070"
+    },
+    {
+     "d": "1340ms",
+     "href": "Tools/049-book-tasting-menu-generator.html",
+     "tool": "book-tasting-menu-generator",
+     "tags": "ela book tasting reading recommendation menu printable",
+     "filterTags": "reading printable ela",
+     "per": "48",
+     "name": "Book Tasting Menu Generator",
+     "pitch": "Turn a stack of book blurbs into a printable &ldquo;menu&rdquo; or table tents for a book-tasting activity, so students can browse titles before choosing one.",
+     "comment": "Serves 30, no reservations needed.",
+     "chips": [
+      "reading",
+      "printable",
+      "ela"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: serves 30, no reservations needed.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t049"
+    },
+    {
+     "d": "1344ms",
+     "href": "Tools/063-grammar-mad-libs-generator.html",
+     "tool": "grammar-mad-libs-generator",
+     "tags": "ela grammar parts of speech mad libs printable",
+     "filterTags": "writing printable ela",
+     "per": "49",
+     "name": "Grammar Mad Libs Generator",
+     "pitch": "Printable fill-in-the-blank Mad-Libs-style worksheets built around a chosen part of speech, with a word bank and a reveal.",
+     "comment": "Nouns and verbs, now with jokes.",
+     "chips": [
+      "writing",
+      "printable",
+      "ela"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: nouns and verbs, now with jokes.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t063"
+    },
+    {
+     "d": "1348ms",
+     "href": "Tools/072-plot-diagram-builder.html",
+     "tool": "plot-diagram-builder",
+     "tags": "ela story elements plot diagram novel printable",
+     "filterTags": "reading printable charts ela",
+     "per": "50",
+     "name": "Story Elements / Plot Diagram Builder",
+     "pitch": "Build a plot-mountain diagram (exposition through resolution) for a novel or story with your own class, then print or project it as a shared reference.",
+     "comment": "Climbs the mountain, sticks the landing.",
+     "chips": [
+      "reading",
+      "printable",
+      "charts"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: climbs the mountain, sticks the landing.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t072"
+    }
+   ]
+  },
+  {
+   "key": "science",
+   "open": false,
+   "d": "580ms",
+   "title": "Science",
+   "statedCount": 8,
+   "rows": [
+    {
+     "d": "1488ms",
+     "href": "Tools/022-lab-group-role-randomizer.html",
+     "tool": "lab-group-role-randomizer",
+     "tags": "science lab groups roles randomizer",
+     "filterTags": "groups randomizer lab science",
+     "per": "51",
+     "name": "Lab Group &amp; Role Randomizer",
+     "pitch": "Randomize lab groups and assign roles &mdash; recorder, materials, safety, etc. &mdash; and remembers who&rsquo;s had which.",
+     "comment": "Recorder isn&rsquo;t anyone&rsquo;s permanent job here.",
+     "chips": [
+      "groups",
+      "randomizer",
+      "lab"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: recorder isn&rsquo;t anyone&rsquo;s permanent job here.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t022"
+    },
+    {
+     "d": "1500ms",
+     "href": "Tools/013-lab-safety-contract-tracker.html",
+     "tool": "lab-safety-contract-tracker",
+     "tags": "science lab safety contract tracker signature",
+     "filterTags": "lab tracker science",
+     "per": "52",
+     "name": "Lab Safety Contract Tracker",
+     "pitch": "One tap marks a contract signed and stamps the date &mdash; a live &ldquo;N of M signed&rdquo; count and a missing-list keep lab day honest.",
+     "comment": "Knows exactly who can&rsquo;t touch the Bunsen burner yet.",
+     "chips": [
+      "lab",
+      "tracker",
+      "science"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: knows exactly who can't touch the bunsen burner yet.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t013"
+    },
+    {
+     "d": "1512ms",
+     "href": "Tools/038-data-chart-builder.html",
+     "tool": "data-chart-builder",
+     "tags": "science data table chart graph lab report",
+     "filterTags": "charts lab export science",
+     "per": "53",
+     "name": "Data Table &rarr; Chart Builder",
+     "pitch": "Turn lab data into a quick chart to paste into a report.",
+     "comment": "Turns a spreadsheet into a chart before the bell rings.",
+     "chips": [
+      "charts",
+      "lab",
+      "export"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: turns a spreadsheet into a chart before the bell rings.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t038"
+    },
+    {
+     "d": "1520ms",
+     "href": "Tools/065-lab-report-template-builder.html",
+     "tool": "lab-report-template-builder",
+     "tags": "science lab report template hypothesis procedure data conclusion printable",
+     "filterTags": "lab writing printable science",
+     "per": "54",
+     "name": "Lab Report Template Builder",
+     "pitch": "Build a reusable lab report template &mdash; hypothesis, materials, procedure, data table, and conclusion prompts &mdash; from a topic starter or from scratch, and print a fillable packet for each lab.",
+     "comment": "Hypothesis: this saves you a prep period. Confirmed.",
+     "chips": [
+      "lab",
+      "writing",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: saves you a prep period. Confirmed.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t065"
+    },
+    {
+     "d": "1352ms",
+     "href": "Tools/074-science-safety-label-maker.html",
+     "tool": "science-safety-label-maker",
+     "tags": "science safety symbols equipment labels lab printable",
+     "filterTags": "labels lab printable science",
+     "per": "55",
+     "name": "Science Safety Symbol &amp; Equipment Label Maker",
+     "pitch": "Printable hazard and equipment labels for lab storage, bins, and stations &mdash; pairs with the Lab Safety Contract Tracker.",
+     "comment": "Every bin knows exactly what it is now.",
+     "chips": [
+      "labels",
+      "lab",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: every bin knows what it is now.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t074"
+    },
+    {
+     "d": "1356ms",
+     "href": "Tools/059-experiment-design-planner.html",
+     "tool": "scientific-method-planner",
+     "tags": "science scientific method experiment design planner printable",
+     "filterTags": "lab planning printable science",
+     "per": "56",
+     "name": "Scientific Method / Experiment Design Planner",
+     "pitch": "A guided pre-lab worksheet (question, hypothesis, variables, materials, procedure) &mdash; the planning-stage companion to the Lab Report Template Builder.",
+     "comment": "Plans the experiment before it plans you.",
+     "chips": [
+      "lab",
+      "planning",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: plans the experiment before it plans you.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t059"
+    },
+    {
+     "d": "1360ms",
+     "href": "Tools/073-science-fair-project-tracker.html",
+     "tool": "science-fair-project-tracker",
+     "tags": "science fair project tracker milestones checkpoints printable",
+     "filterTags": "tracker planning science",
+     "per": "57",
+     "name": "Science Fair Project Tracker",
+     "pitch": "Track milestones and checkpoints for a science-fair project (question, background research, experiment, board, presentation) with due dates and a printable progress report.",
+     "comment": "Finds the kid who hasn&rsquo;t started the board.",
+     "chips": [
+      "tracker",
+      "planning",
+      "science"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: finds who hasn't started the board.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t073"
+    },
+    {
+     "d": "1364ms",
+     "href": "Tools/057-dichotomous-key-builder.html",
+     "tool": "dichotomous-key-builder",
+     "tags": "science dichotomous key classification lab printable",
+     "filterTags": "lab printable science",
+     "per": "58",
+     "name": "Dichotomous Key Builder",
+     "pitch": "Build a custom dichotomous key for a classification lab, then print it as a student worksheet with an answer key.",
+     "comment": "Backbone or not, it&rsquo;ll figure you out.",
+     "chips": [
+      "lab",
+      "printable",
+      "science"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: backbone or not, it'll figure you out.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t057"
+    }
+   ]
+  },
+  {
+   "key": "social-studies",
+   "open": false,
+   "d": "620ms",
+   "title": "Social Studies",
+   "statedCount": 10,
+   "rows": [
+    {
+     "d": "1532ms",
+     "href": "Tools/046-blank-map-generator.html",
+     "tool": "blank-map-generator",
+     "tags": "social studies map blank printable geography labeling shaded regions legend key choropleth data shading population click to shade countries states",
+     "filterTags": "maps printable social-studies",
+     "per": "59",
+     "name": "Blank Map Generator",
+     "pitch": "Start from a built-in world or USA map, label it, click countries or states to shade them, or paste data to shade the whole map — then print it.",
+     "comment": "Always knows where things are.",
+     "chips": [
+      "maps",
+      "printable",
+      "social-studies"
+     ],
+     "grade": "A+",
+     "gradeTitle": "Comment: always knows where things are.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t046"
+    },
+    {
+     "d": "1544ms",
+     "href": "Tools/015-timeline-builder.html",
+     "tool": "timeline-builder",
+     "tags": "social studies timeline events history map place geography present projector story worksheet",
+     "filterTags": "charts printable projector social-studies",
+     "per": "60",
+     "name": "Timeline Builder",
+     "pitch": "Add events with photos and places, present them one at a time on the projector, or print the timeline with a map above it or as a fill-in worksheet.",
+     "comment": "Never late to history class.",
+     "chips": [
+      "charts",
+      "printable",
+      "projector"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: never late to history class.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t015"
+    },
+    {
+     "d": "1548ms",
+     "href": "Tools/028-primary-source-analysis-generator.html",
+     "tool": "primary-source-analysis-generator",
+     "tags": "social studies primary source document analysis worksheet",
+     "filterTags": "reading printable social-studies",
+     "per": "61",
+     "name": "Primary Source Analysis Worksheet Generator",
+     "pitch": "Describe or paste in a source and build a printable OPTIC or SOAPSTone worksheet with the real guiding questions, plus an answer key built from your own notes. One worksheet, three class sets: Academic, Honors, and Honors GT print together. Corroboration mode compares two sources side by side.",
+     "comment": "Knows the difference between a photo and a speech. Do your students?",
+     "chips": [
+      "reading",
+      "printable",
+      "social-studies"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: knows the difference between a photo and a speech.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t028"
+    },
+    {
+     "d": "1552ms",
+     "href": "Tools/056-dbq-source-packet-builder.html",
+     "tool": "dbq-source-packet-builder",
+     "tags": "social studies dbq document based question sources packet printable share link qr named packets essay organizer rubric differentiation leveled academic honors gt",
+     "filterTags": "reading writing printable social-studies",
+     "per": "62",
+     "name": "DBQ / Source Packet Builder",
+     "pitch": "Assemble several primary or secondary sources, text or image, into one printable document-based-question packet with a shared set of guiding questions per source, an essay planning organizer, and a scoring rubric page &mdash; print it at Academic, Honors, or Honors GT, or run all three leveled sets at once.",
+     "comment": "One packet, every source, zero photocopier jams.",
+     "chips": [
+      "reading",
+      "writing",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: zero photocopier jams.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t056"
+    },
+    {
+     "d": "1368ms",
+     "href": "Tools/064-historical-trading-card-maker.html",
+     "tool": "historical-trading-card-maker",
+     "tags": "social studies trading card historical figure country research printable review game top trumps science math literature vocabulary",
+     "filterTags": "cards printable social-studies",
+     "per": "63",
+     "name": "Historical Figure / Country Trading Card Maker",
+     "pitch": "Design collectible research cards with era themes plus science, math, literature and vocabulary looks &mdash; live preview, duplex printing, PNG/PDF/zip export, batch-add from a class roster, share a deck by link or QR code, and play the finished deck as a projector review game.",
+     "comment": "Gotta research &lsquo;em all.",
+     "chips": [
+      "cards",
+      "printable",
+      "social-studies"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: gotta research 'em all.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t064"
+    },
+    {
+     "d": "1372ms",
+     "href": "Tools/054-current-events-discussion-guide-generator.html",
+     "tool": "current-events-discussion-guide",
+     "tags": "social studies current events discussion guide article printable comparison bias media literacy",
+     "filterTags": "reading printable communication social-studies",
+     "per": "64",
+     "name": "Current Events Discussion Guide Generator",
+     "pitch": "Turn one or two pasted news articles into a printable discussion guide &mdash; add a second article for a side-by-side bias/framing comparison, plus an optional media literacy kit (SIFT checklist, headline rewrite, claim vs. evidence) at three class levels.",
+     "comment": "Turns today&rsquo;s headline into tomorrow&rsquo;s bell ringer.",
+     "chips": [
+      "reading",
+      "printable",
+      "communication"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: tomorrow's bell ringer.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t054"
+    },
+    {
+     "d": "1376ms",
+     "href": "Tools/050-civics-role-card-generator.html",
+     "tool": "civics-simulation-role-cards",
+     "tags": "social studies civics government simulation role cards mock trial printable case file packet agenda ballot vote rubric reflection un security council constitutional convention",
+     "filterTags": "cards groups printable social-studies",
+     "per": "65",
+     "name": "Government/Civics Simulation Role Card Generator",
+     "pitch": "Prints the whole simulation: cards, case files, agenda, ballots, rubric, reflections.",
+     "comment": "Objection! (Sustained, per the card.)",
+     "chips": [
+      "cards",
+      "groups",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: objection, sustained, per the card.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t050"
+    },
+    {
+     "d": "1380ms",
+     "href": "Tools/062-geography-bee-quiz-generator.html",
+     "tool": "geography-bee-quiz-generator",
+     "tags": "social studies geography bee map skills quiz printable multiple-choice map questions tournament teams",
+     "filterTags": "maps review-game projector printable social-studies",
+     "per": "66",
+     "name": "Geography Bee / Map Skills Quiz Generator",
+     "pitch": "A 120-question bank across capitals, landmarks, map skills, and outline-map &ldquo;which country is this?&rdquo; questions drawn from the Blank Map Generator&rsquo;s own data &mdash; project it, print it, or run it as a team tournament with a live scoreboard.",
+     "comment": "Finds Waldo AND the capital of Peru.",
+     "chips": [
+      "maps",
+      "review-game",
+      "projector"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: finds Waldo and the capital of Peru.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t062"
+    },
+    {
+     "d": null,
+     "href": "Tools/083-propaganda-analysis-worksheet-generator.html",
+     "tool": "propaganda-analysis-worksheet-generator",
+     "tags": "social studies propaganda political cartoon persuasion analysis worksheet ethos pathos logos bandwagon symbolism",
+     "filterTags": "reading printable analysis social-studies",
+     "per": "83",
+     "name": "Propaganda &amp; Persuasion Analysis Worksheet Generator",
+     "pitch": "Set up a poster, cartoon, or ad once and print a leveled student worksheet &mdash; symbols, a propaganda-technique checklist, ethos/pathos/logos, message and audience &mdash; plus a matching teacher answer key.",
+     "comment": "Bandwagon, glittering generalities, and receipts.",
+     "chips": [
+      "reading",
+      "printable",
+      "analysis"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: bandwagon, glittering generalities, and receipts.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t083"
+    },
+    {
+     "d": null,
+     "href": "Tools/086-wiki-race.html",
+     "tool": "wiki-race",
+     "tags": "social studies wikipedia race game seed phrase deterministic navigation links geography history research trivia timer bulldogs",
+     "filterTags": "review-game projector social-studies",
+     "per": "86",
+     "name": "Wiki Race",
+     "pitch": "Give the class one seed phrase and everyone gets the identical Wikipedia race &mdash; same start article, same target &mdash; with a live timer, click count, breadcrumb path, and a verifiable finish code you can check on the projector. Standalone file: works handed to students directly.",
+     "comment": "Six clicks from Cheese to Charlemagne.",
+     "chips": [
+      "review-game",
+      "projector",
+      "social-studies"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: six clicks from cheese to charlemagne.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t086"
+    }
+   ]
+  },
+  {
+   "key": "world-language",
+   "open": false,
+   "d": "660ms",
+   "title": "World Language",
+   "statedCount": 8,
+   "rows": [
+    {
+     "d": "1564ms",
+     "href": "Tools/039-vocab-conjugation-drill.html",
+     "tool": "vocab-conjugation-drill",
+     "tags": "world language vocabulary conjugation drill flashcards",
+     "filterTags": "vocab warm-up cards world-language",
+     "per": "67",
+     "name": "Vocab &amp; Conjugation Drill Generator",
+     "pitch": "Quiz-style vocabulary drills plus blank verb-conjugation tables for any language, each with a matching answer key.",
+     "comment": "Conjugates verbs. Doesn&rsquo;t conjugate your patience.",
+     "chips": [
+      "vocab",
+      "warm-up",
+      "cards"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: conjugates verbs, not your patience.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t039"
+    },
+    {
+     "d": "1572ms",
+     "href": "Tools/014-roleplay-scenario-generator.html",
+     "tool": "roleplay-scenario-generator",
+     "tags": "world language roleplay dialogue scenario speaking practice",
+     "filterTags": "randomizer groups projector world-language",
+     "per": "68",
+     "name": "Immersion Roleplay Scenario Generator",
+     "pitch": "Real-life dialogue scenarios with roles and vocabulary scaffolding cards you fill in for whatever language you teach &mdash; pairs with the Vocab &amp; Conjugation Drill Generator.",
+     "comment": "Orders the coffee. Directions to the station are on you.",
+     "chips": [
+      "randomizer",
+      "groups",
+      "projector"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: orders the coffee, directions to the station are on you.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t014"
+    },
+    {
+     "d": "1568ms",
+     "href": "Tools/051-classroom-label-maker.html",
+     "tool": "classroom-label-maker",
+     "tags": "world language labels vocabulary classroom objects qr code pronunciation",
+     "filterTags": "labels qr vocab printable world-language",
+     "per": "69",
+     "name": "Classroom Label Maker (Target Language)",
+     "pitch": "Print vocabulary labels for real classroom objects in the target language, each with a QR code linking to a text-to-speech pronunciation clip, plus a plain reference sheet of the whole label set.",
+     "comment": "Every desk and doorknob, fluent now.",
+     "chips": [
+      "labels",
+      "qr",
+      "vocab"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: every desk and doorknob, fluent now.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t051"
+    },
+    {
+     "d": "1384ms",
+     "href": "Tools/079-verb-conjugation-poster-generator.html",
+     "tool": "verb-conjugation-poster-generator",
+     "tags": "world language verb conjugation poster reference printable",
+     "filterTags": "reference printable world-language",
+     "per": "70",
+     "name": "Verb Conjugation Reference Poster Generator",
+     "pitch": "A printable large-format wall poster of conjugation patterns &mdash; a visual reference to hang up, distinct from the drill worksheets.",
+     "comment": "Conjugates so nobody has to guess twice.",
+     "chips": [
+      "reference",
+      "printable",
+      "world-language"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: conjugates so nobody has to guess twice.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t079"
+    },
+    {
+     "d": "1388ms",
+     "href": "Tools/053-cultural-trivia-card-generator.html",
+     "tool": "cultural-trivia-card-generator",
+     "tags": "world language culture trivia cards printable",
+     "filterTags": "review-game cards projector printable world-language",
+     "per": "71",
+     "name": "Cultural Trivia Card Generator",
+     "pitch": "Printable trivia cards about target-language countries and cultures, for warm-ups or feeding into the Quiz / Review Game Board.",
+     "comment": "30 facts, zero stereotypes.",
+     "chips": [
+      "review-game",
+      "cards",
+      "projector"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: 30 facts, zero stereotypes.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t053"
+    },
+    {
+     "d": "1392ms",
+     "href": "Tools/071-picture-prompt-generator.html",
+     "tool": "picture-prompt-task-generator",
+     "tags": "world language picture prompt speaking writing task projector",
+     "filterTags": "writing projector printable world-language",
+     "per": "72",
+     "name": "Picture-Prompt Speaking/Writing Task Generator",
+     "pitch": "A random image prompt for describing-in-the-target-language speaking or writing tasks, projector-friendly or printable.",
+     "comment": "A picture&rsquo;s worth a thousand conjugated words.",
+     "chips": [
+      "writing",
+      "projector",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: a thousand conjugated words.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t071"
+    },
+    {
+     "d": "1396ms",
+     "href": "Tools/052-cognates-false-friends-builder.html",
+     "tool": "cognates-false-friends-builder",
+     "tags": "world language cognates false friends vocabulary reference printable",
+     "filterTags": "vocab reference printable world-language",
+     "per": "73",
+     "name": "Cognates &amp; False Friends Reference List Builder",
+     "pitch": "Build and print a reference list of cognates and false friends for whatever language you teach.",
+     "comment": "&ldquo;Embarazada&rdquo; is not what you think.",
+     "chips": [
+      "vocab",
+      "reference",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: embarazada is not what you think.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t052"
+    },
+    {
+     "d": "1400ms",
+     "href": "Tools/088-braille-reading-trainer.html",
+     "tool": "braille-reading-trainer",
+     "tags": "braille ueb unified english braille reading sight lessons contractions grade 2 spaced repetition practice self study accessibility visual impairment",
+     "filterTags": "reading reference world-language",
+     "per": "88",
+     "name": "Braille Reading Trainer",
+     "pitch": "Learn to read braille by sight in short daily lessons: the alphabet, numbers and punctuation, then every Unified English Braille contraction, with spaced review, a 60-second sprint and timed reading of longer passages.",
+     "comment": "Six dots, zero excuses.",
+     "chips": [
+      "reading",
+      "reference"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: six dots, zero excuses.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4"
+    }
+   ]
+  },
+  {
+   "key": "arts-pe",
+   "open": false,
+   "d": "700ms",
+   "title": "Arts &amp; PE",
+   "statedCount": 7,
+   "rows": [
+    {
+     "d": "1584ms",
+     "href": "Tools/021-pe-tournament-stations.html",
+     "tool": "pe-tournament-station-rotation",
+     "tags": "pe tournament bracket station rotation",
+     "filterTags": "groups projector review-game pe",
+     "per": "74",
+     "name": "Tournament Bracket &amp; Station Rotation",
+     "pitch": "A projector-friendly station rotation timer with named stations and groups, plus a tournament bracket for whatever competition is running inside the unit.",
+     "comment": "Rotates the groups. The trash talk rotates itself.",
+     "chips": [
+      "groups",
+      "projector",
+      "review-game"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: rotates the groups, the trash talk rotates itself.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t021"
+    },
+    {
+     "d": "1596ms",
+     "href": "Tools/017-gallery-walk-qr.html",
+     "tool": "gallery-walk-qr",
+     "tags": "art gallery walk qr code student work",
+     "filterTags": "qr printable art",
+     "per": "75",
+     "name": "Gallery Walk QR Codes",
+     "pitch": "Batch QR codes linking to student work for a gallery walk, plus a plain-text reference sheet for you.",
+     "comment": "Sends them to the work. Not to a 404.",
+     "chips": [
+      "qr",
+      "printable",
+      "art"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: sends them to the work, not a 404.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t017"
+    },
+    {
+     "d": "1600ms",
+     "href": "Tools/047-art-critique-worksheet-generator.html",
+     "tool": "art-critique-worksheet-generator",
+     "tags": "art critique worksheet describe analyze interpret judge gallery walk",
+     "filterTags": "writing printable art",
+     "per": "76",
+     "name": "Art Critique Worksheet Generator",
+     "pitch": "A structured describe/analyze/interpret/judge critique worksheet for student artwork or a gallery walk, with editable prompts per step and a printable half-sheet per student &mdash; pairs with Gallery Walk QR Codes.",
+     "comment": "Describe, analyze, interpret, judge &mdash; no blank stares.",
+     "chips": [
+      "writing",
+      "printable",
+      "art"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: no blank stares.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t047"
+    },
+    {
+     "d": "1400ms",
+     "href": "Tools/060-fitness-skill-assessment-tracker.html",
+     "tool": "fitness-skill-assessment-tracker",
+     "tags": "pe fitness assessment tracker stats printable",
+     "filterTags": "tracker grades printable pe",
+     "per": "77",
+     "name": "Fitness &amp; Skill Assessment Tracker",
+     "pitch": "Track per-student fitness-test results (mile time, push-ups, sit-ups) across the year, with simple stats and a printable report.",
+     "comment": "The mile time that got faster every retell.",
+     "chips": [
+      "tracker",
+      "grades",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: the mile time that got faster every retell.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t060"
+    },
+    {
+     "d": "1404ms",
+     "href": "Tools/048-art-portfolio-label-maker.html",
+     "tool": "art-portfolio-label-maker",
+     "tags": "art portfolio label qr tag printable",
+     "filterTags": "labels qr printable art",
+     "per": "78",
+     "name": "Student Art Portfolio Label &amp; QR Tag Maker",
+     "pitch": "Printable labels and QR tags for physical student art portfolios, each code carrying a photo thumbnail or artist statement &mdash; pairs with Gallery Walk QR Codes.",
+     "comment": "A QR code for the kid who ate the artist statement.",
+     "chips": [
+      "labels",
+      "qr",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: a QR code for the kid who ate the artist statement.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t048"
+    },
+    {
+     "d": "1408ms",
+     "href": "Tools/067-music-sightreading-generator.html",
+     "tool": "music-sightreading-generator",
+     "tags": "music sight reading rhythm warm up projector",
+     "filterTags": "warm-up projector printable music",
+     "per": "79",
+     "name": "Music Sight-Reading / Rhythm Warm-Up Generator",
+     "pitch": "Randomized rhythm or sight-reading warm-up patterns for a projector display, for band, chorus, or general music class.",
+     "comment": "Random, but never on the beat you'd guess.",
+     "chips": [
+      "warm-up",
+      "projector",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: random, but never on the beat you'd guess.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t067"
+    },
+    {
+     "d": "1412ms",
+     "href": "Tools/069-pe-warmup-circuit-generator.html",
+     "tool": "pe-warmup-circuit-generator",
+     "tags": "pe warm up circuit cards stations printable",
+     "filterTags": "warm-up cards printable pe",
+     "per": "80",
+     "name": "PE Warm-Up Circuit Card Generator",
+     "pitch": "Printable warm-up/calisthenics circuit cards to post at stations before a rotation or tournament begins.",
+     "comment": "Station 4 is just a water break in disguise.",
+     "chips": [
+      "warm-up",
+      "cards",
+      "printable"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: station 4 is just a water break in disguise.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t069"
+    }
+   ]
+  },
+  {
+   "key": "platform",
+   "open": false,
+   "d": "740ms",
+   "title": "Platform-Wide",
+   "statedCount": 1,
+   "rows": [
+    {
+     "d": "1612ms",
+     "href": "Tools/009-backup-restore.html",
+     "tool": "backup-restore",
+     "tags": "backup restore export import data local storage safety new computer",
+     "filterTags": "export reference",
+     "per": "81",
+     "name": "Backup &amp; Restore",
+     "pitch": "Download everything every tool on this site has saved in your browser to one file, or restore it on a new computer.",
+     "comment": "A wiped cache is no longer a re-do of the whole semester.",
+     "chips": [
+      "export",
+      "reference"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: a wiped cache is no longer a re-do of the whole semester.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "icon": "t009"
+    }
+   ]
+  }
+ ]
+}

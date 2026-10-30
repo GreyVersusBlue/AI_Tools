@@ -315,6 +315,7 @@
     "Tools/grade-distribution-visualizer/test/chart-svg.test.mjs",
     "Tools/grade-distribution-visualizer/test/chart-svg-parity.test.mjs",
     "Tools/grade-distribution-visualizer/test/gd-items.test.mjs",
+    "Tools/board-check/test/build-index.test.mjs",
     "Tools/list-sentence/test/list-sentence.test.mjs",
     "Tools/ss-glossary/test/ss-glossary.test.mjs",
     "Tools/paste-table/test/paste-table.test.mjs",
