@@ -424,6 +424,10 @@
      takes dark text there (the single view's Start button is left as it was). */
   [data-theme="dark"] .bt-go.btn-primary { color: #0b1420; }
   @media (prefers-reduced-motion: reduce) { .bt-fill { transition: none; } }
+  /* Phone width (AI-30, rank 66). */
+  @media (max-width: 480px) {
+    .app-header .header-actions { flex-wrap: wrap; }
+  }
 </style>
 </head>
 <body>
