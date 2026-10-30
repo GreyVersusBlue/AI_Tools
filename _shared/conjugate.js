@@ -161,9 +161,35 @@
     return d;
   }
 
+  function knownBase(p, c) { return !!(lookupBase(p, c) || has(p.regulars, c)); }
+
+  // A pack with `separable: { prefixes }` (German): an infinitive that is a prefix glued to a verb the
+  // pack knows (aufmachen = auf + machen) is that verb, with the prefix moved to the end of a finite form.
+  function splitSeparable(p, inf) {
+    var sp = p.separable;
+    if (!sp || !sp.prefixes || knownBase(p, inf)) return null;
+    for (var i = 0; i < sp.prefixes.length; i++) {
+      var pre = sp.prefixes[i];
+      if (inf.indexOf(pre) === 0 && inf.length - pre.length >= 3 && knownBase(p, inf.slice(pre.length))) {
+        return { prefix: pre, base: inf.slice(pre.length) };
+      }
+    }
+    return null;
+  }
+
   function lookup(lang, infinitive) {
     var p = packs[lang]; if (!p) return null;
-    return lookupBase(p, baseOf(p, normalize(infinitive)).base) || null;
+    var inf = baseOf(p, normalize(infinitive)).base;
+    var sp = splitSeparable(p, inf);
+    if (sp) {
+      var rec = lookupBase(p, sp.base);
+      if (!rec) return null;
+      var out = {};
+      Object.keys(rec).forEach(function (k) { out[k] = rec[k]; });
+      out.infinitive = inf; out.as = sp.base; delete out.prefixes; delete out.except;
+      return out;
+    }
+    return lookupBase(p, inf) || null;
   }
 
   function resolve(lang, verb) {
@@ -178,13 +204,18 @@
       var bb = baseOf(p, normalize(rec.infinitive || ''));
       inf = bb.base; reflexive = bb.reflexive || !!rec.reflexive;
     }
+    var sepSplit = splitSeparable(p, inf), sep = '', full = inf;
+    if (sepSplit) {
+      sep = sepSplit.prefix; inf = sepSplit.base;
+      if (typeof verb === 'string') rec = lookupBase(p, inf);
+    }
     var cl = (rec && rec['class']) || (classEnding(p, inf) || {}).id || null;
     var cdef = cl ? p.classes[cl] : null;
     var cut = cdef ? (cdef.cut || 2) : 0;
     var known = typeof verb === 'string' ? (!!rec || has(p.regulars, inf))
       : !!(lookupBase(p, inf) || has(p.regulars, inf) || (rec && rec.teacher && Object.keys(rec.teacher).length));
     return {
-      lang: lang, p: p, rec: rec || null, base: inf, reflexive: reflexive, cls: cl, 'class': cdef,
+      lang: lang, p: p, rec: rec || null, base: inf, sep: sep, full: full, reflexive: reflexive, cls: cl, 'class': cdef,
       stem: cdef ? inf.slice(0, inf.length - cut) : '', known: known, cutLen: cut,
       infBase: inf.replace(/í(r)$/, 'i$1')
     };
@@ -223,10 +254,12 @@
 
   function junction(ctx, stem, ending, literal) {
     var out = { text: stem + ending, alt: null, kind: null, from: '' };
-    if (literal || (ctx.rec && ctx.rec.spelling === false)) return out;
+    if (ctx.rec && ctx.rec.spelling === false) return out;
     var rules = ctx.p.spelling;
     for (var i = 0; i < rules.length; i++) {
       var r = rules[i];
+      if (literal && !r.literalToo) continue;
+      if (r.tenses && r.tenses.indexOf(ctx.tid) < 0) continue;
       if (r.cls && r.cls.indexOf(ctx.cls) < 0) continue;
       if (!r.stem.test(stem) || !r.next.test(ending)) continue;
       var s2 = r.stemRepl ? stem.replace(r.stemRepl[0], r.stemRepl[1]) : stem;
@@ -259,7 +292,7 @@
       stem = specStem(spec, slot, ctx.base);
       if (stem == null) return fail();
       literal = true; kinds.push('irregular'); from = rec.as || rec.infinitive || '';
-      if (tdef.strongEndings) {
+      if (tdef.strongEndings && (!tdef.strongIf || rec[tdef.strongIf])) {
         ending = tdef.strongEndings[slot];
         if (tdef.strongAfterJ && slot === 5 && /j$/.test(stem)) ending = tdef.strongAfterJ;
       }
@@ -322,7 +355,8 @@
 
   function participleOf(ctx) {
     var rec = ctx.rec || {};
-    if (rec.participle) return rec.participle;
+    if (rec.participle) return (ctx.sep || '') + rec.participle;
+    if (ctx.p.participleOf) return (ctx.sep || '') + ctx.p.participleOf(ctx);
     var pd = ctx['class'] && ctx['class'].participle;
     if (!pd) return '';
     if (pd.ending) return junction(ctx, ctx.stem, pd.ending, false).text;
@@ -341,19 +375,38 @@
 
   function compoundCell(ctx, tdef, slot) {
     var p = ctx.p, rec = ctx.rec || {};
-    var auxName = (ctx.reflexive && p.reflexiveAux) || rec.auxiliary || tdef.compound.auxiliary;
-    var auxCtx = resolve(ctx.lang, auxName);
-    var ac = cellOf(auxCtx, tenseDef(p, tdef.compound.tense), slot);
-    var part = participleOf(ctx);
+    var cd = tdef.compound, auxName, ac, part;
+    if (cd.forms) {
+      // an auxiliary written out (German werden: werde, wirst, ... and würde, ...) with the infinitive after it
+      auxName = cd.auxiliary; ac = { forms: [cd.forms[slot]] };
+    } else {
+      auxName = (ctx.reflexive && p.reflexiveAux) || rec.auxiliary || cd.auxiliary;
+      ac = cellOf(resolve(ctx.lang, auxName), tenseDef(p, cd.tense), slot);
+    }
+    part = cd.part === 'infinitive' ? (ctx.sep || '') + ctx.base : participleOf(ctx);
     if (!ac.forms.length || !part) return fail();
     var kinds = [], from = '';
-    if (auxName === p.agreementAux) { kinds.push('agreement'); from = auxName; }
-    if (rec.participle) { kinds.push('irregular'); if (!from) from = rec.as || rec.infinitive || ''; }
-    return { forms: [ac.forms[0] + ' ' + part], kinds: kinds, from: from };
+    if (!cd.forms && auxName === p.agreementAux) {
+      kinds.push('agreement'); from = auxName;
+      // a pack that prints the masculine plural for nous/noi/vous... says how
+      if (p.agreementPlural && slot >= 3) part = part.replace(p.agreementPlural[0], p.agreementPlural[1]);
+    }
+    if (cd.part !== 'infinitive' && rec.participle) { kinds.push('irregular'); if (!from) from = rec.as || rec.infinitive || ''; }
+    return { forms: [ac.forms[0] + ' ' + part], kinds: kinds, from: from, whole: true };
   }
 
   function cellOf(ctx, tdef, slot) {
+    var c = cellOf1(ctx, tdef, slot);
+    // the separable prefix goes to the end of a finite form (ich mache auf); a teacher's own cell is whole already
+    if (ctx.sep && c.forms.length && !c.whole && c.kinds.indexOf('teacher') < 0) {
+      c.forms = c.forms.map(function (f) { return f + ' ' + ctx.sep; });
+    }
+    return c;
+  }
+
+  function cellOf1(ctx, tdef, slot) {
     var rec = ctx.rec || {};
+    ctx.tid = tdef.id;
     var tf = rec.forms && rec.forms[tdef.id];
     if (tf && tf[slot] != null && tf[slot] !== '') {
       var teach = !!(rec.teacher && rec.teacher[tdef.id] && rec.teacher[tdef.id][slot]);
@@ -415,7 +468,7 @@
     if (!ctx['class']) return blank('not a verb this pack knows');
     var slots = opts.slots || SLOTS;
     var out = { forms: [], alts: [], notes: [], complete: true, known: ctx.known, reviewed: false, status: STATUS,
-      lang: lang, tense: tenseId, infinitive: ctx.base, reflexive: ctx.reflexive };
+      lang: lang, tense: tenseId, infinitive: ctx.full || ctx.base, reflexive: ctx.reflexive };
     SLOTS.forEach(function (slot) {
       if (slots.indexOf(slot) < 0) { out.forms.push(''); out.alts.push([]); return; }
       var c = cellOf(ctx, tdef, slot);
@@ -473,6 +526,8 @@
     if (t === e) return { verdict: 'correct', reason: '' };
     // ü is accepted as u (Devon, 2026-10-21: "Lenient (u accepted)"), and the caller shows the ü form beside it
     if (e.indexOf('\u00fc') >= 0 && t === e.replace(/\u00fc/g, 'u')) return { verdict: 'correct', reason: 'diaeresis' };
+    // ss typed for ß is close, not wrong: a US keyboard has no ß
+    if (e.indexOf('\u00df') >= 0 && t === e.replace(/\u00df/g, 'ss')) return { verdict: 'close', reason: 'eszett' };
     if (stripAccents(t) === stripAccents(e)) return { verdict: 'close', reason: 'accent' };
     if (undoElision(p, t) === undoElision(p, e)) return { verdict: 'close', reason: 'elision' };
     var st = stripPronouns(p, t), se = stripPronouns(p, e);
@@ -552,7 +607,7 @@
     // every verb the pack holds a record for or names as regular (a '-family' record is not a verb), sorted
     inventory: function (lang) {
       var p = packs[lang]; if (!p) return [];
-      var all = Object.keys(p.records).concat(Object.keys(p.regulars)).filter(function (v) { return v.charAt(0) !== '-'; });
+      var all = Object.keys(p.records).concat(Object.keys(p.regulars), p.examples || []).filter(function (v) { return v.charAt(0) !== '-'; });
       return all.filter(function (v, i) { return all.indexOf(v) === i; }).sort(function (a, b) { return a.localeCompare(b, lang); });
     },
     participle: function (lang, verb) { var c = resolve(lang, verb); return c && c.cls ? participleOf(c) : ''; },

@@ -18,7 +18,9 @@
 //      (P19-8), two accepted forms (paie / paye) both count;
 //   6. an unknown verb is conjugated as regular and marked unchecked (P19-7);
 //   7. nothing the page did before moved: a set with no language shows no tags and quizzes as before;
-//   8. the editor and the quiz are clean under axe.
+//   8. the editor and the quiz are clean under axe;
+//   9. German and Italian (increment 3): the preset picks the language, a separable verb and an essere
+//      verb fill their rows, and the quiz calls ss for ß close.
 // Every word is a verb anyone can look up. NO LANGUAGE TEACHER HAS READ ANY FORM HERE. Exits 1 on failure.
 
 import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
@@ -62,7 +64,7 @@ const status = () => page.$eval('.conj-entry:first-of-type .pattern-status', e =
 
 /* ── 1. fill ─────────────────────────────────────────────────────────── */
 console.log('039 — fill from pattern');
-ok(await page.evaluate(() => typeof Conjugate === 'object' && Conjugate.languages().length === 2), 'the engine and both packs are loaded');
+ok(await page.evaluate(() => typeof Conjugate === 'object' && Conjugate.languages().map(l => l.id).join() === 'es,de,it,fr'), 'the engine and all four packs are loaded, in Devon\'s order');
 await page.click('#addConjBtn'); await settle(page, 100);
 eq(await page.$eval('.conj-entry .pattern-row select', s => s.value), 'es', 'a new entry takes the language of the set\'s preset');
 ok(await page.isDisabled('.conj-entry .pattern-row button'), 'Fill is disabled until there is an infinitive and a tense');
@@ -151,6 +153,37 @@ await page.selectOption(second + ' .pattern-row select:nth-of-type(2)', 'present
 await page.click(second + ' .pattern-row button'); await settle(page, 150);
 eq((await page.$$eval(second + ' .forms-grid input', els => els.map(e => e.value)))[0], 'paie / paye', 'payer gives both (P19-4)');
 
+/* ── 6b. German and Italian ──────────────────────────────────────────── */
+console.log('039 — German and Italian');
+await page.click('#personPresets button[data-preset="german"]'); await settle(page, 150);
+await page.selectOption('#langPresetSelect', 'german'); await settle(page, 100);
+await page.click('#addConjBtn'); await settle(page, 100);
+const third = '.conj-entry:nth-of-type(3)';
+eq(await page.$eval(third + ' .pattern-row select', s => s.value), 'de', 'the German language setting gives a new entry German');
+await page.fill(third + ' input[placeholder^="Infinitive"]', 'aufmachen');
+await page.selectOption(third + ' .pattern-row select:nth-of-type(2)', 'present');
+await page.click(third + ' .pattern-row button'); await settle(page, 150);
+eq(await page.$$eval(third + ' .forms-grid input', els => els.map(e => e.value)), ['mache auf', 'machst auf', 'macht auf', 'machen auf', 'macht auf', 'machen auf'], 'a separable verb puts its prefix last');
+ok(/Unreviewed/.test(await page.$eval(third + ' .pattern-status', e => e.textContent)), 'and says unreviewed');
+await page.fill(third + ' input[placeholder^="Infinitive"]', 'fahren');
+await page.selectOption(third + ' .pattern-row select:nth-of-type(2)', 'present');
+await page.click(third + ' .pattern-row button'); await settle(page, 150);
+eq(await page.$$eval(third + ' .forms-grid input', els => els.map(e => e.value)), ['fahre', 'fährst', 'fährt', 'fahren', 'fahrt', 'fahren'], 'a strong verb changes its vowel at du and er');
+await page.click('#personPresets button[data-preset="italian"]'); await settle(page, 150);
+await page.selectOption('#langPresetSelect', 'italian'); await settle(page, 100);
+await page.click('#addConjBtn'); await settle(page, 100);
+const fourth = '.conj-entry:nth-of-type(4)';
+eq(await page.$eval(fourth + ' .pattern-row select', s => s.value), 'it', 'the Italian language setting gives a new entry Italian');
+await page.fill(fourth + ' input[placeholder^="Infinitive"]', 'andare');
+await page.selectOption(fourth + ' .pattern-row select:nth-of-type(2)', 'passato-prossimo');
+await page.click(fourth + ' .pattern-row button'); await settle(page, 150);
+eq(await page.$$eval(fourth + ' .forms-grid input', els => els.map(e => e.value)), ['sono andato', 'sei andato', 'è andato', 'siamo andati', 'siete andati', 'sono andati'], 'an essere verb prints the masculine, plural for noi, voi, loro');
+ok(await page.$$eval(fourth + ' .rule-tag', els => els.some(e => e.textContent === 'agr' && getComputedStyle(e).display !== 'none')), 'and tags the agreement');
+await page.fill(fourth + ' input[placeholder^="Infinitive"]', 'finire');
+await page.selectOption(fourth + ' .pattern-row select:nth-of-type(2)', 'present');
+await page.click(fourth + ' .pattern-row button'); await settle(page, 150);
+eq((await page.$$eval(fourth + ' .forms-grid input', els => els.map(e => e.value)))[0], 'finisco', 'finire takes -isc-');
+
 /* ── 5. the quiz ─────────────────────────────────────────────────────── */
 console.log('039 — the quiz marks by the engine');
 await page.selectOption('#setSwitch', 'Plain set'); await settle(page, 150);
@@ -175,6 +208,24 @@ ok(/ü/.test(marks[3][1]) && /pingüino/.test(marks[3][1]), 'u for ü is accepte
 ok(/año/.test(marks[4][1]), 'ñ is a letter, not an accent: ano is wrong, and año is shown');
 ok(/Score: 1 \/ 6/.test(await page.$eval('.quiz-progress', e => e.textContent)), 'only the accepted answer scores');
 await a11yScan(page, { impact: 'serious' }).then(r => ok(!r || (Array.isArray(r) ? r.length === 0 : !r.violations || r.violations.length === 0), 'the quiz is clean under axe')).catch(e => ok(false, 'axe: ' + e.message));
+
+console.log('039 — the quiz in German');
+await page.evaluate(() => {
+  const st = JSON.parse(localStorage.getItem('gvb-vocab-conj:data:Plain set'));
+  st.conjugations = [{ id: 'c1', infinitive: 'wissen', tense: 'Präsens', lang: 'de', tenseId: 'present', irregular: false, forms: ['weiß', 'weißt', 'weiß', 'wissen', 'wisst', 'wissen'] }];
+  localStorage.setItem('gvb-vocab-conj:data:Plain set', JSON.stringify(st));
+});
+await page.reload({ waitUntil: 'networkidle' }); await settle(page, 300);
+await page.selectOption('#setSwitch', 'Plain set'); await settle(page, 150);
+const quizBtn2 = await page.evaluateHandle(() => [...document.querySelectorAll('#sheetNav button')].find(b => /quiz/i.test(b.textContent)));
+await quizBtn2.asElement().click(); await settle(page, 150);
+const answersDe = ['weiss', 'weisst', 'ich weiß', 'wissen', 'wißt', ''];
+const inputsDe = await page.$$('.quiz-input');
+for (let i = 0; i < inputsDe.length; i++) await inputsDe[i].fill(answersDe[i]);
+await page.click('#quizCheckBtn'); await settle(page, 150);
+const marksDe = await page.$$eval('.quiz-row', rows => rows.map(r => [r.className.replace('quiz-row', '').trim(), r.querySelector('.quiz-mark').textContent.trim()]));
+eq(marksDe.map(m => m[0]), ['close', 'close', 'close', 'correct', 'incorrect', 'incorrect'], 'ss for ß is close, a missing pronoun is close, ß for ss is wrong');
+ok(/ß/.test(marksDe[0][1]) && /weiß/.test(marksDe[0][1]), 'and the ß form is shown');
 
 /* ── 7. the old page ─────────────────────────────────────────────────── */
 console.log('039 — a set with no language is as it was');

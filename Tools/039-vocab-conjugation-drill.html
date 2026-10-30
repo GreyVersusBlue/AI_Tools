@@ -30,6 +30,8 @@
 <script src="../_shared/word-list.js"></script>
 <script src="../_shared/conjugate.js"></script>
 <script src="../_shared/conjugate-es.js"></script>
+<script src="../_shared/conjugate-de.js"></script>
+<script src="../_shared/conjugate-it.js"></script>
 <script src="../_shared/conjugate-fr.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
@@ -262,6 +264,7 @@
         <option value="spanish">Spanish</option>
         <option value="french">French</option>
         <option value="german">German</option>
+        <option value="italian">Italian</option>
         <option value="latin">Latin</option>
       </select>
     </div>
@@ -312,6 +315,7 @@
             <button type="button" class="secondary small" data-preset="spanish">Spanish</button>
             <button type="button" class="secondary small" data-preset="french">French</button>
             <button type="button" class="secondary small" data-preset="german">German</button>
+            <button type="button" class="secondary small" data-preset="italian">Italian</button>
             <button type="button" class="secondary small" data-preset="latin">Latin</button>
           </div>
           <div id="personsList"></div>
@@ -416,6 +420,7 @@
     spanish: DEFAULT_PERSONS,
     french: ['je', 'tu', 'il / elle / on', 'nous', 'vous', 'ils / elles'],
     german: ['ich', 'du', 'er / sie / es', 'wir', 'ihr', 'sie / Sie'],
+    italian: ['io', 'tu', 'lui / lei', 'noi', 'voi', 'loro'],
     latin: ['ego', 'tū', 'is / ea / id', 'nōs', 'vōs', 'eī / eae / ea']
   };
 
@@ -423,6 +428,7 @@
     spanish: ['á', 'é', 'í', 'ó', 'ú', 'ñ', 'ü', '¿', '¡'],
     french: ['à', 'â', 'ç', 'é', 'è', 'ê', 'ë', 'î', 'ï', 'ô', 'œ', 'ù', 'û', 'ü'],
     german: ['ä', 'ö', 'ü', 'ß', 'Ä', 'Ö', 'Ü'],
+    italian: ['à', 'è', 'é', 'ì', 'ò', 'ó', 'ù'],
     latin: ['ā', 'ē', 'ī', 'ō', 'ū', 'ȳ', 'æ', 'œ']
   };
 
@@ -623,11 +629,11 @@
      well; it applies to this set only. Nothing the engine makes has been read by a language
      teacher, and this page says so wherever it shows a generated table. */
   var HAS_ENGINE = typeof Conjugate !== 'undefined';
-  var LANG_FOR_PRESET = { spanish: 'es', french: 'fr' };
+  var LANG_FOR_PRESET = { spanish: 'es', french: 'fr', german: 'de', italian: 'it' };
   var RULE_TAGS = {
     irregular: ['irr', 'Irregular form'], stem: ['stem', 'Stem change'], spelling: ['spell', 'Spelling change'],
     teacher: ['edit', 'Typed by you; it overrides the pattern'], assumed: ['?', 'This verb is not on the pattern list, so this form is unchecked'],
-    defective: ['none', 'This verb has no form here'], agreement: ['agr', 'Auxiliary être: the masculine singular is printed']
+    defective: ['none', 'This verb has no form here'], agreement: ['agr', 'Auxiliary être or essere: the masculine form is printed']
   };
 
   function langInfo(id) {
@@ -1121,7 +1127,7 @@
       var rowClass = quizChecked ? (' ' + (isRight ? 'correct' : isClose ? 'close' : 'incorrect')) : '';
       var markHtml = '';
       if (quizChecked) {
-        var closeHow = { accent: 'check your accent', pronoun: 'check the pronoun', elision: 'check the apostrophe' }[match && match.slice(6)] || (match === 'close' ? 'check your accent' : 'check your spelling');
+        var closeHow = { accent: 'check your accent', pronoun: 'check the pronoun', elision: 'check the apostrophe', eszett: 'check the \u00df' }[match && match.slice(6)] || (match === 'close' ? 'check your accent' : 'check your spelling');
         markHtml = match === 'correct' ? '&#10003;'
           : match === 'diaeresis' ? '&#10003; accepted &mdash; spelled with &uuml;: ' + escapeHtml(correctAnswer)
           : isClose ? '&#8776; close &mdash; ' + closeHow + ' (' + escapeHtml(correctAnswer) + ')'

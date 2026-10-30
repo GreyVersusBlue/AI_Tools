@@ -1,5 +1,5 @@
 // conjugate.test.mjs — pure-logic tests for _shared/conjugate.js and its two packs
-// (Path 19 P3, increment 1).
+// (Path 19 P3, increments 1 and 3: Spanish, French, German, Italian).
 //
 //   node Tools/conjugate/test/conjugate.test.mjs      (or: npm run test:conjugate)
 //
@@ -29,7 +29,7 @@ import * as corpus from '../print-corpus.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const site = path.join(here, '..', '..', '..');
 const read = (f) => fs.readFileSync(path.join(site, f), 'utf8');
-const FILES = ['_shared/conjugate.js', '_shared/conjugate-es.js', '_shared/conjugate-fr.js'];
+const FILES = ['_shared/conjugate.js', '_shared/conjugate-es.js', '_shared/conjugate-de.js', '_shared/conjugate-it.js', '_shared/conjugate-fr.js'];
 
 function load(patch) {
   const ctx = { window: {} };
@@ -482,9 +482,159 @@ function suite(win) {
     }
   }
 
+
+  // (16) German and Italian (increment 3). Every form below was typed by the session that wrote the
+  // packs, from its own knowledge of the two languages, and NO LANGUAGE TEACHER HAS READ IT: it is
+  // a golden table for the teacher to check, not a source. The future, the conditional and the
+  // compound tenses are composed here from literal auxiliaries, so they do not borrow the engine's code.
+  const DE_AUX = { haben: w('habe hast hat haben habt haben'), sein: w('bin bist ist sind seid sind') };
+  const WERDEN = w('werde wirst wird werden werdet werden'), WUERDE = w('würde würdest würde würden würdet würden');
+  const compose = (aux, tail) => aux.map((a, i) => `${a} ${Array.isArray(tail) ? tail[i] : tail}`);
+  const DE = {
+    machen: ['mache machst macht machen macht machen', 'machte machtest machte machten machtet machten', 'mache machest mache machen machet machen', 'haben', 'gemacht'],
+    arbeiten: ['arbeite arbeitest arbeitet arbeiten arbeitet arbeiten', 'arbeitete arbeitetest arbeitete arbeiteten arbeitetet arbeiteten', 'arbeite arbeitest arbeite arbeiten arbeitet arbeiten', 'haben', 'gearbeitet'],
+    öffnen: ['öffne öffnest öffnet öffnen öffnet öffnen', 'öffnete öffnetest öffnete öffneten öffnetet öffneten', 'öffne öffnest öffne öffnen öffnet öffnen', 'haben', 'geöffnet'],
+    reisen: ['reise reist reist reisen reist reisen', 'reiste reistest reiste reisten reistet reisten', 'reise reisest reise reisen reiset reisen', 'sein', 'gereist'],
+    sammeln: ['sammle sammelst sammelt sammeln sammelt sammeln', 'sammelte sammeltest sammelte sammelten sammeltet sammelten', 'sammle sammelest sammle sammeln sammelet sammeln', 'haben', 'gesammelt'],
+    wandern: ['wandere wanderst wandert wandern wandert wandern', 'wanderte wandertest wanderte wanderten wandertet wanderten', 'wandere wanderest wandere wandern wanderet wandern', 'sein', 'gewandert'],
+    studieren: ['studiere studierst studiert studieren studiert studieren', 'studierte studiertest studierte studierten studiertet studierten', 'studiere studierest studiere studieren studieret studieren', 'haben', 'studiert'],
+    besuchen: ['besuche besuchst besucht besuchen besucht besuchen', 'besuchte besuchtest besuchte besuchten besuchtet besuchten', 'besuche besuchest besuche besuchen besuchet besuchen', 'haben', 'besucht'],
+    fahren: ['fahre fährst fährt fahren fahrt fahren', 'fuhr fuhrst fuhr fuhren fuhrt fuhren', 'fahre fahrest fahre fahren fahret fahren', 'sein', 'gefahren'],
+    laufen: ['laufe läufst läuft laufen lauft laufen', 'lief liefst lief liefen lieft liefen', 'laufe laufest laufe laufen laufet laufen', 'sein', 'gelaufen'],
+    essen: ['esse isst isst essen esst essen', 'aß aßest aß aßen aßt aßen', 'esse essest esse essen esset essen', 'haben', 'gegessen'],
+    sehen: ['sehe siehst sieht sehen seht sehen', 'sah sahst sah sahen saht sahen', 'sehe sehest sehe sehen sehet sehen', 'haben', 'gesehen'],
+    lesen: ['lese liest liest lesen lest lesen', 'las lasest las lasen last lasen', 'lese lesest lese lesen leset lesen', 'haben', 'gelesen'],
+    geben: ['gebe gibst gibt geben gebt geben', 'gab gabst gab gaben gabt gaben', 'gebe gebest gebe geben gebet geben', 'haben', 'gegeben'],
+    finden: ['finde findest findet finden findet finden', 'fand fandest fand fanden fandet fanden', 'finde findest finde finden findet finden', 'haben', 'gefunden'],
+    gehen: ['gehe gehst geht gehen geht gehen', 'ging gingst ging gingen gingt gingen', 'gehe gehest gehe gehen gehet gehen', 'sein', 'gegangen'],
+    sein: ['bin bist ist sind seid sind', 'war warst war waren wart waren', 'sei seiest sei seien seiet seien', 'sein', 'gewesen'],
+    haben: ['habe hast hat haben habt haben', 'hatte hattest hatte hatten hattet hatten', 'habe habest habe haben habet haben', 'haben', 'gehabt'],
+    werden: ['werde wirst wird werden werdet werden', 'wurde wurdest wurde wurden wurdet wurden', 'werde werdest werde werden werdet werden', 'sein', 'geworden'],
+    können: ['kann kannst kann können könnt können', 'konnte konntest konnte konnten konntet konnten', 'könne könnest könne können könnet können', 'haben', 'gekonnt'],
+    wissen: ['weiß weißt weiß wissen wisst wissen', 'wusste wusstest wusste wussten wusstet wussten', 'wisse wissest wisse wissen wisset wissen', 'haben', 'gewusst'],
+    bringen: ['bringe bringst bringt bringen bringt bringen', 'brachte brachtest brachte brachten brachtet brachten', 'bringe bringest bringe bringen bringet bringen', 'haben', 'gebracht'],
+    verstehen: ['verstehe verstehst versteht verstehen versteht verstehen', 'verstand verstandest verstand verstanden verstandet verstanden', 'verstehe verstehest verstehe verstehen verstehet verstehen', 'haben', 'verstanden']
+  };
+  for (const [inf, [pres, pret, subj, aux, part]] of Object.entries(DE)) {
+    cells('de', inf, 'present', pres); cells('de', inf, 'preterite', pret); cells('de', inf, 'subjunctive', subj);
+    eq(forms('de', inf, 'perfect'), compose(DE_AUX[aux], part), `de ${inf} perfect`);
+    eq(forms('de', inf, 'future'), compose(WERDEN, inf), `de ${inf} future`);
+    eq(forms('de', inf, 'conditional'), compose(WUERDE, inf), `de ${inf} conditional`);
+  }
+  // separable verbs: the prefix goes last in a finite form, first in the infinitive, between ge- and the stem
+  cells('de', 'aufmachen', 'present', 'mache auf | machst auf | macht auf | machen auf | macht auf | machen auf');
+  cells('de', 'aufmachen', 'preterite', 'machte auf | machtest auf | machte auf | machten auf | machtet auf | machten auf');
+  cells('de', 'aufmachen', 'subjunctive', 'mache auf | machest auf | mache auf | machen auf | machet auf | machen auf');
+  eq(forms('de', 'aufmachen', 'perfect'), compose(DE_AUX.haben, 'aufgemacht'), 'de aufmachen perfect');
+  eq(forms('de', 'aufmachen', 'future'), compose(WERDEN, 'aufmachen'), 'de aufmachen future');
+  cells('de', 'ankommen', 'present', 'komme an | kommst an | kommt an | kommen an | kommt an | kommen an');
+  cells('de', 'ankommen', 'preterite', 'kam an | kamst an | kam an | kamen an | kamt an | kamen an');
+  eq(forms('de', 'ankommen', 'perfect'), compose(DE_AUX.sein, 'angekommen'), 'de ankommen perfect (sein)');
+  cells('de', 'aufstehen', 'present', 'stehe auf | stehst auf | steht auf | stehen auf | steht auf | stehen auf');
+  eq(forms('de', 'aufstehen', 'perfect'), compose(DE_AUX.haben, 'aufgestanden'), 'de aufstehen perfect');
+  cells('de', 'ansehen', 'present', 'sehe an | siehst an | sieht an | sehen an | seht an | sehen an');
+  eq(forms('de', 'einkaufen', 'perfect')[0], 'habe eingekauft', 'de einkaufen perfect');
+  eq(forms('de', 'zurückkommen', 'perfect')[2], 'ist zurückgekommen', 'de zurückkommen perfect');
+  eq(C.conjugate('de', 'aufmachen', 'present', { pronouns: true }).forms[0], 'ich mache auf', 'de separable with subject');
+  eq(C.conjugate('de', 'aufmachen', 'present').infinitive, 'aufmachen', 'de separable names the whole infinitive');
+  eq(forms('de', 'bekommen', 'perfect')[0], 'habe bekommen', 'de bekommen is not split (be- is not separable)');
+  eq(forms('de', 'ankern', 'present')[0], 'ankere', 'de ankern is not an- + kern: a prefix splits only off a verb the pack knows');
+  eq(C.languages().find((l) => l.id === 'de').persons[5], 'sie / Sie', 'de the plural and the formal you share a slot');
+  eq(C.conjugate('de', 'aufmachen', 'present').known, true, 'de aufmachen is known through machen');
+  eq(C.conjugate('de', 'aufmachen', 'present').notes[0].kind, 'regular', 'de aufmachen notes regular');
+  eq(C.conjugate('de', 'ankommen', 'present').notes[0].kind, 'regular', 'de ankommen notes regular (kommen is regular in the present)');
+  eq(C.conjugate('de', 'ankommen', 'preterite').notes[0].kind, 'irregular', 'de ankommen notes kommen\'s irregular preterite');
+  // an unlisted verb is accepted as regular and marked unchecked (P19-7); a reflexive one is refused
+  eq(forms('de', 'basteln', 'present'), w('bastle bastelst bastelt basteln bastelt basteln'), 'de unlisted -eln verb');
+  eq(C.conjugate('de', 'basteln', 'present').known, false, 'de unlisted verb is not known');
+  eq(kinds('de', 'basteln', 'perfect'), Array(6).fill('assumed'), 'de unlisted verb is assumed');
+  ok(C.conjugate('de', 'sich waschen', 'present').complete === false, 'de refuses a reflexive infinitive');
+  // matching: ü typed as u (P19-8), ß typed as ss, a missing umlaut, the pronoun
+  const dm = (t, e) => C.match(t, e, { lang: 'de' });
+  eq([dm('uber', 'über').verdict === 'correct' ? 'close' : 'x', dm('fahrt', 'fährt').verdict, dm('ich mache', 'mache').verdict, dm('isst', 'isst').verdict], ['close', 'close', 'close', 'correct'], 'de match verdicts (ü is handled below)');
+  eq(dm('uben', 'üben'), { verdict: 'correct', reason: 'diaeresis', expected: 'üben' }, 'de ü typed as u is correct, and the ü form is returned');
+  eq(dm('weiss', 'weiß'), { verdict: 'close', reason: 'eszett', expected: 'weiß' }, 'de ss for ß is close');
+  eq(dm('weis', 'weiß').verdict, 'wrong', 'de a missing s for ß is wrong');
+  eq(dm('du isst', 'isst').verdict, 'close', 'de pronoun');
+
+  const IT_AUX = { avere: w('ho hai ha abbiamo avete hanno'), essere: w('sono sei è siamo siete sono') };
+  const itPerf = (aux, part) => IT_AUX[aux].map((a, i) => `${a} ${aux === 'essere' && i >= 3 ? part.replace(/o$/, 'i') : part}`);
+  const IT = {
+    parlare: ['parlo parli parla parliamo parlate parlano', 'parlavo parlavi parlava parlavamo parlavate parlavano', 'parlerò parlerai parlerà parleremo parlerete parleranno', 'parlerei parleresti parlerebbe parleremmo parlereste parlerebbero', 'parli parli parli parliamo parliate parlino', 'avere', 'parlato'],
+    vendere: ['vendo vendi vende vendiamo vendete vendono', 'vendevo vendevi vendeva vendevamo vendevate vendevano', 'venderò venderai venderà venderemo venderete venderanno', 'venderei venderesti venderebbe venderemmo vendereste venderebbero', 'venda venda venda vendiamo vendiate vendano', 'avere', 'venduto'],
+    dormire: ['dormo dormi dorme dormiamo dormite dormono', 'dormivo dormivi dormiva dormivamo dormivate dormivano', 'dormirò dormirai dormirà dormiremo dormirete dormiranno', 'dormirei dormiresti dormirebbe dormiremmo dormireste dormirebbero', 'dorma dorma dorma dormiamo dormiate dormano', 'avere', 'dormito'],
+    finire: ['finisco finisci finisce finiamo finite finiscono', 'finivo finivi finiva finivamo finivate finivano', 'finirò finirai finirà finiremo finirete finiranno', 'finirei finiresti finirebbe finiremmo finireste finirebbero', 'finisca finisca finisca finiamo finiate finiscano', 'avere', 'finito'],
+    mangiare: ['mangio mangi mangia mangiamo mangiate mangiano', 'mangiavo mangiavi mangiava mangiavamo mangiavate mangiavano', 'mangerò mangerai mangerà mangeremo mangerete mangeranno', 'mangerei mangeresti mangerebbe mangeremmo mangereste mangerebbero', 'mangi mangi mangi mangiamo mangiate mangino', 'avere', 'mangiato'],
+    cominciare: ['comincio cominci comincia cominciamo cominciate cominciano', 'cominciavo cominciavi cominciava cominciavamo cominciavate cominciavano', 'comincerò comincerai comincerà cominceremo comincerete cominceranno', 'comincerei cominceresti comincerebbe cominceremmo comincereste comincerebbero', 'cominci cominci cominci cominciamo cominciate comincino', 'avere', 'cominciato'],
+    cercare: ['cerco cerchi cerca cerchiamo cercate cercano', 'cercavo cercavi cercava cercavamo cercavate cercavano', 'cercherò cercherai cercherà cercheremo cercherete cercheranno', 'cercherei cercheresti cercherebbe cercheremmo cerchereste cercherebbero', 'cerchi cerchi cerchi cerchiamo cerchiate cerchino', 'avere', 'cercato'],
+    pagare: ['pago paghi paga paghiamo pagate pagano', 'pagavo pagavi pagava pagavamo pagavate pagavano', 'pagherò pagherai pagherà pagheremo pagherete pagheranno', 'pagherei pagheresti pagherebbe pagheremmo paghereste pagherebbero', 'paghi paghi paghi paghiamo paghiate paghino', 'avere', 'pagato'],
+    studiare: ['studio studi studia studiamo studiate studiano', 'studiavo studiavi studiava studiavamo studiavate studiavano', 'studierò studierai studierà studieremo studierete studieranno', 'studierei studieresti studierebbe studieremmo studiereste studierebbero', 'studi studi studi studiamo studiate studino', 'avere', 'studiato'],
+    essere: ['sono sei è siamo siete sono', 'ero eri era eravamo eravate erano', 'sarò sarai sarà saremo sarete saranno', 'sarei saresti sarebbe saremmo sareste sarebbero', 'sia sia sia siamo siate siano', 'essere', 'stato'],
+    avere: ['ho hai ha abbiamo avete hanno', 'avevo avevi aveva avevamo avevate avevano', 'avrò avrai avrà avremo avrete avranno', 'avrei avresti avrebbe avremmo avreste avrebbero', 'abbia abbia abbia abbiamo abbiate abbiano', 'avere', 'avuto'],
+    andare: ['vado vai va andiamo andate vanno', 'andavo andavi andava andavamo andavate andavano', 'andrò andrai andrà andremo andrete andranno', 'andrei andresti andrebbe andremmo andreste andrebbero', 'vada vada vada andiamo andiate vadano', 'essere', 'andato'],
+    fare: ['faccio fai fa facciamo fate fanno', 'facevo facevi faceva facevamo facevate facevano', 'farò farai farà faremo farete faranno', 'farei faresti farebbe faremmo fareste farebbero', 'faccia faccia faccia facciamo facciate facciano', 'avere', 'fatto'],
+    venire: ['vengo vieni viene veniamo venite vengono', 'venivo venivi veniva venivamo venivate venivano', 'verrò verrai verrà verremo verrete verranno', 'verrei verresti verrebbe verremmo verreste verrebbero', 'venga venga venga veniamo veniate vengano', 'essere', 'venuto'],
+    potere: ['posso puoi può possiamo potete possono', 'potevo potevi poteva potevamo potevate potevano', 'potrò potrai potrà potremo potrete potranno', 'potrei potresti potrebbe potremmo potreste potrebbero', 'possa possa possa possiamo possiate possano', 'avere', 'potuto'],
+    dire: ['dico dici dice diciamo dite dicono', 'dicevo dicevi diceva dicevamo dicevate dicevano', 'dirò dirai dirà diremo direte diranno', 'direi diresti direbbe diremmo direste direbbero', 'dica dica dica diciamo diciate dicano', 'avere', 'detto'],
+    bere: ['bevo bevi beve beviamo bevete bevono', 'bevevo bevevi beveva bevevamo bevevate bevevano', 'berrò berrai berrà berremo berrete berranno', 'berrei berresti berrebbe berremmo berreste berrebbero', 'beva beva beva beviamo beviate bevano', 'avere', 'bevuto'],
+    uscire: ['esco esci esce usciamo uscite escono', 'uscivo uscivi usciva uscivamo uscivate uscivano', 'uscirò uscirai uscirà usciremo uscirete usciranno', 'uscirei usciresti uscirebbe usciremmo uscireste uscirebbero', 'esca esca esca usciamo usciate escano', 'essere', 'uscito'],
+    aprire: ['apro apri apre apriamo aprite aprono', 'aprivo aprivi apriva aprivamo aprivate aprivano', 'aprirò aprirai aprirà apriremo aprirete apriranno', 'aprirei apriresti aprirebbe apriremmo aprireste aprirebbero', 'apra apra apra apriamo apriate aprano', 'avere', 'aperto']
+  };
+  for (const [inf, [pres, imp, fut, cond, subj, aux, part]] of Object.entries(IT)) {
+    cells('it', inf, 'present', pres); cells('it', inf, 'imperfect', imp); cells('it', inf, 'future', fut);
+    cells('it', inf, 'conditional', cond); cells('it', inf, 'subjunctive', subj);
+    eq(forms('it', inf, 'passato-prossimo'), itPerf(aux, part), `it ${inf} passato prossimo`);
+  }
+  eq(C.conjugate('it', 'andare', 'passato-prossimo').notes.map((n) => n.kind), Array(6).fill('agreement'), 'it essere notes agreement');
+  eq(C.conjugate('it', 'parlare', 'passato-prossimo').notes.map((n) => n.kind), Array(6).fill('regular'), 'it avere notes regular');
+  eq(kinds('it', 'cercare', 'present'), ['regular', 'spelling', 'regular', 'spelling', 'regular', 'regular'], 'it cercare notes the h');
+  eq(kinds('it', 'zompare', 'present'), Array(6).fill('assumed'), 'it unlisted verb is assumed');
+  eq(forms('it', 'zompare', 'present'), w('zompo zompi zompa zompiamo zompate zompano'), 'it unlisted -are verb is regular');
+  eq(forms('it', 'pulire', 'present')[0], 'pulisco', 'it pulire carries the -isc- flag');
+  eq(forms('it', 'servire', 'present')[0], 'servo', 'it servire does not');
+  eq(C.classify('it', 'lavarsi'), null, 'it reflexive is not a class');
+  eq(C.conjugate('it', 'lavarsi', 'present').complete, false, 'it refuses a reflexive infinitive');
+  eq(C.conjugate('it', 'parlare', 'present', { pronouns: true }).forms[2], 'lui parla', 'it subject');
+  eq(C.match('perche', 'perché', { lang: 'it' }).verdict, 'close', 'it accent is close');
+  eq(C.match('e', 'è', { lang: 'it' }).verdict, 'close', 'it è without the accent is close');
+
+  // the pack, per language
+  for (const lang of ['de', 'it']) {
+    const L = C.languages().find((l) => l.id === lang);
+    eq(L.tenses.length, 6, `${lang} declares six tenses`);
+    ok(L.reviewed === false && L.status === 'unreviewed', `${lang} is unreviewed`);
+    ok(read(`_shared/conjugate-${lang}.js`).length < 24 * 1024, `${lang} pack is under 24 KB`);
+    ok(/NOTHING HERE HAS BEEN READ BY A LANGUAGE TEACHER/.test(read(`_shared/conjugate-${lang}.js`)), `${lang} pack says unreviewed in its header`);
+    const names = [...read(`_shared/conjugate-${lang}.js`).matchAll(/\brec\('([^']+)'/g)].map((x) => x[1]);
+    const seen = new Set();
+    for (const n of names) { if (lang === 'it' && ['dormire', 'aprire', 'offrire', 'partire'].includes(n)) continue; ok(!seen.has(n), `${lang}: ${n} is declared twice`); seen.add(n); }
+    const inv = C.inventory(lang), ids = L.tenses.map((t) => t.id);
+    ok(inv.length >= (lang === 'de' ? 70 : 70), `${lang} has a real inventory (${inv.length})`);
+    for (const v of inv) {
+      const rec = C.lookup(lang, v);
+      if (rec) eq(C.validate(lang, rec), [], `${lang} ${v} validates`);
+      ok(!!C.participle(lang, v), `${lang} ${v}: has a participle`);
+      for (const t of ids) {
+        const r = C.conjugate(lang, v, t);
+        ok(r.complete && r.known, `${lang} ${v} ${t}: complete and known`);
+        r.forms.forEach((f, i) => ok(f && f === f.toLowerCase() && f === f.normalize('NFC'), `${lang} ${v} ${t} slot ${i}: lowercase NFC, not empty (${f})`));
+      }
+    }
+  }
+  // two rules agree: the conditional is the future's stem with its own ending
+  for (const v of C.inventory('it')) {
+    const fut = forms('it', v, 'future'), cond = forms('it', v, 'conditional');
+    ok(fut[0].slice(0, -1) === cond[0].slice(0, -2), `it ${v}: the condizionale stem is the futuro's (${fut[0]} / ${cond[0]})`);
+  }
+  // and the German future and conditional end in the infinitive
+  for (const v of C.inventory('de')) ok(forms('de', v, 'future')[0].endsWith(' ' + v) && forms('de', v, 'conditional')[0].endsWith(' ' + v), `de ${v}: the future and conditional end in the infinitive`);
+
   // the six declared tenses are what Devon asked for ("The six", 2026-10-07)
   eq(C.languages().find((l) => l.id === 'es').tenses.map((t) => t.id), ['present', 'preterite', 'imperfect', 'future', 'conditional', 'subjunctive'], 'Spanish tense ids');
   eq(C.languages().find((l) => l.id === 'fr').tenses.map((t) => t.id), ['present', 'passe-compose', 'imperfect', 'future', 'conditional', 'subjunctive'], 'French tense ids');
+  eq(C.languages().find((l) => l.id === 'de').tenses.map((t) => t.id), ['present', 'perfect', 'preterite', 'future', 'conditional', 'subjunctive'], 'German tense ids');
+  eq(C.languages().find((l) => l.id === 'it').tenses.map((t) => t.id), ['present', 'passato-prossimo', 'imperfect', 'future', 'conditional', 'subjunctive'], 'Italian tense ids');
+  eq(C.languages().map((l) => l.id), ['es', 'de', 'it', 'fr'], 'languages come in Devon\'s order (Spanish, German, Italian, [Latin], French)');
   ok(C.languages().find((l) => l.id === 'es').persons.length === 6 && C.languages().find((l) => l.id === 'fr').persons[4] === 'vous', 'six persons, vosotros shown');
 
   return fails;
@@ -551,6 +701,41 @@ const BROKEN = [
   ['a result says reviewed', '_shared/conjugate.js', "known: ctx.known, reviewed: false", "known: ctx.known, reviewed: true"],
   ['a teacher cell is not noted', '_shared/conjugate.js', "kinds: [teach ? 'teacher' : 'irregular']", "kinds: ['irregular']"],
   ['prefix derivation takes any ending', '_shared/conjugate.js', "r.prefixes.indexOf(pre) >= 0 &&", ''],
+  ['German e-insertion is gone', '_shared/conjugate-de.js', "stemRepl: [/$/, 'e'], literalToo: true", "stemRepl: [/$/, ''], literalToo: true"],
+  ['German strong stems skip the e-insertion rule', '_shared/conjugate-de.js', "stemRepl: [/$/, 'e'], literalToo: true", "stemRepl: [/$/, 'e']"],
+  ['German du isst is spelled isst-st', '_shared/conjugate-de.js', "endRepl: [/^st$/, 't'] }", "endRepl: [/^st$/, 'st'] }"],
+  ['German strong s-stems lose the e', '_shared/conjugate-de.js', "endRepl: [/^st$/, 'est'], literalToo: true", "endRepl: [/^st$/, 'st'], literalToo: true"],
+  ['German -eln ich form keeps its e', '_shared/conjugate-de.js', "stemRepl: [/el$/, 'le']", "stemRepl: [/el$/, 'el']"],
+  ['German drops the auf separable prefix', '_shared/conjugate-de.js', "'an', 'auf', 'aus'", "'an', 'aus'"],
+  ['German drops the ankommen aux', '_shared/conjugate-de.js', "strong('kommen', 'kam', 'gekommen', SEIN)", "strong('kommen', 'kam', 'gekommen')"],
+  ['German würde loses its umlaut', '_shared/conjugate-de.js', "forms: ['würde', 'würdest'", "forms: ['wurde', 'wurdest'"],
+  ['German werde becomes wirde', '_shared/conjugate-de.js', "forms: ['werde', 'wirst'", "forms: ['wirde', 'wirst'"],
+  ['German strong endings are weak', '_shared/conjugate-de.js', "strongEndings: ['', 'st', '', 'en', 't', 'en']", "strongEndings: ['e', 'est', 'e', 'en', 'et', 'en']"],
+  ['German strong flag is ignored', '_shared/conjugate.js', "(!tdef.strongIf || rec[tdef.strongIf])", "(!tdef.strongIf || !rec[tdef.strongIf])"],
+  ['German a>ä is a>a', '_shared/conjugate-de.js', "'a>ä': { find: 'a', boot: 'ä' }", "'a>ä': { find: 'a', boot: 'a' }"],
+  ['German e>ie loses its i', '_shared/conjugate-de.js', "'e>ie': { find: 'e', boot: 'ie' }", "'e>ie': { find: 'e', boot: 'i' }"],
+  ['German participle forgets ge-', '_shared/conjugate-de.js', "return (noGe ? '' : 'ge') + stem", "return stem"],
+  ['German be- verbs get ge-', '_shared/conjugate-de.js', "/^(?:be|emp|ent|er|ge|miss|ver|zer).{4}/", "/^(?:xxxx).{4}/"],
+  ['German -ieren verbs get ge-', '_shared/conjugate-de.js', "/ieren$/.test(inf) || ", ""],
+  ['German Konjunktiv I loses its -est', '_shared/conjugate-de.js', "endings: { en: ['e', 'est', 'e', 'en', 'et', 'en']", "endings: { en: ['e', 'st', 'e', 'en', 't', 'en']"],
+  ['German the separable prefix is not placed', '_shared/conjugate.js', "c.forms = c.forms.map(function (f) { return f + ' ' + ctx.sep; });", ""],
+  ['German a separable verb needs no known remainder', '_shared/conjugate.js', "&& knownBase(p, inf.slice(pre.length))) {", ") {"],
+  ['ß typed as ss is wrong', '_shared/conjugate.js', "t === e.replace(/\\u00df/g, 'ss')", "false"],
+  ['German formal Sie is not the plural', '_shared/conjugate-de.js', "persons: ['ich', 'du', 'er / sie / es', 'wir', 'ihr', 'sie / Sie']", "persons: ['ich', 'du', 'er / sie / es', 'wir', 'ihr', 'sie']"],
+  ['Italian -ciare keeps its i', '_shared/conjugate-it.js', "stemRepl: [/i$/, ''] },\n      // studiare", "stemRepl: [/x$/, ''] },\n      // studiare"],
+  ['Italian -iare doubles its i', '_shared/conjugate-it.js', "{ id: 'ii>i', stem: /i$/, next: /^i/, stemRepl: [/i$/, ''] }", "{ id: 'ii>i', stem: /i$/, next: /^i/, stemRepl: [/x$/, ''] }"],
+  ['Italian -care loses its h', '_shared/conjugate-it.js', "stemRepl: [/$/, 'h'] }", "stemRepl: [/$/, ''] }"],
+  ['Italian -are future keeps a', '_shared/conjugate-it.js', "futureSuffix: 'er', participle: { add: 'ato' }", "futureSuffix: 'ar', participle: { add: 'ato' }"],
+  ['Italian -ire future', '_shared/conjugate-it.js', "futureSuffix: 'ir', participle: { add: 'ito' }, not", "futureSuffix: 'er', participle: { add: 'ito' }, not"],
+  ['Italian -isc- endings', '_shared/conjugate-it.js', "isc: ['isco', 'isci', 'isce', 'iamo', 'ite', 'iscono']", "isc: ['o', 'i', 'e', 'iamo', 'ite', 'ono']"],
+  ['Italian finire loses its -isc- flag', '_shared/conjugate-it.js', "['finire', 'capire',", "['capire',"],
+  ['Italian plural agreement', '_shared/conjugate-it.js', "agreementPlural: [/o$/, 'i']", "agreementPlural: [/o$/, 'o']"],
+  ['Italian andare takes avere', '_shared/conjugate-it.js', "stems: { future: 'andr' }, auxiliary: 'essere'", "stems: { future: 'andr' }"],
+  ['Italian andare future stem', '_shared/conjugate-it.js', "future: 'andr'", "future: 'and'"],
+  ['Italian congiuntivo of -ere', '_shared/conjugate-it.js', "ere: ['a', 'a', 'a', 'iamo', 'iate', 'ano'], ire:", "ere: ['i', 'i', 'i', 'iamo', 'iate', 'ino'], ire:"],
+  ['Italian condizionale endings', '_shared/conjugate-it.js', "endings: { all: ['ei', 'esti', 'ebbe', 'emmo', 'este', 'ebbero'] }", "endings: { all: ['ei', 'esti', 'ebbe', 'emmo', 'este', 'ebbe'] }"],
+  ['Italian fare imperfect stem', '_shared/conjugate-it.js', "imperfect: 'fac'", "imperfect: 'far'"],
+  ['Italian uscire present', '_shared/conjugate-it.js', "present: pr('esco esci esce", "present: pr('uscio esci esce"],
   ['a derived tense keeps duplicates', '_shared/conjugate.js', "if (c.forms.indexOf(j.text) < 0) c.forms.push(j.text);", "c.forms.push(j.text);"]
 ];
 
@@ -559,15 +744,15 @@ function sheetChecks() {
   const f = [];
   const { loadEngine, corpusVerbs, checkSheet } = corpus;
   const C = loadEngine();
-  for (const lang of ['es', 'fr']) {
+  for (const lang of ['es', 'fr', 'de', 'it']) {
     const verbs = corpusVerbs(C, lang);
     const html = checkSheet(C, lang, verbs);
     const pages = html.split('<section>').length - 1;
     if (pages !== verbs.length) f.push(`${lang} sheet: ${pages} pages for ${verbs.length} verbs`);
-    if (verbs.length < (lang === 'es' ? 60 : 50)) f.push(`${lang} sheet lists only ${verbs.length} verbs`);
+    if (verbs.length < (lang === 'es' ? 60 : lang === 'fr' ? 50 : 70)) f.push(`${lang} sheet lists only ${verbs.length} verbs`);
     if ((html.match(/UNREVIEWED/g) || []).length !== pages) f.push(`${lang} sheet: not every page says UNREVIEWED`);
     if ((html.match(/Read by:/g) || []).length !== pages) f.push(`${lang} sheet: not every page has a line to sign`);
-    for (const must of lang === 'es' ? ['tener', 'pensar', 'llover', 'conocer', 'levantar'] : ['être', 'acheter', 'payer', 'mourir', 'falloir', 'manger']) {
+    for (const must of { es: ['tener', 'pensar', 'llover', 'conocer', 'levantar'], fr: ['être', 'acheter', 'payer', 'mourir', 'falloir', 'manger'], de: ['sein', 'fahren', 'aufmachen', 'ankommen', 'öffnen', 'sammeln'], it: ['essere', 'finire', 'cercare', 'mangiare', 'andare', 'dormire'] }[lang]) {
       if (!verbs.includes(must)) f.push(`${lang} sheet leaves out ${must}`);
     }
   }
