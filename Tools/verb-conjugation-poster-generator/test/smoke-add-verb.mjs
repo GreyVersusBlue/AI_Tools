@@ -125,9 +125,12 @@ eq(psGi.slice(nGi).map(p => p.forms), [
 ], 'German, Italian and Latin panels come from the engine');
 eq(psGi.slice(nGi).map(p => p.note !== ''), [false, false, false, false, true], 'only the unlisted German verb is marked unchecked');
 ok(/unchecked/.test(await status()), 'and the status line says so');
-await add('de', 'present', 'sich waschen');
-ok(/does not look like a German infinitive/.test(await status()), 'a reflexive German infinitive is refused with the reason');
+await add('de', 'present', 'ich wasche');
+ok(/does not look like a German infinitive/.test(await status()), 'a phrase typed as a German infinitive is refused with the reason');
 eq((await panels()).length, nGi + 5, 'and adds no panel');
+// a reflexive German verb is a verb now (Path 19 P3, reflexives): the pronoun follows the verb
+await add('de', 'present', 'sich waschen');
+eq((await panels()).slice(nGi + 5).map(p => p.forms), [['wasche mich', 'wäschst dich', 'wäscht sich', 'waschen uns', 'wascht euch', 'waschen sich']], 'a reflexive German verb is added with its pronouns');
 
 // -- 3: refusals
 const n1 = (await panels()).length;

@@ -1,0 +1,530 @@
+{
+ "es:present": {
+  "lang": "es",
+  "tense": "present",
+  "verbs": [
+   {
+    "id": "ser",
+    "name": "ser (to be)",
+    "forms": [
+     "soy",
+     "eres",
+     "es",
+     "somos",
+     "sois",
+     "son"
+    ]
+   },
+   {
+    "id": "estar",
+    "name": "estar (to be)",
+    "forms": [
+     "estoy",
+     "estás",
+     "está",
+     "estamos",
+     "estáis",
+     "están"
+    ]
+   },
+   {
+    "id": "ir",
+    "name": "ir (to go)",
+    "forms": [
+     "voy",
+     "vas",
+     "va",
+     "vamos",
+     "vais",
+     "van"
+    ]
+   },
+   {
+    "id": "tener",
+    "name": "tener (to have)",
+    "forms": [
+     "tengo",
+     "tienes",
+     "tiene",
+     "tenemos",
+     "tenéis",
+     "tienen"
+    ]
+   },
+   {
+    "id": "hacer",
+    "name": "hacer (to do, make)",
+    "forms": [
+     "hago",
+     "haces",
+     "hace",
+     "hacemos",
+     "hacéis",
+     "hacen"
+    ]
+   },
+   {
+    "id": "venir",
+    "name": "venir (to come)",
+    "forms": [
+     "vengo",
+     "vienes",
+     "viene",
+     "venimos",
+     "venís",
+     "vienen"
+    ]
+   },
+   {
+    "id": "decir",
+    "name": "decir (to say)",
+    "forms": [
+     "digo",
+     "dices",
+     "dice",
+     "decimos",
+     "decís",
+     "dicen"
+    ]
+   },
+   {
+    "id": "poder",
+    "name": "poder (to be able)",
+    "forms": [
+     "puedo",
+     "puedes",
+     "puede",
+     "podemos",
+     "podéis",
+     "pueden"
+    ]
+   }
+  ]
+ },
+ "es:preterite": {
+  "lang": "es",
+  "tense": "preterite",
+  "verbs": [
+   {
+    "id": "ser",
+    "name": "ser (to be)",
+    "forms": [
+     "fui",
+     "fuiste",
+     "fue",
+     "fuimos",
+     "fuisteis",
+     "fueron"
+    ]
+   },
+   {
+    "id": "ir",
+    "name": "ir (to go)",
+    "forms": [
+     "fui",
+     "fuiste",
+     "fue",
+     "fuimos",
+     "fuisteis",
+     "fueron"
+    ]
+   },
+   {
+    "id": "tener",
+    "name": "tener (to have)",
+    "forms": [
+     "tuve",
+     "tuviste",
+     "tuvo",
+     "tuvimos",
+     "tuvisteis",
+     "tuvieron"
+    ]
+   },
+   {
+    "id": "hacer",
+    "name": "hacer (to do, make)",
+    "forms": [
+     "hice",
+     "hiciste",
+     "hizo",
+     "hicimos",
+     "hicisteis",
+     "hicieron"
+    ]
+   },
+   {
+    "id": "estar",
+    "name": "estar (to be)",
+    "forms": [
+     "estuve",
+     "estuviste",
+     "estuvo",
+     "estuvimos",
+     "estuvisteis",
+     "estuvieron"
+    ]
+   },
+   {
+    "id": "decir",
+    "name": "decir (to say)",
+    "forms": [
+     "dije",
+     "dijiste",
+     "dijo",
+     "dijimos",
+     "dijisteis",
+     "dijeron"
+    ]
+   },
+   {
+    "id": "poder",
+    "name": "poder (to be able)",
+    "forms": [
+     "pude",
+     "pudiste",
+     "pudo",
+     "pudimos",
+     "pudisteis",
+     "pudieron"
+    ]
+   },
+   {
+    "id": "venir",
+    "name": "venir (to come)",
+    "forms": [
+     "vine",
+     "viniste",
+     "vino",
+     "vinimos",
+     "vinisteis",
+     "vinieron"
+    ]
+   }
+  ]
+ },
+ "es:imperfect": {
+  "lang": "es",
+  "tense": "imperfect",
+  "verbs": [
+   {
+    "id": "ser",
+    "name": "ser (to be)",
+    "forms": [
+     "era",
+     "eras",
+     "era",
+     "éramos",
+     "erais",
+     "eran"
+    ]
+   },
+   {
+    "id": "ir",
+    "name": "ir (to go)",
+    "forms": [
+     "iba",
+     "ibas",
+     "iba",
+     "íbamos",
+     "ibais",
+     "iban"
+    ]
+   },
+   {
+    "id": "ver",
+    "name": "ver (to see)",
+    "forms": [
+     "veía",
+     "veías",
+     "veía",
+     "veíamos",
+     "veíais",
+     "veían"
+    ]
+   }
+  ]
+ },
+ "es:future": {
+  "lang": "es",
+  "tense": "future",
+  "verbs": [
+   {
+    "id": "tener",
+    "name": "tener (to have)",
+    "forms": [
+     "tendré",
+     "tendrás",
+     "tendrá",
+     "tendremos",
+     "tendréis",
+     "tendrán"
+    ]
+   },
+   {
+    "id": "hacer",
+    "name": "hacer (to do, make)",
+    "forms": [
+     "haré",
+     "harás",
+     "hará",
+     "haremos",
+     "haréis",
+     "harán"
+    ]
+   },
+   {
+    "id": "decir",
+    "name": "decir (to say)",
+    "forms": [
+     "diré",
+     "dirás",
+     "dirá",
+     "diremos",
+     "diréis",
+     "dirán"
+    ]
+   },
+   {
+    "id": "poder",
+    "name": "poder (to be able)",
+    "forms": [
+     "podré",
+     "podrás",
+     "podrá",
+     "podremos",
+     "podréis",
+     "podrán"
+    ]
+   },
+   {
+    "id": "venir",
+    "name": "venir (to come)",
+    "forms": [
+     "vendré",
+     "vendrás",
+     "vendrá",
+     "vendremos",
+     "vendréis",
+     "vendrán"
+    ]
+   },
+   {
+    "id": "saber",
+    "name": "saber (to know)",
+    "forms": [
+     "sabré",
+     "sabrás",
+     "sabrá",
+     "sabremos",
+     "sabréis",
+     "sabrán"
+    ]
+   },
+   {
+    "id": "querer",
+    "name": "querer (to want)",
+    "forms": [
+     "querré",
+     "querrás",
+     "querrá",
+     "querremos",
+     "querréis",
+     "querrán"
+    ]
+   },
+   {
+    "id": "salir",
+    "name": "salir (to leave)",
+    "forms": [
+     "saldré",
+     "saldrás",
+     "saldrá",
+     "saldremos",
+     "saldréis",
+     "saldrán"
+    ]
+   }
+  ]
+ },
+ "fr:present": {
+  "lang": "fr",
+  "tense": "present",
+  "verbs": [
+   {
+    "id": "être",
+    "name": "être (to be)",
+    "forms": [
+     "suis",
+     "es",
+     "est",
+     "sommes",
+     "êtes",
+     "sont"
+    ]
+   },
+   {
+    "id": "avoir",
+    "name": "avoir (to have)",
+    "forms": [
+     "ai",
+     "as",
+     "a",
+     "avons",
+     "avez",
+     "ont"
+    ]
+   },
+   {
+    "id": "aller",
+    "name": "aller (to go)",
+    "forms": [
+     "vais",
+     "vas",
+     "va",
+     "allons",
+     "allez",
+     "vont"
+    ]
+   },
+   {
+    "id": "faire",
+    "name": "faire (to do, make)",
+    "forms": [
+     "fais",
+     "fais",
+     "fait",
+     "faisons",
+     "faites",
+     "font"
+    ]
+   },
+   {
+    "id": "pouvoir",
+    "name": "pouvoir (to be able)",
+    "forms": [
+     "peux",
+     "peux",
+     "peut",
+     "pouvons",
+     "pouvez",
+     "peuvent"
+    ]
+   },
+   {
+    "id": "vouloir",
+    "name": "vouloir (to want)",
+    "forms": [
+     "veux",
+     "veux",
+     "veut",
+     "voulons",
+     "voulez",
+     "veulent"
+    ]
+   },
+   {
+    "id": "venir",
+    "name": "venir (to come)",
+    "forms": [
+     "viens",
+     "viens",
+     "vient",
+     "venons",
+     "venez",
+     "viennent"
+    ]
+   },
+   {
+    "id": "prendre",
+    "name": "prendre (to take)",
+    "forms": [
+     "prends",
+     "prends",
+     "prend",
+     "prenons",
+     "prenez",
+     "prennent"
+    ]
+   }
+  ]
+ },
+ "fr:imperfect": {
+  "lang": "fr",
+  "tense": "imperfect",
+  "verbs": [
+   {
+    "id": "être",
+    "name": "être (to be)",
+    "forms": [
+     "étais",
+     "étais",
+     "était",
+     "étions",
+     "étiez",
+     "étaient"
+    ]
+   },
+   {
+    "id": "avoir",
+    "name": "avoir (to have)",
+    "forms": [
+     "avais",
+     "avais",
+     "avait",
+     "avions",
+     "aviez",
+     "avaient"
+    ]
+   },
+   {
+    "id": "aller",
+    "name": "aller (to go)",
+    "forms": [
+     "allais",
+     "allais",
+     "allait",
+     "allions",
+     "alliez",
+     "allaient"
+    ]
+   },
+   {
+    "id": "faire",
+    "name": "faire (to do, make)",
+    "forms": [
+     "faisais",
+     "faisais",
+     "faisait",
+     "faisions",
+     "faisiez",
+     "faisaient"
+    ]
+   },
+   {
+    "id": "pouvoir",
+    "name": "pouvoir (to be able)",
+    "forms": [
+     "pouvais",
+     "pouvais",
+     "pouvait",
+     "pouvions",
+     "pouviez",
+     "pouvaient"
+    ]
+   },
+   {
+    "id": "vouloir",
+    "name": "vouloir (to want)",
+    "forms": [
+     "voulais",
+     "voulais",
+     "voulait",
+     "voulions",
+     "vouliez",
+     "voulaient"
+    ]
+   }
+  ]
+ }
+}

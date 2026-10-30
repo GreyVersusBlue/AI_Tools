@@ -13,8 +13,8 @@
 // until that person has read the check sheet, no table is called reviewed, and the suite pins
 // that every result says "unreviewed".
 //
-// 079 parity reads irregulars.js by text and holds the engine to _079-templates-frozen.json (the starters
-// 079 printed before it computed them); a change to
+// 079 parity holds the engine to _079-templates-frozen.json (the starters 079 printed before it computed them)
+// and _079-irregulars-frozen.json (the 41 call-out tables irregulars.js held as literals before it computed them); a change to
 // either that the engine does not agree with fails here, which is what it is for.
 //
 // Broken copies at the end: the suite is run against copies of the source with one thing
@@ -854,17 +854,26 @@ function parity(win) {
     }
   }
   if (n !== 132) fails.push(`079 parity: expected 132 template forms (108 regular + 24 in the two irregular templates), compared ${n}`);
+  // irregulars.js computes its forms from the engine; the 41 tables it used to hold as literals are frozen in
+  // _079-irregulars-frozen.json, and both the engine and the page's data are held to them
+  const frozen = JSON.parse(read('Tools/conjugate/test/_079-irregulars-frozen.json'));
   const ictx = { window: {} };
   vm.createContext(ictx);
+  for (const f of FILES) vm.runInContext(read(f), ictx, { filename: f });
   vm.runInContext(read('Tools/verb-conjugation-poster-generator/irregulars.js'), ictx);
   const I = ictx.window.VCP_IRREGULARS;
   let tables = 0;
-  for (const key of Object.keys(I.tenses)) {
-    const t = I.tenses[key];
-    for (const v of t.verbs) {
+  if (JSON.stringify(Object.keys(I.tenses)) !== JSON.stringify(Object.keys(frozen))) fails.push('079 irregulars: not the same six tenses as the frozen literals');
+  for (const key of Object.keys(frozen)) {
+    const f = frozen[key], page = I.tenses[key];
+    if (!page) { fails.push(`079 irregulars ${key}: missing from the page's data`); continue; }
+    if (JSON.stringify(page.verbs.map((v) => v.id)) !== JSON.stringify(f.verbs.map((v) => v.id))) fails.push(`079 irregulars ${key}: not the same verbs in the same order`);
+    for (const v of f.verbs) {
       tables++;
-      const got = C.conjugate(t.lang, v.id, t.tense).forms;
-      if (JSON.stringify(got) !== JSON.stringify(v.forms)) fails.push(`079 irregulars ${key}/${v.id}: engine ${JSON.stringify(got)}, page ${JSON.stringify(v.forms)}`);
+      const got = C.conjugate(f.lang, v.id, f.tense).forms;
+      if (JSON.stringify(got) !== JSON.stringify(v.forms)) fails.push(`079 irregulars ${key}/${v.id}: engine ${JSON.stringify(got)}, frozen ${JSON.stringify(v.forms)}`);
+      const pv = page.verbs.find((x) => x.id === v.id);
+      if (!pv || JSON.stringify(pv.forms) !== JSON.stringify(v.forms) || pv.name !== v.name) fails.push(`079 irregulars ${key}/${v.id}: the page's data is not the frozen literal`);
     }
   }
   if (tables !== 41) fails.push(`079 irregulars: expected 41 tables, found ${tables}`);
@@ -997,6 +1006,7 @@ const BROKEN = [
   ['Latin a prefix does not carry the lexical stem', '_shared/conjugate.js', "if (rec.stem != null) out.stem = prefix + rec.stem;", ""],
   ['Latin mittere prefix com-', '_shared/conjugate-la.js', "pf(R.mittere, ['ad', 'com',", "pf(R.mittere, ['ad', 'con',"],
   ['Latin conficere keeps the short a', '_shared/conjugate-la.js', "io('conficere', 'confēc')", "io('conficere', 'confec')"],
+  ['079 irregulars: a verb loses a form in the engine', '_shared/conjugate-es.js', "present: pr('soy eres es somos sois son')", "present: pr('soy eres es somos sois sois')"],
   ['a derived tense keeps duplicates', '_shared/conjugate.js', "if (c.forms.indexOf(j.text) < 0) c.forms.push(j.text);", "c.forms.push(j.text);"]
 ];
 
