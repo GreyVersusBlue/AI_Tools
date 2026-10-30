@@ -658,6 +658,14 @@ files must be added there too.
   teacher has read it** (Devon, 2026-10-21): every result says `unreviewed` and a page that shows one says so. 039 drills from it and
   079's starter posters are computed from it (v474; held byte-for-byte by `test:verb-poster-callouts` against `golden-old-posters.json`) and its Add a verb card is the engine's `conjugate()` (v475, `npm run test:verb-poster-add-verb`); 079's irregular call-out tables are held equal to it by `npm run test:conjugate`, which reads `irregulars.js` by text. `node Tools/conjugate/print-corpus.mjs
   es|fr` writes the teacher's check sheet. The suite also runs the page-driven `npm run test:conjugate-039`.
+- **040's study printables are `Tools/vocab-flashcard-generator/vfg-study.js`** (`VfgStudy`, Path 19 P4, v477): Frayer, fill in the blank, the
+  review schedule and the word wall system, pure, with the page turning its output into nodes in `studyBuild()`. Their settings are **one optional
+  `study` field on the list's record, present only once a setting differs from its default** (`smoke-bank.mjs` pins the stored record; do not add
+  fields to it that every list gets). A word's unit is a `unit:<name>` tag on the word in Word Lists. `npm run test:vocab-study-logic`,
+  `npm run test:vocab-study`.
+- **Reading a word aloud is `_shared/speak.js`** (`Speak`, Path 19 P5, v478), used by 040's self-quiz and 051; 039, 014 and 044 still have their own
+  copies. A teacher's recording of a word is 051's `clm-pron.js` (MediaRecorder into `gvb-media`, namespace `labels`): it plays on that device and is not in
+  the label's QR. `npm run test:speak`, `npm run test:label-pron`.
 - **A pasted spreadsheet region is read by `_shared/paste-table.js`** (`PasteTable`, Path 16 P2, v404): `splitLine`,
   `pickDelimiter`, `parse` (rows padded, short rows named in `ragged`), `columnReport` (the cells that stopped a column reading
   as numbers), and 046's name-and-value parsers. 046, 038, 036, 037, 075 and 006 use it; do not write another `split('\t')`. A line a

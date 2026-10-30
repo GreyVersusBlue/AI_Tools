@@ -9,6 +9,26 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-27: Path 19 P4 and P5, the study printables and audio (2026-10-30, v477-v478)
+
+**What shipped.** Two commits on local `main` (P4 `d7da7b6`, v477; P5 `ab0ad03`, v478). P4 is four more tabs in 040 on a pure module, `Tools/vocab-flashcard-generator/vfg-study.js`: a Frayer model page per word, fill-in-the-blank from each word's example, a review schedule for printed drills, and the word wall as a system (units, an index, retire a unit). P5 is `_shared/speak.js`, a Hear it button on 040's self-quiz and a Say it column on 051 with teacher recordings kept in `gvb-media` under a new `labels` namespace. `BACKLOG.md`'s P4 and P5 bullets hold the design as built; ranks 57 and 58 are deleted and the gaps are not renumbered (as for ranks 54 and 55).
+
+**What went wrong first, and what it taught.**
+- *The first P4 stored its settings as eleven new fields on every list.* `smoke-bank.mjs` pins 040's stored record byte for byte against the v270 page, and failed 7 checks. The rule it enforces is the one Path 12's play modes follow: a feature adds its fields only once used. The settings are now one optional `study` object that a list gets when a setting differs from its default (`smoke-study.mjs` checks a list nobody touched has none, and that choosing the self-quiz language writes one). Visiting a tab writes nothing.
+- *The cloze preview test first used 040's own `vocab()` fixture, whose examples never contain the term,* so every word was left out and Preview refused with an alert (a 30 s timeout, not a failure message). The fixture for that state now has examples that use the word. A real list written like the fixture would behave the same way: the sheet says which words were left out and why.
+- *The brief said to use "the existing `speechSynthesis` helper"; there is none.* 039, 014 and 044 each carry a few lines of their own and `a11y.js` reads a whole page. A fourth inline copy was the thing to avoid, so `_shared/speak.js` exists and only the two new callers use it. Moving the three older copies onto it is not done and is a small row of its own.
+- A `test:theme` run crashed once in `smoke-dark-rollout.mjs` (page closed on 030, not a page this work touched) while another loop's suite was queued behind mine; the rerun passed (966). Not diagnosed further.
+
+**Decided without asking (reverse cheaply).** Review steps 1, 3, 7, 14 teaching days and five new words a day (both editable); a retired unit is stored on the list, a unit as a `unit:` tag on the word; a Frayer box is blank unless "filled in" is chosen; cloze blanks the first whole-word, case-insensitive match and does no accent folding; the recording limit is 10 s, one recording per language and word; Hear is offered even when the device has no voice for the language (it says so); Latin is in the language list although few devices have a Latin voice. No question for Devon needed an answer to build any of this.
+
+**What a recording is not.** It is on this device, plays in 051, and is **not** in a printed label's QR, which still opens `speak.html` and speaks with the scanning phone's own voice. A recording cannot ride in a QR, and giving one to a student's phone needs a server or a file this site does not have.
+
+**Verified.** `test:vocab-study-logic` (70 checks), `test:vocab-study` (59 then 68 with the self-quiz checks and the accessibility scans of each new tab), `test:speak` (33), `test:label-pron` (24; Chromium's fake microphone playing a generated tone, a stub speech engine), `smoke-preview-adopters.mjs --only 040` (831; seven new states) and `--only 051` (420), `run-suites --only` for vocab-flashcard-generator (9), classroom-label-maker (2), speak and word-list (7), the a11y sweep on 040 and 051, `test:theme` (63 and 966), lint and the `check:*` guards the repo has.
+**Not verified.** Nothing was printed on paper (the Frayer ring over its grid, the schedule table, the index). No real speaker said a word and no real microphone heard a voice; Safari and Firefox were not tried (`MediaRecorder` types differ). A backup holding a recording being restored was not run (it is in `gvb-media`, which 009 backs up by default). The full `npm test` was not run.
+**Obliges someone else.** Nothing outside this repo. In the repo: a new page that records or speaks calls `Speak`/`ClmPron` rather than writing another; a new `gvb-media` namespace needs a row in `tool-registry.js` (done for `labels`).
+
+---
+
 ## AI-27: Path 19 P3 increment 3, German, Italian and Latin (2026-10-30, v476)
 
 **What shipped.** Two commits on local `main`, one `CACHE_VERSION` (v476) for both. Devon's order is Spanish, German, Italian, Latin, French; the three new packs are `_shared/conjugate-de.js`, `-it.js` and `-la.js`, loaded by 039 and 079 between Spanish and French so `Conjugate.languages()` lists them in that order (a test holds it). 039's language setting and 079's Add a verb card pick them up from `languages()`; 039 gained an Italian preset (persons, accents). `print-corpus.mjs` writes `de`, `it` and `la`. **Every table says unreviewed.**
