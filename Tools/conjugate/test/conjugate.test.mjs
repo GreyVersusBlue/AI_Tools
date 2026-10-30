@@ -337,6 +337,27 @@ function suite(win) {
   eq(C.conjugate('es', 'levantarse', 'command').complete, false, 'es a reflexive command is refused, not guessed');
   eq(C.conjugate('es', 'hablar', 'command').reviewed, false, 'es an extra tense is unreviewed too');
   eq(C.validate('es', { infinitive: 'hablar', forms: { command: { 1: 'habla' } } }), [], 'a teacher may correct an extra tense');
+  // German: the Plusquamperfekt, the passive and the imperative
+  eq(extras('de'), ['pluperfect', 'passive', 'passive-preterite', 'imperative'], 'de extra tenses');
+  eq(six('de'), ['present', 'perfect', 'preterite', 'future', 'conditional', 'subjunctive'], 'de the six do not move');
+  cells('de', 'machen', 'pluperfect', 'hatte gemacht | hattest gemacht | hatte gemacht | hatten gemacht | hattet gemacht | hatten gemacht');
+  cells('de', 'fahren', 'pluperfect', 'war gefahren | warst gefahren | war gefahren | waren gefahren | wart gefahren | waren gefahren');
+  cells('de', 'aufmachen', 'pluperfect', 'hatte aufgemacht | hattest aufgemacht | hatte aufgemacht | hatten aufgemacht | hattet aufgemacht | hatten aufgemacht');
+  cells('de', 'sich waschen', 'pluperfect', 'hatte mich gewaschen | hattest dich gewaschen | hatte sich gewaschen | hatten uns gewaschen | hattet euch gewaschen | hatten sich gewaschen');
+  cells('de', 'machen', 'passive', 'werde gemacht | wirst gemacht | wird gemacht | werden gemacht | werdet gemacht | werden gemacht');
+  cells('de', 'sehen', 'passive-preterite', 'wurde gesehen | wurdest gesehen | wurde gesehen | wurden gesehen | wurdet gesehen | wurden gesehen');
+  cells('de', 'machen', 'imperative', ' | mach |  | machen wir | macht | machen Sie');
+  cells('de', 'arbeiten', 'imperative', ' | arbeite |  | arbeiten wir | arbeitet | arbeiten Sie');
+  cells('de', 'sprechen', 'imperative', ' | sprich |  | sprechen wir | sprecht | sprechen Sie');
+  cells('de', 'lesen', 'imperative', ' | lies |  | lesen wir | lest | lesen Sie');
+  cells('de', 'fahren', 'imperative', ' | fahr |  | fahren wir | fahrt | fahren Sie');
+  cells('de', 'nehmen', 'imperative', ' | nimm |  | nehmen wir | nehmt | nehmen Sie');
+  cells('de', 'sammeln', 'imperative', ' | sammle |  | sammeln wir | sammelt | sammeln Sie');
+  cells('de', 'sein', 'imperative', ' | sei |  | seien wir | seid | seien Sie');
+  cells('de', 'aufmachen', 'imperative', ' | mach auf |  | machen wir auf | macht auf | machen Sie auf');
+  eq(C.conjugate('de', 'können', 'imperative').notes.map((n) => n.kind), Array(6).fill('defective'), 'de a modal has no imperative');
+  eq(C.conjugate('de', 'sein', 'passive').forms, Array(6).fill(''), 'de sein has no passive');
+  eq(C.conjugate('de', 'sich waschen', 'imperative').complete, false, 'de a reflexive imperative is refused, not guessed');
   eq(C.conjugate('es', 'hablar', 'present', { slots: [0, 2] }).forms, ['hablo', '', 'habla', '', '', ''], 'opts.slots');
 
   // (7) defective
@@ -785,7 +806,7 @@ const BROKEN = [
   ['German werde becomes wirde', '_shared/conjugate-de.js', "forms: ['werde', 'wirst'", "forms: ['wirde', 'wirst'"],
   ['German strong endings are weak', '_shared/conjugate-de.js', "strongEndings: ['', 'st', '', 'en', 't', 'en']", "strongEndings: ['e', 'est', 'e', 'en', 'et', 'en']"],
   ['German strong flag is ignored', '_shared/conjugate.js', "(!tdef.strongIf || rec[tdef.strongIf])", "(!tdef.strongIf || !rec[tdef.strongIf])"],
-  ['German a>ä is a>a', '_shared/conjugate-de.js', "'a>ä': { find: 'a', boot: 'ä' }", "'a>ä': { find: 'a', boot: 'a' }"],
+  ['German a>ä is a>a', '_shared/conjugate-de.js', "'a>ä': { find: 'a', boot: 'ä',", "'a>ä': { find: 'a', boot: 'a',"],
   ['German e>ie loses its i', '_shared/conjugate-de.js', "'e>ie': { find: 'e', boot: 'ie' }", "'e>ie': { find: 'e', boot: 'i' }"],
   ['German participle forgets ge-', '_shared/conjugate-de.js', "return (noGe ? '' : 'ge') + stem", "return stem"],
   ['German be- verbs get ge-', '_shared/conjugate-de.js', "/^(?:be|emp|ent|er|ge|miss|ver|zer).{4}/", "/^(?:xxxx).{4}/"],
@@ -839,6 +860,18 @@ const BROKEN = [
   ['Spanish present perfect uses haber in the past', '_shared/conjugate-es.js', "compound: { auxiliary: 'haber', tense: 'present' }", "compound: { auxiliary: 'haber', tense: 'preterite' }"],
   ['a reflexive command is guessed', '_shared/conjugate.js', "if (tdef.noReflexive && ctx.reflexive)", "if (false)"],
   ['an extra tense leaks into the default list', '_shared/conjugate.js', "tenses: p.tenses.map(function (t) { return { id: t.id, name: t.name, mood: t.mood }; }),", "tenses: p.tenses.concat(p.extraTenses).map(function (t) { return { id: t.id, name: t.name, mood: t.mood }; }),"],
+  ['German pluperfect uses the Perfekt auxiliary tense', '_shared/conjugate-de.js', "compound: { auxiliary: 'haben', tense: 'preterite' } },\n      { id: 'passive'", "compound: { auxiliary: 'haben', tense: 'present' } },\n      { id: 'passive'"],
+  ['German passive uses the infinitive', '_shared/conjugate-de.js', "forms: ['werde', 'wirst', 'wird', 'werden', 'werdet', 'werden'], part: 'participle'", "forms: ['werde', 'wirst', 'wird', 'werden', 'werdet', 'werden'], part: 'infinitive'"],
+  ['German passive preterite is wird', '_shared/conjugate-de.js', "forms: ['wurde', 'wurdest', 'wurde', 'wurden', 'wurdet', 'wurden'], part: 'participle'", "forms: ['wurde', 'wirst', 'wurde', 'wurden', 'wurdet', 'wurden'], part: 'participle'"],
+  ['German imperative wir loses Sie', '_shared/conjugate-de.js', "append: [null, null, null, ' wir', null, ' Sie']", "append: [null, null, null, ' wir', null, null]"],
+  ['German imperative of fahren takes the umlaut', '_shared/conjugate-de.js', "'a>ä': { find: 'a', boot: 'ä', 'in': ['present'] }", "'a>ä': { find: 'a', boot: 'ä' }"],
+  ['German imperative arbeite loses its e (rule)', '_shared/conjugate-de.js', "id: 'e-imperative', tenses: ['imperative']", "id: 'e-imperative', tenses: ['nothing']"],
+  ['German imperative ihr ending', '_shared/conjugate-de.js', "endings: { en: ['', '', '', 'en', 't', 'en'], eln:", "endings: { en: ['', '', '', 'en', 'st', 'en'], eln:"],
+  ['German imperative of sammeln keeps el', '_shared/conjugate-de.js', "'subjunctive', 'imperative'], cls: ['eln']", "'subjunctive'], cls: ['eln']"],
+  ['German sein imperative', '_shared/conjugate-de.js', "imperative: { 1: 'sei', 3: 'seien wir'", "imperative: { 1: 'bist', 3: 'seien wir'"],
+  ['German nimm', '_shared/conjugate-de.js', "imperative: pr('. nimm . . . .')", "imperative: pr('. nehm . . . .')"],
+  ['German a modal gets an imperative', '_shared/conjugate-de.js', "rec('können', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, ", "rec('können', { "],
+  ['German a separable imperative puts the prefix before wir', '_shared/conjugate.js', "f + tdef.append[slot]; });\n    }\n    // the separable", "tdef.append[slot] + f; });\n    }\n    // the separable"],
   ['a derived tense keeps duplicates', '_shared/conjugate.js', "if (c.forms.indexOf(j.text) < 0) c.forms.push(j.text);", "c.forms.push(j.text);"]
 ];
 
@@ -862,6 +895,7 @@ function sheetChecks() {
   const one = checkSheet(C, 'es', ['tener']);
   if (!/tengo/.test(one) || !/Participle: <b>tenido/.test(one) || !/Gerund: <b>teniendo/.test(one)) f.push('the sheet for tener does not show its forms');
   if (!/<sup>irr tener<\/sup>/.test(one)) f.push('the sheet does not tag an irregular form with its rule');
+  if (!/More tenses/.test(one) || !/Command \(affirmative\)/.test(one) || !/mantén/.test(checkSheet(C, 'es', ['mantener']))) f.push('the sheet does not print the tenses beyond the six');
   if (!/not on the pattern list/.test(checkSheet(C, 'es', ['zumbar']))) f.push('the sheet does not mark an unknown verb');
   return f;
 }

@@ -47,24 +47,24 @@
   var SEIN = { auxiliary: 'sein' };
 
   // ---- the auxiliaries and the modals ---------------------------------------
-  rec('sein', { 'class': 'n', forms: { present: pr('bin bist ist sind seid sind'), preterite: pr('war warst war waren wart waren'), subjunctive: pr('sei seiest sei seien seiet seien') }, participle: 'gewesen', auxiliary: 'sein' });
+  rec('sein', { 'class': 'n', defective: { tenses: ['passive', 'passive-preterite'] }, forms: { imperative: { 1: 'sei', 3: 'seien wir', 4: 'seid', 5: 'seien Sie' }, present: pr('bin bist ist sind seid sind'), preterite: pr('war warst war waren wart waren'), subjunctive: pr('sei seiest sei seien seiet seien') }, participle: 'gewesen', auxiliary: 'sein' });
   rec('haben', { forms: { present: pr('habe hast hat haben habt haben'), preterite: pr('hatte hattest hatte hatten hattet hatten') }, participle: 'gehabt' });
-  rec('werden', { forms: { present: pr('werde wirst wird werden werdet werden'), preterite: pr('wurde wurdest wurde wurden wurdet wurden') }, participle: 'geworden', auxiliary: 'sein' });
+  rec('werden', { defective: { tenses: ['passive', 'passive-preterite'] }, forms: { imperative: { 1: 'werde', 3: 'werden wir', 4: 'werdet', 5: 'werden Sie' }, present: pr('werde wirst wird werden werdet werden'), preterite: pr('wurde wurdest wurde wurden wurdet wurden') }, participle: 'geworden', auxiliary: 'sein' });
   rec('tun', { 'class': 'n', forms: { present: pr('tue tust tut tun tut tun'), preterite: pr('tat tatest tat taten tatet taten') }, participle: 'getan' });
-  rec('können', { forms: { present: pr('kann kannst kann können könnt können') }, stems: { preterite: 'konn' }, participle: 'gekonnt' });
-  rec('müssen', { forms: { present: pr('muss musst muss müssen müsst müssen') }, stems: { preterite: 'muss' }, participle: 'gemusst' });
-  rec('dürfen', { forms: { present: pr('darf darfst darf dürfen dürft dürfen') }, stems: { preterite: 'durf' }, participle: 'gedurft' });
-  rec('mögen', { forms: { present: pr('mag magst mag mögen mögt mögen') }, stems: { preterite: 'moch' }, participle: 'gemocht' });
-  rec('sollen', { forms: { present: pr('soll sollst soll sollen sollt sollen') } });
-  rec('wollen', { forms: { present: pr('will willst will wollen wollt wollen') } });
-  rec('wissen', { forms: { present: pr('weiß weißt weiß wissen wisst wissen') }, stems: { preterite: 'wuss' }, participle: 'gewusst' });
+  rec('können', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, forms: { present: pr('kann kannst kann können könnt können') }, stems: { preterite: 'konn' }, participle: 'gekonnt' });
+  rec('müssen', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, forms: { present: pr('muss musst muss müssen müsst müssen') }, stems: { preterite: 'muss' }, participle: 'gemusst' });
+  rec('dürfen', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, forms: { present: pr('darf darfst darf dürfen dürft dürfen') }, stems: { preterite: 'durf' }, participle: 'gedurft' });
+  rec('mögen', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, forms: { present: pr('mag magst mag mögen mögt mögen') }, stems: { preterite: 'moch' }, participle: 'gemocht' });
+  rec('sollen', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, forms: { present: pr('soll sollst soll sollen sollt sollen') } });
+  rec('wollen', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, forms: { present: pr('will willst will wollen wollt wollen') } });
+  rec('wissen', { forms: { imperative: { 1: 'wisse', 3: 'wissen wir', 4: 'wisst', 5: 'wissen Sie' }, present: pr('weiß weißt weiß wissen wisst wissen') }, stems: { preterite: 'wuss' }, participle: 'gewusst' });
 
   // ---- strong verbs: vowel change at du/er (stemChange) and the Präteritum stem ----
   strong('gehen', 'ging', 'gegangen', SEIN);
   strong('kommen', 'kam', 'gekommen', SEIN);
   strong('sehen', 'sah', 'gesehen', { stemChange: 'e>ie' });
   strong('geben', 'gab', 'gegeben', { stemChange: 'e>i' });
-  strong('nehmen', 'nahm', 'genommen', { forms: { present: pr('nehme nimmst nimmt nehmen nehmt nehmen') } });
+  strong('nehmen', 'nahm', 'genommen', { forms: { present: pr('nehme nimmst nimmt nehmen nehmt nehmen'), imperative: pr('. nimm . . . .') } });
   strong('fahren', 'fuhr', 'gefahren', { stemChange: 'a>ä', auxiliary: 'sein' });
   strong('essen', 'aß', 'gegessen', { stemChange: 'e>i' });
   strong('lesen', 'las', 'gelesen', { stemChange: 'e>ie' });
@@ -135,8 +135,9 @@
       n: { name: '-n (sein, tun)', example: 'tun', auto: false, suffixes: ['n'], cut: 1 }
     },
     stemChanges: {
-      'a>ä': { find: 'a', boot: 'ä' },
-      'au>äu': { find: 'au', boot: 'äu' },
+      // 'in': the du imperative keeps a / au (fahr!, lauf!); only e>i and e>ie change there (gib!, lies!)
+      'a>ä': { find: 'a', boot: 'ä', 'in': ['present'] },
+      'au>äu': { find: 'au', boot: 'äu', 'in': ['present'] },
       'e>i': { find: 'e', boot: 'i' },
       'e>ie': { find: 'e', boot: 'ie' }
     },
@@ -161,15 +162,29 @@
       { id: 'subjunctive', name: 'Konjunktiv I', mood: 'subjunctive', kind: 'simple',
         endings: { en: ['e', 'est', 'e', 'en', 'et', 'en'], eln: ['', 'est', '', 'n', 'et', 'n'], ern: ['e', 'est', 'e', 'n', 'et', 'n'], n: ['e', 'est', 'e', 'en', 'et', 'en'] } }
     ],
+    // beyond the six: the Plusquamperfekt, the Vorgangspassiv (werden + Partizip II; a transitive verb makes sense of it,
+    // and the pack does not check that) and the imperative (du, wir, ihr, Sie; no er form, and nothing for a modal)
+    extraTenses: [
+      { id: 'pluperfect', name: 'Plusquamperfekt', mood: 'indicative', kind: 'compound', compound: { auxiliary: 'haben', tense: 'preterite' } },
+      { id: 'passive', name: 'Vorgangspassiv (Präsens)', mood: 'indicative', kind: 'compound', noReflexive: true,
+        compound: { auxiliary: 'werden', forms: ['werde', 'wirst', 'wird', 'werden', 'werdet', 'werden'], part: 'participle' } },
+      { id: 'passive-preterite', name: 'Vorgangspassiv (Präteritum)', mood: 'indicative', kind: 'compound', noReflexive: true,
+        compound: { auxiliary: 'werden', forms: ['wurde', 'wurdest', 'wurde', 'wurden', 'wurdet', 'wurden'], part: 'participle' } },
+      { id: 'imperative', name: 'Imperativ', mood: 'imperative', kind: 'simple', boot: [1], none: [0, 2], noReflexive: true,
+        append: [null, null, null, ' wir', null, ' Sie'],
+        endings: { en: ['', '', '', 'en', 't', 'en'], eln: ['', '', '', 'n', 't', 'n'], ern: ['', '', '', 'n', 't', 'n'], n: ['', '', '', 'en', 't', 'en'] } }
+    ],
     spelling: [
       // arbeitest, arbeitet, arbeitete, fandest, öffnest, rechnet
-      { id: 'e-insertion', tenses: ['present', 'preterite'], stem: E_RE, next: /^(?:st|t|te|test|ten|tet)$/, stemRepl: [/$/, 'e'], literalToo: true },
+      { id: 'e-insertion', tenses: ['present', 'preterite', 'imperative'], stem: E_RE, next: /^(?:st|t|te|test|ten|tet)$/, stemRepl: [/$/, 'e'], literalToo: true },
+      // the du imperative has no ending: arbeite!, öffne!, finde!
+      { id: 'e-imperative', tenses: ['imperative'], stem: E_RE, next: /^$/, stemRepl: [/$/, 'e'], literalToo: true },
       // du heißt, tanzt, reist, isst, liest
       { id: 's-t', tenses: ['present'], stem: /[sßxz]$/, next: /^st$/, endRepl: [/^st$/, 't'] },
       // a strong Präteritum stem in s: du aßest, saßest, lasest
       { id: 's-est', tenses: ['preterite'], stem: /[sßxz]$/, next: /^st$/, endRepl: [/^st$/, 'est'], literalToo: true },
       // ich sammle, er sammle
-      { id: 'eln', tenses: ['present', 'subjunctive'], cls: ['eln'], stem: /el$/, next: /^$/, stemRepl: [/el$/, 'le'] }
+      { id: 'eln', tenses: ['present', 'subjunctive', 'imperative'], cls: ['eln'], stem: /el$/, next: /^$/, stemRepl: [/el$/, 'le'] }
     ],
     // separable verbs are not records (they are a prefix on one); these are listed so the check sheet prints them
     examples: 'aufmachen zumachen einkaufen anrufen mitkommen ankommen aufstehen ansehen abholen mitbringen einladen zurückkommen sich_waschen sich_anziehen sich_freuen'.split(' ').map(function (v) { return v.replace('_', ' '); }),

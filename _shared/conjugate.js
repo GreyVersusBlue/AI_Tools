@@ -432,7 +432,7 @@
   function cellOf(ctx, tdef, slot) {
     var c = cellOf1(ctx, tdef, slot);
     // words that follow the verb (German imperative: machen wir, machen Sie), before a separable prefix
-    if (tdef.append && tdef.append[slot] && c.forms.length && c.kinds.indexOf('teacher') < 0) {
+    if (tdef.append && tdef.append[slot] && c.forms.length && !c.fromForms) {
       c.forms = c.forms.map(function (f) { return f + tdef.append[slot]; });
     }
     // the separable prefix goes to the end of a finite form (ich mache auf); a teacher's own cell is whole already
@@ -448,7 +448,7 @@
     var tf = rec.forms && rec.forms[tdef.id];
     if (tf && tf[slot] != null && tf[slot] !== '') {
       var teach = !!(rec.teacher && rec.teacher[tdef.id] && rec.teacher[tdef.id][slot]);
-      return { forms: splitAlts(tf[slot]), kinds: [teach ? 'teacher' : 'irregular'], from: rec.as || rec.infinitive || '' };
+      return { forms: splitAlts(tf[slot]), kinds: [teach ? 'teacher' : 'irregular'], from: rec.as || rec.infinitive || '', fromForms: true };
     }
     var d = rec.defective;
     if (d && ((d.slots && d.slots.indexOf(slot) < 0) || (d.tenses && d.tenses.indexOf(tdef.id) >= 0))) {
