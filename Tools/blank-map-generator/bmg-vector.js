@@ -364,19 +364,30 @@ function canvasToBlob(canvas) {
  * and the IndexedDB cache need to know nothing new about vectors.
  */
 export async function buildBaseMapRecord(preset, { style = 'outline', borders = true, fills = null, choroKey = '', relief = false } = {}) {
-  const { canvas, width, height, calibration } = await renderBaseMapCanvas(preset, { style, borders, fills, relief });
+  const { canvas } = await renderBaseMapCanvas(preset, { style, borders, fills, relief });
   const blob = await canvasToBlob(canvas);
+  return { ...buildBaseMapMeta(preset, { style, borders, choroKey, relief }), blob, mime: 'image/png' };
+}
+
+/**
+ * The record `buildBaseMapRecord` would make, without drawing it: same id, title, size, attribution and
+ * calibration (the size is `pixelSizeFor`'s, which the renderer sizes its canvas by), and `blob: null`.
+ * The live viewer draws a built-in map from the vectors, so the page needs the picture only when that fails.
+ */
+export function buildBaseMapMeta(preset, { style = 'outline', borders = true, choroKey = '', relief = false } = {}) {
+  const bounds = preset.bounds;
+  const { width, height } = pixelSizeFor(bounds);
   return {
     id: baseMapId(preset, style, borders, choroKey, relief),
     title: baseMapTitle(preset, style, borders, !!choroKey, relief),
-    blob,
+    blob: null,
     mime: 'image/png',
     width,
     height,
     attribution: preset.custom
       ? { artist: 'Your file: ' + preset.label, license: 'Supplied by the teacher', licenseUrl: null, descriptionUrl: null }
       : { ...NATURAL_EARTH_ATTRIBUTION },
-    calibration,
+    calibration: { north: bounds.north, south: bounds.south, west: bounds.west, east: bounds.east, projection: 'equirectangular' },
     cachedAt: Date.now(),
   };
 }

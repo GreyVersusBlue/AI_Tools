@@ -33,6 +33,10 @@
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
 <script src="../_shared/stations.js"></script>
+<script src="../_shared/question-bank.js"></script>
+<script src="cultural-trivia-card-generator/ctcg-bank.js"></script>
+<script src="geography-bee-quiz-generator/gbq-bank.js"></script>
+<script src="../_shared/stations-bank.js"></script>
 <script src="../_shared/media-db.js"></script>
 <script src="escape-room-builder/er-image.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
@@ -310,6 +314,8 @@
         </div>
         <div class="hint">Each station's accepted answer unlocks the next one. Text answers ignore case, extra spaces, punctuation, accents and hyphens &mdash; &ldquo;It&rsquo;s well-known!&rdquo; and &ldquo;its well known&rdquo; are the same answer &mdash; and can optionally accept a numeric answer within a tolerance. They still have to <em>be</em> the answer, though: if you&rsquo;ll take a full sentence, add it to the comma-separated list. Leave "Next station" on Auto for a straight linear chain, or point it anywhere for a branching path. Pick a puzzle type per station &mdash; plain text, a digit lock, or a Caesar cipher &mdash; charge points for revealing a hint, cap the number of guesses before a short lockout, and optionally award a letter toward a final combine-the-letters station.</div>
       </div>
+
+      <div class="card" id="bankCard"></div>
 
       <div class="card">
         <div class="card-title"><span>Story intro / cover page</span></div>
@@ -754,6 +760,7 @@
         '<div class="hint" style="margin:-.3rem 0 .6rem;">Attempt limit locks the student out for 30 seconds after this many consecutive wrong guesses in a row (blank = unlimited). Numeric tolerance (text answers only) also accepts any number within &plusmn; this amount of an accepted numeric answer, e.g. answer &ldquo;3.14&rdquo; with tolerance &ldquo;0.05&rdquo;.</div>' +
       '</div>';
     }).join('');
+    if (bankMount) bankMount.render();   // which questions are already stations follows the list
   }
 
   els.stationsList.addEventListener('input', function (e) {
@@ -881,6 +888,15 @@
     save();
     scheduleRender();
   });
+
+  // Path 12 P2: station questions from the shared question bank (_shared/stations-bank.js). It reads the bank
+  // with peek() and writes nothing; the page's own save() is what stores the stations it adds.
+  var bankMount = window.StationsBank ? StationsBank.mount(document.getElementById('bankCard'), {
+    kind: 'room',
+    getSet: function () { return state; },
+    onAdd: function () { Stations.ensureIds(state); renderStations(); save(); scheduleRender(); }
+  }) : null;
+  if (!bankMount) document.getElementById('bankCard').hidden = true;
 
   // ── Validity + chain data ────────────────────────────────────────────────
   function splitAnswers(raw) {

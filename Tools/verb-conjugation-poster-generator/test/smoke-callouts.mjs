@@ -248,6 +248,7 @@ if (want('C')) {
   eq(await page.$$eval('[data-callout-verb]:disabled', x => x.length), preterite.length - 5, 'five chosen: every other box is disabled');
   ok(/5 of 5 verbs chosen/.test(await page.textContent('#calloutStatus')), 'the status says five of five');
   eq(await page.getAttribute('#calloutStatus', 'aria-live'), 'polite', 'and is a polite live region');
+  ok(/Unreviewed: no language teacher has read these forms yet/.test(await page.textContent('#calloutStatus')), 'and says the forms are unreviewed (Path 19 P3)');
   await page.focus('[data-callout-verb="decir"]');
   await page.keyboard.press('Space');
   eq(await page.$$eval('[data-callout-verb]:disabled', x => x.length), 0, 'one unticked: the others are free again');

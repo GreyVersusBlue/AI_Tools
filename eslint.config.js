@@ -51,6 +51,7 @@ const SITE_GLOBALS = {
   StudentFlags: 'readonly',
   UndoStack: 'readonly',
   SchoolDay: 'readonly',
+  BinderStale: 'readonly',
   ToolRegistry: 'readonly',
   ThemeToggle: 'readonly',
   Countdown: 'readonly',
@@ -62,6 +63,8 @@ const SITE_GLOBALS = {
   Grouping: 'readonly',
   Rotation: 'readonly',
   QuestionBank: 'readonly',
+  WordList: 'readonly',
+  Conjugate: 'readonly',
   RestoreKit: 'readonly',
   BrCrypto: 'readonly',
   // _shared/vendor/

@@ -31,7 +31,14 @@
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/tool-registry.js"></script>
+<script src="../_shared/bracket.js"></script>
+<script src="../_shared/handoffs.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/question-bank.js"></script>
+<script src="../_shared/chart-svg.js"></script>
+<link rel="stylesheet" href="../_shared/print-kit.css">
+<script src="../_shared/print-kit.js"></script>
 <style>
 /* === VENDORED FONTS =========================================================
    Bungee, Outfit and Press Start 2P used to be hotlinked from Google's font CDN,
@@ -199,6 +206,8 @@ textarea:focus{outline:none;border-color:var(--accent2);}
 .group-card h4{font-family:'Bungee',sans-serif;color:var(--accent2);font-size:0.95em;margin-bottom:6px;}
 .group-card-names{font-size:0.92em;line-height:1.5;}
 .muted-text{color:var(--muted);font-size:0.88em;padding:10px;text-align:center;}
+.pack-list{list-style:none;padding:0;margin:8px 0;}
+.pack-list li{padding:6px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .info-banner{background:var(--name-bg);padding:8px 12px;border-radius:6px;font-size:0.85em;color:var(--muted);margin-bottom:10px;border-left:3px solid var(--accent2);}
 .notice-banner{background:var(--name-bg);padding:10px 12px;border-radius:6px;font-size:0.86em;margin-bottom:10px;border-left:3px solid var(--accent);}
 .notice-banner .button-row{margin-top:8px;}
@@ -456,6 +465,41 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
   .tournament-tile{min-height:64px;font-size:0.82em;padding:8px 6px;}
 }
 
+/* Equity dashboard (Path 15 P3): a card at the top of the Equity tab, and one printed page, #dashSheet. */
+.dash-card{background:var(--name-bg);border-radius:8px;padding:12px 14px;margin-bottom:16px;border-left:4px solid var(--accent2);}
+.dash-card h3{font-family:'Bungee',sans-serif;color:var(--accent2);font-size:1em;margin:0 0 8px;}
+.dash-card h4{font-size:0.9em;margin:12px 0 4px;color:var(--accent2);}
+.dash-chart{background:#fff;border-radius:6px;padding:6px;margin:8px 0;max-width:640px;}
+.dash-chart svg{display:block;width:100%;height:auto;}
+.dash-lines,.dash-quiet{margin:6px 0 6px 18px;font-size:0.9em;line-height:1.5;}
+.dash-scroll{overflow-x:auto;margin-top:10px;}
+.dash-grid{border-collapse:collapse;font-size:0.84em;min-width:100%;}
+.dash-grid caption{text-align:left;color:var(--muted);padding:2px 0 4px;}
+.dash-grid th,.dash-grid td{padding:4px 7px;border-bottom:1px solid rgba(255,255,255,0.1);text-align:left;white-space:nowrap;}
+.dash-grid .num{text-align:right;font-variant-numeric:tabular-nums;}
+.dash-grid tr.quiet td:last-child{color:var(--accent);font-weight:700;}
+.dash-data{font-size:0.82em;color:var(--muted);line-height:1.5;margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.1);}
+.dash-data .button-row{margin-top:6px;}
+#dashSheet{display:none;}
+@media print{
+  /* the page keeps html and body at overflow:hidden for its own layout; on paper that would cut the sheet to one page */
+  html,body{height:auto;overflow:visible;}
+  body.printing-dash{padding:0 !important;}
+  body.printing-dash>*:not(#dashSheet){display:none !important;}
+  body.printing-dash>#dashSheet{display:block !important;break-after:auto !important;page-break-after:auto !important;}
+  #dashSheet h1{font-size:20px;margin:0 0 2px;}
+  #dashSheet .nd-sub{margin:0 0 8px;font-size:12px;}
+  #dashSheet .nd-chart{max-width:6.2in;}
+  #dashSheet .nd-chart svg{display:block;width:100%;height:auto;}
+  #dashSheet .nd-lines{margin:6px 0 8px 16px;font-size:11.5px;line-height:1.4;}
+  #dashSheet table{width:100%;border-collapse:collapse;margin-top:8px;break-inside:avoid;}
+  #dashSheet caption{text-align:left;font-size:11px;padding-bottom:2px;}
+  #dashSheet th,#dashSheet td{border:1px solid #999;padding:2px 5px;font-size:10.5px;text-align:left;}
+  #dashSheet .num{text-align:right;}
+  #dashSheet tr.quiet td:last-child{font-weight:700;}
+  #dashSheet .nd-foot{margin-top:8px;font-size:10px;color:#333;}
+}
+
 /* Printable "today's picks" report — hidden on screen, the only thing visible
    when the History tab's Print Report button fires window.print(). */
 #printReportArea{display:none;}
@@ -564,6 +608,31 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
     <div id="statsList"></div>
   </div>
   <div class="tab-content" id="tab-equity">
+    <section class="dash-card" id="dashCard" aria-labelledby="dashHeading">
+      <h3 id="dashHeading">Dashboard</h3>
+      <div class="option-row" style="gap:8px;flex-wrap:wrap;">
+        <label class="option-label" for="dashPeriod" style="flex:0 0 auto;">Period:</label>
+        <select id="dashPeriod" style="flex:0 0 auto;"></select>
+        <label class="option-label" for="dashWeeks" style="flex:0 0 auto;">Weeks:</label>
+        <select id="dashWeeks" style="flex:0 0 auto;">
+          <option value="4">Last 4 weeks</option>
+          <option value="8" selected>Last 8 weeks</option>
+          <option value="12">Last 12 weeks</option>
+        </select>
+        <button id="dashPreview" style="flex:0 0 auto;">Preview page</button>
+        <button id="dashPrint" style="flex:0 0 auto;">🖨️ Print the dashboard</button>
+      </div>
+      <p id="dashStatus" class="equity-summary" role="status" aria-live="polite"></p>
+      <div id="dashBody"></div>
+      <div class="dash-data" id="dashData">
+        <strong>Data.</strong> This reads the pick history and its per-day record on this device, and the saved rosters. It stores nothing
+        about a student of its own, and nothing leaves the browser.
+        <div class="button-row">
+          <button id="dashGotoData">Open the Data tab</button>
+          <button id="dashClear" class="btn-danger">🗑 Clear pick history</button>
+        </div>
+      </div>
+    </section>
     <div class="info-banner">Who you have actually been calling on, by date. Lifetime totals on the Stats tab cannot tell you that somebody was called eleven times in September and not since.</div>
     <div class="option-row" style="gap:8px;">
       <span class="option-label" style="flex:0 0 auto;">Window:</span>
@@ -598,6 +667,10 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
     <div class="option-row">
       <input type="checkbox" id="promptsEnabled">
       <label for="promptsEnabled" class="option-label">Enable random task prompts<small>Pulls one task from your list with each pick</small></label>
+    </div>
+    <div class="option-row" id="promptSourceRow">
+      <label for="promptSource" class="option-label">Questions from<small id="promptSourceNote">Your typed prompts below, or the questions in your question bank (write them on Review Game Board). Only the question is shown, never its answer.</small></label>
+      <select id="promptSource" style="flex:0 0 auto;max-width:55%;"></select>
     </div>
     <textarea id="promptsInput" placeholder="Read the next paragraph aloud&#10;Define this vocab word&#10;Give an example from the reading&#10;Make a connection to today's theme" style="min-height:120px;margin-top:10px;"></textarea>
     <div class="button-row">
@@ -637,6 +710,11 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
     <div class="option-row"><input type="checkbox" id="suddenDeath"><label for="suddenDeath" class="option-label">🔥 Sudden Death Chaos Mode<small>Upgraded Crazy. Particles stream across screen, picks cause MEGA screen-shake explosion + shockwave</small></label></div>
     <div class="option-row"><input type="checkbox" id="hofEnabled" checked><label for="hofEnabled" class="option-label">🏆 Hall of Fame ticker<small>Scrolling marquee at bottom shows recent Rare/Epic/Legendary/Mythic winners</small></label></div>
     <div class="option-row"><input type="checkbox" id="luckyStudent"><label for="luckyStudent" class="option-label">⭐ Lucky Student of the Day<small>One random student gets a hidden bonus to rare-tier rolls. Resets each day or when you reshuffle.</small></label></div>
+    <h3 style="margin-top:20px;">Theme packs</h3>
+    <p class="muted-text" style="font-size:0.85em;">A theme pack is a small file of colours, so a unit-themed board can be handed round. It holds colours and names only, nothing that runs. An imported pack's themes appear in the Theme list under "Theme packs".</p>
+    <div class="button-row"><button id="importPackBtn">⬆️ Import a theme pack</button></div>
+    <p id="packStatus" class="muted-text" role="status" aria-live="polite"></p>
+    <ul id="packList" class="pack-list"></ul>
     <h3 style="margin-top:20px;">Multi-Pick</h3>
     <div class="option-row"><span class="option-label">Pick N names at once:</span><input type="number" id="multiPickCount" value="1" min="1" max="10" style="width:70px;"></div>
     <p style="font-size:0.85em;color:var(--muted);margin-top:-5px;">Set to 1 for normal. Set 2+ for partners/groups.</p>
@@ -721,17 +799,33 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
   </div>
 </div>
 
+<div id="dashSheet" class="pk-page pk-paper"></div>
+
 <script id="appScript" type="module">
 /* Storage and picking live in name-picker/, imported by relative path so the Node
    suite (name-picker/test/smoke.mjs) resolves the same modules the page does.
    Nothing in this file touches localStorage — np-store owns all thirteen keys and
    lets gvb-save do the probing, because reading the `localStorage` property
    throws outright in a browser configured to block storage. */
-import { createStore, OPTION_DEFAULTS } from './name-picker/np-store.js';
+import { MAX_HISTORY, createStore, OPTION_DEFAULTS } from './name-picker/np-store.js';
+import * as rollup from './name-picker/np-rollup.js';
+import * as dashboard from './name-picker/np-dashboard.js';
+import * as dashView from './name-picker/np-dashboard-view.js';
+import * as qsource from './name-picker/np-question-source.js';
 import { freshRotation, pickOne, pickMany, shuffle, leastPicked, fairnessWeights } from './name-picker/np-pick.js';
 import { report as equityReport, summaryLine as equitySummaryLine, dayKey } from './name-picker/np-equity.js';
 import { loadDetails, lookupDetail, displayName, loadIds, lookupId } from './name-picker/np-details.js';
 import { loadSeatingState, seatEquityReport, seatSummaryLine } from './name-picker/np-seat-equity.js';
+import { themeVars, hasTheme } from './name-picker/np-themes.js';
+import * as tpacks from './name-picker/np-theme-packs.js';
+import { createSound } from './name-picker/np-sound.js';
+import { jumpPick as runJump } from './name-picker/np-mode-jump.js';
+import { disappearPick as runDisappear } from './name-picker/np-mode-disappear.js';
+import { slotPick as runSlot } from './name-picker/np-mode-slot.js';
+import { multiPick as runMulti } from './name-picker/np-mode-multi.js';
+import { tournamentPick as runTournament } from './name-picker/np-mode-tournament.js';
+import { createDraft } from './name-picker/np-mode-draft.js';
+import { createWinnerUi } from './name-picker/np-ui.js';
 
 /* _shared/store.js is linked in the head but nothing on this page calls it
    directly: np-store's thirteen slots keep their boxing wrapper. It is here so
@@ -744,13 +838,32 @@ const store = createStore();
 let opts = { ...OPTION_DEFAULTS };
 let rotation = freshRotation();
 
-let names=[],originalNames=[],history=[],nameCards=[],isRolling=false,mode='jump',speed=130,crazyMode=false,audioCtx=null,prompts=[],statsCache={},lastPickTime=0,comboCount=0,comboTimer=null,currentStatsSort='most';
+let names=[],originalNames=[],history=[],nameCards=[],isRolling=false,mode='jump',speed=130,crazyMode=false,prompts=[],statsCache={},lastPickTime=0,comboCount=0,comboTimer=null,currentStatsSort='most';
 
 /* === New feature state === */
 let absentSet=new Set(),hallOfFame=[],retroUnlocked=false,retroActive=false,tournamentMode=false,suddenDeath=false,luckyStudent=null,luckyDate=null,konamiBuffer=[],achievementsShown=new Set(),chaosParticleTimer=null,sessionMythicCount=0;
 
 /* === New feature state: Team Draft mode === */
-let draftTeams=[],draftTurnIndex=0,draftStarted=false,draftTeamCount=2;
+/* The draft's teams, turn and started flag live in np-mode-draft.js now (draft.clear() empties them). Every host member
+   is read at call time, so the page's later declarations and reassigned variables are fine. */
+const draft=createDraft({
+  document, window,
+  names:()=>names, isAbsent:n=>isAbsent(n), scatterNames:()=>scatterNames(),
+  playBeep:(...a)=>playBeep(...a), playWinSound:(...a)=>playWinSound(...a), showConfetti:()=>showConfetti(),
+  fireworkShow:()=>fireworkShow(), crazy:()=>crazyMode, escapeHtml:s=>escapeHtml(s),
+  clearCards:()=>{nameCards=[];}, updateCountDisplay:()=>updateCountDisplay(),
+  /* Path 15 P5: the finished board hands its teams to 002 (groups) or 020 (a bracket) through _shared/handoffs.js.
+     Names and team names only; the sheet's own roster share is untouched. */
+  doneButtons:()=>window.Handoffs?'<button id="draftToGroupsBtn">👥 Send to Groups</button><button id="draftToBracketBtn">🏆 Send to Bracket</button><span id="draftSendNote" class="muted-text" role="status" aria-live="polite"></span>':'',
+  bindDone:doc=>{
+    const send=(id,to)=>{const b=doc.getElementById(id);if(!b)return;b.addEventListener('click',()=>{
+      const entry=window.Handoffs.from('name-picker').find(h=>h.to===to);
+      const r=window.Handoffs.open(entry,{name:currentRosterName?currentRosterName+' draft':'Team Draft',teams:draft.teams().map(t=>({name:t.name,picks:t.picks.slice()}))});
+      const note=doc.getElementById('draftSendNote');if(note)note.textContent=r.message;
+    });};
+    send('draftToGroupsBtn','group-team-generator');send('draftToBracketBtn','bracket-tournament-generator');
+  }
+});
 
 /* === Reduced motion, undo, dated absences, equity, roster details === */
 /* matchMedia is guarded because the page also has to run from a file:// URL in
@@ -807,25 +920,23 @@ function renderRosterFlagNotice(){
 }
 const KONAMI=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
 
-const themes={
-  default:{'--bg':'#1a1a2e','--surface':'#16213e','--text':'#eaeaea','--accent':'#e94560','--accent-fill':'#c9304a','--accent2':'#f5d76e','--name-bg':'#0f3460','--name-text':'#fff','--highlight':'#e94560','--highlight-text':'#fff','--winner':'#f5d76e','--winner-text':'#1a1a2e'},
-  classroom:{'--bg':'#f5f7fa','--surface':'#ffffff','--text':'#1d2939','--accent':'#2563eb','--accent2':'#f59e0b','--name-bg':'#2563eb','--name-text':'#fff','--highlight':'#dc2626','--highlight-text':'#fff','--winner':'#f59e0b','--winner-text':'#1d2939'},
-  medieval:{'--bg':'#2a1810','--surface':'#3d2817','--text':'#f0e0c0','--accent':'#b8860b','--accent2':'#daa520','--name-bg':'#5d3a1a','--name-text':'#f5e6c8','--highlight':'#a0522d','--highlight-text':'#fff','--winner':'#daa520','--winner-text':'#2a1810'},
-  'ancient-china':{'--bg':'#2c0d0d','--surface':'#4a1414','--text':'#ffd700','--accent':'#dc143c','--accent2':'#ffd700','--name-bg':'#7a1f1f','--name-text':'#fff8dc','--highlight':'#ff4500','--highlight-text':'#fff','--winner':'#ffd700','--winner-text':'#2c0d0d'},
-  byzantine:{'--bg':'#1a0a2e','--surface':'#2d1b3d','--text':'#f5e6d3','--accent':'#9b59b6','--accent2':'#f1c40f','--name-bg':'#4a2c5e','--name-text':'#fff','--highlight':'#c0392b','--highlight-text':'#fff','--winner':'#f1c40f','--winner-text':'#1a0a2e'},
-  space:{'--bg':'#000814','--surface':'#001d3d','--text':'#fff','--accent':'#00b4d8','--accent2':'#ffd60a','--name-bg':'#003566','--name-text':'#fff','--highlight':'#7209b7','--highlight-text':'#fff','--winner':'#ffd60a','--winner-text':'#000814'},
-  forest:{'--bg':'#1b2e1f','--surface':'#2d4a2b','--text':'#e8f4d8','--accent':'#6b8e23','--accent2':'#daa520','--name-bg':'#3d5e3d','--name-text':'#f0f4e8','--highlight':'#cd5c5c','--highlight-text':'#fff','--winner':'#daa520','--winner-text':'#1b2e1f'},
-  ocean:{'--bg':'#03045e','--surface':'#023e8a','--text':'#caf0f8','--accent':'#00b4d8','--accent2':'#90e0ef','--name-bg':'#0077b6','--name-text':'#fff','--highlight':'#ff006e','--highlight-text':'#fff','--winner':'#90e0ef','--winner-text':'#03045e'},
-  sunset:{'--bg':'#2d1b3d','--surface':'#4a2c5e','--text':'#fff5e1','--accent':'#ff6b35','--accent2':'#ffd23f','--name-bg':'#6e3d5a','--name-text':'#fff','--highlight':'#f72585','--highlight-text':'#fff','--winner':'#ffd23f','--winner-text':'#2d1b3d'},
-  halloween:{'--bg':'#0a0a0a','--surface':'#1a0a1a','--text':'#ff7518','--accent':'#ff7518','--accent2':'#a020f0','--name-bg':'#2d1500','--name-text':'#ff7518','--highlight':'#a020f0','--highlight-text':'#fff','--winner':'#a020f0','--winner-text':'#fff'},
-  patriotic:{'--bg':'#0a1a3a','--surface':'#13234d','--text':'#fff','--accent':'#bf0a30','--accent2':'#fff','--name-bg':'#1d3582','--name-text':'#fff','--highlight':'#bf0a30','--highlight-text':'#fff','--winner':'#fff','--winner-text':'#0a1a3a'}
-};
-
+/* Imported theme packs (np-theme-packs.js): colours and names only, picked in the Theme list under "Theme packs". */
+let packThemes={};
+function loadPacks(){
+  packThemes=tpacks.resolve(store.get('themePacks'));
+  const sel=document.getElementById('theme');
+  const old=document.getElementById('packThemeGroup');if(old)old.remove();
+  const ids=Object.keys(packThemes);
+  if(ids.length){
+    const g=document.createElement('optgroup');g.id='packThemeGroup';g.label='Theme packs';
+    ids.forEach(id=>{const o=document.createElement('option');o.value=id;o.textContent=packThemes[id].label+' — '+packThemes[id].pack;g.appendChild(o);});
+    sel.appendChild(g);
+  }
+}
+function hasAnyTheme(n){return hasTheme(n)||Object.prototype.hasOwnProperty.call(packThemes,n);}
 function applyTheme(n){
-  const t=themes[n]||themes.default;
-  for(const[k,v]of Object.entries(t))document.documentElement.style.setProperty(k,v);
-  /* White button text needs 4.5:1 on its fill; default's #e94560 gives 3.83, so it names a darker fill. Other themes fill with their accent. */
-  document.documentElement.style.setProperty('--accent-fill',t['--accent-fill']||t['--accent']);
+  const vars=Object.prototype.hasOwnProperty.call(packThemes,n)?packThemes[n].vars:themeVars(n);
+  for(const[k,v]of Object.entries(vars))document.documentElement.style.setProperty(k,v);
   /* Set body class for theme-specific readability overrides */
   document.body.className=document.body.className.split(' ').filter(c=>!c.startsWith('theme-')).join(' ').trim();
   document.body.classList.add('theme-'+n);
@@ -851,7 +962,7 @@ function rollRarity(luckyBonus=false){
 }
 
 function scatterNames(){
-  if(mode==='draft'){renderDraftBoard();return;}
+  if(mode==='draft'){draft.renderBoard();return;}
   if(tournamentMode){renderTournamentGrid();return;}
   const board=document.getElementById('board');
   board.querySelectorAll('.name-card').forEach(el=>el.remove());
@@ -937,8 +1048,13 @@ function drawLightning(fromEl,toEl){
   if(motionOff())return;
   const svg=document.getElementById('lightningSvg');
   const r1=fromEl.getBoundingClientRect(),r2=toEl.getBoundingClientRect();
-  const x1=r1.left+r1.width/2,y1=r1.top+r1.height/2;
-  const x2=r2.left+r2.width/2,y2=r2.top+r2.height/2;
+  /* The Crazy-mode pulse puts a filter on <body>, and a filtered ancestor becomes the
+     containing block of a position:fixed child: the svg then starts wherever the body
+     does (it sat ~320px off to the left), so the bolt must be placed from the svg's own
+     origin and not from the viewport's. */
+  const o=svg.getBoundingClientRect();
+  const x1=r1.left+r1.width/2-o.left,y1=r1.top+r1.height/2-o.top;
+  const x2=r2.left+r2.width/2-o.left,y2=r2.top+r2.height/2-o.top;
   let path=`M ${x1} ${y1}`;
   for(let i=1;i<6;i++){
     const t=i/6;
@@ -954,107 +1070,8 @@ function drawLightning(fromEl,toEl){
   setTimeout(()=>bolt.remove(),300);
 }
 
-function ensureAudio(){if(!audioCtx){try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){audioCtx=null;}}return audioCtx;}
-
-/* === ENHANCED AUDIO ENGINE: smooth attack + release envelope eliminates clicks/pops on rapid playback === */
-function playBeep(freq=800,duration=80,type='square',volume=0.1){
-  if(!document.getElementById('soundToggle').checked)return;
-  const ctx=ensureAudio();
-  if(!ctx)return;
-  try{
-    const osc=ctx.createOscillator(),gain=ctx.createGain();
-    osc.connect(gain);gain.connect(ctx.destination);
-    osc.type=type;osc.frequency.value=freq;
-    const now=ctx.currentTime;
-    const dur=Math.max(0.02,duration/1000);
-    const attack=Math.min(0.006,dur*0.25);
-    const release=Math.min(0.04,dur*0.55);
-    const sustainEnd=Math.max(attack+0.001,dur-release);
-    gain.gain.setValueAtTime(0.00001,now);
-    gain.gain.linearRampToValueAtTime(volume,now+attack);
-    gain.gain.setValueAtTime(volume,now+sustainEnd);
-    gain.gain.exponentialRampToValueAtTime(0.00001,now+dur);
-    osc.start(now);
-    osc.stop(now+dur+0.015);
-  }catch(e){}
-}
-
-/* Bypass the soundToggle check for soundboard sounds (manual = always play if user clicked) */
-function playBeepForced(freq=800,duration=80,type='square',volume=0.1){
-  const ctx=ensureAudio();
-  if(!ctx)return;
-  try{
-    const osc=ctx.createOscillator(),gain=ctx.createGain();
-    osc.connect(gain);gain.connect(ctx.destination);
-    osc.type=type;osc.frequency.value=freq;
-    const now=ctx.currentTime;
-    const dur=Math.max(0.02,duration/1000);
-    const attack=Math.min(0.006,dur*0.25);
-    const release=Math.min(0.04,dur*0.55);
-    const sustainEnd=Math.max(attack+0.001,dur-release);
-    gain.gain.setValueAtTime(0.00001,now);
-    gain.gain.linearRampToValueAtTime(volume,now+attack);
-    gain.gain.setValueAtTime(volume,now+sustainEnd);
-    gain.gain.exponentialRampToValueAtTime(0.00001,now+dur);
-    osc.start(now);
-    osc.stop(now+dur+0.015);
-  }catch(e){}
-}
-
-/* Noise burst utility for percussive sounds (applause, drumroll, crickets, etc.) */
-function playNoise(duration=200,volume=0.1,filterFreq=null,filterQ=1){
-  const ctx=ensureAudio();
-  if(!ctx)return;
-  try{
-    const bufferSize=ctx.sampleRate*Math.max(0.05,duration/1000);
-    const buffer=ctx.createBuffer(1,bufferSize,ctx.sampleRate);
-    const data=buffer.getChannelData(0);
-    for(let i=0;i<bufferSize;i++)data[i]=Math.random()*2-1;
-    const src=ctx.createBufferSource();
-    src.buffer=buffer;
-    const gain=ctx.createGain();
-    const now=ctx.currentTime;
-    const dur=duration/1000;
-    if(filterFreq){
-      const filter=ctx.createBiquadFilter();
-      filter.type='bandpass';
-      filter.frequency.value=filterFreq;
-      filter.Q.value=filterQ;
-      src.connect(filter);filter.connect(gain);
-    }else{
-      src.connect(gain);
-    }
-    gain.connect(ctx.destination);
-    gain.gain.setValueAtTime(0.00001,now);
-    gain.gain.linearRampToValueAtTime(volume,now+0.005);
-    gain.gain.exponentialRampToValueAtTime(0.00001,now+dur);
-    src.start(now);
-    src.stop(now+dur+0.02);
-  }catch(e){}
-}
-
-function playWinSound(rarity){
-  if(!document.getElementById('soundToggle').checked)return;
-  const v=crazyMode?0.15:0.12;
-  playBeep(523,130,'square',v);
-  setTimeout(()=>playBeep(659,130,'square',v),140);
-  setTimeout(()=>playBeep(784,130,'square',v),280);
-  setTimeout(()=>playBeep(1047,400,'square',v+0.02),420);
-  if(rarity&&rarity.name!=='COMMON'){
-    setTimeout(()=>playBeep(rarity.sound,200,'sawtooth',0.1),600);
-    setTimeout(()=>playBeep(rarity.sound*1.5,300,'triangle',0.1),800);
-    if(rarity.name==='MYTHIC'||rarity.name==='LEGENDARY'){
-      setTimeout(()=>playBeep(rarity.sound*2,500,'sawtooth',0.12),1100);
-    }
-  }
-}
-
-function playKlaxon(){
-  if(!document.getElementById('soundToggle').checked)return;
-  playBeep(440,120,'sawtooth',0.12);
-  setTimeout(()=>playBeep(330,120,'sawtooth',0.12),130);
-  setTimeout(()=>playBeep(440,120,'sawtooth',0.12),260);
-}
+/* The audio engine lives in name-picker/np-sound.js; it reads the Sound checkbox and Crazy mode through these two readers. */
+const {ensureAudio,playBeep,playBeepForced,playNoise,playWinSound,playKlaxon}=createSound({soundOn:()=>document.getElementById('soundToggle').checked,isCrazy:()=>crazyMode});
 
 /* The still stand-in for every moving celebration. Deliberately not an
    animation: prefers-reduced-motion means "do not move things", and a fade is
@@ -1174,260 +1191,86 @@ function pickName(){
   else jumpPick();
 }
 
-async function jumpPick(){
-  isRolling=true;setRollingState(true);
-  const activeCards=nameCards.filter(c=>c.active);
-  if(activeCards.length===0){finishRolling();return;}
-  const winnerCard=chooseWinner(activeCards);
-  if(!winnerCard){finishRolling();return;}
-  if(activeCards.length===1){selectWinner(winnerCard);return;}
-  const winnerIdx=activeCards.indexOf(winnerCard);
-  const dramatic=document.getElementById('dramaticPause').checked;
-  const baseJumps=dramatic?16:10;
-  const totalJumps=baseJumps+Math.floor(Math.random()*6);
-  let lastIdx=-1,lastEl=null,currentDelay=speed;
-  for(let i=0;i<totalJumps;i++){
-    let idx;
-    if(i===totalJumps-1)idx=winnerIdx;                 /* land on the chosen name */
-    else{
-      /* On the penultimate jump, stay off the winner so the last hop is a visible
-         move rather than the same card lighting twice. */
-      const avoidWinner=i===totalJumps-2&&activeCards.length>2;
-      let guard=0;
-      do{idx=Math.floor(Math.random()*activeCards.length);guard++;}
-      while(guard<40&&((idx===lastIdx&&activeCards.length>1)||(avoidWinner&&idx===winnerIdx)));
-    }
-    activeCards.forEach(c=>c.el.classList.remove('highlighted'));
-    activeCards[idx].el.classList.add('highlighted');
-    playBeep(550+Math.random()*350,60);
-    if(crazyMode){shake(1);if(lastEl)drawLightning(lastEl,activeCards[idx].el);}
-    lastIdx=idx;lastEl=activeCards[idx].el;
-    if(dramatic&&i>totalJumps*0.55)currentDelay=currentDelay*1.18;
-    await sleep(currentDelay);
-  }
-  activeCards.forEach(c=>c.el.classList.remove('highlighted'));
-  selectWinner(winnerCard);
-}
+/* The jump, disappear, slot, multi and tournament modes live in name-picker/np-mode-*.js. Each is handed this host
+   rather than reaching for page globals; every member is looked up when called, because the page
+   reassigns nameCards and speed and defines some of these helpers further down. */
+const modeHost={
+  document,
+  cards:()=>nameCards,speed:()=>speed,crazy:()=>crazyMode,
+  dramatic:()=>document.getElementById('dramaticPause').checked,
+  begin:()=>{isRolling=true;setRollingState(true);},
+  finishRolling:()=>finishRolling(),
+  chooseWinner:(cards)=>chooseWinner(cards),selectWinner:(card)=>selectWinner(card),
+  playBeep:(...a)=>playBeep(...a),shake:(n)=>shake(n),sleep:(ms)=>sleep(ms),
+  drawLightning:(a,b)=>drawLightning(a,b),launchFirework:(x,y,c)=>launchFirework(x,y,c),
+  shuffle:(list)=>shuffle(list),
+  requestAnimationFrame:(fn)=>requestAnimationFrame(fn)
+};
+Object.assign(modeHost,{
+  isSkipped:(n)=>isSkipped(n),rotation:()=>rotation,setRotation:(r)=>{rotation=r;},options:()=>opts,
+  drawWeights:(list)=>drawWeights(list),history:()=>history,suddenDeath:()=>suddenDeath,
+  playWinSound:(r)=>playWinSound(r),showConfetti:(x)=>showConfetti(x),fireworkShow:()=>fireworkShow(),
+  triggerSuddenDeathExplosion:()=>triggerSuddenDeathExplosion(),markUndoPoint:(w)=>markUndoPoint(w),
+  incrementStats:(n)=>incrementStats(n),saveHistory:()=>saveHistory(),updateHistoryUI:()=>updateHistoryUI(),
+  bumpCombo:()=>bumpCombo(),todayKey:()=>todayKey(),showMultiWinnerModal:(w)=>showMultiWinnerModal(w)
+});
+const multiPick=(count)=>runMulti(modeHost,count);
+modeHost.selectTournamentWinner=(card)=>selectTournamentWinner(card);
+const tournamentPick=()=>runTournament(modeHost);
+const jumpPick=()=>runJump(modeHost);
+const disappearPick=()=>runDisappear(modeHost);
+const slotPick=()=>runSlot(modeHost);
 
-async function disappearPick(){
-  isRolling=true;setRollingState(true);
-  const active=nameCards.filter(c=>c.active);
-  if(active.length===0){finishRolling();return;}
-  const winnerCard=chooseWinner(active);
-  if(!winnerCard){finishRolling();return;}
-  if(active.length===1){selectWinner(winnerCard);return;}
-  /* Everyone but the winner goes, in a uniformly shuffled order. */
-  for(const card of shuffle(active.filter(c=>c!==winnerCard))){
-    if(crazyMode){
-      const r=card.el.getBoundingClientRect();
-      launchFirework(r.left+r.width/2,r.top+r.height/2,'#ffffff');
-      shake(1);
-    }
-    card.el.classList.add('fading');
-    card.active=false;
-    playBeep(350+Math.random()*250,80,'sine',0.07);
-    await sleep(speed);
-    setTimeout(()=>{if(card.el)card.el.style.display='none';},450);
-  }
-  selectWinner(winnerCard);
+/* The question bank as a second source of task prompts (np-question-source.js, Path 15 P4). null = the typed prompts.
+   Read with peek(): this page never writes the bank. The chosen source is a page variable; nothing is stored about it. */
+let promptSourceId=null,promptItems=[],promptBag=null;
+function bankPromptSources(){
+  if(!window.QuestionBank)return [];
+  try{return QuestionBank.sources({peek:true,named:true}).filter(src=>!src.readOnly&&src.count>0);}catch(e){return [];}
 }
+function loadPromptItems(){
+  if(promptSourceId===null||!window.QuestionBank){promptItems=[];promptBag=null;return;}
+  try{promptItems=qsource.usable(QuestionBank.questionsOf(promptSourceId,{peek:true}));}catch(e){promptItems=[];}
+  if(promptBag)promptBag.reset(promptItems);else promptBag=qsource.createBag(promptItems);
+}
+function refreshPromptSources(){
+  const sel=document.getElementById('promptSource');
+  const srcs=bankPromptSources();
+  const want=promptSourceId===null?'typed':'src:'+promptSourceId;
+  sel.textContent='';
+  const add=(v,t)=>{const o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o);};
+  add('typed','My typed prompts');
+  srcs.forEach(src=>add('src:'+src.id,QuestionBank.sourceLabel(src)));
+  if(!srcs.some(src=>'src:'+src.id===want))promptSourceId=null;
+  sel.value=promptSourceId===null?'typed':want;
+  document.getElementById('promptSourceRow').style.display=window.QuestionBank?'':'none';
+  loadPromptItems();
+}
+function drawQuestion(){
+  if(promptSourceId===null||!promptBag||!promptBag.size())return null;
+  const it=promptBag.next();
+  return it?it.text:null;
+}
+function qidFor(text){return promptSourceId===null?'':qsource.idFor(promptItems,text);}
 
-async function slotPick(){
-  isRolling=true;setRollingState(true);
-  const activeCards=nameCards.filter(c=>c.active);
-  if(activeCards.length===0){finishRolling();return;}
-  const winnerCard=chooseWinner(activeCards);
-  if(!winnerCard){finishRolling();return;}
-  if(activeCards.length===1){selectWinner(winnerCard);return;}
-  const overlay=document.createElement('div');
-  overlay.className='slot-overlay';
-  overlay.innerHTML=`<div class="slot-machine"><div class="slot-title">🎰 SPINNING... 🎰</div><div class="slot-reel"><div class="slot-strip" id="slotStrip"></div><div class="slot-line"></div></div></div>`;
-  document.body.appendChild(overlay);
-  const strip=overlay.querySelector('#slotStrip');
-  const itemHeight=120,totalItems=60;
-  const stripNames=[];
-  for(let i=0;i<totalItems-1;i++)stripNames.push(activeCards[Math.floor(Math.random()*activeCards.length)].name);
-  stripNames.push(winnerCard.name);
-  stripNames.forEach(n=>{const item=document.createElement('div');item.className='slot-name';item.textContent=n;strip.appendChild(item);});
-  const finalY=-((totalItems-1)*itemHeight);
-  const duration=Math.max(1800,Math.min(4500,30000/Math.max(40,speed)*100));
-  let startTime=null,lastTick=-1;
-  return new Promise(resolve=>{
-    function animate(t){
-      if(!startTime)startTime=t;
-      const elapsed=t-startTime;
-      const progress=Math.min(elapsed/duration,1);
-      const eased=1-Math.pow(1-progress,3);
-      const y=finalY*eased;
-      strip.style.transform=`translateY(${y}px)`;
-      const itemIdx=Math.floor(Math.abs(y)/itemHeight);
-      if(itemIdx!==lastTick&&progress<0.98){
-        playBeep(900,30,'square',0.05);
-        if(crazyMode&&itemIdx%3===0)shake(1);
-        lastTick=itemIdx;
-      }
-      if(progress<1){requestAnimationFrame(animate);}
-      else{
-        playBeep(150,200,'sawtooth',0.15);
-        shake(crazyMode?3:2);
-        setTimeout(()=>{overlay.remove();selectWinner(winnerCard);resolve();},600);
-      }
-    }
-    requestAnimationFrame(animate);
-  });
-}
-
-async function multiPick(count){
-  isRolling=true;setRollingState(true);
-  const activeNames=nameCards.filter(c=>c.active).map(c=>c.name).filter(n=>!isSkipped(n));
-  /* Draws through the same rotation, so picking four partners spends four turns
-     rather than sidestepping the round. */
-  const drawn=pickMany(rotation,activeNames,count,{fair:opts.fair,weights:drawWeights(activeNames)});
-  rotation=drawn.state;
-  const winners=drawn.names;
-  if(!winners.length){finishRolling();return;}
-  const activeCards=nameCards.filter(c=>c.active&&!isSkipped(c.name));
-  const sweepCount=Math.min(18,Math.floor(20/(speed/100))+8);
-  for(let i=0;i<sweepCount;i++){
-    activeCards.forEach(c=>c.el.classList.remove('highlighted'));
-    if(activeCards.length){const c=activeCards[Math.floor(Math.random()*activeCards.length)];c.el.classList.add('highlighted');}
-    playBeep(550+Math.random()*350,50);
-    if(crazyMode)shake(1);
-    await sleep(speed*0.7);
-  }
-  activeCards.forEach(c=>c.el.classList.remove('highlighted'));
-  winners.forEach(name=>{const card=nameCards.find(c=>c.name===name);if(card)card.el.classList.add('winner');});
-  playWinSound(null);
-  showConfetti(crazyMode);
-  if(crazyMode){fireworkShow();shake(3);}
-  if(suddenDeath){triggerSuddenDeathExplosion();}
-  markUndoPoint(winners);
-  winners.forEach(name=>{
-    history.push({name,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),date:todayKey()});
-    incrementStats(name);
-  });
-  saveHistory();updateHistoryUI();bumpCombo();
-  setTimeout(()=>showMultiWinnerModal(winners),700);
-}
-
-function selectWinner(winnerCard){
-  winnerCard.el.classList.add('winner');
-  const useRarity=document.getElementById('rarityEnabled').checked;
-  const luckyBonus=luckyStudent===winnerCard.name;
-  const rarity=useRarity?rollRarity(luckyBonus):null;
-  playWinSound(rarity);
-  showConfetti();
-  if(crazyMode){
-    fireworkShow();
-    shake(rarity&&(rarity.name==='LEGENDARY'||rarity.name==='MYTHIC')?3:2);
-  }
-  if(suddenDeath){triggerSuddenDeathExplosion();}
-  isRolling=false;
-  bumpCombo();
-  const promptText=pickRandomPrompt();
-  markUndoPoint([winnerCard.name]);
-  const entry={name:winnerCard.name,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),date:todayKey()};
-  if(promptText)entry.prompt=promptText;
-  history.push(entry);
-  incrementStats(winnerCard.name);
-  if(rarity&&['RARE','EPIC','LEGENDARY','MYTHIC'].includes(rarity.name)){addToHof(winnerCard.name,rarity);}
-  if(rarity&&rarity.name==='MYTHIC'){sessionMythicCount++;}
-  checkAchievements(rarity,winnerCard.name);
-  saveHistory();updateHistoryUI();
-  const coldCall=document.getElementById('coldCallMode').checked;
-  setTimeout(()=>showWinnerModal(winnerCard,coldCall,rarity,promptText),700);
-}
-
-/* Set by "Same question, next student" and spent by the very next pick. */
-let stickyPrompt=null;
-function pickRandomPrompt(){
-  if(stickyPrompt){const held=stickyPrompt;stickyPrompt=null;return held;}
-  if(!document.getElementById('promptsEnabled').checked||!prompts.length)return null;
-  return prompts[Math.floor(Math.random()*prompts.length)];
-}
-
-/* The name block on the winner modal, and the one place the Class Roster Hub
-   detail is worth the most: a name the teacher is unsure how to say is exactly
-   the name they are least likely to call on. */
-function winnerNameHTML(name){
-  const shown=displayName(name,detailFor(name));
-  return `<div class="winner-name">${escapeHtml(shown.big)}</div>`+
-         (shown.sub?`<div class="winner-sub">${escapeHtml(shown.sub)}</div>`:'')+
-         (shown.say?`<div class="winner-say">say: ${escapeHtml(shown.say)}</div>`:'');
-}
-
-function showWinnerModal(winnerCard,coldCallMode,rarity,prompt){
-  const overlay=document.createElement('div');
-  overlay.className='modal-overlay';
-  const rarityHTML=rarity?`<div class="rarity-banner ${rarity.class}">${rarity.emoji} ${rarity.name} PICK ${rarity.emoji}</div>`:'';
-  const promptHTML=prompt?`<div class="prompt-task"><div class="prompt-task-label">📝 TASK</div>${escapeHtml(prompt)}</div>`:'';
-  /* "Same question, next student" is the whole point of attaching a prompt to a
-     pick: a discussion question is asked of three or four students in a row, and
-     re-rolling used to throw the question away and draw a new one. */
-  const sameHTML=prompt?`<button id="modalSameQ">Same question, next student</button>`:'';
-  overlay.innerHTML=`<div class="modal ${crazyMode?'crazy':''}">${rarityHTML}<div class="modal-label">🎉 Selected!</div>${winnerNameHTML(winnerCard.name)}${promptHTML}<div class="modal-buttons"><button class="btn-primary" id="modalDone">Done</button><button id="modalRoll">Roll Again</button>${sameHTML}<button id="modalRemoveRoll">Remove &amp; Roll Again</button></div></div>`;
-  document.body.appendChild(overlay);
-  const cleanup=()=>{overlay.remove();document.removeEventListener('keydown',escHandler);};
-  const escHandler=(e)=>{if(e.key==='Escape'){cleanup();handleDone(winnerCard,coldCallMode);}};
-  document.addEventListener('keydown',escHandler);
-  document.getElementById('modalDone').onclick=()=>{cleanup();handleDone(winnerCard,coldCallMode);};
-  document.getElementById('modalRoll').onclick=()=>{cleanup();handleRollAgain(winnerCard,coldCallMode);};
-  document.getElementById('modalRemoveRoll').onclick=()=>{cleanup();handleRemoveAndRoll(winnerCard);};
-  if(prompt)document.getElementById('modalSameQ').onclick=()=>{cleanup();stickyPrompt=prompt;handleRollAgain(winnerCard,coldCallMode);};
-}
-
-function showMultiWinnerModal(winners){
-  const overlay=document.createElement('div');
-  overlay.className='modal-overlay';
-  overlay.innerHTML=`<div class="modal ${crazyMode?'crazy':''}"><div class="modal-label">🎉 ${winners.length} Selected!</div><div class="multi-pick-list">${winners.map(n=>{const d=displayName(n,detailFor(n));return `<div class="multi-pick-name">${escapeHtml(d.big)}${d.sub?` <span style="opacity:.6;font-size:.75em;">${escapeHtml(d.sub)}</span>`:''}</div>`;}).join('')}</div><div class="modal-buttons"><button class="btn-primary" id="multiDone">Done</button><button id="multiRoll">Roll Again</button><button id="multiRemoveRoll">Remove All &amp; Roll Again</button></div></div>`;
-  document.body.appendChild(overlay);
-  const cleanup=()=>{overlay.remove();document.removeEventListener('keydown',escHandler);};
-  const escHandler=(e)=>{if(e.key==='Escape'){cleanup();finishRolling();cleanupMultiWinners(false);}};
-  document.addEventListener('keydown',escHandler);
-  const coldCall=document.getElementById('coldCallMode').checked;
-  document.getElementById('multiDone').onclick=()=>{cleanup();cleanupMultiWinners(coldCall,winners);finishRolling();};
-  document.getElementById('multiRoll').onclick=()=>{cleanup();cleanupMultiWinners(coldCall,winners);finishRolling();setTimeout(pickName,250);};
-  document.getElementById('multiRemoveRoll').onclick=()=>{cleanup();noteBoardRemoval();names=names.filter(n=>!winners.includes(n));scatterNames();finishRolling();setTimeout(pickName,250);};
-}
-
-function cleanupMultiWinners(coldCall,winners){
-  if(coldCall&&winners){names=names.filter(n=>!winners.includes(n));scatterNames();}
-  else{nameCards.forEach(c=>c.el.classList.remove('winner'));}
-}
-
-function handleDone(winnerCard,coldCallMode){
-  winnerCard.el.classList.remove('winner');
-  if(coldCallMode){
-    names=names.filter(n=>n!==winnerCard.name);
-    if(mode==='disappear')scatterNames();
-    else removeCardSilently(winnerCard);
-  }
-  finishRolling();
-}
-
-function handleRollAgain(winnerCard,coldCallMode){
-  if(coldCallMode){noteBoardRemoval();names=names.filter(n=>n!==winnerCard.name);}
-  if(mode==='disappear')scatterNames();
-  else{winnerCard.el.classList.remove('winner');if(coldCallMode)removeCardSilently(winnerCard);}
-  finishRolling();
-  setTimeout(()=>pickName(),250);
-}
-
-function handleRemoveAndRoll(winnerCard){
-  noteBoardRemoval();
-  names=names.filter(n=>n!==winnerCard.name);
-  if(mode==='disappear')scatterNames();
-  else removeCardSilently(winnerCard);
-  finishRolling();
-  setTimeout(()=>pickName(),250);
-}
-
-function removeCardSilently(card){
-  card.active=false;
-  card.el.classList.remove('winner');
-  card.el.classList.add('fading');
-  setTimeout(()=>{if(card.el&&card.el.parentNode)card.el.remove();},500);
-}
+/* The winner step and its dialogs are np-ui.js. Values are read at call time, so reassigned page variables are seen. */
+const winnerUi=createWinnerUi({
+  document,
+  names:()=>names,setNames:(list)=>{names=list;},mode:()=>mode,crazy:()=>crazyMode,suddenDeath:()=>suddenDeath,
+  luckyStudent:()=>luckyStudent,prompts:()=>prompts,history:()=>history,nameCards:()=>nameCards,
+  drawQuestion:()=>drawQuestion(),qidFor:(t)=>qidFor(t),
+  setRolling:(v)=>{isRolling=v;},bumpMythic:()=>{sessionMythicCount++;},
+  rollRarity:(l)=>rollRarity(l),playWinSound:(r)=>playWinSound(r),showConfetti:(x)=>showConfetti(x),fireworkShow:()=>fireworkShow(),
+  shake:(n)=>shake(n),triggerSuddenDeathExplosion:()=>triggerSuddenDeathExplosion(),bumpCombo:()=>bumpCombo(),
+  markUndoPoint:(w)=>markUndoPoint(w),todayKey:()=>todayKey(),incrementStats:(n)=>incrementStats(n),
+  addToHof:(n,r)=>addToHof(n,r),checkAchievements:(r,n)=>checkAchievements(r,n),saveHistory:()=>saveHistory(),
+  updateHistoryUI:()=>updateHistoryUI(),displayName:(n,d)=>displayName(n,d),detailFor:(n)=>detailFor(n),
+  escapeHtml:(s)=>escapeHtml(s),noteBoardRemoval:()=>noteBoardRemoval(),scatterNames:()=>scatterNames(),
+  finishRolling:()=>finishRolling(),pickName:()=>pickName()
+});
+const selectWinner=(card)=>winnerUi.selectWinner(card);
+const selectTournamentWinner=(card)=>winnerUi.selectTournamentWinner(card);
+const showMultiWinnerModal=(winners)=>winnerUi.showMultiWinnerModal(winners);
 
 function finishRolling(){isRolling=false;setRollingState(false);}
 
@@ -1464,8 +1307,16 @@ function updateStatsUI(){
   });
 }
 
-function saveHistory(){store.set('history',history);}
-function loadHistory(){history=store.get('history');updateHistoryUI();}
+/* np_history is cut to its last MAX_HISTORY entries on every write. The entries that fall off the front are folded into
+   np_daily (np-rollup.js) first, once: `rolledUp` is how many of the front entries of the in-memory list have been. */
+let rolledUp=0;
+const rollupId=(n)=>lookupId(rosterIds,n,currentRosterName);
+function saveHistory(){
+  const r=rollup.foldOverflow(store.get('daily'),history,rolledUp,MAX_HISTORY,rollupId);
+  if(r.rolledUp!==rolledUp){store.set('daily',r.doc);rolledUp=r.rolledUp;}
+  store.set('history',history);
+}
+function loadHistory(){history=store.get('history');rolledUp=0;updateHistoryUI();}
 
 function updateHistoryUI(){
   const list=document.getElementById('historyList');
@@ -1631,7 +1482,7 @@ function loadNamesFromInput(){
   achievementsShown.clear();
   /* A new roster invalidates any in-progress draft — its picks name students who
      may no longer be on the list. */
-  draftTeams=[];draftStarted=false;draftTurnIndex=0;
+  draft.clear();
   /* A new roster is a new class period. Nobody carries a turn over from the last
      one, so the rotation starts clean. */
   rotation=freshRotation();
@@ -1642,7 +1493,7 @@ function loadNamesFromInput(){
 
 const defaultPrompts=['Read the next paragraph aloud','Define the next vocab word','Give one example from the reading','Summarize the last section in one sentence','Make a connection to today\'s theme','Ask a question about the material','Share what surprised you most','Predict what happens next','Compare this to something modern','Identify the cause AND the effect'];
 
-function loadPrompts(){prompts=store.get('prompts');document.getElementById('promptsInput').value=prompts.join('\n');updatePromptsList();}
+function loadPrompts(){prompts=store.get('prompts');document.getElementById('promptsInput').value=prompts.join('\n');updatePromptsList();refreshPromptSources();}
 
 function savePrompts(){
   const text=document.getElementById('promptsInput').value;
@@ -1839,7 +1690,61 @@ function renderSeatEquity(rep){
   }
 }
 
+/* The equity dashboard (np-dashboard.js): every pick on record, by week, per saved roster. Reads np_history through
+   np-rollup's view() so the picks the 500-entry window let go are in it; stores nothing of its own. */
+let dashPeriod=null,dashWeeks=8;
+function currentDash(){
+  const view=rollup.view(store.get('daily'),history,rollupId);
+  let rosters=store.get('rosters');
+  if(!Object.keys(rosters).length&&originalNames.length)rosters={'This list':originalNames};
+  return dashboard.build(view,rosters,{today:todayKey(),weeks:dashWeeks,idOf:(n,r)=>lookupId(rosterIds,n,r||currentRosterName)});
+}
+function dashPeriodOf(dash){
+  if(dashPeriod==='')return dash.all;
+  return dash.periods.find(p=>p.name===dashPeriod)||dash.periods.find(p=>p.name===currentRosterName)||(dash.periods.length===1?dash.periods[0]:dash.all);
+}
+function renderDashboard(){
+  const dash=currentDash();
+  const sel=document.getElementById('dashPeriod');
+  const chosen=dashPeriodOf(dash);
+  sel.textContent='';
+  const add=(v,t)=>{const o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o);};
+  dash.periods.forEach(p=>add(p.name,p.name));
+  if(dash.periods.length>1)add('','All periods');
+  sel.value=chosen===dash.all&&dash.periods.length>1?'':chosen.name;
+  if(chosen===dash.all&&dash.periods.length<=1&&sel.options.length===0)add('','All periods');
+  dashView.render(document.getElementById('dashBody'),document.getElementById('dashStatus'),window.ChartSvg,dash,chosen);
+  return {dash,chosen};
+}
+function buildDashSheet(){
+  const {dash,chosen}=renderDashboard();
+  const ok=dashView.buildSheet(document.getElementById('dashSheet'),window.ChartSvg,dash,chosen,{dateText:new Date().toLocaleDateString()});
+  if(!ok)alert('Load or save a roster first — there is nothing to put on the page.');
+  return ok;
+}
+function dashPageOn(){PrintKit.setPage({paper:'letter',orientation:'portrait',margin:'0.4in'});}
+function dashPageOff(){const st=document.getElementById('pk-page-style');if(st)st.remove();}
+function dashPrint(){
+  if(!buildDashSheet())return;
+  dashPageOn();
+  document.body.classList.add('printing-dash');
+  const done=()=>{document.body.classList.remove('printing-dash');dashPageOff();window.removeEventListener('afterprint',done);};
+  window.addEventListener('afterprint',done);
+  window.print();
+}
+function dashPreview(trigger){
+  if(!buildDashSheet())return;
+  dashPageOn();
+  document.body.classList.add('printing-dash');
+  PrintKit.preview({
+    area:document.getElementById('dashSheet'),trigger,title:'Participation dashboard',
+    onClose:()=>{document.body.classList.remove('printing-dash');dashPageOff();},
+    onPrint:dashPrint
+  });
+}
+
 function renderEquity(){
+  renderDashboard();
   const rep=currentEquityReport();
   document.getElementById('equitySummary').textContent=equitySummaryLine(rep);
   const list=document.getElementById('equityList');
@@ -2007,218 +1912,13 @@ function renderTournamentGrid(){
   board.appendChild(grid);
   updateCountDisplay();
 }
-async function tournamentPick(){
-  isRolling=true;setRollingState(true);
-  const activeCards=nameCards.filter(c=>c.active&&!isSkipped(c.name));
-  if(activeCards.length===0){finishRolling();return;}
-  const winnerCard=chooseWinner(activeCards);
-  if(!winnerCard){finishRolling();return;}
-  if(activeCards.length===1){selectTournamentWinner(winnerCard);return;}
-  const winnerIdx=activeCards.indexOf(winnerCard);
-  const dramatic=document.getElementById('dramaticPause').checked;
-  const baseJumps=dramatic?18:12;
-  const totalJumps=baseJumps+Math.floor(Math.random()*6);
-  let lastIdx=-1,currentDelay=Math.max(speed,90);
-  for(let i=0;i<totalJumps;i++){
-    let idx;
-    if(i===totalJumps-1)idx=winnerIdx;
-    else{
-      const avoidWinner=i===totalJumps-2&&activeCards.length>2;
-      let guard=0;
-      do{idx=Math.floor(Math.random()*activeCards.length);guard++;}
-      while(guard<40&&((idx===lastIdx&&activeCards.length>1)||(avoidWinner&&idx===winnerIdx)));
-    }
-    activeCards.forEach(c=>c.el.classList.remove('spotlight'));
-    activeCards[idx].el.classList.add('spotlight');
-    playBeep(600+Math.random()*350,55,'square',0.08);
-    if(crazyMode)shake(1);
-    lastIdx=idx;
-    if(dramatic&&i>totalJumps*0.55)currentDelay=currentDelay*1.16;
-    await sleep(currentDelay);
-  }
-  activeCards.forEach(c=>c.el.classList.remove('spotlight'));
-  selectTournamentWinner(winnerCard);
-}
-function selectTournamentWinner(winnerCard){
-  winnerCard.el.classList.add('winner-tile');
-  const useRarity=document.getElementById('rarityEnabled').checked;
-  const luckyBonus=luckyStudent===winnerCard.name;
-  const rarity=useRarity?rollRarity(luckyBonus):null;
-  playWinSound(rarity);
-  showConfetti();
-  if(crazyMode){fireworkShow();shake(rarity&&(rarity.name==='LEGENDARY'||rarity.name==='MYTHIC')?3:2);}
-  if(suddenDeath){triggerSuddenDeathExplosion();}
-  isRolling=false;
-  bumpCombo();
-  const promptText=pickRandomPrompt();
-  markUndoPoint([winnerCard.name]);
-  const entry={name:winnerCard.name,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),date:todayKey()};
-  if(promptText)entry.prompt=promptText;
-  history.push(entry);
-  incrementStats(winnerCard.name);
-  if(rarity&&['RARE','EPIC','LEGENDARY','MYTHIC'].includes(rarity.name)){addToHof(winnerCard.name,rarity);}
-  if(rarity&&rarity.name==='MYTHIC')sessionMythicCount++;
-  checkAchievements(rarity,winnerCard.name);
-  saveHistory();updateHistoryUI();
-  const coldCall=document.getElementById('coldCallMode').checked;
-  setTimeout(()=>{
-    const overlay=document.createElement('div');
-    overlay.className='modal-overlay';
-    const rarityHTML=rarity?`<div class="rarity-banner ${rarity.class}">${rarity.emoji} ${rarity.name} PICK ${rarity.emoji}</div>`:'';
-    const prompt=promptText;
-    const promptHTML=prompt?`<div class="prompt-task"><div class="prompt-task-label">📝 TASK</div>${escapeHtml(prompt)}</div>`:'';
-    overlay.innerHTML=`<div class="modal ${crazyMode?'crazy':''}">${rarityHTML}<div class="modal-label">🏆 Selected!</div>${winnerNameHTML(winnerCard.name)}${promptHTML}<div class="modal-buttons"><button class="btn-primary" id="tDone">Done</button><button id="tRoll">Roll Again</button><button id="tRemoveRoll">Eliminate &amp; Roll</button></div></div>`;
-    document.body.appendChild(overlay);
-    const cleanup=()=>{overlay.remove();};
-    document.getElementById('tDone').onclick=()=>{cleanup();winnerCard.el.classList.remove('winner-tile');if(coldCall){winnerCard.active=false;winnerCard.el.classList.add('eliminated');names=names.filter(n=>n!==winnerCard.name);}finishRolling();};
-    document.getElementById('tRoll').onclick=()=>{cleanup();winnerCard.el.classList.remove('winner-tile');if(coldCall){noteBoardRemoval();winnerCard.active=false;winnerCard.el.classList.add('eliminated');names=names.filter(n=>n!==winnerCard.name);}finishRolling();setTimeout(pickName,250);};
-    document.getElementById('tRemoveRoll').onclick=()=>{cleanup();noteBoardRemoval();winnerCard.active=false;winnerCard.el.classList.add('eliminated');names=names.filter(n=>n!==winnerCard.name);finishRolling();setTimeout(pickName,250);};
-  },700);
-}
-
 /* =====================================================================
    TEAM DRAFT MODE — captains alternate picking students from the roster,
    instead of a fully-random draw. `names`/`originalNames` are left untouched
    (drafting is non-destructive, same as marking someone absent); the pool of
    who is still undrafted is always derived from draftTeams' picks so far.
    ===================================================================== */
-function draftRemaining(){
-  const picked=new Set(draftTeams.flatMap(t=>t.picks));
-  return names.filter(n=>!picked.has(n)&&!isAbsent(n));
-}
-function resetDraft(){
-  draftTeams.forEach(t=>t.picks=[]);
-  draftTurnIndex=0;
-  scatterNames();
-}
-function reconfigureDraft(){
-  draftStarted=false;
-  scatterNames();
-}
-function startDraft(){
-  const countInput=document.getElementById('draftTeamCount');
-  const n=Math.max(2,Math.min(12,parseInt(countInput.value,10)||2));
-  const nameInputs=document.querySelectorAll('.draft-team-name-input');
-  draftTeamCount=n;
-  draftTeams=Array.from({length:n},(_,i)=>({name:(nameInputs[i]&&nameInputs[i].value.trim())||`Team ${i+1}`,picks:[]}));
-  draftTurnIndex=0;
-  draftStarted=true;
-  scatterNames();
-}
-function draftPick(name){
-  if(!draftStarted||!draftTeams.length)return;
-  const remaining=draftRemaining();
-  if(!remaining.includes(name))return;
-  const team=draftTeams[draftTurnIndex];
-  team.picks.push(name);
-  playBeep(500+Math.random()*200,90,'square',0.09);
-  if(draftRemaining().length>0){
-    draftTurnIndex=(draftTurnIndex+1)%draftTeams.length;
-  }else{
-    playWinSound(null);showConfetti();if(crazyMode)fireworkShow();
-  }
-  scatterNames();
-}
-function printDraftReport(){
-  if(!draftTeams.length)return;
-  document.getElementById('printSeatSection').style.display='none';
-  document.getElementById('printReportTitle').textContent='Team Draft Results';
-  document.getElementById('printReportSub').textContent=`${new Date().toLocaleDateString()} · ${draftTeams.length} teams`;
-  document.querySelector('#printReportTable thead').innerHTML='<tr><th>Team</th><th>Size</th><th>Members</th></tr>';
-  document.getElementById('printReportBody').innerHTML=draftTeams.map(t=>
-    `<tr><td>${escapeHtml(t.name)}</td><td>${t.picks.length}</td><td>${t.picks.map(escapeHtml).join(', ')}</td></tr>`
-  ).join('');
-  window.print();
-}
-function exportDraftReport(){
-  if(!draftTeams.length)return;
-  const text=draftTeams.map(t=>`${t.name} (${t.picks.length})\n${t.picks.map(n=>'  - '+n).join('\n')}`).join('\n\n');
-  const blob=new Blob([text],{type:'text/plain'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download=`team-draft-${new Date().toISOString().slice(0,10)}.txt`;
-  a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
-}
-function draftSetupHTML(){
-  const rows=[];
-  for(let i=0;i<draftTeamCount;i++){
-    const existing=(draftTeams[i]&&draftTeams[i].name)||`Team ${i+1}`;
-    rows.push(`<input type="text" class="draft-team-name-input" data-team-idx="${i}" value="${escapeHtml(existing)}" maxlength="40">`);
-  }
-  const ready=names.filter(n=>!isAbsent(n)).length>0;
-  return `<div class="draft-setup">
-    <h2>🧑‍🤝‍🧑 TEAM DRAFT</h2>
-    <p>Set up teams below, then captains take turns clicking a student on the board to draft them.</p>
-    <div class="option-row" style="justify-content:center;border-bottom:none;"><span class="option-label" style="flex:0;">Number of teams:</span><input type="number" id="draftTeamCount" value="${draftTeamCount}" min="2" max="12" style="width:70px;"></div>
-    <div class="draft-team-inputs">${rows.join('')}</div>
-    <button class="btn-primary" id="draftStartBtn" ${ready?'':'disabled'}>🏁 Start Draft</button>
-    ${ready?'':'<p class="muted-text">Load a roster first (⚙️ Roster).</p>'}
-  </div>`;
-}
-function draftActiveHTML(){
-  const remaining=draftRemaining();
-  const complete=remaining.length===0;
-  const teamsHtml=draftTeams.map((t,i)=>{
-    const isTurn=!complete&&i===draftTurnIndex;
-    return `<div class="draft-team-card${isTurn?' active-turn':''}">
-      <h4>${isTurn?'👉 ':''}${escapeHtml(t.name)} <small>(${t.picks.length})</small></h4>
-      <div class="draft-team-picks">${t.picks.length?t.picks.map(escapeHtml).join(', '):'<span style="opacity:0.6;">No picks yet</span>'}</div>
-    </div>`;
-  }).join('');
-  const remainingHtml=complete?'':`<div class="draft-remaining-label">👉 ${escapeHtml(draftTeams[draftTurnIndex].name)}'s turn — click a student to draft them</div>
-    <div class="draft-remaining">${remaining.map(n=>`<button class="draft-tile" data-draft-pick="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join('')}</div>`;
-  const doneHtml=complete?`<div class="draft-complete"><h3>🎉 Draft complete!</h3><div class="button-row" style="justify-content:center;"><button id="draftPrintBtn">🖨️ Print Rosters</button><button id="draftExportBtn">⬇️ Export</button><button id="draftRestartBtn">↺ New Draft (Same Teams)</button></div></div>`:'';
-  return `<div class="draft-reconfigure"><button id="draftReconfigureBtn">⚙️ Reconfigure Teams</button></div><div class="draft-teams-bar">${teamsHtml}</div>${remainingHtml}${doneHtml}`;
-}
-function bindDraftSetupEvents(){
-  document.getElementById('draftTeamCount').addEventListener('change',(e)=>{
-    const inputs=document.querySelectorAll('.draft-team-name-input');
-    inputs.forEach((inp,i)=>{if(draftTeams[i])draftTeams[i].name=inp.value;else draftTeams[i]={name:inp.value,picks:[]};});
-    draftTeamCount=Math.max(2,Math.min(12,parseInt(e.target.value,10)||2));
-    scatterNames();
-  });
-  document.querySelectorAll('.draft-team-name-input').forEach((inp,i)=>{
-    inp.addEventListener('input',()=>{if(!draftTeams[i])draftTeams[i]={name:inp.value,picks:[]};else draftTeams[i].name=inp.value;});
-  });
-  const startBtn=document.getElementById('draftStartBtn');
-  if(startBtn)startBtn.addEventListener('click',startDraft);
-}
-function bindDraftActiveEvents(){
-  document.querySelectorAll('[data-draft-pick]').forEach(btn=>{
-    btn.addEventListener('click',()=>draftPick(btn.dataset.draftPick));
-  });
-  const reconfigureBtn=document.getElementById('draftReconfigureBtn');
-  if(reconfigureBtn)reconfigureBtn.addEventListener('click',reconfigureDraft);
-  const printBtn=document.getElementById('draftPrintBtn');
-  if(printBtn)printBtn.addEventListener('click',printDraftReport);
-  const exportBtn=document.getElementById('draftExportBtn');
-  if(exportBtn)exportBtn.addEventListener('click',exportDraftReport);
-  const restartBtn=document.getElementById('draftRestartBtn');
-  if(restartBtn)restartBtn.addEventListener('click',resetDraft);
-}
-function renderDraftBoard(){
-  const board=document.getElementById('board');
-  board.querySelectorAll('.name-card').forEach(el=>el.remove());
-  board.querySelectorAll('.tournament-grid').forEach(el=>el.remove());
-  board.querySelectorAll('.draft-board').forEach(el=>el.remove());
-  board.querySelectorAll('.all-absent-msg').forEach(el=>el.remove());
-  nameCards=[];
-  const emptyState=document.getElementById('emptyState');
-  if(emptyState)emptyState.style.display='none';
-  const wrap=document.createElement('div');
-  wrap.className='draft-board';
-  if(draftStarted){
-    wrap.innerHTML=draftActiveHTML();
-    board.appendChild(wrap);
-    bindDraftActiveEvents();
-  }else{
-    wrap.innerHTML=draftSetupHTML();
-    board.appendChild(wrap);
-    bindDraftSetupEvents();
-  }
-  updateCountDisplay();
-}
+/* The mode itself is np-mode-draft.js; the page keeps the host it asked for (declared with the state, near the top). */
 
 /* =====================================================================
    KONAMI / RETRO ARCADE THEME
@@ -2504,7 +2204,7 @@ function restoreFromState(state){
     `are left alone.`
   );
   if(!ok)return;
-  const wrote=store.restore(state,{merge:true});
+  const wrote=store.restore(state,{merge:true,idOf:rollupId});
   loadStats();loadHistory();loadHof();loadPrompts();updateRosterUI();updateStatsUI();updateDataTab();
   alert(`✅ Restored. ${wrote.length} of the tool's data keys were updated.`);
 }
@@ -2566,9 +2266,9 @@ function eraseStudentData(){
   );
   if(!ok)return;
   store.clearStudentData();
-  names=[];originalNames=[];history=[];statsCache={};hallOfFame=[];
+  names=[];originalNames=[];history=[];rolledUp=0;statsCache={};hallOfFame=[];
   absentSet=new Set();luckyStudent=null;luckyDate=null;
-  draftTeams=[];draftStarted=false;draftTurnIndex=0;
+  draft.clear();
   rotation=freshRotation();
   document.getElementById('namesInput').value='';
   scatterNames();updateStatsUI();updateHistoryUI();updateHofTicker();updateRosterUI();updateDataTab();
@@ -2579,9 +2279,9 @@ function eraseEverything(){
   if(!confirm('Erase everything this tool has stored, including themes, task prompts, options and the unlocked retro theme?\n\nThis cannot be undone.'))return;
   store.clearAll();
   opts={...OPTION_DEFAULTS};
-  names=[];originalNames=[];history=[];statsCache={};hallOfFame=[];prompts=[];
+  names=[];originalNames=[];history=[];rolledUp=0;statsCache={};hallOfFame=[];prompts=[];
   absentSet=new Set();luckyStudent=null;luckyDate=null;
-  draftTeams=[];draftStarted=false;draftTurnIndex=0;
+  draft.clear();
   retroUnlocked=false;retroActive=false;crazyMode=false;
   rotation=freshRotation();
   document.body.classList.remove('retro-mode','crazy-active','sudden-death');
@@ -2667,7 +2367,7 @@ document.getElementById('pickBtn').addEventListener('click',pickName);
    over too. Without that, students restored by a reset would sit at the back of
    the current round until it refilled. */
 document.getElementById('resetBtn').addEventListener('click',()=>{
-  if(mode==='draft'){resetDraft();return;}
+  if(mode==='draft'){draft.reset();return;}
   names=originalNames.slice();rotation=freshRotation();clearUndoPoint();scatterNames();
 });
 document.getElementById('shuffleBtn').addEventListener('click',()=>{if(!isRolling)scatterNames();});
@@ -2677,7 +2377,7 @@ document.getElementById('closePanel').addEventListener('click',()=>{document.get
 document.getElementById('loadNames').addEventListener('click',loadNamesFromInput);
 document.getElementById('clearInput').addEventListener('click',()=>{if(confirm('Clear the input area? (Saved rosters are not affected)'))document.getElementById('namesInput').value='';});
 document.getElementById('saveRoster').addEventListener('click',saveRoster);
-document.getElementById('clearHistory').addEventListener('click',()=>{if(confirm('Clear pick history?')){history=[];saveHistory();updateHistoryUI();updateDataTab();}});
+document.getElementById('clearHistory').addEventListener('click',()=>{if(confirm('Clear pick history?')){history=[];rolledUp=0;store.clear('daily');saveHistory();updateHistoryUI();updateDataTab();}});
 document.getElementById('exportHistory').addEventListener('click',()=>{
   if(!history.length){alert('No history to export.');return;}
   const text=['Date\tTime\tName\tQuestion']
@@ -2715,6 +2415,53 @@ document.getElementById('luckyStudent').addEventListener('change',(e)=>{
 document.getElementById('clearHof').addEventListener('click',()=>{
   if(confirm('Clear the Hall of Fame ticker? Recent high-rarity picks will be erased.')){hallOfFame=[];saveHof();updateHofTicker();updateDataTab();}
 });
+/* Theme packs: Import reads a file through np-theme-packs.js (whitelisted properties, hex colours only) and stores
+   it only if every theme in it passes; Export writes the same file back out; Remove forgets one pack. */
+function packSay(text){const el=document.getElementById('packStatus');if(el)el.textContent=text;}
+function renderPackList(){
+  const ul=document.getElementById('packList');if(!ul)return;
+  ul.textContent='';
+  const doc=store.get('themePacks');
+  Object.entries(tpacks.fix(doc).packs).forEach(([id,p])=>{
+    const li=document.createElement('li');
+    const label=document.createElement('span');
+    label.textContent=p.name+' ('+Object.keys(p.themes).length+' theme'+(Object.keys(p.themes).length===1?'':'s')+') ';
+    const ex=document.createElement('button');ex.type='button';ex.textContent='⬇️ Export';ex.setAttribute('aria-label','Export the pack '+p.name);
+    ex.addEventListener('click',()=>{
+      const pack=tpacks.exportPack(store.get('themePacks'),id);if(!pack)return;
+      const url=URL.createObjectURL(new Blob([JSON.stringify(pack,null,2)],{type:'application/json'}));
+      const a=document.createElement('a');a.href=url;a.download='theme-pack-'+id+'.json';
+      document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      packSay('Saved theme-pack-'+id+'.json.');
+    });
+    const rm=document.createElement('button');rm.type='button';rm.textContent='🗑 Remove';rm.className='btn-danger';rm.setAttribute('aria-label','Remove the pack '+p.name);
+    rm.addEventListener('click',()=>{
+      if(!confirm('Remove the theme pack "'+p.name+'" from this device?'))return;
+      store.set('themePacks',tpacks.removePack(store.get('themePacks'),id));
+      loadPacks();renderPackList();
+      const sel=document.getElementById('theme');
+      if(!hasAnyTheme(store.get('theme'))){sel.value='default';applyTheme('default');}
+      packSay('Removed '+p.name+'.');
+    });
+    li.append(label,ex,' ',rm);ul.appendChild(li);
+  });
+}
+function importPackFile(file){
+  return file.text().then(text=>{
+    const r=tpacks.parsePackText(text);
+    if(!r.ok){packSay('Nothing was imported. '+r.errors.slice(0,6).join(' ')+(r.errors.length>6?' (and '+(r.errors.length-6)+' more)':''));return;}
+    const added=tpacks.addPack(store.get('themePacks'),r.pack);
+    if(added.error){packSay(added.error);return;}
+    store.set('themePacks',added.doc);
+    loadPacks();renderPackList();
+    packSay((added.replaced?'Replaced the pack ':'Imported the pack ')+r.pack.name+' ('+Object.keys(r.pack.themes).length+' theme'+(Object.keys(r.pack.themes).length===1?'':'s')+').'+(r.warnings.length?' Careful: '+r.warnings.slice(0,3).join(' '):''));
+  },()=>packSay('Could not read that file.'));
+}
+document.getElementById('importPackBtn').addEventListener('click',()=>{
+  const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.hidden=true;
+  input.addEventListener('change',()=>{const f=input.files&&input.files[0];input.remove();if(f)importPackFile(f);});
+  document.body.appendChild(input);input.click();
+});
 document.getElementById('exportRosters').addEventListener('click',exportAllData);
 /* The file picker comes from promptImportFile() above, so there is no hidden
    <input type="file"> in the markup. */
@@ -2732,8 +2479,16 @@ document.getElementById('loadDefaults').addEventListener('click',()=>{document.g
 document.getElementById('undoPickBtn').addEventListener('click',undoLastPick);
 document.getElementById('equityWindow').addEventListener('change',(e)=>{equityWindowDays=parseInt(e.target.value,10)||0;renderEquity();});
 document.getElementById('refreshEquity').addEventListener('click',()=>{refreshRosterDetails();renderEquity();});
+document.getElementById('promptSource').addEventListener('change',e=>{promptSourceId=e.target.value==='typed'?null:e.target.value.slice(4);promptBag=null;loadPromptItems();});
+document.getElementById('dashPeriod').addEventListener('change',e=>{dashPeriod=e.target.value;renderDashboard();});
+document.getElementById('dashWeeks').addEventListener('change',e=>{dashWeeks=parseInt(e.target.value,10)||8;renderDashboard();});
+document.getElementById('dashPrint').addEventListener('click',dashPrint);
+document.getElementById('dashPreview').addEventListener('click',e=>dashPreview(e.currentTarget));
+document.getElementById('dashGotoData').addEventListener('click',()=>showTab('data'));
+document.getElementById('dashClear').addEventListener('click',()=>{document.getElementById('clearHistory').click();if(document.getElementById('tab-equity').classList.contains('active'))renderEquity();});
 /* A flag pressed in Class Roster Hub in another tab reaches this board without a reload. */
 window.addEventListener('storage',e=>{
+  if(e.key==='gvb-question-bank'&&promptSourceId!==null){refreshPromptSources();return;}
   if(e.key!==null&&e.key!=='crh_flags_v1'&&e.key!=='crh_students_v1')return;
   refreshRosterDetails();
   if(!isRolling)scatterNames();
@@ -2779,6 +2534,7 @@ function showTab(tab){
   document.querySelectorAll('.tab-content').forEach(c=>c.classList.toggle('active',c.id==='tab-'+tab));
   if(tab==='stats'){updateStatsUI();renderAbsentNotice();}
   if(tab==='equity'){refreshRosterDetails();renderEquity();}
+  if(tab==='prompts')refreshPromptSources();
   if(tab==='data')updateDataTab();
 }
 document.querySelectorAll('.tab-buttons button').forEach(btn=>{
@@ -2838,8 +2594,10 @@ window.addEventListener('load',()=>{
   opts=store.get('options');
   applyOptionsToUI();
 
+  loadPacks();
+  renderPackList();
   const savedTheme=store.get('theme');
-  if(themes[savedTheme]){document.getElementById('theme').value=savedTheme;applyTheme(savedTheme);}
+  if(hasAnyTheme(savedTheme)){document.getElementById('theme').value=savedTheme;applyTheme(savedTheme);}
   else applyTheme('default');
 
   /* Reflected, not forced: the OS setting already wins inside motionOff(), and

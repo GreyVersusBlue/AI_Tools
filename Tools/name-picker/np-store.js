@@ -36,6 +36,8 @@
 // the gvb-save import is relative rather than site-absolute.
 
 import { createSaveSlot, defaultStorage } from "../../_shared/gvb-save.js";
+import * as rollup from "./np-rollup.js";
+import * as themePacks from "./np-theme-packs.js";
 
 const GAME = "name-picker";
 const SLOT_VERSION = 1;   // per-key slots. Unversioned data on disk reads as 0.
@@ -45,6 +47,7 @@ const BUNDLE_VERSION = 3; // export file. The hand-rolled backup format was at 2
    the DOM by the thousand; no real class list comes near any of them. */
 const MAX_NAME = 120, MAX_ROSTER = 400, MAX_ROSTERS = 60;
 const MAX_PROMPTS = 200, MAX_HISTORY = 500, MAX_HOF = 50, MAX_STATS = 4000;
+export { MAX_HISTORY };
 
 const isStr = v => typeof v === "string";
 const isObj = v => !!v && typeof v === "object" && !Array.isArray(v);
@@ -201,10 +204,22 @@ export const KEYS = [
         if (/^\d{4}-\d{2}-\d{2}$/.test(h.date)) out.date = h.date;
         const prompt = trimmed(h.prompt).slice(0, 300);
         if (prompt) out.prompt = prompt;
+        // `qid` (Path 15 P4): the teacher's own bank id of the question that was the prompt. Never a `seed:` id.
+        const qid = trimmed(h.qid);
+        if (prompt && qid && qid.length <= 80 && !/^seed:/i.test(qid)) out.qid = qid;
         return out;
       })
       .filter(h => h.name)
       .slice(-MAX_HISTORY)
+  },
+  {
+    // The picks np_history has let go, as per-day counts keyed on the student's id (np-rollup.js). Added in Path 15 P2
+    // beside np_history, which is untouched: an entry is in one of the two, never both. `records`, like its neighbour, so
+    // the erase buttons and the year rollover already cover it.
+    name: "daily", key: "np_daily", group: "records", wire: "json",
+    label: "Pick history rollup", blank: rollup.blank,
+    ok: isObj,
+    fix: rollup.fix
   },
   {
     // Who is out today. In `roster` rather than `prefs` because it is a list of
@@ -275,6 +290,14 @@ export const KEYS = [
     name: "theme", key: "np_theme", group: "prefs", wire: "raw",
     label: "Theme", blank: () => "default",
     ok: isStr, fix: v => trimmed(v).slice(0, 40) || "default"
+  },
+  {
+    // Imported theme packs (np-theme-packs.js, Path 15 P5): colours and names, validated against a whitelist on the way in
+    // and again here. `prefs`: no student data.
+    name: "themePacks", key: "np_theme_packs", group: "prefs", wire: "json",
+    label: "Theme packs", blank: themePacks.blank,
+    ok: isObj,
+    fix: themePacks.fix
   },
   { ...FLAG, name: "crazy", key: "np_crazy", label: "Let's Go Crazy" },
   { ...FLAG, name: "luckyEnabled", key: "np_lucky_enabled", label: "Lucky student enabled" },
@@ -487,9 +510,10 @@ export function createStore(options = {}) {
    * settings alone; without it the file replaces every key it carries. Returns
    * the keys actually written.
    */
-  function restore(state, { merge = true } = {}) {
+  function restore(state, { merge = true, idOf } = {}) {
     const incoming = fixBundle(state);
     const wrote = [];
+    let droppedByTrim = null;   // history entries a merge pushed out of the 500 window; they go to the rollup
     for (const d of KEYS) {
       let value = incoming[d.key];
       if (value === undefined) continue;
@@ -499,7 +523,11 @@ export function createStore(options = {}) {
           const acc = { ...raw("stats") };
           for (const [n, c] of Object.entries(value)) acc[n] = (acc[n] || 0) + c;
           value = acc;
-        } else if (d.name === "history") value = [...raw("history"), ...value].slice(-MAX_HISTORY);
+        } else if (d.name === "history") {
+          const all = [...raw("history"), ...value];
+          if (all.length > MAX_HISTORY) droppedByTrim = all.slice(0, all.length - MAX_HISTORY);
+          value = all.slice(-MAX_HISTORY);
+        } else if (d.name === "daily") value = rollup.merge(raw("daily"), value);
         else if (d.name === "hof") value = [...raw("hof"), ...value].slice(-MAX_HOF);
         else if (d.name === "prompts") {
           if (raw("prompts").length) continue;   // never overwrite a teacher's own list
@@ -507,6 +535,7 @@ export function createStore(options = {}) {
       }
       if (setRaw(d.name, value)) wrote.push(d.key);
     }
+    if (droppedByTrim) setRaw("daily", rollup.fold(raw("daily"), droppedByTrim, idOf));
     return wrote;
   }
 

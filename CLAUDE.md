@@ -620,6 +620,10 @@ files must be added there too.
   holds an `idb:` reference, and only 030 deletes a stored picture (its pass at load keeps the bank's). A tool that
   shows no picture needs no code for it and says so on its card, as 040 and 020 do (`npm run test:bank-media`,
   `npm run test:question-bank-media`).
+  Since v435 019 and 018 are readers too (Path 12 P2, increment 6): `_shared/stations-bank.js` builds their **Question bank** card, reads with
+  `peek()`, writes nothing, and turns a ticked question into a station with `bankId` on it (a text station on 019; a choice or text station on 018).
+  A new page that makes stations from questions calls `StationsBank.mount` and does not write a second chooser (`npm run test:stations-bank`,
+  `npm run test:stations-bank-smoke`).
   Since v300 the bank holds the teacher's **named sets** (`sets` beside `questions`, Devon's "B": an ordered list of
   question ids saved with the bank, repeats allowed, seed ids allowed); the stored `schema` is 2 only while a set exists,
   which is what stops a v265–v299 page from saving the bank without them. A file's sets are imported beside the
@@ -631,6 +635,29 @@ files must be added there too.
   older backup working. The module's header has the migration, the ids and the file formats. Its suites are
   `npm run test:question-bank` (pure Node) and `smoke-bank-file.mjs` in `npm run test:review-board`; no file it
   writes has been opened in a spreadsheet.
+- **The emergency binder's staleness reminder is `_shared/binder-stale.js`** (`BinderStale`, Path 10 P3, v442): 090 records the print of exactly
+  the Emergency binder preset (`gvb-packet:evergreen.v1`, a time and a fingerprint per watched key, never data) and `index.html` and 010 call
+  `mount()`; they show a line, never a student or a detail. `WATCHED` must equal the preset's providers' keys less `crh_students_v1`
+  (`npm run test:binder-stale` holds that); a section added to the preset is a line there. 044 stamps `savedOn` on its standing details.
+  `npm run test:binder-stale-smoke`.
+- **A page of the Packet Builder (090) is a provider in `Tools/packet-builder/`** (Path 10 P1, v437-v439): `sections.js` is the pure registry and
+  `providers.js` the sections. A provider is data in, blocks out (`evaluate(ctx)`, `build(ctx)`; it reads only through `ctx.read(key)` and never
+  touches storage or the DOM), `toHtml()` is the one place its text becomes markup, and its `storageKeys` must equal 090's `reads` on its row in
+  `_shared/tool-registry.js` and be keys its source tool's row declares (`npm run test:packet-providers` fails otherwise). A new section is a
+  provider, a registry `reads` line and a case in that suite; do not write a page-private list of sections. A page that prints a source tool's data in its own markup (045) reads it with `PacketSections.load(id, ctx)` and names no other tool's key (`test:sub-binder-providers` holds that, and 045's output against a frozen copy). `npm run test:packet-sections`,
+  `npm run test:packet-builder`. No packet has been printed on paper.
+- **044's `.docx` and its text copy are one model, `dayModel()`** (Path 10 P4, v445): a line that belongs on the plan is added to the model, and
+  `renderDayText()` / `renderDayDocx()` draw it; do not add a line to one renderer alone. `npm run test:sub-plan-render` holds both outputs to
+  `Tools/sub-plan-builder/test/golden/` (a change you meant is `--update` and the golden diff in the same commit). 044's do-now is read from the
+  question bank's `do-now`-tagged questions through the packet providers (`test:sub-plan-donow`), and its "what the sub said" notes
+  (`subPlanBuilder.subSaid.v1`, this device only, student data) are in no link, history, file or copy (`test:sub-plan-said`).
+- **Verb forms come from `_shared/conjugate.js`** (`Conjugate`, Path 19 P3, v469-v475): the engine and a pack a language
+  (`conjugate-es.js`, `conjugate-fr.js`), six tenses each, pure functions, no storage. A tool that needs a conjugated form calls
+  `Conjugate.conjugate()` and does not type a table. A teacher's correction is a verb record merged over the pack's (`merge`), and it
+  lives on the word (`WordList.setVerb`, `lang` on a list), for its list only. **No table it makes is called reviewed until a language
+  teacher has read it** (Devon, 2026-10-21): every result says `unreviewed` and a page that shows one says so. 039 drills from it and
+  079's starter posters are computed from it (v474; held byte-for-byte by `test:verb-poster-callouts` against `golden-old-posters.json`) and its Add a verb card is the engine's `conjugate()` (v475, `npm run test:verb-poster-add-verb`); 079's irregular call-out tables are held equal to it by `npm run test:conjugate`, which reads `irregulars.js` by text. `node Tools/conjugate/print-corpus.mjs
+  es|fr` writes the teacher's check sheet. The suite also runs the page-driven `npm run test:conjugate-039`.
 - **A pasted spreadsheet region is read by `_shared/paste-table.js`** (`PasteTable`, Path 16 P2, v404): `splitLine`,
   `pickDelimiter`, `parse` (rows padded, short rows named in `ragged`), `columnReport` (the cells that stopped a column reading
   as numbers), and 046's name-and-value parsers. 046, 038, 036, 037, 075 and 006 use it; do not write another `split('\t')`. A line a

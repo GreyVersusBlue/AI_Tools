@@ -82,7 +82,7 @@ eq(await page.isVisible('#btnBaseMapFile'), true, 'the Your own file… button i
 
 /* ── choose a GeoJSON file ─────────────────────────────────────────────── */
 await setFile('Kansas districts.geojson', districts);
-await page.waitForFunction(() => !document.getElementById('mapImg').hidden && document.getElementById('mapImg').naturalWidth > 0, null, { timeout: 15000 });
+await page.waitForFunction(() => !document.getElementById('mapImg').hidden && document.getElementById('mapImg').width > 0, null, { timeout: 15000 });
 await settle(page, 600);
 let d = await activeData();
 ok(/^vector:custom-[0-9a-f]{16}:/.test(d.mapId || ''), 'the project\'s map id names the dropped file: ' + d.mapId);
@@ -91,7 +91,7 @@ const cal = d.calibration || {};
 ok(['north', 'south', 'west', 'east'].every(k => Math.abs(cal[k] - want.bounds[k]) < 1e-9), 'the calibration is the data box plus 4%: ' + JSON.stringify(cal));
 eq(await page.locator('#baseMapSelect optgroup[data-yours] option').allTextContents().then(a => a.join()), 'Kansas districts', 'the file is in the list under Your files, by its name');
 eq(await page.inputValue('#baseMapSelect'), want.key, 'and it is the selected base map');
-const px = await page.evaluate(() => { const i = document.getElementById('mapImg'); return [i.naturalWidth, i.naturalHeight]; });
+const px = await page.evaluate(() => { const i = document.getElementById('mapImg'); return [i.width, i.height]; });
 ok(px[0] === 4000 && px[1] > 1000 && px[1] < 4000, 'the picture is the 4000 px long side, in the data\'s own proportions: ' + px.join('x'));
 eq(await page.isDisabled('#btnShadeClick'), false, 'click-to-shade is available on it');
 ok(/Kansas districts|3 shapes/.test(await page.textContent('#baseMapHint')), 'the hint says it is the teacher\'s file: ' + await page.textContent('#baseMapHint'));
@@ -111,7 +111,7 @@ await settle(page, 200);
 
 /* ── it is stored where "Clear cached maps" cannot reach, and survives a reload ── */
 ok((await idbKeys('gvb-media', 'blobs')).includes('bmg-geo/' + want.key), 'the clean file is in gvb-media under bmg-geo');
-ok((await idbKeys('bmg-maps', 'images')).some(k => k.includes(want.key)), 'the rendered picture is in the bmg-maps cache');
+ok(!(await idbKeys('bmg-maps', 'images')).some(k => k.includes(want.key)), 'no rendered picture is cached for it (drawn from the vectors since v432)');
 page.once('dialog', dlg => dlg.accept());
 await page.click('#btnClearCache');
 await settle(page, 600);
@@ -121,14 +121,14 @@ ok((await idbKeys('gvb-media', 'blobs')).includes('bmg-geo/' + want.key), 'and l
 await page.reload({ waitUntil: 'networkidle' });
 await settle(page, 900);
 /* since v430 a built-in or stored-file map is drawn again from its vectors, not left blank, when the picture cache is empty */
-await page.waitForFunction(() => !document.getElementById('mapImg').hidden && document.getElementById('mapImg').naturalWidth > 0, null, { timeout: 15000 });
-ok((await idbKeys('bmg-maps', 'images')).some(k => k.includes(want.key)), 'with the picture cache cleared the map is drawn again from the stored file and cached');
+await page.waitForFunction(() => !document.getElementById('mapImg').hidden && document.getElementById('mapImg').width > 0, null, { timeout: 15000 });
+ok(!(await idbKeys('bmg-maps', 'images')).some(k => k.includes(want.key)), 'with the picture cache cleared the map is drawn again from the stored file, and no picture is cached (since v432)');
 await page.focus('#baseMapSelect');
 await settle(page, 400);
 eq(await page.locator('#baseMapSelect optgroup[data-yours] option').allTextContents().then(a => a.join()), 'Kansas districts', 'the stored file is listed once the list is opened');
 await page.selectOption('#baseMapSelect', want.key);
 await page.click('#btnBaseMap');
-await page.waitForFunction(() => !document.getElementById('mapImg').hidden && document.getElementById('mapImg').naturalWidth > 0, null, { timeout: 15000 });
+await page.waitForFunction(() => !document.getElementById('mapImg').hidden && document.getElementById('mapImg').width > 0, null, { timeout: 15000 });
 await settle(page, 600);
 d = await activeData();
 ok(['north', 'south', 'west', 'east'].every(k => Math.abs((d.calibration || {})[k] - want.bounds[k]) < 1e-9), 'drawn again from the stored file with the same calibration');

@@ -25,6 +25,7 @@
 <script src="../_shared/stage.js"></script>
 <script src="../_shared/countdown.js"></script>
 <script src="../_shared/school-day.js"></script>
+<script src="../_shared/binder-stale.js"></script>
 <script src="../_shared/tool-registry.js"></script>
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
@@ -54,6 +55,8 @@
   /* The hidden attribute is only display:none in the UA stylesheet; any class
      that sets display beats it. This makes `el.hidden = true` mean it. */
   [hidden] { display: none !important; }
+  .binder-stale { margin: .4rem 0 .8rem; font-size: .95rem; }
+  .binder-stale a { font-weight: 600; text-decoration: underline; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -325,6 +328,8 @@
     <div id="panelConfigRows"></div>
   </div>
 
+  <p class="binder-stale" hidden><a id="binderStatus" href="090-packet-builder.html?preset=emergency" hidden></a></p>
+
   <div class="board" id="board"></div>
 
   <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded. Reads the roster saved in Class Roster Hub / Name Picker, the calendar saved in the School Calendar Visualizer, and the live board from the Hall Pass Log.</footer>
@@ -397,6 +402,15 @@
     settings.panels = list.map(function (p) { return { id: p.id, on: !!p.on }; });
     saveSettings();
   }
+
+  /* Emergency binder reminder (Path 10 P3): one line when the printed binder is stale. Fingerprints only,
+     nothing about a student, nothing fetched. */
+  (function () {
+    var link = document.getElementById('binderStatus');
+    if (!link || !window.BinderStale) return;
+    BinderStale.mount(link, localStorage, new Date().toISOString(), '../');
+    link.parentNode.hidden = link.hidden;
+  })();
 
   var board = document.getElementById('board');
   var mounted = {};

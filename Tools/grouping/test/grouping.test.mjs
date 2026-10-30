@@ -24,12 +24,19 @@ const site = path.join(here, '..', '..', '..');
 const SRC = fs.readFileSync(path.join(site, '_shared/grouping.js'), 'utf8');
 const GOLDEN = path.join(here, 'golden.json');
 const UPDATE = process.argv.includes('--update');
+/* Every load counts the orderings rotateRoles' exhaustive search visits (visitsOf), so a check can
+   hold the work done and not the clock, which a shared CI runner stretches. */
+const LOADED = new WeakMap();
+const VISIT = 'if (d === n) { visit(pick); return; }';
 function load(src) {
-  const ctx = { window: {} };
+  const ctx = { window: {}, __visits: 0 };
   vm.createContext(ctx);
+  if (src.split(VISIT).length === 2) src = src.replace(VISIT, 'if (d === n) { __visits++; visit(pick); return; }');
   vm.runInContext(src, ctx);
+  LOADED.set(ctx.window.Grouping, ctx);
   return ctx.window.Grouping;
 }
+const visitsOf = G => LOADED.get(G).__visits;
 const J = x => JSON.stringify(x);
 const names = n => Array.from({ length: n }, (_, i) => 'S' + String(i + 1).padStart(2, '0'));
 const flat = gs => gs.reduce((a, g) => a.concat(g), []);
@@ -324,9 +331,11 @@ const CHECKS = {
     for (const [m, r] of [[8, 10], [8, 12], [6, 15], [12, 12]]) {
       const roles = Array.from({ length: r }, (_, i) => 'R' + i), hist = {};
       keys(m).forEach((x, i) => { hist[x] = [roles[i % r]]; });
-      const t = Date.now();
+      const t = Date.now(), v0 = visitsOf(G);
       const out = G.rotateRoles([keys(m)], roles, hist, { method: 'best', seed: 1 });
-      if (Date.now() - t > 400) return `${m} members, ${r} roles took ${Date.now() - t} ms`;
+      // the work, not the clock: past 400,000 orderings the search must not be exhaustive (a slow runner stretches ms, never this)
+      if (visitsOf(G) - v0 > 400000) return `${m} members, ${r} roles tried ${visitsOf(G) - v0} orderings`;
+      if (Date.now() - t > 8000) return `${m} members, ${r} roles took ${Date.now() - t} ms`;
       if (out.repeats.length) return `${m} members, ${r} roles: ${out.repeats.length} repeats`;
       if (new Set(out.byGroup[0].map(x => x.role)).size !== m) return `${m} members, ${r} roles: a role handed out twice`;
     }

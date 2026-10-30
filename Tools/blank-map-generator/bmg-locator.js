@@ -12,7 +12,7 @@ export function createLocatorInset(containerEl, imgEl, rectEl, viewport, viewer)
 
   function setImage(objectUrl, w, h) {
     naturalW = w;
-    imgEl.src = objectUrl;
+    if (objectUrl) imgEl.src = objectUrl; else imgEl.removeAttribute('src');
     const s = MAX_DIM / Math.max(w, h);
     containerEl.style.width = `${Math.round(w * s)}px`;
     containerEl.style.height = `${Math.round(h * s)}px`;

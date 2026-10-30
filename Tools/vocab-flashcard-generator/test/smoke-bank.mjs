@@ -69,9 +69,12 @@ async function fixedPage(storage) {
   }, { storage });
   return page;
 }
+// The pins hold 040's OWN keys as the v270 page left them. Since v462 the page also writes the shared
+// word-list store (gvb-word-lists, Path 19 P1) beside them; that key is the v462 hub's, and
+// Tools/word-list/test/smoke-hub.mjs holds it, so it is left out of this hash on purpose.
 const stored = page => page.evaluate(() => {
   const out = {};
-  Object.keys(localStorage).filter(k => !/^gvb-a11y|^__/.test(k)).sort().forEach(k => { out[k] = localStorage.getItem(k); });
+  Object.keys(localStorage).filter(k => !/^gvb-a11y|^__|^gvb-word-lists$/.test(k)).sort().forEach(k => { out[k] = localStorage.getItem(k); });
   return out;
 });
 

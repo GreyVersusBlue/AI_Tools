@@ -158,6 +158,11 @@
   #viewerStatus { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   #baseCanvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   #stage { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  .sliceRow { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+  .sliceRow input[type=range] { flex: 1; min-width: 0; }
+  .sliceFields { display: flex; gap: 12px; flex-wrap: wrap; margin: 6px 0; }
+  .sliceFields label { display: flex; flex-direction: column; font-size: 12px; gap: 2px; }
+  .sliceFields input { padding: 4px 6px; }
   #stage img { display: block; max-width: none; user-select: none; -webkit-user-drag: none; }
   #viewerEmpty:not([hidden]) {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -338,6 +343,10 @@
   .panelRow input[type=text] { min-width: 180px; }
 
   .quizCount { font-size: 0.82rem; font-weight: 600; color: var(--accent); }
+  .quizMemory { margin: 4px 0 8px; font-size: 0.85rem; }
+  .quizMemory summary { cursor: pointer; font-weight: 600; }
+  .quizMemoryList { margin: 4px 0 6px 1.2em; padding: 0; }
+  .quizMemory[hidden] { display: none !important; }
 
   /* Projector mode for the self-check quiz: bumps on-screen label text to a
      size that reads from the back of the room. !important because a colored
@@ -543,7 +552,7 @@
       </select>
       <select id="countrySelect" class="styleSelect" data-no-pan hidden></select>
     </div>
-    <p class="hint">Searches Commons' public map images. Once you pick one, it's downloaded and kept in this browser so it works offline afterward.</p>
+    <p class="hint">Searches Commons' public map images. Nothing is fetched from Wikimedia until you press Search. Once you pick a map, it's downloaded and kept in this browser (see Recently used) so it works offline afterward.</p>
     <label class="licenseFilterRow"><input type="checkbox" id="licenseFilter" data-no-pan> Public domain / CC0 only (safe to hand out to students)</label>
     <div id="searchStatus" class="status" hidden></div>
     <div id="resultsGrid" class="grid"></div>
@@ -565,6 +574,33 @@
   <div id="recentCard" class="card recent-card no-print" hidden>
     <h2>Recently used</h2>
     <div id="recentRow" class="recentRow"></div>
+  </div>
+
+  <div id="sliceCard" class="card recent-card no-print">
+    <h2>Time slices</h2>
+    <p class="hint" style="margin:0 0 8px;">Annotate the same map as it was at different dates: each slice keeps its own labels, markers, shaded regions, lines and key, and the base map and view stay put. Nothing changes on a project until you start slices.</p>
+    <button id="btnSliceStart" class="small" title="Makes what is on the map now the first slice">Start time slices</button>
+    <div id="sliceControls" hidden>
+      <div class="sliceRow">
+        <button id="btnSlicePrev" class="small" aria-label="Previous slice">&lsaquo;</button>
+        <input type="range" id="sliceRange" min="0" max="0" step="1" value="0" aria-label="Time slice">
+        <button id="btnSliceNext" class="small" aria-label="Next slice">&rsaquo;</button>
+      </div>
+      <p id="sliceReadout" class="hint" aria-live="polite" style="margin:0 0 6px;"></p>
+      <div class="sliceFields">
+        <label>Slice name <input id="sliceName" type="text" maxlength="80" data-no-pan></label>
+        <label>Year (negative for BCE) <input id="sliceYear" type="text" inputmode="numeric" maxlength="8" placeholder="e.g. 1803" data-no-pan></label>
+      </div>
+      <div class="toolbar-row" style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button id="btnSliceAdd" class="small" title="A new slice with nothing on it">Add blank slice</button>
+        <button id="btnSliceCopy" class="small" title="A new slice that starts as a copy of this one, for a border that moved a little">Copy this slice</button>
+        <button id="btnSliceSort" class="small" title="Puts the slices in order of year">Sort by year</button>
+        <button id="btnSliceDelete" class="small" title="Deletes this slice and what it holds">Delete slice</button>
+        <button id="btnSlicePrint" class="small primary" title="One small map per slice on a single sheet">Print the slices</button>
+        <button id="btnSlicePdf" class="small primary" title="The same sheet as a PDF">Save the slices as PDF</button>
+      </div>
+      <p id="sliceNote" class="hint" aria-live="polite" style="margin:6px 0 0;"></p>
+    </div>
   </div>
 
   <div class="card viewer-card">
@@ -643,10 +679,18 @@
       <button id="btnQuizGot" class="small" title="Tally one for the class — the running score is for a projected whole-class review">Class got it &#10003;</button>
       <button id="btnQuizMissed" class="small" title="Tally a miss — worth coming back to before the test">Missed &#10007;</button>
       <span id="quizScore" class="quizCount"></span>
+      <span id="quizCurrent" class="quizCount" aria-live="polite"></span>
       <button id="btnQuizRevealAll" class="small">Reveal all</button>
       <button id="btnQuizNewRound" class="small">New round</button>
       <label class="lineArrowLabel" title="Bump label text up to a size that reads from the back of the room"><input type="checkbox" id="quizBigText" data-no-pan> Projector text</label>
+      <label class="lineArrowLabel" title="Reveal the places this class has missed before first, using the quiz history kept in this browser"><input type="checkbox" id="quizMissedFirst" data-no-pan> Missed ones first</label>
     </div>
+    <details id="quizMemory" class="quizMemory no-print" hidden>
+      <summary id="quizMemorySummary">Missed in past rounds</summary>
+      <p class="hint" id="quizMemoryNote">Kept in this browser for this map project only: place names and counts, never students. It is not in a shared link.</p>
+      <ul id="quizMemoryList" class="quizMemoryList"></ul>
+      <button id="btnQuizForget" class="small" title="Delete the quiz history this browser keeps for this map project">Forget quiz history for this map</button>
+    </details>
     <div class="viewerToolbar no-print">
       <label class="pageFormatLabel" for="pageFormatSelect">Page shape</label>
       <select id="pageFormatSelect" class="styleSelect">
@@ -718,6 +762,7 @@
         <button id="btnExportLabelSet" class="small" title="Download this set as a small JSON file — hand it to a colleague, who can Import it into their own copy of this tool">Export set&hellip;</button>
         <button id="btnToTimeline" class="small" title="Open these places as events in the Timeline Builder, ready for you to add dates — this map covers where, the timeline covers when">Send places to Timeline Builder &rarr;</button>
         <button id="btnImportLabelSet" class="small" title="Load a label-set JSON file exported from this tool">Import set&hellip;</button>
+        <label id="timelineAllSlicesWrap" class="checkLabel" hidden title="Sends the places of every time slice, each event dated by its slice's year"><input type="checkbox" id="timelineAllSlices" checked data-no-pan> Send every time slice, dated by year</label>
         <input type="file" id="importLabelSetInput" accept="application/json,.json" hidden data-no-pan>
         <button id="btnDeleteLabelSet" class="small" hidden>Delete this saved set</button>
         <button id="btnLabelSetClose" class="small">Close</button>
@@ -864,6 +909,8 @@ import { createStore } from './blank-map-generator/bmg-store.js';
 import { searchMaps, searchByRegion, fetchMapImage } from './blank-map-generator/bmg-commons.js';
 import { CONTINENTS } from './blank-map-generator/bmg-geography.js';
 import { createViewer } from './blank-map-generator/bmg-viewer.js';
+import * as Slices from './blank-map-generator/bmg-slices.js';
+import * as QuizMemory from './blank-map-generator/bmg-quiz-memory.js';
 import { loadSource as loadLiveSource, drawBaseMap, drawExtent, parseBaseMapId } from './blank-map-generator/bmg-live.js';
 import { createLabelLayer, labelColorHex, labelFontSizePx, labelSwatchSvg, LABEL_COLORS } from './blank-map-generator/bmg-labels.js';
 import {
@@ -888,7 +935,7 @@ import { createLocatorInset } from './blank-map-generator/bmg-locator.js';
 import { isCalibrated, toLatLon, fromLatLon, formatLatLon, computeGraticule, computeScaleBar } from './blank-map-generator/bmg-latlong.js';
 import * as cache from './blank-map-generator/bmg-map-cache.js';
 import {
-  BASE_MAP_PRESETS, BASE_MAP_STYLES, findPreset, baseMapId, buildBaseMapRecord, hasRelief,
+  BASE_MAP_PRESETS, BASE_MAP_STYLES, findPreset, baseMapId, buildBaseMapRecord, buildBaseMapMeta, hasRelief,
   listRegionNames, sameBaseMap, presetFromBaseMapId, loadDividedGeoJson,
   renderBaseMapCanvas, NATURAL_EARTH_ATTRIBUTION,
 } from './blank-map-generator/bmg-vector.js';
@@ -911,7 +958,9 @@ const viewport = el('viewport');
 const stage = el('stage');
 const mapImg = el('mapImg');
 
+let sliceSheetBuilding = false; // while the slices sheet swaps each slice's annotations in, nothing may be saved
 function save() {
+  if (sliceSheetBuilding) return;
   store.setActiveProject(project);
   recordHistoryPoint();
 }
@@ -961,7 +1010,7 @@ const liveBase = (() => {
     const mine = ++token;
     el('locatorCanvas').hidden = true; el('locatorImg').hidden = false;   // the old map's inset must not outlive it
     const p = parseBaseMapId(id);
-    if (!p || !p.preset) { hide(); return; }
+    if (!p || !p.preset) { hide(); return false; }
     let src;
     try {
       // A shaded map needs its colours: the caller that just built them passes them; a project opened from
@@ -969,16 +1018,17 @@ const liveBase = (() => {
       if (p.choroKey && !fills) {
         const again = await buildActiveChoropleth(p.preset);
         fills = again && again.ok && again.key === p.choroKey ? again.fills : null;
-        if (!fills) { if (mine === token) hide(); return; }
+        if (!fills) { if (mine === token) hide(); return false; }
       }
       src = await loadLiveSource({ preset: p.preset, style: p.style, borders: p.borders, relief: p.relief, fills: p.choroKey ? fills : null });
-    } catch (e) { if (mine === token) hide(); return; }
-    if (mine !== token || src.width !== record.width || src.height !== record.height) { if (mine === token) hide(); return; }
+    } catch (e) { if (mine === token) hide(); return false; }
+    if (mine !== token || src.width !== record.width || src.height !== record.height) { if (mine === token) hide(); return false; }
     source = src;
     canvas.hidden = false;
     draw();
     drawLocator();
     mapImg.style.visibility = 'hidden';
+    return true;
   }
   new ResizeObserver(schedule).observe(viewport);
   /** Draws the base map into an export's context in place of drawImage(mapImg): same view, same projection, the context's own scale as dpr. */
@@ -1385,13 +1435,54 @@ function setStudentModeEnabled(on) {
 // labels are revealed are session-only — a new round starts clean.
 let quizScore = { got: 0, missed: 0 };
 
+// Quiz memory (Path 20 P5): "Class got it" / "Missed" also record against the place the class is answering (the last
+// one revealed), in this browser, for this map project: which places keep getting missed. Place names and counts only.
+// One mark per place per round: the same button twice counts once, the other button replaces it.
+let quizMemory = QuizMemory.load();
+const roundMarks = new Map(); // label id -> 'got' | 'missed', this round
+const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
+function markCurrent(result) {
+  const cur = labelLayer.getCurrentQuizLabel();
+  if (!cur) return;
+  quizMemory = QuizMemory.record(quizMemory, store.getActiveId(), cur.text, result, todayStr(), roundMarks.get(cur.id) || null);
+  roundMarks.set(cur.id, result);
+  QuizMemory.save(quizMemory);
+}
+
+function renderQuizMemory() {
+  const box = el('quizMemory');
+  box.hidden = el('quizBar').hidden;
+  if (box.hidden) return;
+  const weak = QuizMemory.weakList(quizMemory, store.getActiveId());
+  el('quizMemorySummary').textContent = weak.length ? `Missed in past rounds (${weak.length})` : 'Missed in past rounds (none yet)';
+  const ul = el('quizMemoryList');
+  ul.textContent = '';
+  weak.slice(0, 20).forEach(w => {
+    const li = document.createElement('li');
+    li.textContent = `${w.text}: missed ${w.missed}, got ${w.got}${w.at ? ` (last ${w.last} ${w.at})` : ''}`;
+    ul.appendChild(li);
+  });
+  if (weak.length > 20) { const li = document.createElement('li'); li.textContent = `and ${weak.length - 20} more`; ul.appendChild(li); }
+  el('btnQuizForget').disabled = !Object.prototype.hasOwnProperty.call(quizMemory.projects, store.getActiveId());
+}
+
 function setQuizModeEnabled(on) {
   labelLayer.setQuizMode(on);
   el('btnQuizMode').classList.toggle('active', on);
   el('quizBar').hidden = !on;
   quizScore = { got: 0, missed: 0 };
+  roundMarks.clear();
+  if (on) {
+    // Read afresh (another tab may have marked) and drop history of map projects deleted since.
+    const live = store.listProjects().map(p => p.id);
+    const fresh = QuizMemory.load();
+    quizMemory = QuizMemory.prune(fresh, live);
+    if (Object.keys(quizMemory.projects).length !== Object.keys(fresh.projects).length) QuizMemory.save(quizMemory);
+  }
   if (!on) {
     el('quizBigText').checked = false;
+    el('quizMissedFirst').checked = false;
     document.body.classList.remove('quiz-projector');
   }
   renderQuizBar(labelLayer.getQuizProgress());
@@ -1403,16 +1494,27 @@ function renderQuizBar({ revealed, total } = { revealed: 0, total: 0 }) {
     ? `Score: ${quizScore.got} ✓ / ${quizScore.missed} ✗`
     : '';
   el('btnQuizReveal').disabled = revealed >= total;
+  const cur = labelLayer.getCurrentQuizLabel();
+  el('quizCurrent').textContent = cur ? `Marking: ${cur.text}` : '';
+  renderQuizMemory();
 }
 
-el('btnQuizReveal').addEventListener('click', () => labelLayer.revealNext());
+el('btnQuizReveal').addEventListener('click', () => labelLayer.revealNext(
+  el('quizMissedFirst').checked ? hidden => QuizMemory.pickWeak(hidden, quizMemory, store.getActiveId()) : null));
+el('btnQuizForget').addEventListener('click', () => {
+  if (!confirm('Forget the quiz history this browser keeps for this map project? Other maps are not touched.')) return;
+  quizMemory = QuizMemory.forget(quizMemory, store.getActiveId());
+  QuizMemory.save(quizMemory);
+  renderQuizBar(labelLayer.getQuizProgress());
+});
 el('btnQuizRevealAll').addEventListener('click', () => labelLayer.revealAll());
 el('btnQuizNewRound').addEventListener('click', () => {
   quizScore = { got: 0, missed: 0 };
+  roundMarks.clear();
   labelLayer.hideAll();
 });
-el('btnQuizGot').addEventListener('click', () => { quizScore.got++; renderQuizBar(labelLayer.getQuizProgress()); });
-el('btnQuizMissed').addEventListener('click', () => { quizScore.missed++; renderQuizBar(labelLayer.getQuizProgress()); });
+el('btnQuizGot').addEventListener('click', () => { quizScore.got++; markCurrent('got'); renderQuizBar(labelLayer.getQuizProgress()); });
+el('btnQuizMissed').addEventListener('click', () => { quizScore.missed++; markCurrent('missed'); renderQuizBar(labelLayer.getQuizProgress()); });
 el('quizBigText').addEventListener('change', () => {
   document.body.classList.toggle('quiz-projector', el('quizBigText').checked);
   labelLayer.reposition();
@@ -1836,12 +1938,20 @@ function timelinePlaces() {
   if (!isCalibrated(project.calibration) || !currentSize.width) {
     throw new Error('Set this map’s latitude and longitude first (Calibrate), so each label has real coordinates to send.');
   }
-  const places = project.labels
+  // With time slices the places of every slice go, each carrying its slice's year, unless the box is cleared
+  // (then only the slice on the map goes, undated as before).
+  const everySlice = Slices.hasSlices(project) && el('timelineAllSlices').checked;
+  const sources = everySlice
+    ? project.slices.list.map(s => ({ year: s.year, labels: Slices.contentOf(project, s.id).labels }))
+    : [{ year: null, labels: project.labels }];
+  const places = sources.flatMap(src => src.labels
     .filter(l => l.text)
     .map(l => {
       const { lat, lon } = toLatLon(project.calibration, currentSize.width, currentSize.height, l.x, l.y);
-      return { name: l.text, lat: Math.round(lat * 1e4) / 1e4, lon: Math.round(lon * 1e4) / 1e4 };
-    })
+      const place = { name: l.text, lat: Math.round(lat * 1e4) / 1e4, lon: Math.round(lon * 1e4) / 1e4 };
+      if (src.year !== null) place.year = src.year;
+      return place;
+    }))
     .filter(p => isFinite(p.lat) && isFinite(p.lon));
   if (!places.length) {
     throw new Error('This map has no text labels to send yet. Add labels for the places you want on the timeline first.');
@@ -1859,8 +1969,9 @@ el('btnToTimeline').addEventListener('click', () => {
   let state;
   try { state = timelinePlaces(); } catch (e) { setLabelSetStatus(e.message, true); return; }
   const r = Handoffs.open(TIMELINE_HANDOFF, state);
+  const dated = state.places.filter(p => p.year !== undefined).length;
   setLabelSetStatus(r.ok
-    ? `Sent ${state.places.length} place${state.places.length === 1 ? '' : 's'} to the Timeline Builder in a new tab, as events dated year 0 — set each event's real year there. It saves as its own timeline; editing it does not change this map.`
+    ? `Sent ${state.places.length} place${state.places.length === 1 ? '' : 's'} to the Timeline Builder in a new tab, ${dated ? `${dated} dated by their slice's year and ${state.places.length - dated ? 'the rest' : 'none'} at year 0` : 'as events dated year 0'} — set each event's real year there. It saves as its own timeline; editing it does not change this map.`
     : r.message, !r.ok);
 });
 
@@ -2704,15 +2815,12 @@ async function rebuildBuiltInRecord(id) {
   try {
     const p = parseBaseMapId(id);
     if (!p || !p.preset) return null;
-    let fills = null;
     if (p.choroKey) {
       const again = await buildActiveChoropleth(p.preset);
       if (!(again && again.ok && again.key === p.choroKey)) return null;
-      fills = again.fills;
     }
-    const record = await buildBaseMapRecord(p.preset, { style: p.style, borders: p.borders, fills, choroKey: p.choroKey, relief: p.relief });
+    const record = buildBaseMapMeta(p.preset, { style: p.style, borders: p.borders, choroKey: p.choroKey, relief: p.relief });
     if (record.id !== id) return null;
-    await cache.putCachedMap(record).catch(() => {});
     return record;
   } catch (e) { return null; }
 }
@@ -2745,11 +2853,11 @@ async function useBuiltInBaseMap() {
     syncReliefControl();               // the shading state may have just changed
     const relief = !el('baseMapRelief').disabled && el('baseMapRelief').checked && !shaded;
     const id = baseMapId(preset, style, borders, choroKey, relief);
-    let record = await cache.getCachedMap(id).catch(() => null);
-    if (!record) {
-      record = await buildBaseMapRecord(preset, { style, borders, fills: shaded ? choro.fills : null, choroKey, relief });
-      await cache.putCachedMap(record).catch(() => {});
-    }
+    // A built-in map is drawn from the vectors, so nothing is rendered or stored for it here: a record
+    // from an older visit is used as it is, otherwise the record is its size and calibration, no picture
+    // (displayMap() draws the picture only if the live drawing cannot run).
+    const record = (await cache.getCachedMap(id).catch(() => null))
+      || buildBaseMapMeta(preset, { style, borders, choroKey, relief });
     // Re-shading (or un-shading) a map the project is already on is the same
     // piece of paper with different ink: same preset, same crop, same pixel
     // size, same calibration. Labels and markers a teacher has already placed
@@ -3251,10 +3359,10 @@ el('uploadMapInput').addEventListener('change', () => {
 function displayMap(record, opts = {}) {
   const isSameMap = project.mapId === record.id || !!opts.keepAnnotations;
   if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
-  currentObjectUrl = URL.createObjectURL(record.blob);
+  currentObjectUrl = record.blob ? URL.createObjectURL(record.blob) : null;
   currentSize = { width: record.width, height: record.height };
 
-  mapImg.onload = () => {
+  const sized = () => {
     const w = record.width || mapImg.naturalWidth;
     const h = record.height || mapImg.naturalHeight;
     mapImg.width = w;
@@ -3275,12 +3383,33 @@ function displayMap(record, opts = {}) {
     renderGrid();
     locator.updateRect();
   };
-  mapImg.src = currentObjectUrl;
+  mapImg.onload = sized;
   mapImg.hidden = false;
   currentRecord = record;
-  liveBase.show(record.id, record, opts.liveFills);
   el('viewerEmpty').hidden = true;
-  locator.setImage(currentObjectUrl, record.width, record.height);
+  if (currentObjectUrl) {
+    mapImg.src = currentObjectUrl;
+    locator.setImage(currentObjectUrl, record.width, record.height);
+    liveBase.show(record.id, record, opts.liveFills);
+  } else {
+    // No picture: the stage takes its size from the record, the locator its box from the same numbers, and
+    // the vectors draw the map. If they cannot (a missing data file), the picture is rendered then.
+    mapImg.removeAttribute('src');
+    locator.setImage(null, record.width, record.height);
+    sized();
+    liveBase.show(record.id, record, opts.liveFills).then(async drawn => {
+      if (drawn || currentRecord !== record) return;
+      try {
+        const p = parseBaseMapId(record.id);
+        const full = await buildBaseMapRecord(p.preset, { style: p.style, borders: p.borders, fills: opts.liveFills || null, choroKey: p.choroKey, relief: p.relief });
+        if (currentRecord !== record) return;
+        currentRecord = full;
+        currentObjectUrl = URL.createObjectURL(full.blob);
+        mapImg.src = currentObjectUrl;
+        locator.setImage(currentObjectUrl, full.width, full.height);
+      } catch (e) { setStatus('Couldn’t draw that base map.', true); }
+    });
+  }
 
   project.mapId = record.id;
   // Every caller of displayMap() is a user action that loads/selects a map —
@@ -4741,7 +4870,7 @@ function showEmptyMapState(mapMissing) {
   el('viewerEmpty').hidden = false;
   el('viewerEmpty').textContent = mapMissing
     ? "This project's map isn't cached in this browser anymore — search above and re-download it to keep annotating."
-    : 'Search above and pick a map to get started.';
+    : 'Pick a built-in map above, or press Search Wikimedia Commons (nothing is fetched until you do).';
   setPlaceMode('none');
   updateShadeButton();
   labelLayer.setLabels([]);
@@ -4771,9 +4900,191 @@ function showEmptyMapState(mapMissing) {
 }
 
 /** Loads whichever project is now active (after init, switch, create, or delete) into the viewer. */
+
+// --- Time slices (Path 20 P4; bmg-slices.js) ----------------------------------
+// The active slice's annotations are the project's own fields, so nothing else on this page knows slices exist:
+// switching writes them into the slice and loads another's, then redraws the four layers and the key.
+function showSliceContent() {
+  labelLayer.setLabels(project.labels);
+  markerLayer.setMarkers(project.markers);
+  regionLayer.setRegions(project.regions);
+  lineLayer.setLines(project.lines);
+  renderLegend();
+}
+
+function sliceLabel(s, i, n) {
+  const y = Slices.yearText(s.year);
+  return `Slice ${i + 1} of ${n}: ${s.name}${y ? ', ' + y : ''}`;
+}
+
+function refreshSliceUI() {
+  const on = Slices.hasSlices(project);
+  el('btnSliceStart').hidden = on;
+  el('timelineAllSlicesWrap').hidden = !on;
+  el('sliceControls').hidden = !on;
+  if (!on) return;
+  const list = project.slices.list;
+  const i = Math.max(0, list.findIndex(s => s.id === project.slices.active));
+  const range = el('sliceRange');
+  range.max = String(list.length - 1);
+  range.value = String(i);
+  const text = sliceLabel(list[i], i, list.length);
+  range.setAttribute('aria-valuetext', text);
+  el('sliceReadout').textContent = text;
+  el('sliceName').value = list[i].name;
+  el('sliceYear').value = list[i].year === null ? '' : String(list[i].year);
+  el('btnSlicePrev').disabled = i === 0;
+  el('btnSliceNext').disabled = i === list.length - 1;
+  el('btnSliceDelete').disabled = list.length < 2;
+  el('btnSliceAdd').disabled = el('btnSliceCopy').disabled = list.length >= Slices.MAX_SLICES;
+  el('btnSlicePrint').disabled = el('btnSlicePdf').disabled = list.length < 2;
+}
+
+function goToSlice(id) {
+  if (!Slices.switchTo(project, id)) return;
+  setPlaceMode('none');
+  showSliceContent();
+  resetHistory();
+  save();
+  refreshSliceUI();
+}
+
+function sliceStep(d) {
+  const list = project.slices.list;
+  const i = list.findIndex(s => s.id === project.slices.active) + d;
+  if (list[i]) goToSlice(list[i].id);
+}
+
+el('btnSliceStart').addEventListener('click', () => {
+  Slices.enableSlices(project);
+  save();
+  refreshSliceUI();
+  el('sliceNote').textContent = 'Slices started: what is on the map is “Slice 1”. Add a slice, give each a name and a year, and move between them with the slider.';
+});
+el('sliceRange').addEventListener('input', () => {
+  const s = project.slices.list[Number(el('sliceRange').value)];
+  if (s) goToSlice(s.id);
+});
+el('btnSlicePrev').addEventListener('click', () => sliceStep(-1));
+el('btnSliceNext').addEventListener('click', () => sliceStep(1));
+function addSliceAndShow(copy) {
+  const id = Slices.addSlice(project, { copy });
+  if (!id) { el('sliceNote').textContent = `Up to ${Slices.MAX_SLICES} slices fit on a sheet.`; return; }
+  goToSlice(id);
+  el('sliceNote').textContent = copy ? 'Copied: this slice starts as the one before it. Change what differs and set its year.' : 'A new, empty slice. Place the labels, markers, shapes and lines for this date.';
+  el('sliceName').focus();
+}
+el('btnSliceAdd').addEventListener('click', () => addSliceAndShow(false));
+el('btnSliceCopy').addEventListener('click', () => addSliceAndShow(true));
+el('btnSliceSort').addEventListener('click', () => { Slices.sortByYear(project); save(); refreshSliceUI(); el('sliceNote').textContent = 'Sorted oldest first; undated slices are last.'; });
+el('btnSliceDelete').addEventListener('click', () => {
+  const s = Slices.activeSlice(project);
+  if (!s || project.slices.list.length < 2) return;
+  if (!confirm(`Delete “${s.name}” and everything placed on it?`)) return;
+  Slices.removeSlice(project, s.id);
+  showSliceContent();
+  resetHistory();
+  save();
+  refreshSliceUI();
+  el('sliceNote').textContent = 'Deleted.';
+});
+function commitSliceMeta() {
+  const s = Slices.activeSlice(project);
+  if (!s) return;
+  const yearText = el('sliceYear').value.trim();
+  Slices.setSliceMeta(project, s.id, { name: el('sliceName').value, year: yearText });
+  el('sliceNote').textContent = yearText && Slices.parseYear(yearText) === null ? '“' + yearText + '” is not a year; it was left blank. Use a whole number such as 1803 or -44.' : '';
+  save();
+  refreshSliceUI();
+}
+el('sliceName').addEventListener('change', commitSliceMeta);
+el('sliceYear').addEventListener('change', commitSliceMeta);
+
+/** One panel per slice, the same view of the same map, each with its name and year; drawn by the worksheet's own map renderer. */
+async function buildSlicesCanvas(pageWIn, pageHIn, dpi) {
+  Slices.captureLive(project);
+  const list = project.slices.list.slice();
+  const U = SERIES_UNITS_PER_IN;
+  const pageW = pageWIn * U, pageH = pageHIn * U;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(pageWIn * dpi);
+  canvas.height = Math.round(pageHIn * dpi);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(canvas.width / pageW, canvas.height / pageH);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, pageW, pageH);
+  const margin = 40, gap = 18, labelH = 22, headingH = 34;
+  const vp = viewport.getBoundingClientRect();
+  const aspect = vp.width / vp.height;
+  drawSeriesText(ctx, el('wsTitle').value.trim() || 'Time slices', margin, margin + 16, 17, { weight: '700', color: '#1f3550' });
+  const top = margin + headingH, boxW0 = pageW - margin * 2, boxH0 = pageH - top - margin;
+  let best = null;
+  for (let cols = 1; cols <= list.length; cols++) {
+    const rows = Math.ceil(list.length / cols);
+    const cw = (boxW0 - gap * (cols - 1)) / cols, ch = (boxH0 - gap * (rows - 1)) / rows - labelH;
+    const w = Math.min(cw, ch * aspect);
+    if (!best || w > best.w) best = { cols, rows, w, h: w / aspect, cw, ch: ch + labelH };
+  }
+  const gridW = best.cols * best.w + (best.cols - 1) * gap;
+  const x0 = margin + (boxW0 - gridW) / 2;
+  const live = Slices.liveContent(project);
+  sliceSheetBuilding = true;
+  const dpr = dpi / U; // canvas pixels per panel unit: the sheet is U units to an inch
+  try {
+    for (let i = 0; i < list.length; i++) {
+      const c = Slices.contentOf(project, list[i].id);
+      for (const f of Slices.CONTENT_FIELDS) project[f] = c[f];
+      const cx = x0 + (i % best.cols) * (best.w + gap), cy = top + Math.floor(i / best.cols) * (best.ch + gap);
+      const y = Slices.yearText(list[i].year);
+      drawSeriesText(ctx, list[i].name + (y ? ' — ' + y : ''), cx + best.w / 2, cy + 14, 12, { align: 'center', weight: '700' });
+      const panel = await renderWorksheetMapCanvas(Math.round(best.w), Math.round(best.h), dpr, {});
+      ctx.drawImage(panel, cx, cy + labelH, best.w, best.h);
+      ctx.strokeStyle = '#9aa4b2'; ctx.lineWidth = 1;
+      ctx.strokeRect(cx, cy + labelH, best.w, best.h);
+    }
+  } finally {
+    for (const f of Slices.CONTENT_FIELDS) project[f] = live[f];
+    sliceSheetBuilding = false;
+    save();
+  }
+  drawSeriesText(ctx, `${list.length} slices of one map`, margin, pageH - margin + 14, 9);
+  return canvas;
+}
+
+async function withSlices(btn, busy, fn) {
+  if (!Slices.hasSlices(project) || project.slices.list.length < 2 || !currentSize.width) return;
+  await withBusyButton(btn, busy, async () => {
+    try {
+      const { w, h } = getPhysicalPageInches();
+      await fn(await buildSlicesCanvas(w, h, PRINT_DPI), w, h);
+    } catch (err) { alert(`Couldn't build the slices sheet (${err.message}).`); }
+  });
+}
+el('btnSlicePrint').addEventListener('click', () => withSlices(el('btnSlicePrint'), 'Preparing…', async (canvas, wIn, hIn) => {
+  const stage = el('printExportStage');
+  stage.innerHTML = '';
+  const img = document.createElement('img');
+  img.alt = '';
+  const loaded = new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+  img.src = canvas.toDataURL('image/png');
+  stage.appendChild(img);
+  setPrintPageSize(wIn, hIn);
+  await loaded;
+  document.body.classList.add('printing-map-export');
+  window.print();
+}));
+el('btnSlicePdf').addEventListener('click', () => withSlices(el('btnSlicePdf'), 'Building PDF…', async (canvas, wIn, hIn) => {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: wIn >= hIn ? 'l' : 'p', unit: 'in', format: [wIn, hIn], compress: true });
+  pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, wIn, hIn);
+  pdf.save('map-slices.pdf');
+}));
+
+
 async function loadActiveProjectIntoUI(opts) {
   project = store.getActiveProject();
   refreshProjectSwitcher();
+  refreshSliceUI();
   syncPageFormatControls();
   applyViewportSize();
   el('grayscaleSafeCheck').checked = project.grayscaleSafePrint !== false;
@@ -4800,9 +5111,9 @@ async function loadActiveProjectIntoUI(opts) {
   // to set the base map itself (the starter projects). Kicking off a Wikimedia
   // search and then immediately throwing the results away is a network request
   // on a school network for nothing.
-  if (opts && opts.skipSearch) return;
+  // Devon, 2026-10-07: nothing goes to Wikimedia until the teacher presses Search. The box holds a suggested
+  // query and nothing more (Path 20 P5; test:blank-map-quiz-memory-smoke holds the page to no request at load).
   el('searchInput').value = 'blank world map';
-  runSearch('blank world map');
 }
 
 el('projectSwitcher').addEventListener('change', () => {

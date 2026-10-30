@@ -178,6 +178,7 @@
         { k: 'np_absent', student: true },
         { k: 'np_crazy' },
         { k: 'np_current', student: true },
+        { k: 'np_daily', student: true },
         { k: 'np_history', student: true },
         { k: 'np_hof', student: true },
         { k: 'np_lucky', student: true },
@@ -189,6 +190,11 @@
         { k: 'np_rosters', student: true, rollover: 'reduce' },
         { k: 'np_stats', student: true },
         { k: 'np_theme' },
+        { k: 'np_theme_packs' },
+      ],
+      /* Path 15 P4: the Prompts tab can draw its task from the teacher's question bank. Read with peek(), never written. */
+      reads: [
+        'gvb-question-bank',
       ],
     },
     {
@@ -438,6 +444,9 @@
         { k: 'subPlanBuilder.history.v1', rollover: 'ask' },
         { k: 'subPlanBuilder.lastAbsence.v1' },
         { k: 'subPlanBuilder.standingDetails.v1', rollover: 'reduce' },
+        /* What the sub said, one typed note per date out. Not in the share link, history, .docx or text copy.
+           The teacher types it, so it can name a student: student data, deleted at the year-end rollover. */
+        { k: 'subPlanBuilder.subSaid.v1', student: true },
       ],
     },
     {
@@ -445,6 +454,7 @@
       title: 'Sub Binder / Day Bundle Generator',
       file: 'Tools/045-sub-binder-generator.html',
       category: 'scheduling-subs',
+      share: { param: 'binder' },
       keys: [
         { k: 'gvb-sub-binder:included-sections.v1' },
         { k: 'gvb-sub-binder:today-lesson', rollover: 'ask' },
@@ -455,6 +465,38 @@
         'hall-pass-log-sections',
         'scv_calendar_v1',
         'seating-chart-v1',
+        'snfs_slip_v1',
+        'subPlanBuilder.history.v1',
+        'subPlanBuilder.lastAbsence.v1',
+        'subPlanBuilder.standingDetails.v1',
+      ],
+    },
+    {
+      slug: 'packet-builder',
+      title: 'Packet Builder',
+      file: 'Tools/090-packet-builder.html',
+      category: 'scheduling-subs',
+      /* The layout and the presets are section ids only; no section's content
+         is copied here (Path 10 P1). `reads` is the union of the providers'
+         storageKeys in Tools/packet-builder/providers.js, and
+         Tools/packet-builder/test/providers.test.mjs holds the two equal. */
+      keys: [
+        { k: 'gvb-packet:layout.v1' },
+        { k: 'gvb-packet:presets.v1' },
+        /* When the Emergency binder was last printed and a fingerprint of each source key then
+           (_shared/binder-stale.js). No data is copied; index.html and 010 read it for the reminder. */
+        { k: 'gvb-packet:evergreen.v1' },
+      ],
+      reads: [
+        'behavior-points-tracker-sections',
+        'crh_students_v1',
+        'gvb-exit-ticket:customPrompts',
+        'gvb-question-bank',
+        'hall-pass-log-sections',
+        'np_rosters',
+        'scv_calendar_v1',
+        'seating-chart-v1',
+        'snfs_slip_v1',
         'subPlanBuilder.history.v1',
         'subPlanBuilder.lastAbsence.v1',
         'subPlanBuilder.standingDetails.v1',
@@ -660,6 +702,12 @@
       file: 'Tools/018-qr-scavenger-hunt-builder.html',
       category: 'games-rewards',
       share: { param: 'hunt' },
+      /* The site's question bank (Path 12 P2, increment 6): the Question bank card lists it through
+         _shared/question-bank.js's peek(), which writes nothing. The bank is OWNED by Review Game Board's row. */
+      reads: [
+        'gvb-question-bank',
+        'gvb-review-board-bank:entries',
+      ],
       keys: [
         { k: 'qr-scavenger-hunt-sets', rollover: 'reduce' },
         { k: 'qr-scavenger-hunt-settings' },
@@ -671,6 +719,12 @@
       file: 'Tools/019-escape-room-builder.html',
       category: 'games-rewards',
       share: { param: 'room' },
+      /* The site's question bank (Path 12 P2, increment 6): the Question bank card lists it through
+         _shared/question-bank.js's peek(), which writes nothing. The bank is OWNED by Review Game Board's row. */
+      reads: [
+        'gvb-question-bank',
+        'gvb-review-board-bank:entries',
+      ],
       /* Station clue images are not in this key since Path 4 P4: each station
          holds an `idb:` reference and the images are in `gvb-media` (declared
          on the site row above) under the `escape-room/` namespace. Rooms and
@@ -961,6 +1015,9 @@
       keys: [
         { k: 'gvb-vocab-flashcards:current' },
         { k: 'gvb-vocab-flashcards:list' },
+        /* The shared word lists (Path 19 P1, _shared/word-list.js): 040's Word
+           Lists hub owns them; 039, 014, 027, 051 and 052 read them in P2. */
+        { k: 'gvb-word-lists' },
       ],
       prefixes: [
         { p: 'gvb-vocab-flashcards:', legacy: true },
@@ -1039,16 +1096,17 @@
         { k: 'novel-study-units', rollover: 'reduce' },
         { k: 'novel-study-units-current' },
       ],
+      /* The vocabulary export writes a list into the shared word lists (Path 19 P2) and
+         reads 040's old list names to keep the new one's name clear of them. */
       writes: [
         'gvb-review-board:current',
         'gvb-review-board:data:',
         'gvb-review-board:list',
-        'gvb-vocab-flashcards:current',
-        'gvb-vocab-flashcards:data:',
-        'gvb-vocab-flashcards:list',
+        'gvb-word-lists',
       ],
       reads: [
         'crh_students_v1',
+        'gvb-vocab-flashcards:list',
         'np_rosters',
       ],
     },
@@ -1226,6 +1284,9 @@
         { k: '__bmg_probe__', transient: true },
         { k: 'bmg_project_v1', legacy: true },
         { k: 'bmg_workspace_v1' },
+        /* Quiz memory (Path 20 P5): per map project, which place names the class got or missed. Place names and counts
+           only, no student: not student data, so the year rollover leaves it. Never inside a project or a share link. */
+        { k: 'bmg_quiz_memory_v1' },
       ],
       idb: [
         { name: 'bmg-maps', cache: true, note: 'Cached map images for the Blank Map Generator. Safe to leave out — they download again when needed.' },
@@ -1422,8 +1483,15 @@
         { p: 'gvb-vocab-conj:', legacy: true },
         { p: 'gvb-vocab-conj:data:' },
       ],
+      /* The shared word lists (Path 19 P2): this page reads 040's lists from them and writes its
+         vocabulary into the list of the same name (term and definition only). 040's own keys are
+         read once by word-list.js's importLegacy. */
       reads: [
         'gvb-vocab-flashcards:list',
+        'gvb-word-lists',
+      ],
+      writes: [
+        'gvb-word-lists',
       ],
       readPrefixes: [
         'gvb-vocab-flashcards:data:',
@@ -1454,7 +1522,9 @@
       prefixes: [
         { p: 'gvb-roleplay:', legacy: true },
       ],
+      /* The shared word lists (Path 19 P2): a list fills a scenario's empty cards; read-only. */
       reads: [
+        'gvb-word-lists',
         'np_rosters',
       ],
     },
@@ -1473,9 +1543,11 @@
       prefixes: [
         { p: 'clm_list_v1:' },
       ],
+      /* The shared word lists (Path 19 P2): a list can be added to the box; read-only. */
       reads: [
         'clm_lang_v1',
         'clm_words_v1',
+        'gvb-word-lists',
       ],
     },
     {
@@ -1534,6 +1606,10 @@
       share: { param: 'cognates' },
       keys: [
         { k: 'cffb_list_v1' },
+      ],
+      /* The shared word lists (Path 19 P2): a list can be put in the bulk box; read-only. */
+      reads: [
+        'gvb-word-lists',
       ],
     },
     {

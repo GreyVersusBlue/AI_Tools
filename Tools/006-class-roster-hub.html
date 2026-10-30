@@ -584,6 +584,7 @@
   var STORE_KEY = Roster.ROSTERS_KEY;            // 'np_rosters' — owned by _shared/roster.js now; this page keeps the
                                                  // name only for OWN_KEYS, which the dependency scan below excludes
   var ARCHIVE_KEY = 'crh_archived_students';     // { [rosterName]: [name, name, ...] } — this tool only
+  // Read by Tools/packet-builder/providers.js (090 Packet Builder): np_rosters and the preferred names in this sidecar. Keep the shape or bump the key.
   var RECORDS_KEY = 'crh_students_v1';           // richer per-student records, kept beside np_rosters (see note below)
   var ROSTER_ARCHIVE_KEY = 'crh_archive_v1';     // archived rosters + past school years
   var FLAGS_KEY = 'crh_flags_v1';                // StudentFlags.KEY: absent today / do not cold call, by student id

@@ -9,6 +9,347 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-27: Path 19 P3 increment 2, 079 on the engine (2026-10-29, v474-v475)
+
+**What shipped.** Two commits on local `main`, a `CACHE_VERSION` bump in each.
+- **v474, the starter posters from the engine.** `TEMPLATES` in 079 is built at load from `STARTERS` (a language, a tense, a title and, per panel, the label printed over it and the verb) by `Conjugate.conjugate()`; the person column comes from the pack. The 29 recorded posters (nine starters at 1, 2 and 3 per row, two with colour off) print string-for-string what `golden-old-posters.json` holds, so nothing moved on paper. `test:conjugate`'s 079 parity case used to cut the typed literal out of the page by text; there is no literal now, so it reads `Tools/conjugate/test/_079-templates-frozen.json` (the old literal, cut from the page at 6c84811) and also fails if the page holds a typed-out starter form again or stops calling `Conjugate.conjugate`.
+- **v475, the Add a verb card.** Language, tense, infinitive and an optional English meaning become an ordinary panel (`panel.name` = infinitive plus meaning, forms from the engine). A verb the pack does not list is accepted, conjugated as regular and flagged `unchecked` (P19-7): the status line says so and the panel in the editor carries a line; **nothing about checking is printed**, and the flag is local (a share link rebuilds panels from their whitelisted fields and drops it). A word the pack cannot read as a verb adds nothing and says why. Every add says "Unreviewed: no language teacher has read these forms yet". A blank poster takes the language's person labels; a poster with forms keeps its own and the status line says so. Suite `test:verb-poster-add-verb` (8618, 29 checks).
+
+**Decided without asking (reverse cheaply).** The unchecked flag stays on the panel after the teacher edits its forms (nothing in the page can tell that someone read them); it is not printed, because a wall poster with "unchecked" on it is worse than one the teacher has read before printing. The status line, not an alert, carries the refusals.
+
+**Not done, and why.** *German, Italian and Latin were not built.* The brief allowed German and Italian "as a line of data each only if they need no new record kind". Neither is a line. Italian is a pack: its future and conditional drop the infinitive's vowel (parlare, parlerò), which the engine's `stemFrom: 'infinitive'` cannot do, and -ire verbs split into plain and -isc- (dormo, finisco) with no way to tell them apart except a per-verb flag (French's `ir2` is the model). German needs separable prefixes, strong-verb vowel changes at du/er and a future built on the infinitive; Latin needs principal parts. All three are listed in rank 56. 079's irregular call-out data (`irregulars.js`) is still typed by hand and held equal to the engine by `test:conjugate`.
+**Not verified.** No language teacher has read any form, on the poster or in the engine. The poster was not printed on paper. The full `npm test` and `test:preview-adopters` were not run.
+
+## AI-27: Path 19 P3 increment 1, the conjugation engine, Spanish and French, and 039 drilling from it (2026-10-29, v469-v473)
+
+**What shipped.** Five commits on local `main`, a `CACHE_VERSION` bump in each step.
+- **v469, `_shared/conjugate.js` (`window.Conjugate`), `conjugate-es.js`, `conjugate-fr.js`.** Six tenses a language (Devon: "the six"), regular patterns by verb class, spelling changes derived and never declared (`c>qu g>gu z>c c>zc g>j gu>g i>y u>uy i>í`; French `c>ç g>ge ç>c ge>g y>i`, with `-ayer` giving both), stem changes as one token on the record, irregular records (sparse `forms` and `stems`), prefix derivation by an explicit prefix list (mantener from tener; `mover` is not derived from `ver`), reflexives and French elision, the answer check `match`, teacher records `merge`/`validate`. Every result carries `reviewed:false`. `test:conjugate`: 132 template forms from 079's page and all 41 tables in `irregulars.js` are reproduced (read by text from the files), 197 named verb-and-tense rows and the six regular paradigms in every tense, the second derivation, pack integrity, 20 broken copies.
+- **v470, storage on the word.** `WordList` keeps a `verb` record on a word (shape checked by `cleanVerb`, not the language) and a `lang` on a list, in the JSON file; a merge fills and never overwrites. 140 pure checks, 6 more broken copies.
+- **v471, 039.** Language and tense selects beside the free-text label (kept), **Fill from pattern** through `personSlots`, a tag per non-regular cell, teacher edits kept on the entry and on the word, the quiz marked by the engine. `test:conjugate-039` (8617). Next free port **8618**.
+- **v472, 079's callout status line** says "Unreviewed: no language teacher has read these forms yet."
+- **v473, `Tools/conjugate/print-corpus.mjs`**, the check sheet for the teacher Devon has arranged.
+
+**Decisions taken (reversible).** Spanish and French first because the prompt asked; Devon's order (Spanish, German, Italian, Latin, French) puts French last, so German, Italian and Latin are the ones left, and they need engine work (separable prefixes, principal parts). 079 does not call the engine yet; only parity holds them together. The "unreviewed" note is on the answer key and the status lines, not on a blank student sheet. A correction is stored on the entry and, only if the infinitive is already a word of the set's list, on that word: editing a conjugation never adds a vocabulary word. The irregular box is set by a fill (irregular, stem change or the teacher's cell) and never cleared by one. Unknown verbs are conjugated as regular and every cell is noted `assumed` (P19-7). `u` for `ü` is accepted *and scores* (P19-8, "Lenient"), with the ü form shown beside it; any other accent difference is close and does not score, as before.
+
+**Behaviour that moved.** 039's quiz used NFD stripping, which made `ano` and `año` one answer ("close"); `ñ` and `ç` are letters now and `ano` is **wrong**, for sets with no language as well. A typed pronoun or a missing one is close. This is the design's finding made real, not a regression, but a teacher who relied on it will see it.
+
+**Found.** The 079 parity case caught nothing the engine got wrong, which is not proof: a form is held equal to a form that was itself typed by a session, never read by a teacher. The design said 108 forms; the page has 108 in its regular templates plus 24 in the two irregular templates (132). `classEnding('devoir')` matched `-ir` because `-oir` ends in `ir`; the class now carries `not: /oir$/`. A `Write` of a regex written with `\u0300` landed as the raw combining characters in the file (rewritten with escapes by hand). The French subjonctif and imparfait needed no table of their own: both come out of the présent's ils and nous cells, which is why a typed présent must be right.
+
+**Not verified.** Every form in the packs and the suite was written from the session's knowledge of the two languages and held against itself and against 079; no language teacher has read any of it, and nothing says otherwise anywhere on the site. The check sheet was not printed or opened by anyone. The full `npm test` was not run (site-wide for `_shared/` and `sw.js`). 079 and 039's printed pages were not checked on paper.
+
+---
+
+## AI-27: Path 19 P1 and P2, the shared word lists and their six adopters (2026-10-29, v461-v468)
+
+**What shipped.** Ten commits on local `main`, a `CACHE_VERSION` bump in each step.
+- **v461, `_shared/word-list.js`** (`window.WordList`, key `gvb-word-lists`, a Store envelope of named lists of `{ id, term, definition, partOfSpeech, example, pronunciation, gender, tags }`; a field it does not know is kept). Pure half: `fromText`/`toText` (040's text format, held to `VocabLayout.parseWordList` on a corpus and 400 seeded random lines), `parseTable` (PasteTable; header optional; CSV from `ExportKit.toCsv` reads back, the formula apostrophe comes off), JSON and CSV files, `mergeWords` (by term; fills an empty field, never changes a filled one), `reconcile` (an edit of the text keeps each word's id, gender and tags by term). Storage half: `put`, `putText`, `rename`, `remove`, `importLegacy` (040's old keys, read once per set name, never written), `importPlan`/`applyImport` (a file is shown before it is stored). `test:word-list`: 99 checks and fifteen deliberately broken copies, each of which must fail. `gvb-word-lists` is on 040's registry row.
+- **v462, the Word Lists hub in 040.** A card, not a tool number. 040 keeps its textarea and its settings record and *writes through*: `save()`, rename, delete and a shared-link arrival also reach the hub by name. The card lists the hub's lists with Open, reads a pasted table or a CSV or JSON file into a review that stores nothing until Add, and downloads all lists (JSON), the open list (CSV) and a blank template. `test:word-list-hub` (8611). `smoke-bank.mjs`'s byte-for-byte storage pins now leave `gvb-word-lists` out of the hash (their claim is 040's own keys; the hub key has this suite).
+- **v463, 039.** Reads the hub instead of 040's keys (its 40-line copy of 040's parser is gone) and writes its vocabulary through by term and definition only (`putPairs`), so a list 040 gave an example, gender and tags keeps them; its own sets are taken over once (`importLegacyDrill`, held to 039's `parseVocab`, cut out of the page by text). `test:word-list-039` (8612).
+- **v464, 040 and the deletion.** 040's bridge to 039 became "add words from another saved list" over the hub (the whole word comes over, not term and definition only) and `vfg-conjdrill-link.js` is deleted. Whole-repo grep before deleting: `sw.js`, 040's script tag and row, a comment in `check-precache.mjs`, and HISTORY and BACKLOG prose; no test named it.
+- **v465, 027.** The vocabulary export writes a hub list ("<book> Vocabulary", `(2)` and up when taken, 040's old names counting as taken) and points the hub's `current` at it; 040 opens it at its next load, makes its own list of that name and clears the pointer. `test:word-list-027` (8613).
+- **v466, 051.** A read-only row adds a saved list's words to the box as `target: English` lines; a term with a colon is named as left out. `test:word-list-051` (8614).
+- **v467, 052.** A read-only row puts a saved list's words in the bulk box as tab-separated lines (a pipe in a word is safe); Add to lists is unchanged. `test:word-list-052` (8615).
+- **v468, 014.** A scenario's empty vocabulary cards are filled from a list when a word's definition equals the English phrase (case, spacing and a final full stop ignored), never over a typed card. `test:word-list-014` (8616). Next free port **8617**.
+
+**Decisions taken (reversible).** (1) A 039 set and a 040 list of one name are one hub list; 039 does not delete or rename it (deleting would take 040's words), and a hub-only list is deleted from 040 after Open. (2) A hub list is also a 040 list by name: Open and Add make the 040 record. (3) The CSV column order is 040's (term, definition, example, pronunciation, part of speech) then gender and tags, so a five-column paste made for 040 reads the same without a header. (4) 014's match is exact on the definition; nothing is guessed. (5) The hub's `current` is a one-shot "open this next" pointer, cleared by 040. None of Devon's open questions was touched.
+
+**Found.** `String.prototype.trim` removes a byte order mark, so a CSV that keeps its BOM reads without code for it (I wrote the strip first and a broken copy of it passed). `Blob.text()` strips the BOM too, which is why a download test reads no BOM. The 040 page fills in a record's settings defaults when it opens it, so "a key the page did not open is byte for byte as it was" is true only of the lists not open. A first draft of the registry row for `gvb-word-lists` was reported STALE until the module called `root.Store.get(KEY` in the form the checker resolves. **I ran `git stash` once by mistake (against the rules for this session) while checking that and popped it at once; nothing was lost, the stash list is empty.**
+
+**Not verified.** Full `npm test` (the `--changed` selection is site-wide for `_shared/` and `sw.js`, about the length of the full list; I started it and stopped it). Two tabs of 040 and 039 writing one name at once. A teacher's real lists. No verb table exists yet, so none is called reviewed; P3's tables will say "unreviewed" until the language teacher Devon arranged has read them.
+
+## AI-23 (fourth session): Path 15 P5 built except the phone remote (2026-10-29, v459-v460)
+
+**What shipped.**
+- **v459.** Team Draft's finished teams go to 002 (`?groups=`) and to 020 (a bracket built by `Bracket.buildBracket(…, 'asEntered')`, members in 020's own `members` field) through two `Handoffs` entries in `_shared/handoffs.js`; two buttons on the finished board via optional `doneButtons()`/`bindDone()` on `np-mode-draft.js` (`parity-draft.mjs` untouched). `handoffs.test.mjs` gained the cases and its "nothing sends to 002" assertion was narrowed to "no roster does; Team Draft is the one result that does". `test:name-picker-handoff-smoke` (8609) opens both links in 002 and 020.
+- **v460.** Theme packs as JSON: `np-theme-packs.js` (whitelist of the eleven properties plus `--accent-fill`, hex colours only, ids checked, twelve packs at most), `np_theme_packs` in `np-store.js` and the registry, Import/Export/Remove in the Options tab, a "Theme packs" group in the Theme list. `test:name-picker-theme-packs` (pure, 66 cases, four mutants killed) and `-smoke` (8610).
+
+**Decisions taken (reversible).** The same pack name replaces the earlier import. Removing a pack in use puts the board on the default theme. Team Draft sends names and team names only. Low contrast in a pack is a warning, not a refusal. A pack theme id is `pk-<pack>-<theme>` so `np_theme`'s 40-character cap holds.
+
+**Found.** Removing the selected `<option>` makes a `<select>` report the first option, so "is the chosen theme still valid" must read the stored theme, not the select; the smoke suite caught it.
+
+**Left.** The phone remote (Path 15 P5, rank 42), which needs `_shared/remote.js` from Path 8 P1.
+
+**Not verified.** The full `npm test`; a pack written by another person; a bracket from a 30-student draft opened on a phone.
+
+## AI-23 (third session): Path 15 P3 and P4 built (2026-10-29, v456-v458)
+
+**What shipped.**
+- **P3, v456-v457.** The Equity dashboard. `np-dashboard.js` is the numbers (weeks by student by period, from `np-rollup.js` `view()`, the first reader of it); `np-dashboard-view.js` draws them as elements; 007's Equity tab gets a card (chart through `ChartSvg.bar`, quiet list, student-by-week table, periods side by side, the Data line) and one printed page through the print kit with Preview. Nothing new is stored. The design is in the P3 bullet, written first. `test:name-picker-dashboard` (46 cases, six mutants) and `test:name-picker-dashboard-smoke` (32 cases, port 8607).
+- **P4, v458.** A pick can carry a question from the teacher's bank. `np-question-source.js` (pure), two optional hooks on `np-ui.js` (`parity-ui.mjs` untouched and green), the Prompts tab's "Questions from" chooser, `qid` kept by `np-store`'s history repair. Only the question's words reach the board and the log. `test:name-picker-qsource` (30 cases) and `test:name-picker-qsource-smoke` (18 cases, port 8608).
+- P5 was read and written into its bullet, not built (rank 42).
+
+**Decisions taken (reversible).** A period is a saved roster, read at view time, because a history entry has no roster and adding one would be a new fact about a student on disk. Three weeks is the quiet line; eight weeks opens. The chosen question source is not remembered across reloads. `qid` is never a `seed:` id. 007 loads `question-bank.js` but none of the seed-set data files. None of Devon's open questions is touched.
+
+**Found.** 007's `html,body{height:100%;overflow:hidden}` cut every printed sheet to one page in Chromium's PDF; the kit's preview said 3 where the PDF said 1 until a print-only `html,body{height:auto;overflow:visible}` went in. A `:has(body.printing-dash)` version of that rule made the preview say 1 against the PDF's 3 (the preview iframe copies the page's print rules), so the rule is unscoped on purpose. The same rule un-clips the page's older Participation Summary and Today's Picks printouts when they run past a page; those were not re-checked on paper. The sheet's row cap (22 students, one fewer per period past three) was found by lifting it and watching both counts rise together.
+
+**Left.** Path 15 P5 (rank 42): the two hand-offs and the theme packs, with the plan in the bullet. The seat join's `unmatched` fix (ids instead of names in `np-seat-equity.js`) is its own change.
+
+**Not verified.** The full `npm test`. Nothing was printed on paper or read by a person; the dashboard was driven in Chromium only. The dashboard has not been looked at on a phone-width screen beyond the a11y sweep. A real question bank with hundreds of questions was not timed (the bank is read on a source change and on a bank storage event, not on every pick).
+
+## AI-23 (second session): Path 15 P1 finished, Path 15 P2 built (2026-10-29, v453-v455)
+
+**What shipped.**
+- **P1 step 6, v453.** `np-mode-draft.js`: Team Draft as `createDraft(host)`, the four page variables becoming its state. `test:name-picker-draft` runs the module and a byte copy of the old block over 19 scenarios (state, drawn HTML and an event log after every step; the export's blob URL pinned); a mutant on the turn rotation, the 12-team clamp, Crazy fireworks, absent students and `clear()` keeping the team count were each caught (the last needed a scenario added).
+- **P1 step 7, v454.** `np-ui.js`: `createWinnerUi(host)` with `selectWinner`, `selectTournamentWinner`, `showMultiWinnerModal`, the dialogs' buttons and the sticky prompt. The module was generated from the page's own text by mechanical substitution (reads become host getters, `names=names.filter(...)` becomes `host.setNames(...)`), so the port is exact; `test:name-picker-ui` holds it to a byte copy over 219 cases and caught mutants on the sticky prompt, the rolling flag, the Mythic count and the Legendary/Mythic shake (the first two needed the suite to observe `isRolling` and a second pick).
+- **P2, v455.** `np_daily`: the picks `np_history`'s 500-entry window lets go, as per-day counts keyed on the Class Roster Hub id (else the normalised name). The design is in the Path 15 P2 bullet, written before the code. The choice that shaped it: the rollup is *only* what trimming throws away, so no entry is in both stores, nothing needs migrating, `np_history` and every reader of it (`np-equity.js`, `np-seat-equity.js`) are untouched, and an undo cannot double count.
+
+**Decisions taken (reversible).** The rollup keeps 400 days. A backup's `np_daily` adds into the teacher's (the way `np_stats` does, so importing one file twice counts twice, as for stats). "Clear pick history" clears both stores, so nothing hidden is left behind. `np_daily` is a `records` key, deleted at the year rollover like `np_history`. None of Devon's open questions is touched.
+
+**Found.** `np-store` cuts `np_history` to 500 on *read*, not write: localStorage holds the overflow until the page next reloads. The design assumed the write cut it; the fold is on the page's in-memory overflow instead, and `smoke-rollup.mjs` holds "rollup + last 500 = every pick". Adding a key moved three assertions that count keys (`smoke.mjs` 14 to 15 and 7 to 8 student keys, `registry-shape` section 9's excuse list); each is named in the diff. The `inline-sinks` ratchet for 007 fell 23 to 17 when the sinks left with `np-ui.js` and was lowered in the P2 commit, not the v454 one.
+
+**Left.** Path 15 P3 (rank 40) is the first reader of `view()` and the place the `unmatched` fix lands. Rank numbers 38 and 39 are left as gaps, like the other rows deleted today.
+
+**Not verified.** The full `npm test`. Nothing was heard or felt by a person: Team Draft and the winner dialogs were driven in Chromium only. No real backup file with an `np_daily` has been round-tripped through 009 in a browser (the store's own restore is tested; 009's restore is `RestoreKit`, which reads the registry).
+
+## AI-23: 007's "Let's go crazy" lightning fixed; Path 15 P1 steps 1 to 5, themes, sound and five pick modes out of the page (2026-10-29, v447-v452)
+
+**What shipped.**
+- **v447, the bug Devon reported on 2026-10-07 ("the lightning effect for let's go crazy doesn't work").** It was reproduced, not guessed: the bolts were drawn, but `drawLightning` placed them from viewport coordinates inside `#lightningSvg`, a `position: fixed` element. Crazy mode pulses a `filter` on `<body>` (`bgPulse`), and a filtered ancestor becomes the containing block of its fixed children, so the svg started where the body does (measured at x = -324 at 1280 px, in Chromium) and every bolt landed that far from the cards it joins. The fix subtracts the svg's own origin. `test:name-picker-lightning` (port 8602) holds each bolt's two ends on name-card centres in viewport terms (it fails on the old code) and holds Calm mode and `prefers-reduced-motion` to drawing none. Not reproduced on Devon's machine itself: his reduced-motion setting would also turn the bolts off by design (Calm turns itself on from the OS setting), which is the other reading of "doesn't work" and is unchanged.
+- **P1 step 1, v448.** `np-themes.js`: the eleven themes as data (`THEMES`) and `themeVars(name)`. `test:name-picker-themes` holds it to a byte copy of the old object and rule; `test:name-picker-themes-smoke` selects every theme in the page.
+- **P1 step 2, v449.** `np-sound.js`: `createSound({ soundOn, isCrazy })` for `ensureAudio`, `playBeep`, `playBeepForced`, `playNoise`, `playWinSound`, `playKlaxon`. `test:name-picker-sound` runs the new module and a byte copy of the old code against a recording fake `AudioContext`; `test:name-picker-sound-smoke` reaches it through the page.
+- **P1 steps 3 to 5, v450-v452.** `np-mode-jump.js`, `-disappear.js`, `-slot.js`, `-multi.js`, `-tournament.js`: each an async function taking a `host` object (cards, speed, Crazy, rotation, options, effect and log helpers, every member looked up when called). `test:name-picker-modes` (pure Node, 185 comparisons) runs each against a byte copy of the old code on a recording host and fake DOM, Crazy on and off, with `Math.random`, timers and `Date` pinned, mutants on a constant in each module caught; `test:name-picker-modes-smoke` drives every mode through the page.
+
+**Ports alone, and the one difference.** Nothing a teacher sees, hears or has saved changed. The one behavioural edge: the saved-theme check was `themes[saved]`, which an inherited name such as `constructor` satisfied; it is `hasTheme()` (own keys only) now, so such a value falls back to the default theme.
+
+**Left in P1 (rank 38).** The Team Draft mode (its state is `draftTeams`/`draftTurnIndex`/`draftStarted` and it renders its own board) and `np-ui.js` (`selectWinner`, `selectTournamentWinner`, the winner dialogs, which write history, stats, the Hall of Fame and achievements). Both read many page globals; they want the same host-object treatment, one at a time.
+
+**Found.** `page.click('#crazyBtn')` times out once Crazy is on (the button wobbles and is never "stable"), so the suites click through `evaluate`. A Playwright run of `--only name-picker` takes about 2.6 minutes with the new suites. 007's script is a module, so nothing in it is a `window` global; nothing outside 007 slices its text.
+
+**Not verified.** Nothing was heard: the sound parity compares call logs against a fake `AudioContext`. The lightning was measured and asserted in Chromium only, not in Devon's browser. The full `npm test` was not run; the suites run were the name-picker ones, `test:theme`, the registry/precache/tests/inline-sinks guards and lint.
+
+## AI-19: Path 10 P4 increments 2 and 3 and P5, 044 pulls a do-now, has one renderer and keeps what the sub said (2026-10-29, v444-v446)
+
+**What shipped.**
+- **v444, the do-now.** "The prompt banks" was decided, not asked: the teacher's own question bank, `gvb-question-bank`, questions tagged `do-now` (any case, space, hyphen or underscore). A new `do-now` provider in `Tools/packet-builder/providers.js` (the eleventh section on 090, between the lessons and the feedback page) reads it through `ctx.read`, accepts Store's `{ v, data }` envelope or the bare bank, caps at 40 prompts of 300 characters and never reads an answer; 090's `reads` gained the key. 044 shows a picker only when something is tagged; the button puts `**Do now (5 min):** <prompt>` first in the schedule and replaces an earlier do-now line, so a typed schedule is untouched. 044's script names no key of the bank. `test:sub-plan-donow` (8599); the provider is in `providers.test.mjs` (7 mutants) and 090's smoke counts eleven sections.
+- **v445, one renderer.** The `.docx` builder (`buildDayParas`) and the plain-text builder (`buildPlainTextForDay`) were two independent walks over the same fields. `dayModel()` is now what a day says (sections of `p`, `boldp`, `lab`, `bullet`, `gap` and `table` items, plus a seating image section) and `renderDayText()` and `renderDayDocx()` draw it; the old function names remain as one-line wrappers. `test:sub-plan-render` (8600) drives the page the way a teacher does (a `?plan=` link or a saved-details seed in; the generated zip's `word/document.xml` and the quick-copy box out) and holds both outputs for three plans (defaults, a three-day full plan with a seating image, a bare plan) to files in `Tools/sub-plan-builder/test/golden/` **captured from the page before the join**; a second check reads every plain-text line back out of the Word text in order. Four mutants (a bullet prefix, a dropped table gap, a dropped checklist line, bold marks left in the text) each turn it red.
+- **v446, what the sub said.** Share-by-link was already on 044 (the P3 share sheet), so P5's new part is only the note: a `<details>` card with a day picker and a box, saved on input to `subPlanBuilder.subSaid.v1` (`{ v: 1, notes: { date: text } }`, 2,000 characters, newest 60 dates). Not in the link, history, `.docx` or text copy (the suite checks the last three and that no other stored key holds it). It can name a student, so the registry marks it `student: true`, `BrRollover` has a delete rule for it and `registry-shape.test.mjs`'s `SINCE_THE_MIGRATION` names it. `test:sub-plan-said` (8601, 3 mutants checked by hand).
+
+**Two changes the join made to outputs, both drift fixes (reversible by editing the golden files back).** A `**bold**` mark in an announcement or a behavior line reached Word as literal asterisks (the bold-throughout paragraph wrote the raw line); it is now a bold run without them. Standing details typed with `**` (attendance, rooms, keys, who to ask, phones, contacts) printed their asterisks in the text copy while Word made them bold; the text now strips them like every other line. The one place the two still spell a thing differently on purpose is the Main Office line (curly quotes in Word, straight in text), kept as an `plainText` alternative on that item.
+
+**Decisions taken (Devon-reversible).** Prompt bank means the question bank with a `do-now` tag; exit-ticket and feedback-slip prompts are not do-nows; seed sets are not offered; the label is fixed at 5 minutes. The optional QR-to-the-sub's-phone form is not built (it needs a return path from a student-adjacent device). Not decided: Devon's open question on `.docx` vs PDF as 044's primary output.
+
+**Found.** `require()` of a vendored UMD file in this repo returns an empty object (package.json says `"type": "module"`); the render suite loads JSZip with `new Function('module','exports', source)`. The golden `.docx` XML ends its declaration in CRLF, so the suite compares with line endings normalised. 044's script is one closure, so none of its builders is reachable from a test; the suites drive the page. A `--changed` run for these edits was started and killed at my own 590 s cap without a result, so the selector-chosen set was not run as a whole.
+
+**Not verified.** The `.docx` was never opened in Word; the do-now picker was tested with a seeded bank, not with 030's editor tagging a question; the print was checked as the quick-copy text, not on paper; the full `npm test` was not run.
+
+## AI-19: Path 10 P4 increment 1, 044 draws the room from the saved seating chart (2026-10-29, v443)
+
+**What shipped.** In 044's seating chart field, a "Use my saved seating chart" button and class picker appear when 005 has a chart with at least one desk. Choosing a class draws the room with 090's seating section (`PacketSections.build(['seating'], ctx)`, so 044's script names no key of 005 and the chart is read through `SeatingRead` as everywhere else), rasterises the SVG to the same 900 px PNG an attached file becomes (a white ground drawn first, so Word does not show a transparent picture) and sets the page's existing `seatingChartImage`. Nothing downstream changed: the preview, Remove, the plain-text copy line and the `.docx` embed on every day's page all read that one variable, and Attach image works as before. The image is held in the tab only, like the attached one. 044 now loads `seating-read.js`, `packet-builder/sections.js` and `providers.js`; the two packet-builder files joined `SHELL_URLS` because 044 is a shell tool and `check:precache` (SHELLDEP) refuses a shell page whose eager scripts install late.
+- Suite: `test:sub-plan-seating` (port 8598; next free **8599**): the control is hidden with no chart or no desks, lists only classes with a desk and shows a name as text, the PNG is the room's shape at 900 px with ink and an opaque white corner, nothing of it is saved in storage, Remove clears it, the generated `.docx` holds a `word/media` picture with it and none without. Break-on-purpose: removing the white `fillRect` turns the corner check red (the first version checked the share of light pixels and the mutant survived, because the white desks alone cover enough).
+
+**Left on P4 (rank 19 rewritten).** The do-now from the prompt banks: "prompt banks" is not one thing in the repo. `QuestionBank` has no do-now field, 076's slip prompts and `gvb-exit-ticket:customPrompts` are other lists. That choice was not taken here because it is a product call to write down before building; the default for the next session is `QuestionBank.peek()` filtered to a `do-now` tag, with a button that drops one into the lesson's opening. The calendar half was done in v316. One renderer for the `.docx` and the printed output is also left.
+
+**Not verified.** The `.docx` was checked for the picture's presence in the zip, not opened in Word; the chart's class names with markup are shown as text only (checked), and a chart whose desks are all unseated draws empty desks. The full `npm test` was not run.
+
+## AI-19: Path 10 P3, the evergreen emergency binder and its staleness reminder (2026-10-29, v442)
+
+**What shipped.** The Emergency binder was already a built-in preset on 090 (v438); P3 makes it a thing a teacher keeps current.
+- **One click prints it.** 090 has a "Print emergency binder" button that ticks the preset's pages (emergency information, sub plan standing details, hall pass procedure, class rosters; whichever have something saved) and prints. `?preset=emergency` opens 090 with that packet showing and the button focused; it is the link the reminder uses.
+- **A version stamp on the standing details.** 044 writes `savedOn` (the local date of the last save or import) into `subPlanBuilder.standingDetails.v1`; the sub plan and emergency pages print "Details last saved 2026-09-02." under their content. A record saved before the stamp prints none. 044's own output and 045's byte-equal check are untouched (045 reads through `load()`, not `build()`).
+- **`_shared/binder-stale.js` (`BinderStale`).** When 090 prints exactly the Emergency binder it stores `gvb-packet:evergreen.v1 = { v: 1, at, sums }`: when, and an FNV-1a fingerprint of each watched key's raw text (`subPlanBuilder.standingDetails.v1`, `hall-pass-log-sections`, `np_rosters`), never the data. `check()` answers none, never, changed, old (180 days) or fresh; changed wins over old. The landing page (a link in the app bar, shown only when stale) and Command Center (one line above the board) call `mount()`. Both read fingerprints, so the reminder names no student and no detail; nothing is fetched. The record is written by 090 itself with a literal `localStorage.setItem`, because `check:registry` only sees literal call sites (`BinderStale.entry()` builds the record; `record()` is the same with the write, for the Node suite).
+- Suites: `test:binder-stale` (pure, 62 checks and mutants, including that the watched keys equal the Emergency binder's providers' keys less `crh_students_v1`) and `test:binder-stale-smoke` (8597; next free **8598**).
+
+**Calls Devon can reverse (taken by default).** The old-print threshold is 180 days (`MAX_DAYS`). `crh_students_v1` is not watched: it supplies only preferred names and moves on every student note, so watching it would nag daily; a student added to a roster still changes `np_rosters`. A print that is not exactly the Emergency binder (a subset, other pages) records nothing. The reminder has no snooze or dismiss: printing is the dismissal. "Never printed" shows only once something is saved in a watched key, so a teacher who never uses these tools sees nothing.
+
+**What did not work or was not verified.** The first smoke stubbed `window.print()` and the record never appeared, because the record is written on `beforeprint`, which the stub does not fire (the stub now dispatches it, as a browser does). The first mutant for "a removed key counts as a change" survived: `record()` stores every watched key, so the case needed a hand-built record that predates a key. `check:registry` reported the new key as written by nothing until the write was a literal in the page. Not run: the full `npm test`. No printer has printed the binder; no real `beforeprint` from Ctrl+P was exercised.
+
+## AI-19: Path 10 P2, 045 Sub Binder on the providers, 076's questions, and the share sheet (2026-10-29, v441)
+
+**What shipped.** (1) `PacketSections` gained an optional `load(ctx)` on a provider (the one place a source key's shape is read) and `readerFor(storage)`.
+`load` was added to the sub plan, emergency, hall pass, calendar and seating providers, and three providers were added for what 045 read and 090 had no
+section for: `behavior-plan` (008's chip lists), `exit-ticket` (023's saved bank, first twelve) and `sub-plan-days` (044's last absence and dated plans).
+090 now has ten sections. (2) 045 loads `sections.js` and `providers.js` and its script names no other tool's key: every loader is one `PS.load` line.
+Its printed output is unchanged, proved against `Tools/sub-binder-generator/test/_045-frozen.html` (the page as it was, only its script paths moved) for
+five profiles. (3) A `sub-feedback` provider reads the slip in use from `snfs_slip_v1` (`{ v: 2, sets, currentId }` or the older bare shape); 045's
+feedback page asks those questions in place of its four standing ones when there are any. (4) 045 has a share sheet, the last tool of Path 6 P3.
+
+**Decisions taken (all reversible, none Devon's open question).** 045 keeps its own markup instead of rendering `toHtml()` blocks, because the
+standing rule was unchanged output and the two renderers look different. The link carries the recipe (ticked sections plus the note to the sub),
+never another tool's data, because the receiver has nowhere to put a snapshot and the seating chart holds student names. An arrival asks first when the
+device has its own ticks or note.
+
+**Verified.** `test:packet-sections` 57 checks, 37 breaks caught; `test:packet-providers` 62 checks, 40 breaks caught; `test:packet-builder` 66;
+`test:sub-binder-providers` 78 (parity plus the slip cases; a changed provider turns six assertions red); `test:sub-binder-share` 43 (a payload that
+leaked the seating turned three red, an arrival that skipped the question five); the existing `test:sub-binder` (28) and
+`smoke-consumers-sub-plans` (47, 10 breaks); `test:theme` (966, with 045 dark); a11y sweep on 045 and 090; lint; check:registry, precache
+(`--base origin/main`), inline-sinks (045 baselined at 17 after reading its sinks), entities, hidden-flex, print-clip, dedupe, tests, docs-commands,
+adoption (`--check` after pasting the row).
+
+**What was wrong or different.** The lesson note is the only link input that reaches the page's markup, and both places it is printed escape it.
+`smoke-share-rollout.mjs` was not given a row (its table assumes one JSON key). An empty `seating-chart-v1` list stays a chart in `load()`, because
+045 says "no chart saved" for it in its own words.
+
+**Obliges others.** `suite-durations.json` rows for `smoke-binder-providers` (40 s) and `smoke-binder-share` (30 s) are estimates.
+
+**Not verified.** No packet or binder was printed on paper; the QR row of the sheet was not scanned; no real browser's clipboard was used (the suite
+stubs it).
+
+---
+
+## AI-19: Path 10 P1 finished, the seating section, source-tool comments and drag-to-reorder (2026-10-29, v440)
+
+**What shipped.** (1) A `seating` section in `Tools/packet-builder/providers.js`: it reads `seating-chart-v1` and draws each class that has a desk as
+one inline SVG built from `SeatingRead.placeDesks`, `bounds` and `marksOf` (the page hands the reader to providers in `ctx.SeatingRead`), with the
+chart's own `mirror` and `numbered` flags, turned desks, doors and windows, and names fitted to the desk by size. Every name is escaped in the one
+`html` block; a student's note and flag are never read. The Sub day preset lists it after the rosters. (2) A one-line "Read by
+Tools/packet-builder/providers.js ... keep the shape or bump the key" comment beside the key in 044, 001, 032, 006 and `seating.mjs`. (3) Drag to
+reorder: `PacketSections.moveTo` (pure) and a draggable row for each ticked page, announced in the layout status line; Up and Down stay as the keyboard way.
+Rank 16 is deleted (a gap, as AI-14 did).
+
+**Verified.** `test:packet-sections` 53 checks, 31 breaks caught; `test:packet-providers` 42 checks, 24 breaks caught; `test:packet-builder` 66 checks
+(including a real drag, and the PDF page count equal to the packet's at seven pages); a11y sweep on 090; lint; check:registry, precache
+(`--base origin/main`), inline-sinks, entities, hidden-flex, print-clip, dedupe. A deliberate break of the drop handler turns three drag checks red.
+
+**What was wrong or different.** The earlier text said the seating section would be `seating.mjs`'s `buildPrintPage`. That function is 005's own, inline in
+the page, and returns a DOM node styled by 005's CSS; nothing in `seating.mjs` prints. The section draws its own SVG through `SeatingRead`, the
+reader every other tool already shares, so it cannot drift from 005's geometry. It is not 005's print page: no rule conflicts, no photos.
+
+**Not verified.** No packet has been printed on paper; the SVG was not compared against 005's own print by eye.
+
+---
+
+## AI-19: Path 10 P1, Packet Builder `090` and the section-provider registry (2026-10-29, v437-v439)
+
+**What shipped.** The design first (committed alone, `21ad6ec`, in the Path 10 P1 bullet), then three steps. (1) `Tools/packet-builder/sections.js`, pure:
+`PacketSections` registers providers (`{ id, title, sourceSlug, setupHint, storageKeys, evaluate(ctx), build(ctx) }`), never lets one throw at the page,
+cleans what they return to seven block types, and `toHtml()` is the only place text becomes markup. Layout and preset records, `move()`. (2) The tool,
+`Tools/090-packet-builder.html`: a checkbox list with each status line, greyed with a setup link when a source has nothing, up/down reorder, a live
+preview of the same markup the printer gets, Preview pages and Print through `PrintKit` (`print-area.css`, `pk-paper`), presets (Sub day and Emergency
+binder built in; saved ones in `gvb-packet:presets.v1`, ids only), a registry row, `index.html` and `README.md` rows. (3) `providers.js`: sub plan
+standing details, emergency information, hall pass procedure (001's settings, never the log), the school calendar through `SchoolDay`, class rosters
+(preferred names from `crh_students_v1`). Tool numbered **090**: 087 is Class Screen (and Track P's old `082` was long taken). Nothing stored holds
+content; no student data is copied.
+
+**Verified.** `test:packet-sections` 50 checks, 28 deliberate breaks caught; `test:packet-providers` 29 checks, 15 breaks caught (it holds the providers'
+keys equal to the registry row's `reads`, each declared by its source tool's row, each source a page that exists); `test:packet-builder` (8594) 59 checks
+in light and dark: empty profile, seeded, reorder saved and reloaded, Print once, Chromium's PDF page count equal to the packet's (2 and 6), markup in a
+saved field printed as text, a broken key, presets; a11y sweep on 090 (empty and seeded), axe inside the suite for all three states; every tracked
+`*.test.mjs` (100, `grouping/test/parity.test.mjs` 122352 passed); lint; `test:registry`; `test:theme`; `test:picker-rollout`; check:tests, precache
+(`--base origin/main`), registry, dedupe, docs-commands, entities, hidden-flex, print-clip, adoption (`--check` after pasting the row);
+`offline:build` and `offline:verify`.
+
+**What was wrong or different.** (1) My first smoke run hung 300 s because `flock` was waiting on another session's `run-suites --only review-game-board`;
+it passed run directly, then under the lock. (2) A mutant survived the calendar check (7 days ahead for 28) until a day three weeks out was added.
+(3) The design said no raw `innerHTML` of source data; the page does `innerHTML = toHtml(...)`, which is escaped by construction and tested with markup in
+every text field, but it is an `innerHTML` and `check:inline-sinks` would count it if the page ever took link input (it does not).
+(4) `test:share-rollout` timed out inside my 590 s window and was not re-run.
+
+**Obliges others.** `Tools/board-check/suite-durations.json` rows for the three new suites are estimates (2 s, 2 s, 30 s). 009's backup reads the registry,
+so Packet Builder's two keys show in a backup with no other change. Source tools 044, 001, 032 and 006 do not yet carry a comment that a packet
+section reads them (left on rank 16).
+
+**Not verified.** No packet has been printed on paper; the seating section is not built; nothing was tried on a phone; the full `npm test`; the real
+calendar on a non-ordinary school year (only a seeded one).
+
+---
+
+## AI-14: Path 12 P2 increment 6, station questions from the bank for 019 and 018 (2026-10-29, v435-v436)
+
+**What shipped.** A **Question bank** card on 019 (Escape Room Builder, v435) and 018 (QR Scavenger Hunt Builder, v436), both built by one new
+shared file, `_shared/stations-bank.js` (`StationsBank`: pure `toStation`, `addTo`, `heldIds`, and `mount`, which builds the card into a host div). It
+lists the teacher's bank and the built-in sets (`QuestionBank.sources({ peek: true })`, `sourceLabel`), ticks, and on **Add ticked as stations** appends
+one station per question in the page's own shape with `bankId` set to the question's id. Nothing is written until the press and then only by the page's
+own save; the bank is never written. 019: a text station (prompt to clue, answer to accepted answers; a comma in an answer becomes a space, a comma
+between digits is dropped, so the matcher reads it as it read the original). 018: two to six choices with the answer among them is a choice station
+(`correctChoice` its place); anything else is a text station with "Answer: ..." in its note, so it is on the answer key. A question already a station
+(its id is a `bankId` in the set) is shown as such and skipped; a lone empty station is replaced. Nothing student-facing changed (Devon, 2026-10-05); a
+bank station encodes as a hand-typed one (Devon, 2026-10-07: answers stay readable in the code). The design is in the Path 12 P2 bullet, committed first
+(`487ad71`), with four new questions for Devon (66 to 69), each on its default. Rank 28 is deleted: **Path 12 is whole**; Path 18 P3's row no longer
+lists the bank as left.
+
+**Verified.** `test:stations-bank` (pure Node, 53 assertions, 12 mutants all caught); `test:stations-bank-smoke` (new, port 8593, 32 checks on both pages;
+break-on-purpose run against each page); `--only stations` (10 green), `--only escape-room-builder` (7), `--only qr-scavenger-hunt-builder` (7),
+`--only service-worker`, a11y sweep 018 and 019, `test:theme`, `test:registry`, lint, check:tests/precache(--base)/registry/dedupe/entities/hidden-flex/
+print-clip/inline-sinks/adoption(--check). `test:stations` still 366+ (the module is untouched).
+
+**What was wrong or different.** (1) The design first said `bankId` rides the share link; `shareState` never listed it, and it should not (a tie to
+one teacher's bank means nothing on another's, and links keep their bytes), so the design text was corrected before the build and the test pins its
+absence. (2) A first draft expected "Washington, D.C." to accept "washington dc"; the matcher turns each dot into a space, so it does not, and never did
+for the original answer either: the test now types what the answer says. (3) **Ranks were not renumbered**: the Tier 1 table already has gaps (111 rows
+up to 161) and many "rank N" cross-references in the file point at old numbers, so deleting row 28 left a gap, as v265 and AI-20's rows did. (4) 018
+had no `store.js`; `question-bank.js` needs it, so it is loaded there now (42 adopters).
+
+**Obliges others.** `Tools/board-check/suite-durations.json` has estimated rows for the two new suites (2 s, 30 s): refresh from CI logs. Nothing else shared.
+
+**Not verified.** No person used the card; no class played a hunt or room built from it; a bank of thousands in the chooser; no real phone scanned a bank
+station's code; the full `npm test`.
+
+---
+
+## AI-28: Path 20 P5, quiz memory across sessions and no Wikimedia search at load (2026-10-29, v434)
+
+**What shipped.** `bmg-quiz-memory.js` (pure, plus `load()`/`save()` on `bmg_quiz_memory_v1`) and its wiring on 046's quiz bar, as written into the P5 bullet before
+it was built. "Class got it" and "Missed" still tally a round as they did, and now also record against the place the class is answering (the last one revealed by
+Reveal next or a click; the bar names it: "Marking: Alps"): per map project and place name, times got and missed, which came last, the date. One mark per place per
+round (the same button twice counts once; the other replaces it); with nothing revealed only the tally counts. "Missed ones first" makes Reveal next take a hidden
+weak place before a random one (weak = missed more than got, or missed last); a "Missed in past rounds (N)" disclosure lists them; "Forget quiz history for this
+map" (asks first) clears one map's. The key is a registry row, not `student: true` (place names and counts, no student), so 009 backs it up and the year rollover
+leaves it; it is not inside the project, so a share link and file never carry it; history of deleted projects is pruned when quiz mode starts; caps 40 projects,
+500 places, counts 9999. **Network:** the one request 046 made unasked, a default "blank world map" search when an empty project opened, is gone (Devon,
+2026-10-07: nothing fetches until he asks); the box keeps the suggestion, and the card's hint and the empty-map line say nothing is fetched until Search.
+**Part A, same session:** the grouping test "rotateRoles: best with many roles stays quick..." (an AI-21 test that failed CI's first run of #375 on a 400 ms wall
+clock) now counts the orderings the exhaustive search visits (held to the module's own 400,000) and keeps only an 8 s clock backstop; its break-on-purpose entry
+still fails it.
+
+**Verified.** `test:blank-map-quiz-memory` (pure Node, 20 mutants all caught; the first draft missed two, because the cases did not exercise "a got replaced by a
+miss" or "another version of the memory", and a third, on an inherited key, is equivalent and was dropped). `test:blank-map-quiz-memory-smoke` (new, port 8592, 33
+checks): a first visit and a reload make no off-site request; Search is what asks; marking, double press, replace, a second round, the list, the project data holding
+nothing, a reload, Missed ones first, pruning, axe, Forget. With the load search put back 3 checks fail; with the Got record removed 1 does. `test:grouping` 96
+passed. `--only blank-map-generator` (22 green), a11y sweep 046, `test:registry`, `test:rollover`, `test:rollover-tools`, lint, offline build and verify,
+check:tests/precache(--base)/registry/dedupe/docs-commands/inline-sinks/entities/hidden-flex/print-clip/adoption(--check).
+
+**Not verified, and what did not work.** A real class: whether "last revealed" is the place a teacher means when two are on screen (a click reveals the one clicked,
+Reveal next the one drawn); the box on a phone; the new key inside a real 009 backup file. Found: `make-offline-copy` stages `git ls-files`, so a new module must be
+committed before `offline:build` can find it. The Tier 1 table already skipped ranks (88 to 91, and later), so "contiguous" was not true before this; all rows after the
+deleted one moved up by one and the gaps were left. Not built: sharing the history between devices; a per-student view (that would be student data).
+
+---
+
+## AI-28: Path 20 P4, time slices for annotations and the dated send to Timeline Builder (2026-10-29, v433)
+
+**What shipped.** `bmg-slices.js` (pure) and a "Time slices" card on 046, as designed in the P4 bullet: a project may hold named, dated slices, each with its own
+labels, markers, shaded regions, lines and key; the active slice's annotations are the project's own fields, so no editor, export or undo changed. Slider and
+previous/next, name and year fields, Add blank / Copy / Sort by year / Delete (asks first), and "Print the slices" / "Save the slices as PDF": one panel per
+slice (name and year above each, same view of the same map, drawn by the worksheet's own map renderer with the slice swapped in and put back). A project with
+no slices stores no `slices` field. Slices ride in the project data, so share links and files carry them, and `cleanSlices()` bounds what arrives. The send to
+Timeline Builder (`handoffs.js` entry and 046's `timelinePlaces()`) now sends every slice's labels dated by that slice's year (a box turns it off, and then
+only the slice on the map goes, at year 0 as before). Choices taken without asking: slice content includes the key text; the view and map are shared;
+undo resets on a switch; 12 slices at most.
+
+**Verified.** `test:blank-map-slices` (pure Node; 14 mutants all caught; a 15th, a copy sharing its source's object, is an equivalent mutant and was removed).
+`test:blank-map-slices-smoke` (new, port 8591, 44 checks): no field on a plain project; Start; blank slice; name/year; bad year said and left blank; reload
+keeps the active slice; slider/Next/Previous bring each slice's labels; copy goes after its source; names numbered; sort; delete asks; the PDF sheet draws one
+panel per slice and the panels differ by slice; the map and saved data are unchanged after building the sheet; a link's slices arrive cleaned; the dated send
+(7 events at 1803/1804/1850) and the undated one; axe clean; nothing off-site. Panels not swapped in and the handoff's year dropped each fail the suite.
+`--only blank-map-generator` (20 green), `timeline-builder` (7), `share` (22), a11y sweep 046, lint and the guards in CLAUDE.md, offline build and verify.
+
+**Not verified, and what did not work.** The `sliceSheetBuilding` guard in `save()` (no save while a slice is swapped in) is not proven by a test: with it off the
+suite still passes, because the final `save()` after the sheet repairs the stored data; it only matters if the tab closes mid-build. The sheet on paper, in
+the print preview (not wired), at dpr 2, with 12 slices, on a Chromebook. **Not built, needs Devon:** the way back (a timeline into a map project) needs a route
+015 does not accept and a decision about where an event's year goes on a map; markers are not sent to 015 (a marker has no name of its own, only a caption in the
+key). Legends are per slice.
+
+---
+
+## AI-28: Path 20 P3 increment 5, step 7: a built-in map writes no raster (2026-10-29, v432)
+
+**What shipped.** Path 20 P3's last step. Choosing a built-in base map (or opening a project that names one, or a shared link) no longer renders the
+4000 px PNG and writes it to `bmg-maps`. `bmg-vector.js` gained `buildBaseMapMeta`, the record with its size, title, attribution and calibration and
+`blob: null`; `buildBaseMapRecord` now spreads it and adds the blob, so the two cannot differ. In `046`, `displayMap()` with no blob takes the stage size
+and the locator box from the record, and builds the picture only if the vector draw cannot run. A record cached by an earlier version is still used;
+"Clear cached maps" is unchanged (Devon's default). `renderBaseMapCanvas` is untouched.
+
+**Verified.** `test:blank-map-live-noraster` (new, port 8590): no `vector:` record in `bmg-maps` after choosing, reloading, or restoring; the `<img>` has no
+source; the stage and locator are sized; the project stores the id; `buildBaseMapMeta` equals `buildBaseMapRecord` minus the blob for three presets; an old
+cached record loads and appears in Recently used; nothing off-site. With the old write restored 5 of its 15 checks fail. Six existing suites had read the
+raster and were changed on purpose: `smoke-relief` and `smoke-choropleth` sample the live canvas, `smoke-hittest` and `smoke-dropped` read the stage's size,
+`smoke-live-viewer` and `smoke-dropped` assert there is no raster. `--only blank-map-generator` (18 green), `--only timeline-builder` (7 green), the a11y
+sweep for 046, lint, and the guards CLAUDE.md names.
+
+**Not verified.** Paper, dpr 2, a Chromebook's frame time, the fallback render when the vector data is missing (written, not exercised).
+
+---
+
 ## AI-28: Path 20 P3 increment 4, step 6: the locator inset drawn from the vectors (2026-10-29, v431)
 
 **What shipped.** One step. The locator inset ("Locator Map") is a second canvas, `#locatorCanvas`, drawn by one `drawBaseMap` call at the fit

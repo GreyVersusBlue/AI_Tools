@@ -204,14 +204,12 @@ const waitForMapId = (want, not = null) => page.waitForFunction(({ want, not }) 
  * reach into the page's modules for it.
  */
 const samplePixel = (lat, lon, bounds) => page.evaluate(({ lat, lon, bounds }) => {
-  const img = document.getElementById('mapImg');
-  const w = img.naturalWidth, h = img.naturalHeight;
-  const x = Math.round(((lon - bounds.west) / (bounds.east - bounds.west)) * w);
-  const y = Math.round(((bounds.north - lat) / (bounds.north - bounds.south)) * h);
-  const c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  c.getContext('2d').drawImage(img, 0, 0);
-  const d = c.getContext('2d').getImageData(x, y, 1, 1).data;
+  // Drawn from the vectors since v432 (no raster exists): read the live canvas where the stage box puts the point.
+  const img = document.getElementById('mapImg'), cv = document.getElementById('baseCanvas'), vp = document.getElementById('viewport').getBoundingClientRect();
+  const r = img.getBoundingClientRect(), k = cv.width / vp.width;
+  const x = Math.round((r.left - vp.left + ((lon - bounds.west) / (bounds.east - bounds.west)) * r.width) * k);
+  const y = Math.round((r.top - vp.top + ((bounds.north - lat) / (bounds.north - bounds.south)) * r.height) * k);
+  const d = cv.getContext('2d').getImageData(x, y, 1, 1).data;
   return { r: d[0], g: d[1], b: d[2], lum: 0.2126 * d[0] + 0.7152 * d[1] + 0.0722 * d[2] };
 }, { lat, lon, bounds });
 

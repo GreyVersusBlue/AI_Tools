@@ -27,6 +27,8 @@
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
+<!-- The site's word lists (Path 19 P2): the vocabulary export writes one, and 040 opens it. -->
+<script src="../_shared/word-list.js"></script>
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/grouping.js"></script>
 <script src="../_shared/undo.js"></script>
@@ -1361,20 +1363,16 @@
   });
 
   // ── Vocabulary handoff to Flashcard Generator ───────────────────────────
-  // Writes into 040-vocab-flashcard-generator.html's own localStorage
-  // contract (Tools/vocab-flashcard-generator/vfg-store.js): a list of
-  // saved-list names under 'gvb-vocab-flashcards:list', one JSON blob per
-  // name under 'gvb-vocab-flashcards:data:<name>', and a
-  // 'gvb-vocab-flashcards:current' pointer that tool reads on boot to decide
-  // which list to load. Unlike wpg-rubric-link.js (which only ever points
-  // the target's :current pointer at a rubric the *user* already saved
-  // there), there's no pre-existing Flashcard Generator list for this
-  // novel-study project's vocabulary — so this always mints one new,
-  // uniquely-named list (never overwriting any existing saved list there)
-  // and then points :current at it, same as that tool's own import flow.
+  // Writes a word list into the site's shared word lists (_shared/word-list.js,
+  // Path 19 P2) and points the hub's `current` at it; 040 opens the list it
+  // names when it next loads, makes its own saved list of that name, and clears
+  // the pointer. (It used to write 040's own keys, 'gvb-vocab-flashcards:*',
+  // directly. Those are now only READ here, to keep a new list's name clear of
+  // a list 040 saved before the hub.) Unlike wpg-rubric-link.js (which only
+  // ever points at a rubric the *user* already saved there), there's no
+  // pre-existing list for this novel-study project's vocabulary — so this always
+  // mints one new, uniquely-named list and never overwrites an existing one.
   var FLASHCARD_LIST_KEY = 'gvb-vocab-flashcards:list';
-  var FLASHCARD_DATA_PREFIX = 'gvb-vocab-flashcards:data:';
-  var FLASHCARD_CURRENT_KEY = 'gvb-vocab-flashcards:current';
 
   function flashcardListNames() {
     try {
@@ -1415,29 +1413,16 @@
     return out;
   }
 
-  // "term: definition" per line — the format Flashcard Generator's own
-  // VocabLayout.parseWordList reads (same convention this tool already
-  // uses for typing vocab in, via parseVocabLines).
-  function vocabExportText(items) {
-    return items.map(function (it) { return it.definition ? (it.word + ': ' + it.definition) : it.word; }).join('\n');
-  }
-
   els.exportVocabBtn.addEventListener('click', function () {
     var items = collectVocabForExport();
     if (!items.length) { showMsg('Log some vocabulary words with a meeting before exporting.'); return; }
     var existingNames = flashcardListNames();
+    try { WordList.names().forEach(function (n) { if (existingNames.indexOf(n) === -1) existingNames.push(n); }); } catch (e) { /* the hub is unreadable: 040's own names still count */ }
     var baseName = (state.bookTitle || state.name || 'Novel Study') + ' Vocabulary';
     var listName = uniqueFlashcardListName(baseName, existingNames);
-    var flashState = {
-      name: listName, words: vocabExportText(items), mode: 'flashcards',
-      flashCols: 2, flashRows: 4, cardSizePreset: 'grid', flashLayout: 'duplex',
-      wallPerPage: 2, wallShowDef: true, sortOrder: 'none', shuffle: false, showGuides: true
-    };
     try {
-      existingNames.push(listName);
-      localStorage.setItem(FLASHCARD_LIST_KEY, JSON.stringify(existingNames));
-      localStorage.setItem(FLASHCARD_DATA_PREFIX + listName, JSON.stringify(flashState));
-      localStorage.setItem(FLASHCARD_CURRENT_KEY, listName);
+      WordList.put(listName, items.map(function (it) { return { term: it.word, definition: it.definition }; }));
+      WordList.setCurrent(listName);
     } catch (e) {
       showMsg("Could not save to this browser's storage (private browsing, or storage full?).");
       return;

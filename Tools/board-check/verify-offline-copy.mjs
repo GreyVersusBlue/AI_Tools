@@ -132,7 +132,17 @@ for (const rel of ENTRIES) {
       await page.selectOption('#baseMapSelect', 'world');
       await page.click('#btnBaseMap');
       await page.waitForFunction(
-        () => document.getElementById('mapImg')?.src.startsWith('blob:'),
+        () => {
+          // Since v432 a built-in map is drawn from the vectors on #baseCanvas and has no picture; it has
+          // rendered when the canvas is showing and holds more than one colour.
+          const c = document.getElementById('baseCanvas');
+          if (!c || c.hidden || !c.width) return false;
+          const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+          const seen = new Set();
+          for (let i = 0; i < d.length; i += 64) seen.add(d[i] + ',' + d[i + 1] + ',' + d[i + 2]);
+          return seen.size >= 3;
+        },
+        null,
         { timeout: 10000 }
       );
       console.log('  ok  Tools/046-blank-map-generator.html: built-in base map rendered offline');

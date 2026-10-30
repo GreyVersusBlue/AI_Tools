@@ -819,6 +819,7 @@
     /* ── Kind A: student data and nothing else, deleted. ── */
     { key: 'np_current', tool: '007', kind: 'delete' },
     { key: 'np_history', tool: '007', kind: 'delete' },
+    { key: 'np_daily', tool: '007', kind: 'delete' },
     { key: 'np_stats', tool: '007', kind: 'delete' },
     { key: 'np_hof', tool: '007', kind: 'delete' },
     { key: 'np_lucky', tool: '007', kind: 'delete' },
@@ -826,6 +827,7 @@
     { key: 'crh_archived_students', tool: '006', kind: 'delete' },
     { key: 'crh_flags_v1', tool: '006', kind: 'delete' },
     { key: 'escape-room-builder:monitor-record', tool: '019', kind: 'delete', what: 'the teacher monitor’s record of each team’s play' },
+    { key: 'subPlanBuilder.subSaid.v1', tool: '044', kind: 'delete', what: 'the notes about what each sub said' },
     { key: 'pcl_entries_v1', tool: '068', kind: 'delete' },
     { key: 'pcl_idnames_v1', tool: '068', kind: 'delete' },
     { key: 'pcl_roster_v1', tool: '068', kind: 'delete' },

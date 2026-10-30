@@ -15,6 +15,9 @@
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
 <script src="../_shared/media-db.js"></script>
+<script src="../_shared/seating-read.js"></script>
+<script src="packet-builder/sections.js"></script>
+<script src="packet-builder/providers.js"></script>
 <style>
   /* --ink, --paper, --card, --card-2, --line, --muted, --err and their dark
      values come from _shared/ink-paper.css (AI-35); these are 044's own. */
@@ -214,6 +217,7 @@
   }
   .back-link { display: inline-block; color: var(--muted); text-decoration: none; font-size: .88rem; padding: .3rem .5rem .3rem 0; margin-bottom: .2rem; }
   .back-link:hover { color: var(--accent); }
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
@@ -379,6 +383,10 @@
   <textarea id="scheduleText" rows="5" placeholder="**Setup (5 min):** students get into groups from yesterday
 **Activity (36 min):** 6 minutes per station, rotate clockwise
 **Wrap-up (5-10 min):** submit worksheets, quiet seat time"></textarea>
+  <div class="toggle-row" id="doNowPullRow" style="gap:10px; flex-wrap:wrap; margin-top:6px;" hidden>
+    <select id="doNowPick" aria-label="Do-now prompt from your question bank"></select>
+    <button type="button" class="small" id="doNowPullBtn">Put this at the top as the do-now</button>
+  </div>
 
   <div class="toggle-row">
     <input type="checkbox" id="samePeriods" checked>
@@ -402,8 +410,12 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     <button type="button" class="small danger" id="seatingChartRemoveBtn" style="display:none;">✕ Remove</button>
     <span class="field-hint" id="seatingChartStatus" style="margin:0;">No image attached.</span>
   </div>
+  <div class="toggle-row" id="seatingChartPullRow" style="gap:10px; flex-wrap:wrap; margin-top:6px;" hidden>
+    <select id="seatingChartPick" aria-label="Class to draw from Seating Chart Generator"></select>
+    <button type="button" class="small" id="seatingChartPullBtn">Use my saved seating chart</button>
+  </div>
   <img id="seatingChartPreview" alt="Seating chart preview" style="display:none; max-width:220px; max-height:160px; border:1px solid var(--line); border-radius:6px; margin-top:8px;">
-  <p class="field-hint" style="margin-top:4px;">Export a chart from the Seating Chart Generator (or use any photo/screenshot). Like Student Notes below, <strong>this image is never saved</strong> — it lives only in this tab until you generate or leave the page.</p>
+  <p class="field-hint" style="margin-top:4px;">Pick a class you have already seated in the Seating Chart Generator (the room is drawn for you), or attach any photo or screenshot. Like Student Notes below, <strong>this image is never saved</strong> — it lives only in this tab until you generate or leave the page.</p>
 
   <div class="toggle-row">
     <input type="checkbox" id="saveToHistory">
@@ -425,6 +437,18 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   </div>
   <p class="hint" id="shareNote">&nbsp;</p>
 </div>
+
+<details class="card" id="subSaidCard">
+  <summary>What the sub said <span class="opt">— a note for each day out, written after you're back</span></summary>
+  <div class="inner">
+    <p class="hint">Type what the sub told you, or what their feedback page said. It stays on this device only: it is not in the share link, the saved history, the Word file or the text copy, and it is never sent anywhere. A day with a note is marked ✓.</p>
+    <label for="subSaidDay">Day</label>
+    <select id="subSaidDay"></select>
+    <label for="subSaidText">What the sub said <span class="opt">(up to 2,000 characters)</span></label>
+    <textarea id="subSaidText" rows="4" maxlength="2000" placeholder="e.g. Period 3 finished early; the video link did not load; Sam was out of the room twice."></textarea>
+    <p class="hint" id="subSaidNote">&nbsp;</p>
+  </div>
+</details>
 
 <div id="generateArea">
   <button class="primary" id="btnGenerate">Generate Word document</button>
@@ -456,6 +480,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
 <script>
 (() => {
   const W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+  // Read by Tools/packet-builder/providers.js (090 Packet Builder): the standing-details fields (teacherName, roomNumber, periods, fireRoute, lockdownProcedure, ...). Keep the shape or bump the key.
   const STORAGE_KEY = "subPlanBuilder.standingDetails.v1";
 
   const DEFAULTS = {
@@ -578,9 +603,18 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     if (isCheckbox) node.addEventListener('change', () => { settings[key] = node.checked; scheduleSave(); });
   }
 
+  // The version stamp on the standing details: the local date of the last save. 090 Packet Builder
+  // prints it under the sub plan and the emergency page, so a binder printed in September shows
+  // that it predates an October room change (Path 10 P3).
+  function stampSettings() {
+    const d = new Date(), p = n => (n < 10 ? '0' : '') + n;
+    settings.savedOn = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+
   function scheduleSave() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
+      stampSettings();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
       saveNote.textContent = 'Saved.';
       saveNote.classList.add('saved');
@@ -672,6 +706,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
         assignMissingPeriodIds(settings.periods);
         applySettingsToForm();
         renderPerPeriodBlocks();
+        stampSettings();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
         saveNote.textContent = 'Imported.';
         saveNote.classList.add('saved');
@@ -1041,107 +1076,147 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     return String(text || '').split('\n').map(l => l.trim()).filter(Boolean);
   }
 
-  function buildPlainTextForDay(dateStr, dp, dayIndex, totalDays) {
-    const lines = [];
+  // ---------- One model, two renderers (Path 10 P4) ----------
+  // dayModel() is what one day's plan SAYS: sections of items, in order, from the standing details and the day's
+  // fields. renderDayText() draws it as the plain-text copy / print and renderDayDocx() as WordprocessingML, so a line
+  // added here reaches both, and neither can say something the other leaves out. The only things a section carries for
+  // one renderer alone are `text` (how the plain copy indents its lines, and whether it shouts them) and an item's
+  // `plainText` (where the two spell a thing differently on purpose). Item kinds:
+  //   p      a line of text, **bold** marks honoured      boldp  a line that is bold throughout (marks removed)
+  //   lab    a bold label then a value                   bullet a list line
+  //   gap    a blank line                                table  the Period / Time / Notes grid (rows)
+  // A `image` section is the seating chart: a picture in Word, one sentence in text.
+  function dayModel(dateStr, dp, dayIndex, totalDays) {
     const teacherName = el('teacherName').value.trim() || 'Devon Moore';
     const signOff = el('signOffName').value.trim() || teacherName;
-    const dateDisplay = dateStr ? new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '[Insert Date]';
-    const lessonTitle = (dp.lessonTitle || '').trim();
-    const dayTag = totalDays > 1 ? ` (Day ${dayIndex + 1} of ${totalDays})` : '';
-
-    lines.push('SUBSTITUTE PLAN' + (lessonTitle ? ' – ' + lessonTitle : '') + dayTag);
-    lines.push('Teacher: ' + teacherName + (settings.roomNumber ? '   Room: ' + settings.roomNumber : ''));
-    lines.push('Date: ' + dateDisplay);
+    const dateDisplay = dateStr ? new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '';
+    const sections = [];
+    const add = (id, title, items, text) => { sections.push({ id, title, items, text: text || {} }); };
+    const val = key => (settings[key] || '').trim();
+    const field = id => el(id).value.trim();
+    const p = text => ({ k: 'p', text });
+    const bullet = (text, plainText) => ({ k: 'bullet', text, plainText });
+    const lines = text => linesOf(text);
 
     // Emergency info — always included, first, regardless of how short the lesson is.
-    lines.push('');
-    lines.push('EMERGENCY INFO');
-    const hasEmergencyInfo = (settings.fireRoute || '').trim() || (settings.lockdownProcedure || '').trim() || (settings.medicalAlerts || '').trim();
-    if (!hasEmergencyInfo) {
-      lines.push('  (Nothing entered yet — add a fire route, lockdown procedure, and any medical alerts in Standing Details.)');
+    const emergency = [];
+    if (!val('fireRoute') && !val('lockdownProcedure') && !val('medicalAlerts')) {
+      emergency.push(p('(Nothing entered yet — add a fire route, lockdown procedure, and any medical alerts in Standing Details.)'));
     } else {
-      if ((settings.fireRoute || '').trim()) lines.push('  Fire / evacuation: ' + stripBold(settings.fireRoute.trim()));
-      if ((settings.lockdownProcedure || '').trim()) lines.push('  Lockdown: ' + stripBold(settings.lockdownProcedure.trim()));
-      if ((settings.medicalAlerts || '').trim()) lines.push('  Medical alerts: ' + stripBold(settings.medicalAlerts.trim()));
+      if (val('fireRoute')) emergency.push({ k: 'lab', label: 'Fire / evacuation: ', value: val('fireRoute') });
+      if (val('lockdownProcedure')) emergency.push({ k: 'lab', label: 'Lockdown: ', value: val('lockdownProcedure') });
+      if (val('medicalAlerts')) emergency.push({ k: 'lab', label: 'Medical alerts: ', value: val('medicalAlerts') });
     }
+    add('emergency', 'Emergency Info', emergency, { p: '  ', lab: '  ' });
 
     // Quick checklist — the "hard to accidentally omit" summary drawn from standing details.
-    lines.push('');
-    lines.push('QUICK CHECKLIST');
-    const periodsAll = settings.periods.filter(p => (p.label || '').trim());
-    if (periodsAll.length) lines.push('  Bell times: ' + periodsAll.map(p => 'P' + p.label + (p.time ? ' ' + p.time : '')).join(', '));
-    if ((settings.keysLocation || '').trim()) lines.push('  Keys: ' + settings.keysLocation.trim());
-    if ((settings.whoToAsk || '').trim()) lines.push('  Who to ask: ' + settings.whoToAsk.trim());
-    if ((settings.techFailureText || '').trim()) lines.push('  If tech fails: ' + stripBold(settings.techFailureText.trim()));
-    if (seatingChartImage) lines.push('  Seating chart: attached — see the generated Word doc (this plain-text copy cannot carry an image).');
+    const periodsAll = settings.periods.filter(x => (x.label || '').trim());
+    const checklist = [];
+    if (periodsAll.length) checklist.push(bullet('Bell times: ' + periodsAll.map(x => 'P' + x.label + (x.time ? ' ' + x.time : '')).join(', ')));
+    if (val('keysLocation')) checklist.push(bullet('Keys: ' + val('keysLocation')));
+    if (val('whoToAsk')) checklist.push(bullet('Who to ask: ' + val('whoToAsk')));
+    if (val('techFailureText')) checklist.push(bullet('If tech fails: ' + val('techFailureText')));
+    add('checklist', 'Quick Checklist', checklist, { bullet: '  ' });
+
+    // Seating chart — attached once for the whole absence, repeated on every day's page like Emergency Info and the
+    // checklist, so a page pulled out on its own still has it.
+    if (seatingChartImage) {
+      sections.push({ id: 'seating', title: 'Seating Chart', items: [], text: {}, image: seatingChartImage,
+        plainText: '  Seating chart: attached — see the generated Word doc (this plain-text copy cannot carry an image).' });
+    }
 
     const announcement = (dp.announcement || '').trim();
-    if (announcement) { lines.push(''); linesOf(announcement).forEach(l => lines.push(stripBold(l).toUpperCase())); }
+    if (announcement) add('announcement', null, lines(announcement).map(l => ({ k: 'boldp', text: l })), { upper: true });
 
     const overview = (dp.overviewText || '').trim();
-    if (overview) { lines.push(''); lines.push('OVERVIEW'); linesOf(overview).forEach(l => lines.push(stripBold(l))); }
+    if (overview) add('overview', 'Overview', lines(overview).map(p), {});
 
     const schedule = (dp.scheduleText || '').trim();
-    if (schedule) { lines.push(''); lines.push('CLASS SCHEDULE & TIMING'); linesOf(schedule).forEach(l => lines.push('- ' + stripBold(l))); }
+    if (schedule) add('schedule', 'Class Schedule & Timing', lines(schedule).map(l => bullet(l)), { bullet: '- ' });
 
-    const periods = periodsAll;
-    if (periods.length) {
-      lines.push('');
-      lines.push('PERIOD-SPECIFIC DETAILS');
+    // Period-specific details — a Period / Time / Notes grid, one row per period.
+    if (periodsAll.length) {
       const same = dp.samePeriods !== false;
       const sharedNotes = (dp.sharedPeriodNotes || '').trim();
-      periods.forEach(p => {
-        lines.push('Period ' + p.label + (p.time ? ' (' + p.time + ')' : ''));
-        const notes = same ? sharedNotes : ((dp.perPeriodValues || {})[p._id] || '');
-        linesOf(notes).forEach(l => lines.push('  - ' + stripBold(l)));
-      });
+      add('periods', 'Period-Specific Details', [{ k: 'table', rows: periodsAll.map(x => ({
+        label: x.label,
+        time: x.time || '',
+        notesText: same ? sharedNotes : ((dp.perPeriodValues || {})[x._id] || '')
+      })) }], {});
     }
 
-    lines.push('');
-    lines.push('IMPORTANT NOTES');
-    const materials = (dp.materialsNote || '').trim();
-    if (materials) linesOf(materials).forEach(l => lines.push(stripBold(l)));
-    const attendanceText = el('attendanceText').value.trim();
-    if (attendanceText) lines.push('Attendance: ' + attendanceText);
-    lines.push('Resources:');
-    if (el('rosterLocation').value.trim()) lines.push('  - Rosters / seating charts: ' + el('rosterLocation').value.trim());
-    if (el('absenceLocation').value.trim()) lines.push('  - Absence slips: ' + el('absenceLocation').value.trim());
-    if (el('emergencyLocation').value.trim()) lines.push('  - Substitute / emergency folder: ' + el('emergencyLocation').value.trim());
-    lines.push('  - Please review the IEP/504 accommodation grid for extra time, assistance, etc.');
+    const notes = [];
+    lines((dp.materialsNote || '').trim()).forEach(l => notes.push(p(l)));
+    if (field('attendanceText')) notes.push({ k: 'lab', label: 'Attendance: ', value: field('attendanceText') });
+    notes.push({ k: 'lab', label: 'Resources:', value: '' });
+    if (field('rosterLocation')) notes.push(bullet('Rosters / seating charts: ' + field('rosterLocation')));
+    if (field('absenceLocation')) notes.push(bullet('Absence slips: ' + field('absenceLocation')));
+    if (field('emergencyLocation')) notes.push(bullet('Substitute / emergency folder: ' + field('emergencyLocation')));
+    notes.push(bullet('Please review the IEP/504 accommodation grid for extra time, assistance, etc.'));
+    add('notes', 'Important Notes', notes, { bullet: '  - ', lab: '' });
 
-    lines.push('');
-    lines.push('BEHAVIOR EXPECTATIONS');
-    const variant = settings.behaviorVariant;
-    const behaviorText = variant === 'custom' ? (settings.behaviorCustom || '') : (BEHAVIOR_TEXT[variant] || BEHAVIOR_TEXT.long);
-    linesOf(behaviorText).forEach(l => lines.push(stripBold(l)));
+    const behaviorText = settings.behaviorVariant === 'custom' ? (settings.behaviorCustom || '') : BEHAVIOR_TEXT[settings.behaviorVariant] || BEHAVIOR_TEXT.long;
+    const behavior = lines(behaviorText).map(l => ({ k: 'boldp', text: l }));
     const nLines = Math.max(0, parseInt(settings.referralLines, 10) || 0);
     if (nLines > 0) {
-      lines.push('');
-      for (let i = 0; i < nLines; i++) lines.push('Student Name: _______________________   Period: _______   Reason: _______________________');
+      behavior.push({ k: 'gap' });
+      for (let i = 0; i < nLines; i++) behavior.push(p('Student Name: _______________________   Period: _______   Reason: _______________________'));
     }
+    add('behavior', 'Behavior Expectations', behavior, {});
 
-    lines.push('');
-    lines.push('EMERGENCY CONTACTS');
-    lines.push('  - Main Office: press 0 and hit "Call"');
-    if (el('phoneNurse').value.trim()) lines.push('  - Nurse: ' + el('phoneNurse').value.trim());
-    if (el('phoneCounseling').value.trim()) lines.push('  - Counseling: ' + el('phoneCounseling').value.trim());
-    if (el('phoneSupport').value.trim()) lines.push('  - Support Room: ' + el('phoneSupport').value.trim());
-    if (el('phoneOther').value.trim()) lines.push('  - Other numbers: ' + el('phoneOther').value.trim());
-    if (settings.includeCallingOut) lines.push('  - Calling out of the building: dial 9, then the number you want to call.');
+    const contacts = [bullet('Main Office: press 0 and hit “Call”', 'Main Office: press 0 and hit "Call"')];
+    if (field('phoneNurse')) contacts.push(bullet('Nurse: ' + field('phoneNurse')));
+    if (field('phoneCounseling')) contacts.push(bullet('Counseling: ' + field('phoneCounseling')));
+    if (field('phoneSupport')) contacts.push(bullet('Support Room: ' + field('phoneSupport')));
+    if (field('phoneOther')) contacts.push(bullet('Other numbers: ' + field('phoneOther')));
+    if (settings.includeCallingOut) contacts.push(bullet('Calling out of the building: dial 9, then the number you want to call.'));
+    add('contacts', 'Emergency Contacts', contacts, { bullet: '  - ' });
 
-    const studentNotes = el('studentNotes').value.trim();
-    if (studentNotes) {
-      lines.push('');
-      lines.push('STUDENT NOTES & CONCERNS');
-      linesOf(studentNotes).forEach(l => lines.push('  - ' + stripBold(l)));
-    }
+    // Student notes (optional, never persisted)
+    const studentNotes = field('studentNotes');
+    if (studentNotes) add('students', 'Student Notes & Concerns', lines(studentNotes).map(l => bullet(l)), { bullet: '  - ' });
 
-    lines.push('');
-    lines.push('Questions? Call the main office.');
-    lines.push('Thank you for covering!');
-    lines.push(signOff);
+    add('signoff', null, ['Questions? Call the main office.', 'Thank you for covering!', signOff].map(p), {});
 
-    return lines.join('\n');
+    const lessonTitle = (dp.lessonTitle || '').trim();
+    return {
+      lessonTitle,
+      dayTag: totalDays > 1 ? ` (Day ${dayIndex + 1} of ${totalDays})` : '',
+      head: [
+        [['Teacher: ', teacherName]].concat(settings.roomNumber ? [['   Room: ', settings.roomNumber]] : []),
+        [['Date: ', dateDisplay || '[Insert Date]']]
+      ],
+      sections
+    };
+  }
+
+  function renderDayText(m) {
+    const out = ['SUBSTITUTE PLAN' + (m.lessonTitle ? ' – ' + m.lessonTitle : '') + m.dayTag];
+    m.head.forEach(parts => out.push(parts.map(x => x[0] + x[1]).join('')));
+    m.sections.forEach(sec => {
+      if (sec.image) { out.push(sec.plainText); return; }
+      out.push('');
+      if (sec.title) out.push(sec.title.toUpperCase());
+      sec.items.forEach(it => {
+        const shown = t => { const x = stripBold(t); return sec.text.upper ? x.toUpperCase() : x; };
+        if (it.k === 'gap') out.push('');
+        else if (it.k === 'p') out.push((sec.text.p || '') + stripBold(it.text));
+        else if (it.k === 'boldp') out.push(shown(it.text));
+        else if (it.k === 'lab') out.push((sec.text.lab || '') + it.label + stripBold(it.value));
+        else if (it.k === 'bullet') out.push((sec.text.bullet || '') + stripBold(it.plainText || it.text));
+        else if (it.k === 'table') {
+          it.rows.forEach(r => {
+            out.push('Period ' + r.label + (r.time ? ' (' + stripBold(r.time) + ')' : ''));
+            linesOf(r.notesText).forEach(l => out.push('  - ' + stripBold(l)));
+          });
+        }
+      });
+    });
+    return out.join('\n');
+  }
+
+  function buildPlainTextForDay(dateStr, dp, dayIndex, totalDays) {
+    return renderDayText(dayModel(dateStr, dp, dayIndex, totalDays));
   }
 
   function buildPlainTextPlan() {
@@ -1284,6 +1359,159 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     setSeatingChartUI();
   });
 
+  // ---------- What the sub said (Path 10 P5) ----------
+  // One typed note per date out, kept in this browser only. It is deliberately outside the share payload, the saved
+  // history, the .docx and the text copy: it can name a student, and nothing here leaves the device. The key is
+  // { v: 1, notes: { '<iso date>': text } }; only the newest SUB_SAID_KEEP dates are kept.
+  const SUB_SAID_KEY = 'subPlanBuilder.subSaid.v1';
+  const SUB_SAID_KEEP = 60, SUB_SAID_MAX = 2000;
+  function readSubSaid() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(SUB_SAID_KEY));
+      const notes = raw && typeof raw === 'object' && raw.notes && typeof raw.notes === 'object' && !Array.isArray(raw.notes) ? raw.notes : {};
+      const out = {};
+      Object.keys(notes).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d) && typeof notes[d] === 'string' && notes[d].trim()).forEach(d => { out[d] = notes[d].slice(0, SUB_SAID_MAX); });
+      return out;
+    } catch (e) { return {}; }
+  }
+  function writeSubSaid(notes) {
+    const keep = Object.keys(notes).sort().slice(-SUB_SAID_KEEP);
+    const out = {};
+    keep.forEach(d => { out[d] = notes[d]; });
+    try { localStorage.setItem(SUB_SAID_KEY, JSON.stringify({ v: 1, notes: out })); return true; } catch (e) { return false; }
+  }
+  function renderSubSaidDays() {
+    const sel = el('subSaidDay');
+    const notes = readSubSaid();
+    const keep = sel.value;
+    const dates = computeDateList();
+    sel.textContent = '';
+    dates.forEach(d => {
+      const o = document.createElement('option');
+      o.value = d;
+      o.textContent = dayLabelLong(d) + (notes[d] ? ' ✓' : '');
+      sel.appendChild(o);
+    });
+    if (dates.includes(keep)) sel.value = keep;
+    el('subSaidText').value = notes[sel.value] || '';
+  }
+  el('subSaidDay').addEventListener('change', () => { el('subSaidText').value = readSubSaid()[el('subSaidDay').value] || ''; });
+  el('subSaidText').addEventListener('input', () => {
+    const d = el('subSaidDay').value;
+    if (!d) return;
+    const notes = readSubSaid();
+    const text = el('subSaidText').value.slice(0, SUB_SAID_MAX);
+    if (text.trim()) notes[d] = text; else delete notes[d];
+    el('subSaidNote').textContent = writeSubSaid(notes) ? 'Saved on this device.' : 'Could not save: this browser refused the storage.';
+    const o = el('subSaidDay').selectedOptions[0];
+    if (o) o.textContent = dayLabelLong(d) + (text.trim() ? ' ✓' : '');
+  });
+  el('subSaidCard').addEventListener('toggle', () => { if (el('subSaidCard').open) renderSubSaidDays(); });
+  ['planDate', 'numDays'].forEach(id => el(id).addEventListener('input', renderSubSaidDays));
+  renderSubSaidDays();
+
+  // Path 10 P4: a do-now from the question bank. The Packet Builder's do-now provider (packet-builder/providers.js)
+  // reads the bank and hands back the prompts of the questions tagged "do-now"; this page names no key of the
+  // bank. The chosen prompt becomes the first line of the schedule, replacing an earlier do-now line, and the
+  // field stays ordinary text: typing a do-now by hand works as it always did.
+  const DO_NOW_LEAD = '**Do now (5 min):** ';
+  let doNowList = [];
+  function doNowPrompts() {
+    if (!window.PacketSections) return [];
+    try { return PacketSections.load('do-now', { read: PacketSections.readerFor(localStorage), todayISO: '' }) || []; } catch (e) { return []; }
+  }
+  function doNowLine(prompt) { return DO_NOW_LEAD + String(prompt || '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim(); }
+  function putDoNow(text, prompt) {
+    const rest = String(text || '').split('\n').filter(l => !/^\s*\*\*do now\b/i.test(l));
+    return [doNowLine(prompt)].concat(rest).join('\n').replace(/\n+$/, '');
+  }
+  function renderDoNowPull() {
+    doNowList = doNowPrompts();
+    const pick = el('doNowPick');
+    pick.textContent = '';
+    doNowList.forEach((d, i) => {
+      const o = document.createElement('option');
+      o.value = String(i);
+      o.textContent = d.prompt.length > 80 ? d.prompt.slice(0, 79) + '…' : d.prompt;
+      pick.appendChild(o);
+    });
+    el('doNowPullRow').hidden = !doNowList.length;
+  }
+  el('doNowPullBtn').addEventListener('click', () => {
+    const d = doNowList[+el('doNowPick').value];
+    if (!d) return;
+    const f = el('scheduleText');
+    f.value = putDoNow(f.value, d.prompt);
+    f.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  renderDoNowPull();
+
+  // Path 10 P4: draw the room from the seating chart saved in the Seating Chart Generator instead of
+  // asking for an image. The Packet Builder's seating section (packet-builder/providers.js) reads the
+  // chart and draws the SVG; this page names no key of that tool. The drawing is turned into the same
+  // PNG an attached file becomes, held in this tab only, like the attached image.
+  function seatingClasses() {
+    if (!window.PacketSections || !window.SeatingRead) return [];
+    try {
+      const ctx = { read: PacketSections.readerFor(localStorage), todayISO: '', SeatingRead: window.SeatingRead };
+      const built = PacketSections.build(['seating'], ctx).sections[0];
+      if (!built) return [];
+      return built.pages.map(pg => ({
+        name: pg.title.replace(/^Seating: /, ''),
+        svg: (pg.blocks.find(b => b.type === 'html') || {}).html || ''
+      })).filter(c => c.svg);
+    } catch (e) { return []; }
+  }
+
+  function svgToPng(svg) {
+    return new Promise((resolve, reject) => {
+      const m = /viewBox="([-\d. ]+)"/.exec(svg);
+      const v = m ? m[1].trim().split(/\s+/).map(Number) : [];
+      if (v.length !== 4 || !(v[2] > 0) || !(v[3] > 0)) { reject(new Error('could not size the chart')); return; }
+      const scale = SEATING_CHART_MAX_DIM / Math.max(v[2], v[3]);
+      const w = Math.round(v[2] * scale), h = Math.round(v[3] * scale);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const g = canvas.getContext('2d');
+        g.fillStyle = '#fff';
+        g.fillRect(0, 0, w, h);
+        g.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/png');
+        resolve({ dataUrl: dataUrl, base64: dataUrl.split(',')[1], widthPx: w, heightPx: h });
+      };
+      img.onerror = () => reject(new Error('could not draw the chart'));
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg.replace('width="100%"', 'width="' + w + '" height="' + h + '"'));
+    });
+  }
+
+  let seatingClassList = [];
+  function renderSeatingPull() {
+    seatingClassList = seatingClasses();
+    const pick = el('seatingChartPick');
+    pick.textContent = '';
+    seatingClassList.forEach((c, i) => {
+      const o = document.createElement('option');
+      o.value = String(i);
+      o.textContent = c.name;
+      pick.appendChild(o);
+    });
+    el('seatingChartPullRow').hidden = !seatingClassList.length;
+  }
+  el('seatingChartPullBtn').addEventListener('click', async () => {
+    const c = seatingClassList[+el('seatingChartPick').value];
+    if (!c) return;
+    try {
+      seatingChartImage = await svgToPng(c.svg);
+      setSeatingChartUI();
+      el('seatingChartStatus').textContent = 'Drawn from your saved seating chart: ' + c.name + ' (' + seatingChartImage.widthPx + '×' + seatingChartImage.heightPx + 'px) — will be embedded in the Word doc.';
+    } catch (err) {
+      el('seatingChartStatus').textContent = 'Could not draw that class: ' + err.message;
+    }
+  });
+  renderSeatingPull();
+
   // ---------- DOCX generation ----------
 
   const R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -1420,154 +1648,30 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
       `</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
   }
 
-  function buildDayParas(dateStr, dp, dayIndex, totalDays) {
-    const paras = [];
-
-    const teacherName = el('teacherName').value.trim() || 'Devon Moore';
-    const signOff = el('signOffName').value.trim() || teacherName;
-    const dateDisplay = dateStr ? new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '';
-    const lessonTitle = (dp.lessonTitle || '').trim();
-    const dayTag = totalDays > 1 ? ` (Day ${dayIndex + 1} of ${totalDays})` : '';
-
-    paras.push(heading(1, 'Substitute Plan' + (lessonTitle ? ' – ' + lessonTitle : '') + dayTag));
-    paras.push(`<w:p>${run('Teacher: ', true)}${run(teacherName, false)}${settings.roomNumber ? run('   Room: ', true) + run(settings.roomNumber, false) : ''}</w:p>`);
-    paras.push(`<w:p>${run('Date: ', true)}${run(dateDisplay || '[Insert Date]', false)}</w:p>`);
-
-    // Emergency info — always included, right up top, regardless of lesson length.
-    paras.push(emptyParagraph());
-    paras.push(heading(2, 'Emergency Info'));
-    const hasEmergencyInfo = (settings.fireRoute || '').trim() || (settings.lockdownProcedure || '').trim() || (settings.medicalAlerts || '').trim();
-    if (!hasEmergencyInfo) {
-      paras.push(paragraph('(Nothing entered yet — add a fire route, lockdown procedure, and any medical alerts in Standing Details.)', {}));
-    } else {
-      if ((settings.fireRoute || '').trim()) paras.push(`<w:p>${run('Fire / evacuation: ', true)}${runsFor(settings.fireRoute.trim())}</w:p>`);
-      if ((settings.lockdownProcedure || '').trim()) paras.push(`<w:p>${run('Lockdown: ', true)}${runsFor(settings.lockdownProcedure.trim())}</w:p>`);
-      if ((settings.medicalAlerts || '').trim()) paras.push(`<w:p>${run('Medical alerts: ', true)}${runsFor(settings.medicalAlerts.trim())}</w:p>`);
-    }
-
-    // Quick checklist
-    paras.push(emptyParagraph());
-    paras.push(heading(2, 'Quick Checklist'));
-    const periodsAll = settings.periods.filter(p => (p.label || '').trim());
-    if (periodsAll.length) paras.push(paragraph('Bell times: ' + periodsAll.map(p => 'P' + p.label + (p.time ? ' ' + p.time : '')).join(', '), { style: 'ListParagraph', bullet: true }));
-    if ((settings.keysLocation || '').trim()) paras.push(paragraph('Keys: ' + settings.keysLocation.trim(), { style: 'ListParagraph', bullet: true }));
-    if ((settings.whoToAsk || '').trim()) paras.push(paragraph('Who to ask: ' + settings.whoToAsk.trim(), { style: 'ListParagraph', bullet: true }));
-    if ((settings.techFailureText || '').trim()) paras.push(paragraph('If tech fails: ' + settings.techFailureText.trim(), { style: 'ListParagraph', bullet: true }));
-
-    // Seating chart — attached once for the whole absence (not per-day), but
-    // repeated on every day's page like Emergency Info/Quick Checklist above,
-    // so a page pulled out on its own still has it. Only one media part is
-    // ever written to the zip; every day's <w:drawing> below just points at
-    // the same relationship id, so this doesn't multiply the file's size.
-    if (seatingChartImage) {
+  function renderDayDocx(m) {
+    const paras = [heading(1, 'Substitute Plan' + (m.lessonTitle ? ' – ' + m.lessonTitle : '') + m.dayTag)];
+    m.head.forEach(parts => paras.push(`<w:p>${parts.map(x => run(x[0], true) + run(x[1], false)).join('')}</w:p>`));
+    m.sections.forEach(sec => {
       paras.push(emptyParagraph());
-      paras.push(heading(2, 'Seating Chart'));
-      const dims = computeDrawingSizeEmu(seatingChartImage.widthPx, seatingChartImage.heightPx);
-      paras.push(drawingParagraph(SEATING_CHART_REL_ID, dims.w, dims.h));
-    }
-
-    const announcement = (dp.announcement || '').trim();
-    if (announcement) {
-      paras.push(emptyParagraph());
-      linesToParagraphs(announcement, { bold: true }).forEach(p => paras.push(p));
-    }
-
-    // Overview
-    const overview = (dp.overviewText || '').trim();
-    if (overview) {
-      paras.push(emptyParagraph());
-      paras.push(heading(2, 'Overview'));
-      linesToParagraphs(overview, {}).forEach(p => paras.push(p));
-    }
-
-    // Schedule & timing
-    const schedule = (dp.scheduleText || '').trim();
-    if (schedule) {
-      paras.push(emptyParagraph());
-      paras.push(heading(2, 'Class Schedule & Timing'));
-      linesToParagraphs(schedule, { style: 'ListParagraph', bullet: true }).forEach(p => paras.push(p));
-    }
-
-    // Period-specific details — a real table (Period / Time / Notes), one
-    // row per period, faster to scan under pressure than repeated headings.
-    const periods = periodsAll;
-    if (periods.length) {
-      paras.push(emptyParagraph());
-      paras.push(heading(2, 'Period-Specific Details'));
-      const same = dp.samePeriods !== false;
-      const sharedNotes = (dp.sharedPeriodNotes || '').trim();
-      const rows = periods.map(p => ({
-        label: p.label,
-        time: p.time || '',
-        notesText: same ? sharedNotes : ((dp.perPeriodValues || {})[p._id] || '')
-      }));
-      paras.push(periodTableXml(rows));
-      paras.push(emptyParagraph());
-    }
-
-    // Important notes
-    const materials = (dp.materialsNote || '').trim();
-    paras.push(emptyParagraph());
-    paras.push(heading(2, 'Important Notes'));
-    if (materials) {
-      linesToParagraphs(materials, {}).forEach(p => paras.push(p));
-    }
-    const attendanceText = el('attendanceText').value.trim();
-    if (attendanceText) {
-      paras.push(`<w:p>${run('Attendance: ', true)}${runsFor(attendanceText)}</w:p>`);
-    }
-    const rosterLoc = el('rosterLocation').value.trim();
-    const absenceLoc = el('absenceLocation').value.trim();
-    const emergencyLoc = el('emergencyLocation').value.trim();
-    paras.push(`<w:p>${run('Resources:', true)}</w:p>`);
-    if (rosterLoc) paras.push(paragraph('Rosters / seating charts: ' + rosterLoc, { style: 'ListParagraph', bullet: true }));
-    if (absenceLoc) paras.push(paragraph('Absence slips: ' + absenceLoc, { style: 'ListParagraph', bullet: true }));
-    if (emergencyLoc) paras.push(paragraph('Substitute / emergency folder: ' + emergencyLoc, { style: 'ListParagraph', bullet: true }));
-    paras.push(paragraph('Please review the IEP/504 accommodation grid for extra time, assistance, etc.', { style: 'ListParagraph', bullet: true }));
-
-    // Behavior expectations
-    paras.push(emptyParagraph());
-    paras.push(heading(2, 'Behavior Expectations'));
-    const variant = settings.behaviorVariant;
-    const behaviorText = variant === 'custom' ? (settings.behaviorCustom || '') : BEHAVIOR_TEXT[variant] || BEHAVIOR_TEXT.long;
-    if (behaviorText.trim()) {
-      linesToParagraphs(behaviorText, { bold: true }).forEach(p => paras.push(p));
-    }
-    const nLines = Math.max(0, parseInt(settings.referralLines, 10) || 0);
-    if (nLines > 0) {
-      paras.push(emptyParagraph());
-      for (let i = 0; i < nLines; i++) {
-        paras.push(paragraph('Student Name: _______________________   Period: _______   Reason: _______________________', {}));
+      if (sec.title) paras.push(heading(2, sec.title));
+      if (sec.image) {
+        const dims = computeDrawingSizeEmu(sec.image.widthPx, sec.image.heightPx);
+        paras.push(drawingParagraph(SEATING_CHART_REL_ID, dims.w, dims.h));
       }
-    }
-
-    // Emergency contacts
-    paras.push(emptyParagraph());
-    paras.push(heading(2, 'Emergency Contacts'));
-    paras.push(paragraph('Main Office: press 0 and hit “Call”', { style: 'ListParagraph', bullet: true }));
-    if (el('phoneNurse').value.trim()) paras.push(paragraph('Nurse: ' + el('phoneNurse').value.trim(), { style: 'ListParagraph', bullet: true }));
-    if (el('phoneCounseling').value.trim()) paras.push(paragraph('Counseling: ' + el('phoneCounseling').value.trim(), { style: 'ListParagraph', bullet: true }));
-    if (el('phoneSupport').value.trim()) paras.push(paragraph('Support Room: ' + el('phoneSupport').value.trim(), { style: 'ListParagraph', bullet: true }));
-    if (el('phoneOther').value.trim()) paras.push(paragraph('Other numbers: ' + el('phoneOther').value.trim(), { style: 'ListParagraph', bullet: true }));
-    if (settings.includeCallingOut) {
-      paras.push(paragraph('Calling out of the building: dial 9, then the number you want to call.', { style: 'ListParagraph', bullet: true }));
-    }
-
-    // Student notes (optional, never persisted)
-    const studentNotes = el('studentNotes').value.trim();
-    if (studentNotes) {
-      paras.push(emptyParagraph());
-      paras.push(heading(2, 'Student Notes & Concerns'));
-      linesToParagraphs(studentNotes, { style: 'ListParagraph', bullet: true }).forEach(p => paras.push(p));
-    }
-
-    // Sign-off
-    paras.push(emptyParagraph());
-    paras.push(paragraph('Questions? Call the main office.', {}));
-    paras.push(paragraph('Thank you for covering!', {}));
-    paras.push(paragraph(signOff, {}));
-
+      sec.items.forEach(it => {
+        if (it.k === 'gap') paras.push(emptyParagraph());
+        else if (it.k === 'p') paras.push(paragraph(it.text, {}));
+        else if (it.k === 'boldp') paras.push(paragraph(stripBold(it.text), { bold: true }));
+        else if (it.k === 'lab') paras.push(`<w:p>${run(it.label, true)}${it.value ? runsFor(it.value) : ''}</w:p>`);
+        else if (it.k === 'bullet') paras.push(paragraph(it.text, { style: 'ListParagraph', bullet: true }));
+        else if (it.k === 'table') { paras.push(periodTableXml(it.rows)); paras.push(emptyParagraph()); }
+      });
+    });
     return paras;
+  }
+
+  function buildDayParas(dateStr, dp, dayIndex, totalDays) {
+    return renderDayDocx(dayModel(dateStr, dp, dayIndex, totalDays));
   }
 
   function buildDocumentXml() {
@@ -1857,6 +1961,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
           return false;
         }
         applySharePayload(decoded);
+        renderSubSaidDays();
         setShareNote('Opened a shared plan from ' + who + '. It is a copy — nothing goes back to them.', 'saved');
         return true;
       }

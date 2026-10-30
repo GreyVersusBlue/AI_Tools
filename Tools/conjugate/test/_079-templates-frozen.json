@@ -1,0 +1,388 @@
+{
+ "es_present": {
+  "lang": "es",
+  "tense": "present",
+  "title": "Present Tense — Regular Verbs",
+  "persons": [
+   "yo",
+   "tú",
+   "él / ella / usted",
+   "nosotros",
+   "vosotros",
+   "ellos / ellas / ustedes"
+  ],
+  "panels": [
+   {
+    "name": "-AR: hablar (to speak)",
+    "forms": [
+     "hablo",
+     "hablas",
+     "habla",
+     "hablamos",
+     "habláis",
+     "hablan"
+    ]
+   },
+   {
+    "name": "-ER: comer (to eat)",
+    "forms": [
+     "como",
+     "comes",
+     "come",
+     "comemos",
+     "coméis",
+     "comen"
+    ]
+   },
+   {
+    "name": "-IR: vivir (to live)",
+    "forms": [
+     "vivo",
+     "vives",
+     "vive",
+     "vivimos",
+     "vivís",
+     "viven"
+    ]
+   }
+  ]
+ },
+ "es_preterite": {
+  "lang": "es",
+  "tense": "preterite",
+  "title": "Preterite Tense — Regular Verbs",
+  "persons": [
+   "yo",
+   "tú",
+   "él / ella / usted",
+   "nosotros",
+   "vosotros",
+   "ellos / ellas / ustedes"
+  ],
+  "panels": [
+   {
+    "name": "-AR: hablar (to speak)",
+    "forms": [
+     "hablé",
+     "hablaste",
+     "habló",
+     "hablamos",
+     "hablasteis",
+     "hablaron"
+    ]
+   },
+   {
+    "name": "-ER: comer (to eat)",
+    "forms": [
+     "comí",
+     "comiste",
+     "comió",
+     "comimos",
+     "comisteis",
+     "comieron"
+    ]
+   },
+   {
+    "name": "-IR: vivir (to live)",
+    "forms": [
+     "viví",
+     "viviste",
+     "vivió",
+     "vivimos",
+     "vivisteis",
+     "vivieron"
+    ]
+   }
+  ]
+ },
+ "es_imperfect": {
+  "lang": "es",
+  "tense": "imperfect",
+  "title": "Imperfect Tense — Regular Verbs",
+  "persons": [
+   "yo",
+   "tú",
+   "él / ella / usted",
+   "nosotros",
+   "vosotros",
+   "ellos / ellas / ustedes"
+  ],
+  "panels": [
+   {
+    "name": "-AR: hablar (to speak)",
+    "forms": [
+     "hablaba",
+     "hablabas",
+     "hablaba",
+     "hablábamos",
+     "hablabais",
+     "hablaban"
+    ]
+   },
+   {
+    "name": "-ER: comer (to eat)",
+    "forms": [
+     "comía",
+     "comías",
+     "comía",
+     "comíamos",
+     "comíais",
+     "comían"
+    ]
+   },
+   {
+    "name": "-IR: vivir (to live)",
+    "forms": [
+     "vivía",
+     "vivías",
+     "vivía",
+     "vivíamos",
+     "vivíais",
+     "vivían"
+    ]
+   }
+  ]
+ },
+ "es_future": {
+  "lang": "es",
+  "tense": "future",
+  "title": "Future Tense — Regular Verbs",
+  "persons": [
+   "yo",
+   "tú",
+   "él / ella / usted",
+   "nosotros",
+   "vosotros",
+   "ellos / ellas / ustedes"
+  ],
+  "panels": [
+   {
+    "name": "-AR: hablar (to speak)",
+    "forms": [
+     "hablaré",
+     "hablarás",
+     "hablará",
+     "hablaremos",
+     "hablaréis",
+     "hablarán"
+    ]
+   },
+   {
+    "name": "-ER: comer (to eat)",
+    "forms": [
+     "comeré",
+     "comerás",
+     "comerá",
+     "comeremos",
+     "comeréis",
+     "comerán"
+    ]
+   },
+   {
+    "name": "-IR: vivir (to live)",
+    "forms": [
+     "viviré",
+     "vivirás",
+     "vivirá",
+     "viviremos",
+     "viviréis",
+     "vivirán"
+    ]
+   }
+  ]
+ },
+ "es_irregulars": {
+  "lang": "es",
+  "tense": "present",
+  "title": "Irregular Verbs — Present Tense",
+  "persons": [
+   "yo",
+   "tú",
+   "él / ella / usted",
+   "nosotros",
+   "vosotros",
+   "ellos / ellas / ustedes"
+  ],
+  "panels": [
+   {
+    "name": "ser (to be)",
+    "forms": [
+     "soy",
+     "eres",
+     "es",
+     "somos",
+     "sois",
+     "son"
+    ]
+   },
+   {
+    "name": "estar (to be)",
+    "forms": [
+     "estoy",
+     "estás",
+     "está",
+     "estamos",
+     "estáis",
+     "están"
+    ]
+   }
+  ]
+ },
+ "fr_present": {
+  "lang": "fr",
+  "tense": "present",
+  "title": "Present Tense — Regular Verbs",
+  "persons": [
+   "je",
+   "tu",
+   "il / elle / on",
+   "nous",
+   "vous",
+   "ils / elles"
+  ],
+  "panels": [
+   {
+    "name": "-ER: parler (to speak)",
+    "forms": [
+     "parle",
+     "parles",
+     "parle",
+     "parlons",
+     "parlez",
+     "parlent"
+    ]
+   },
+   {
+    "name": "-IR: finir (to finish)",
+    "forms": [
+     "finis",
+     "finis",
+     "finit",
+     "finissons",
+     "finissez",
+     "finissent"
+    ]
+   },
+   {
+    "name": "-RE: vendre (to sell)",
+    "forms": [
+     "vends",
+     "vends",
+     "vend",
+     "vendons",
+     "vendez",
+     "vendent"
+    ]
+   }
+  ]
+ },
+ "fr_imperfect": {
+  "lang": "fr",
+  "tense": "imperfect",
+  "title": "Imperfect Tense — Regular Verbs",
+  "persons": [
+   "je",
+   "tu",
+   "il / elle / on",
+   "nous",
+   "vous",
+   "ils / elles"
+  ],
+  "panels": [
+   {
+    "name": "-ER: parler (to speak)",
+    "forms": [
+     "parlais",
+     "parlais",
+     "parlait",
+     "parlions",
+     "parliez",
+     "parlaient"
+    ]
+   },
+   {
+    "name": "-IR: finir (to finish)",
+    "forms": [
+     "finissais",
+     "finissais",
+     "finissait",
+     "finissions",
+     "finissiez",
+     "finissaient"
+    ]
+   },
+   {
+    "name": "-RE: vendre (to sell)",
+    "forms": [
+     "vendais",
+     "vendais",
+     "vendait",
+     "vendions",
+     "vendiez",
+     "vendaient"
+    ]
+   }
+  ]
+ },
+ "fr_irregulars": {
+  "lang": "fr",
+  "tense": "present",
+  "title": "Irregular Verbs — Present Tense",
+  "persons": [
+   "je",
+   "tu",
+   "il / elle / on",
+   "nous",
+   "vous",
+   "ils / elles"
+  ],
+  "panels": [
+   {
+    "name": "avoir (to have)",
+    "forms": [
+     "ai",
+     "as",
+     "a",
+     "avons",
+     "avez",
+     "ont"
+    ]
+   },
+   {
+    "name": "être (to be)",
+    "forms": [
+     "suis",
+     "es",
+     "est",
+     "sommes",
+     "êtes",
+     "sont"
+    ]
+   }
+  ]
+ },
+ "blank": {
+  "title": "Verb Conjugation Reference",
+  "persons": [
+   "yo",
+   "tú",
+   "él / ella / usted",
+   "nosotros",
+   "vosotros",
+   "ellos / ellas / ustedes"
+  ],
+  "panels": [
+   {
+    "name": "Verb group",
+    "forms": [
+     "",
+     "",
+     "",
+     "",
+     "",
+     ""
+    ]
+   }
+  ]
+ }
+}

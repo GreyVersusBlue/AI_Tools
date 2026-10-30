@@ -30,6 +30,9 @@
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/state-link.js"></script>
+<!-- The site's word lists (Path 19 P2): a list saved on 040 or 039 can be added to this one. -->
+<script src="../_shared/store.js"></script>
+<script src="../_shared/word-list.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
@@ -149,6 +152,13 @@
     <label for="wordInput">Vocabulary, one per line: target word: English</label>
     <textarea id="wordInput" placeholder="la mesa: the table&#10;la silla: the chair&#10;la ventana: the window"></textarea>
     <button class="secondary" id="saveWordsBtn">Save list</button>
+    <div id="wordListRow" hidden style="margin-top:.8rem;">
+      <label for="wordListSelect">Add words from a saved word list</label>
+      <p class="hint">The word lists saved in this browser, including the Vocabulary Flashcard Generator&rsquo;s. The word goes in as the target word and its definition as the English. Press Save list to keep them.</p>
+      <select id="wordListSelect"></select>
+      <button type="button" class="secondary" id="wordListAddBtn">Add words to the box</button>
+      <p class="hint" id="wordListNote" role="status"></p>
+    </div>
   </div>
 
   <div class="card">
@@ -174,6 +184,7 @@
   var els = {};
   ['langSelect', 'wordInput', 'saveWordsBtn', 'wordCount', 'wordTable', 'printBtn', 'previewBtn', 'printArea', 'fileWarning',
    'listSwitch', 'listName', 'newListBtn', 'duplicateListBtn', 'deleteListBtn',
+   'wordListRow', 'wordListSelect', 'wordListAddBtn', 'wordListNote',
    'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
@@ -524,14 +535,43 @@
     });
   }
 
+  /* ---------- add words from a saved word list (Path 19 P2) ----------
+     Read-only: _shared/word-list.js holds every saved list (it takes 040's and 039's over once). The
+     words are put in the box as "target: English" lines and kept only when the teacher presses Save list. */
+  function wordListDo(fn) { try { return fn(); } catch (e) { return undefined; } }
+  function refreshWordListRow() {
+    var names = wordListDo(function () { return WordList.names(); }) || [];
+    els.wordListRow.hidden = !names.length;
+    var current = els.wordListSelect.value;
+    els.wordListSelect.innerHTML = '';
+    names.forEach(function (n) {
+      var opt = document.createElement('option');
+      opt.value = n; opt.textContent = n;
+      els.wordListSelect.appendChild(opt);
+    });
+    if (current && names.indexOf(current) !== -1) els.wordListSelect.value = current;
+  }
+  els.wordListAddBtn.addEventListener('click', function () {
+    var list = wordListDo(function () { return WordList.get(els.wordListSelect.value); });
+    if (!list || !list.words.length) { els.wordListNote.textContent = 'That list has no words yet.'; return; }
+    var usable = list.words.filter(function (w) { return w.term.indexOf(':') === -1; });
+    var lines = usable.map(function (w) { return w.term + ': ' + w.definition; });
+    els.wordInput.value = (els.wordInput.value.trim() ? els.wordInput.value.replace(/\n*$/, '\n') : '') + lines.join('\n');
+    var left = list.words.length - usable.length;
+    els.wordListNote.textContent = 'Added ' + usable.length + (usable.length === 1 ? ' word' : ' words') + ' from "' + list.name + '". Press Save list to keep them.' +
+      (left ? ' ' + left + (left === 1 ? ' word was' : ' words were') + ' left out because ' + (left === 1 ? 'its' : 'their') + ' term has a colon in it.' : '');
+  });
+
   /* ---------- boot ----------
      The legacy migration runs BEFORE the import: an arrival saved first would
      make listNames() non-empty, and migrateLegacyIfNeeded() bails on exactly
      that — which would quietly drop the word list a teacher saved before this
      tool had named lists at all. load() calls it too, and it is idempotent. */
   migrateLegacyIfNeeded();
+  wordListDo(function () { WordList.importLegacy(window.localStorage); WordList.importLegacyDrill(window.localStorage); });
   if (!importSharedList()) load();
   renderAll();
+  refreshWordListRow();
   if (location.protocol === 'file:') els.fileWarning.classList.add('show');
 })();
 </script>

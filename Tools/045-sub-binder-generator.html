@@ -23,6 +23,10 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <!-- gvb:social:end -->
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -246,7 +250,9 @@
     <button type="button" id="refreshBtn" class="secondary">&#8635; Refresh data</button>
     <button type="button" id="printBtn">Print bundle</button>
     <button type="button" id="printAllDaysBtn" class="secondary" style="display:none;">Print bundle for all days</button>
+    <button type="button" id="shareBtn" class="secondary">&#128279; Share this binder&hellip;</button>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
   <p class="hint" id="printAllDaysHint" style="display:none;">Shared sections (standing details, seating, hall pass, behavior plan)
     print once; the calendar entry and lesson print once per day, with a divider header for each.</p>
 
@@ -257,14 +263,14 @@
 <div class="print-only" id="printArea"></div>
 
 <script src="../_shared/school-day.js"></script>
+<script src="packet-builder/sections.js"></script>
+<script src="packet-builder/providers.js"></script>
 <script>
 (function () {
   'use strict';
 
   var LESSON_KEY = 'gvb-sub-binder:today-lesson';
   var INCLUDE_KEY = 'gvb-sub-binder:included-sections.v1';
-  var LAST_ABSENCE_KEY = 'subPlanBuilder.lastAbsence.v1';
-  var SPB_HISTORY_KEY = 'subPlanBuilder.history.v1';
 
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -278,30 +284,32 @@
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
 
+  /* Every other tool's saved data comes through the Packet Builder's providers
+     (Tools/packet-builder/providers.js, Path 10 P2), which own those keys and
+     their shapes; this page keeps only its own two (LESSON_KEY, INCLUDE_KEY)
+     and prints the data in its own markup. */
+  var PS = window.PacketSections;
+  var packetCtx = { read: PS.readerFor(localStorage), todayISO: localISODate(new Date()), SchoolDay: window.SchoolDay || null };
+
   /* ==================== Selected date (the Sub Plan Builder handoff) ====================
      There's no single shared "current absence date" record across every tool —
      instead, Sub Plan Builder writes the dates it's currently showing to
-     subPlanBuilder.lastAbsence.v1 every time they change, and this tool reads
+     its last-absence record every time they change, and this tool reads
      that once to default its own date picker. From there the two tools are
      linked only by matching dates: this tool looks up
-     subPlanBuilder.history.v1 for an entry whose `date` equals the date
+     its dated history for an entry whose `date` equals the date
      selected here. If the teacher never saved that day to history (or picks a
      date Sub Plan Builder doesn't know about), this tool falls back to the
      freeform lesson note below and says so plainly. */
 
   function loadLastAbsenceDates() {
-    try {
-      var parsed = JSON.parse(localStorage.getItem(LAST_ABSENCE_KEY) || 'null');
-      if (parsed && Array.isArray(parsed.dates) && parsed.dates.length) return parsed.dates;
-    } catch (e) { /* ignore */ }
-    return null;
+    var a = PS.load('sub-plan-days', packetCtx);
+    return a && a.dates ? a.dates : null;
   }
 
   function loadSubPlanHistory() {
-    try {
-      var parsed = JSON.parse(localStorage.getItem(SPB_HISTORY_KEY) || '[]');
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) { return []; }
+    var a = PS.load('sub-plan-days', packetCtx);
+    return a ? a.history : [];
   }
 
   function findHistoryEntryForDate(dateStr) {
@@ -368,14 +376,7 @@
     short: "Ideally, students should not say anything during this entire lesson. If students talk, make noises, or are a distraction in class, DO NOT HESITATE to send them to the support room or main office."
   };
 
-  function loadStanding() {
-    try {
-      var raw = localStorage.getItem('subPlanBuilder.standingDetails.v1');
-      if (!raw) return null;
-      var parsed = JSON.parse(raw);
-      return (parsed && typeof parsed === 'object') ? parsed : null;
-    } catch (e) { return null; }
-  }
+  function loadStanding() { return PS.load('sub-plan', packetCtx); }
 
   function behaviorTextFor(standing) {
     if (standing.behaviorCustom && standing.behaviorCustom.trim()) return standing.behaviorCustom;
@@ -509,9 +510,7 @@
      SchoolDay.lessonsOn()), and whether the date or the school day after it is
      the last school day of a grading period. The same HTML prints on each
      day's page of the packet. */
-  function loadCalendar() {
-    return window.SchoolDay ? SchoolDay.read(localStorage) : null;
-  }
+  function loadCalendar() { return PS.load('school-calendar', packetCtx); }
 
   var calCache = loadCalendar();
 
@@ -636,15 +635,7 @@
   }
 
   /* ==================== Seating (Seating Chart Generator) ==================== */
-  function loadSeatingState() {
-    try {
-      var raw = localStorage.getItem('seating-chart-v1');
-      if (!raw) return null;
-      var parsed = JSON.parse(raw);
-      if (!parsed || !Array.isArray(parsed.sections)) return null;
-      return parsed;
-    } catch (e) { return null; }
-  }
+  function loadSeatingState() { return PS.load('seating', packetCtx); }
 
   var seatingState = loadSeatingState();
   var seatingSelect = byId('seatingSelect');
@@ -746,15 +737,7 @@
   seatingSelect.addEventListener('change', renderSeatingCard);
 
   /* ==================== Hall pass procedure (Hall Pass Log) ==================== */
-  function loadHallPassStore() {
-    try {
-      var raw = localStorage.getItem('hall-pass-log-sections');
-      if (!raw) return null;
-      var parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== 'object' || !parsed.sets || typeof parsed.sets !== 'object') return null;
-      return parsed;
-    } catch (e) { return null; }
-  }
+  function loadHallPassStore() { return PS.load('hall-pass-log', packetCtx); }
   var hallPassStore = loadHallPassStore();
 
   function evalHallPass() {
@@ -784,15 +767,7 @@
   function renderHallPassCard() { byId('hallPassBody').innerHTML = hallPassCardHtml(); }
 
   /* ==================== Behavior plan snapshot (Behavior Points Tracker) ==================== */
-  function loadBehaviorStore() {
-    try {
-      var raw = localStorage.getItem('behavior-points-tracker-sections');
-      if (!raw) return null;
-      var parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== 'object' || !parsed.sets || typeof parsed.sets !== 'object') return null;
-      return parsed;
-    } catch (e) { return null; }
-  }
+  function loadBehaviorStore() { return PS.load('behavior-plan', packetCtx); }
   var behaviorStore = loadBehaviorStore();
 
   function evalBehavior() {
@@ -823,12 +798,7 @@
      given day (that lives in an in-memory `currentPrompt` that resets on
      reload). So there is no "today's exit ticket" to read; the best this
      tool can honestly offer is the saved bank, with that caveat spelled out. */
-  function loadExitTicketBank() {
-    try {
-      var parsed = JSON.parse(localStorage.getItem('gvb-exit-ticket:customPrompts') || '[]');
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) { return []; }
-  }
+  function loadExitTicketBank() { return PS.load('exit-ticket', packetCtx) || []; }
   var exitTicketBank = loadExitTicketBank();
 
   function evalExitTicket() {
@@ -850,14 +820,17 @@
      standing details it falls back to four generic rows rather than nothing. */
   var FEEDBACK_FALLBACK_ROWS = 4;
 
+  /* The questions under the period rows are the ones on the slip in use in Sub Note / Feedback Slip
+     Generator when it has saved any; otherwise the four this page has always asked. */
+  var feedbackPrompts = [];
+
   function evalFeedback() {
     var periods = (standingCache && Array.isArray(standingCache.periods)) ? standingCache.periods.length : 0;
-    return {
-      available: true,
-      status: periods
+    var status = periods
         ? 'Blank form, with a row per period from your standing details (' + periods + ').'
-        : 'Blank form, with ' + FEEDBACK_FALLBACK_ROWS + ' generic rows (no periods saved in Sub Plan Builder yet).'
-    };
+        : 'Blank form, with ' + FEEDBACK_FALLBACK_ROWS + ' generic rows (no periods saved in Sub Plan Builder yet).';
+    if (feedbackPrompts.length) status += ' Its ' + feedbackPrompts.length + (feedbackPrompts.length === 1 ? ' question comes' : ' questions come') + ' from your Sub Note / Feedback Slip.';
+    return { available: true, status: status };
   }
 
   function feedbackRowLabels() {
@@ -880,10 +853,13 @@
       '<table class="fb-table"><thead><tr>' +
         '<th class="fb-period">Period</th><th>What got done</th><th>How it went</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table>' +
+      (feedbackPrompts.length ? feedbackPrompts.map(function (q) {
+        return '<div class="fb-block"><div class="fb-label">' + escapeHtml(q) + '</div><div class="fb-box"></div></div>';
+      }).join('') :
       '<div class="fb-block"><div class="fb-label">Students who helped &mdash; I would like to thank them</div><div class="fb-box short"></div></div>' +
       '<div class="fb-block"><div class="fb-label">Students I had to speak to, and what happened</div><div class="fb-box"></div></div>' +
       '<div class="fb-block"><div class="fb-label">What did not get finished, or what I left for you</div><div class="fb-box"></div></div>' +
-      '<div class="fb-block"><div class="fb-label">Anything else you should know (materials, technology, the room, a message from the office)</div><div class="fb-box"></div></div>' +
+      '<div class="fb-block"><div class="fb-label">Anything else you should know (materials, technology, the room, a message from the office)</div><div class="fb-box"></div></div>') +
       '<div class="fb-sign"><span>Substitute&rsquo;s name</span><span>Best way to reach you</span></div>';
   }
 
@@ -963,6 +939,8 @@
     hallPassStore = loadHallPassStore();
     behaviorStore = loadBehaviorStore();
     exitTicketBank = loadExitTicketBank();
+    var slip = PS.load('sub-feedback', packetCtx);
+    feedbackPrompts = slip ? slip.prompts : [];
     lastAbsenceDates = loadLastAbsenceDates();
 
     renderBundleDateHint();
@@ -981,6 +959,74 @@
 
   bundleDateEl.addEventListener('change', refreshAll);
   refreshAll();
+
+  /* ==================== Share (Path 6 P3, _shared/share.js) ====================
+     THE LINK IS THE RECIPE, NOT THE BINDER. Every section above is read live from the tool that holds
+     it, so a link that carried them would hand a colleague your standing details, your hall pass rules
+     and, worst, a seating chart with students' names, none of which they can put anywhere and some of
+     which are not theirs to have. What this page owns is the two things below, and they are what a
+     department can usefully agree on: which sections go in the binder, and the note to the sub. The
+     other teacher's binder then fills those sections from their own tools. (Devon can reverse this:
+     BACKLOG Path 10 P2.) An arrival replaces the ticks and the note, so it asks first when this
+     device already has either. */
+  var SHARE_PARAM = 'binder';
+  var SHARE_NOTE_MAX = 4000;
+
+  function setShareNote(text, isError) {
+    var el = byId('shareNote');
+    el.textContent = text || '';
+    el.style.display = text ? '' : 'none';
+    el.classList.toggle('error', !!isError);
+  }
+
+  function shareableBinder() {
+    var included = {};
+    SECTION_ORDER.forEach(function (key) { included[key] = isIncluded(key); });
+    return { v: 1, included: included, lesson: String(lessonInput.value || '').slice(0, SHARE_NOTE_MAX) };
+  }
+
+  Share.mount(byId('shareBtn'), {
+    getState: shareableBinder,
+    param: SHARE_PARAM,
+    tool: 'sub-binder-generator',
+    title: 'Share this binder',
+    noun: 'this binder',
+    filename: 'sub binder',
+    note: 'The link carries which sections are in the binder and your note to the sub, nothing else. Standing details, hall pass rules, the seating chart and every other page are read from the tools on the device that opens it, so no student name travels.',
+    successMessage: 'Link copied. It carries the ticked sections and your note; the other device fills the pages from its own tools.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleBinder(obj) {
+    return !!obj && typeof obj === 'object' && !Array.isArray(obj) &&
+      ((obj.included && typeof obj.included === 'object' && !Array.isArray(obj.included)) || typeof obj.lesson === 'string');
+  }
+
+  Share.receive({
+    param: SHARE_PARAM,
+    validate: isPlausibleBinder,
+    onError: function (message) { setShareNote(message, true); },
+    onState: function (decoded) {
+      var hadSaved = !!(lessonInput.value || '').trim() || Object.keys(includePrefs).length > 0;
+      if (hadSaved && !confirm('Replace the ticked sections and the note saved here with the shared binder\u2019s?')) {
+        setShareNote('Kept the sections and note already on this device. The shared binder was not loaded.');
+        return false;
+      }
+      var next = {};
+      SECTION_ORDER.forEach(function (key) {
+        if (decoded.included && typeof decoded.included[key] === 'boolean') next[key] = decoded.included[key];
+      });
+      includePrefs = next;
+      saveIncludePrefs();
+      if (typeof decoded.lesson === 'string') {
+        lessonInput.value = decoded.lesson.slice(0, SHARE_NOTE_MAX);
+        try { localStorage.setItem(LESSON_KEY, lessonInput.value); } catch (e) { /* ignore */ }
+      }
+      refreshAll();
+      setShareNote('Loaded a shared binder: ' + SECTION_ORDER.filter(isIncluded).length + ' of ' + SECTION_ORDER.length + ' sections ticked. Pages with nothing saved on this device stay greyed until you set them up.');
+      return true;
+    }
+  });
 
   /* ==================== Print ==================== */
   function seatingPageHtml(section, dateLabel) {
