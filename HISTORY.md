@@ -9,6 +9,16 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-31: 047 rubric-scored critique, rank 81 (2026-10-31, v507)
+
+**What shipped.** An opt-in card on 047, "Add a teacher score to each step". On, the printed half sheet shows "Score ___ / 4" at the right of every step heading, an optional row of numbers to circle (up to 5 points), and "Teacher total: ___ / 12" under the last step; the page says what the worksheet is worth, and each step block gets a "Points for this step" box (0 leaves it unscored). The pure rules are `Tools/art-critique-worksheet-generator/acw-rubric.js` (`CritiqueRubric`). Stored as one optional `rubric: { on, points, circle }` on the worksheet and an optional `points` on a step, present only once used, so no key was added and 047's registry row is unchanged. A share link carries the score; `normalizeWorksheet` cleans it (a point value must be one the page offers, a step's 0 to 10) and the share note says so.
+
+**Decisions.** (1) Points per step come from 2, 3, 4, 5 or 10, default 4; a four-level scale matches the usual art rubric and 10 is for percent-like grading. (2) Descriptors are not built: the page prints a blank to score, not a rubric table. (3) With the score off, the sheet markup is untouched: the step heading only becomes a flex row when it carries a score.
+
+**Tests.** `test:critique-rubric` (port 8634; 52 assertions): the pure rules; the score-off sheet against the SHA-256 of the old page's printed output for the same worksheet (hash taken from `HEAD` before the change); boxes, circles, per-step values, total, escaping, reload, duplicate, share link, 360 px. Eight mutants (unscored box, zero step, point limit, share rubric, share points, plain heading, total, off field) each fail it. `test:a11y --only 047`, `audit-print --check --only 047`, `test:share-rollout`, `check:hidden-flex`, `check:print-clip`, `check:entities` pass.
+
+**Not verified.** Nothing printed on paper (the half sheet still has the 47vh minimum, so a long prompt plus the score may push a pair onto a second page; `min-height` does not clip); the Gallery Walk pairing and the digital fill-in rows of 047 are untouched.
+
 ## AI-31: 042 templates as data, rank 79 (2026-10-31, v506)
 
 **What shipped.** The five certificate designs were CSS classes (`.theme-playful` ... `.theme-ribbon`); they are now objects in a new pure module, `Tools/certificate-award-maker/cam-templates.js` (`CertificateTemplates`): a font key into a fixed list of six system stacks, ink, paper (one colour or a pair drawn at 135 degrees), the title's colour, case, italic, weight, spacing and size, the small line's colour, and an optional suggested seal (Ribbon's gold seal and blue ribbon, which the page used to special-case by name). The page writes a template onto each certificate as `--t-*` variables and one set of rules reads them, so a new design is a new object. A "Make your own template" panel in the Template card builds one (name, font, four colours, a title look, a title size), saves it and chooses it; Remove deletes it and puts Elegant back. Up to 12, in the new key `gvb-certificate-maker:templates` (registry row added, not student data, no rollover).

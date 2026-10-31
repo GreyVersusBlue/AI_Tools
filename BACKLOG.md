@@ -821,7 +821,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 65 | First-run "Load sample data" across the tools that open to an empty form (P15); 059, 072, 049 (v488) and 043, 042, 082, 038, 084 (v489) done; the people-content tools wait on Devon (question below) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 66 | Phone-sized layout pass beyond 005: sideways overflow is gone from all 90 pages at 360 px (v490-v491) and the three toolbars over half a 740 px screen fold behind a More button (011, 032, 054; v498, `test:phone-toolbar`); left: only that a real phone has not been tried | site | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 80 | Evergreen emergency binder — date-independent sections only, with a staleness reminder | 045 | ½ | | [045 Sub Binder / Day Bundle Generator](#045--sub-binder--day-bundle-generator) |
-| 81 | Rubric-scored critique variant — an optional per-step point scale and teacher score column | 047 | ½ | | [047 Art Critique Worksheet Generator](#047--art-critique-worksheet-generator) |
 | 82 | Bulk photo import — a whole folder at once, downscaled and auto-matched by filename | 048 | ½ | | [048 Student Art Portfolio Label & QR Tag Maker](#048--student-art-portfolio-label--qr-tag-maker) |
 | 83 | Spreadsheet book-list import via the shared SheetJS build, with a genre-balance warning | 049 | ½ | | [049 Book Tasting Menu Generator](#049--book-tasting-menu-generator) |
 | 85 | Practice worksheet variants — matching, fill-in-the-blank and "trap or true cognate" with answer keys | 052 | ½ | | [052 Cognates & False Friends Reference List Builder](#052--cognates--false-friends-reference-list-builder) |
@@ -13102,9 +13101,10 @@ work, and don't promote one without Devon saying so.
 - **Digital fill-in mode** via a share link (this toolkit's P3 pattern),
   useful for a 1:1 classroom gallery walk where photographing artwork
   digitally makes more sense than a paper half-sheet per station.
-- **A rubric-style scoring option** alongside the open-ended critique
-  questions, for when a critique doubles as a graded assignment rather than
-  a purely formative gallery-walk activity.
+- **Done (v507).** **A rubric-style scoring option.** An opt-in "Add a teacher score to each step" card: a
+  Score box and an optional row of numbers to circle on every step, a point value per step (0 leaves a
+  step unscored) and a teacher total at the bottom, in `Tools/art-critique-worksheet-generator/acw-rubric.js`.
+  Left: named level descriptors (Beginning / Proficient / ...) per step.
 
 #### Moonshot / North Star
 
