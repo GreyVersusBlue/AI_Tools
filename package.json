@@ -235,6 +235,8 @@
     "test:math-drill-frac-exp-eq-core": "node Tools/math-drill-generator/test/drill-frac-exp-eq.test.mjs",
     "test:math-drill-frac-exp-eq": "node Tools/math-drill-generator/test/smoke-frac-exp-eq.mjs",
     "test:docx-merger": "node Tools/docx-merger/test/smoke-per-file-options.mjs",
+    "test:docx-merger-frame-core": "node Tools/docx-merger/test/frame-core.test.mjs",
+    "test:docx-merger-frame": "node Tools/docx-merger/test/smoke-frame.mjs",
     "test:roleplay": "node Tools/roleplay-scenario-generator/test/smoke-success-criteria.mjs",
     "test:roleplay-speaking-core": "node Tools/roleplay-scenario-generator/test/speaking-core.test.mjs",
     "test:roleplay-speaking": "node Tools/roleplay-scenario-generator/test/smoke-speaking.mjs",

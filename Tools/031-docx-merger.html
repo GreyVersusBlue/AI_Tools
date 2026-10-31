@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="../_shared/theme.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <script src="../_shared/vendor/jszip/jszip.min.js"></script>
+<script src="docx-merger/dm-frame.js"></script>
 <style>
   body { max-width: 900px; margin: 0 auto; padding: 0 var(--space-4) var(--space-8); }
   h1 { font-size: 32px; margin-bottom: var(--space-1); }
@@ -85,7 +86,8 @@
   .options input[type=checkbox] { margin-top: 3px; accent-color: var(--color-accent); }
   .options .hint { display: block; opacity: 0.6; font-size: 12px; font-weight: normal; }
   .outname { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-1); }
-  .outname .input { flex: 1; }
+  .outname .input { flex: 1; min-width: 0; }
+  .outname { flex-wrap: wrap; }
 
   #status { margin-top: var(--space-4); font-size: 14px; min-height: 1.2em; }
   #status.ok { color: var(--color-success); }
@@ -107,6 +109,13 @@
   .limits summary { cursor: pointer; color: var(--color-accent); font-weight: 600; }
   .limits ul { margin: var(--space-2) 0 0 18px; padding: 0; }
   .limits li { margin-bottom: var(--space-1); }
+  .frame-set{ border: 1px solid var(--color-divider, #ccc); border-radius: 6px; margin: var(--space-3, 12px) 0; padding: var(--space-3, 12px) var(--space-4, 16px); }
+  .frame-set legend{ font-weight: 600; padding: 0 6px; }
+  .frame-hint{ margin: 0 0 var(--space-2, 8px); }
+  .options .frame-set .hint{ opacity: 0.85; }
+  .frame-grid{ display: grid; grid-template-columns: minmax(0, 14rem) minmax(0, 1fr); gap: 6px 12px; align-items: center; margin: var(--space-2, 8px) 0; }
+  .frame-grid label{ font-size: 14px; }
+  @media (max-width: 560px){ .frame-grid{ grid-template-columns: minmax(0, 1fr); } }
 </style>
 </head>
 <body>
@@ -175,6 +184,51 @@
       <span class="hint">Lists each file's heading. Requires the file-name headings above; opens in Word ready for you to right-click and "Update Field" to fill in page numbers.</span>
     </span>
   </label>
+  <fieldset class="frame-set" id="frameSet">
+    <legend>Cover page, header and page numbers</legend>
+    <p class="hint frame-hint">These apply to the whole merged document. The first page counts as page 1, even when it is the cover. Left empty, nothing is added.</p>
+    <label>
+      <input type="checkbox" id="optCover">
+      <span>Add a cover page
+        <span class="hint">Title, course, teacher and date, centered on a page of its own at the front.</span>
+      </span>
+    </label>
+    <div class="frame-grid">
+      <label for="covTitle">Cover title <span class="hint">(blank uses the output file name)</span></label>
+      <input class="input" type="text" id="covTitle" maxlength="120" autocomplete="off">
+      <label for="covSubtitle">Class or course</label>
+      <input class="input" type="text" id="covSubtitle" maxlength="120" autocomplete="off">
+      <label for="covTeacher">Teacher</label>
+      <input class="input" type="text" id="covTeacher" maxlength="120" autocomplete="off">
+      <label for="covDate">Date</label>
+      <input class="input" type="date" id="covDate">
+    </div>
+    <div class="frame-grid">
+      <label for="frmHeader">Header text <span class="hint">(top of every page)</span></label>
+      <input class="input" type="text" id="frmHeader" maxlength="200" autocomplete="off">
+      <label for="frmFooter">Footer text <span class="hint">(bottom of every page)</span></label>
+      <input class="input" type="text" id="frmFooter" maxlength="200" autocomplete="off">
+      <label for="frmNumbers">Page numbers</label>
+      <select class="input" id="frmNumbers">
+        <option value="none">None</option>
+        <option value="page">Page 1</option>
+        <option value="pageOf">Page 1 of 5</option>
+        <option value="plain">1</option>
+      </select>
+      <label for="frmAlign">Line up header, footer and numbers</label>
+      <select class="input" id="frmAlign">
+        <option value="left">Left</option>
+        <option value="center" selected>Center</option>
+        <option value="right">Right</option>
+      </select>
+    </div>
+    <label>
+      <input type="checkbox" id="frmClearFirst" checked>
+      <span>Leave the header, footer and page number off the first page
+        <span class="hint">Usually what you want when the first page is a cover.</span>
+      </span>
+    </label>
+  </fieldset>
   <label>
     <input type="radio" name="styleMode" id="optStyleNormalize" value="normalize" checked>
     <span>Normalize to the first file's styles <em>(default)</em>
@@ -214,7 +268,7 @@
       <li>Text, headings, bullet/numbered lists, tables, and images are carried over from every file.</li>
       <li>The page size, margins, and orientation of the <em>last</em> file in your list are used for the whole merged document.</li>
       <li>If different files use very different custom styles or fonts, some formatting may fall back to a default look rather than matching the original exactly.</li>
-      <li>Headers/footers from individual files aren't merged in — only the content between them. A file with a header, footer, comments, footnotes, or tracked changes gets a &#9888; warning in the list below once it's been read, so you know before merging, not after.</li>
+      <li>Headers/footers from individual files aren't merged in — only the content between them. (Use the header, footer and page-number options above to give the whole packet its own.) A file with a header, footer, comments, footnotes, or tracked changes gets a &#9888; warning in the list below once it's been read, so you know before merging, not after.</li>
       <li>Corrupted or non-.docx files are skipped automatically and listed after merging, so one bad file won't stop the rest.</li>
     </ul>
   </details>
@@ -225,6 +279,8 @@
   const W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
   const REL_TYPE_IMAGE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
   const REL_TYPE_NUMBERING = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering";
+  const REL_TYPE_PREFIX = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/"; // + header | footer
+  const R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
   let filesArr = []; // {id, file, name, size, heading, scanned, pages, preview, warnings}
   let nextEntryId = 1;
@@ -253,6 +309,32 @@
   const optTocLabel = document.getElementById('optTocLabel');
   const optStyleNormalize = document.getElementById('optStyleNormalize');
   const optStylePreserve = document.getElementById('optStylePreserve');
+  /* The cover, header and page numbers (dm-frame.js). The inputs are the single source: the spec is read from
+     them at merge time and saved with the other options, so a reload brings the same choices back. */
+  const frameEls = {
+    cover: document.getElementById('optCover'), title: document.getElementById('covTitle'), subtitle: document.getElementById('covSubtitle'),
+    teacher: document.getElementById('covTeacher'), date: document.getElementById('covDate'),
+    header: document.getElementById('frmHeader'), footer: document.getElementById('frmFooter'),
+    numbers: document.getElementById('frmNumbers'), align: document.getElementById('frmAlign'), clearFirst: document.getElementById('frmClearFirst')
+  };
+  function readFrameSpec() {
+    return DocxFrame.cleanSpec({
+      cover: { on: frameEls.cover.checked, title: frameEls.title.value, subtitle: frameEls.subtitle.value, teacher: frameEls.teacher.value, date: frameEls.date.value },
+      header: frameEls.header.value, footer: frameEls.footer.value, numbers: frameEls.numbers.value, align: frameEls.align.value,
+      clearFirst: frameEls.clearFirst.checked
+    });
+  }
+  function applyFrameSpec(spec) {
+    frameEls.cover.checked = spec.cover.on;
+    frameEls.title.value = spec.cover.title; frameEls.subtitle.value = spec.cover.subtitle;
+    frameEls.teacher.value = spec.cover.teacher; frameEls.date.value = spec.cover.date;
+    frameEls.header.value = spec.header; frameEls.footer.value = spec.footer;
+    frameEls.numbers.value = spec.numbers; frameEls.align.value = spec.align; frameEls.clearFirst.checked = spec.clearFirst;
+    syncCoverFields();
+  }
+  function syncCoverFields() {
+    [frameEls.title, frameEls.subtitle, frameEls.teacher, frameEls.date].forEach(el => { el.disabled = !frameEls.cover.checked; });
+  }
   (function loadOptionPrefs() {
     let raw;
     try { raw = JSON.parse(localStorage.getItem(OPTIONS_KEY) || '{}'); } catch (e) { raw = {}; }
@@ -260,6 +342,7 @@
     if (typeof raw.heading === 'boolean') optHeading.checked = raw.heading;
     if (typeof raw.toc === 'boolean') optToc.checked = raw.toc;
     if (raw.styleMode === 'preserve') optStylePreserve.checked = true;
+    applyFrameSpec(DocxFrame.cleanSpec(raw.frame));
   })();
   function saveOptionPrefs() {
     try {
@@ -267,7 +350,8 @@
         pageBreak: optPageBreak.checked,
         heading: optHeading.checked,
         toc: optToc.checked,
-        styleMode: optStylePreserve.checked ? 'preserve' : 'normalize'
+        styleMode: optStylePreserve.checked ? 'preserve' : 'normalize',
+        frame: readFrameSpec()
       }));
     } catch (e) { /* storage full/blocked */ }
   }
@@ -281,6 +365,10 @@
   optStylePreserve.addEventListener('change', saveOptionPrefs);
   optToc.addEventListener('change', saveOptionPrefs);
   syncTocAvailability();
+  Object.keys(frameEls).forEach(k => {
+    frameEls[k].addEventListener('change', () => { syncCoverFields(); saveOptionPrefs(); });
+    if (frameEls[k].tagName === 'INPUT' && frameEls[k].type === 'text') frameEls[k].addEventListener('input', saveOptionPrefs);
+  });
 
   dropzone.addEventListener('click', () => fileInput.click());
   ['dragenter','dragover'].forEach(evt =>
@@ -889,7 +977,7 @@
     return null;
   }
 
-  async function updateContentTypes(zip, extensions, needsNumberingOverride) {
+  async function updateContentTypes(zip, extensions, needsNumberingOverride, extraOverrides = []) {
     const path = '[Content_Types].xml';
     const str = await zip.file(path).async('string');
     const doc = parseXml(str);
@@ -916,6 +1004,15 @@
         root.appendChild(ov);
       }
     }
+    extraOverrides.forEach(([partName, contentType]) => {
+      const has = Array.from(root.getElementsByTagName('Override')).some(o => o.getAttribute('PartName') === partName);
+      if (!has) {
+        const ov = doc.createElementNS(ns, 'Override');
+        ov.setAttribute('PartName', partName);
+        ov.setAttribute('ContentType', contentType);
+        root.appendChild(ov);
+      }
+    });
     zip.file(path, xmlToString(doc));
   }
 
@@ -940,6 +1037,7 @@
     const errors = [];
 
     const preserveStyles = optStylePreserve.checked;
+    const frame = readFrameSpec();
 
     // find a working base file
     let baseZip = null, baseIndex = -1, baseHeading = '';
@@ -1011,6 +1109,12 @@
       [createTocHeadingParagraph(baseDoc), createTocFieldParagraph(baseDoc), createPageBreakParagraph(baseDoc)]
         .reverse()
         .forEach(node => baseBody.insertBefore(node, baseBody.firstChild));
+    }
+
+    /* The cover is the very first page: in front of the contents page and the first heading. */
+    if (frame.cover.on) {
+      const coverRoot = parseXml(DocxFrame.coverXml(frame, document.getElementById('outName').value.replace(/\.docx$/i, ''))).documentElement;
+      Array.from(coverRoot.childNodes).reverse().forEach(node => baseBody.insertBefore(baseDoc.importNode(node, true), baseBody.firstChild));
     }
 
     const remaining = filesArr.filter((_, i) => i !== baseIndex && !failedBeforeBase.has(i));
@@ -1086,7 +1190,42 @@
       }
     }
 
-    baseBody.appendChild(baseDoc.importNode(finalSectPr || createDefaultSectPr(baseDoc), true));
+    const sectEl = baseDoc.importNode(finalSectPr || createDefaultSectPr(baseDoc), true);
+    const frameOverrides = [];
+    if (DocxFrame.hasFrame(frame)) {
+      /* The last file's own header and footer references point at parts that were never carried over,
+         so they go; ours replace them. Only when a header, footer or number was asked for. */
+      Array.from(sectEl.childNodes).forEach(n => {
+        if (n.nodeType === 1 && /^w:(headerReference|footerReference|titlePg)$/.test(n.tagName)) sectEl.removeChild(n);
+      });
+      const refs = [];
+      const addPart = (kind, xml) => {
+        relIdCounter += 1;
+        const id = 'rId' + relIdCounter;
+        const name = 'aplp-' + kind + '.xml';
+        baseZip.file('word/' + name, xml);
+        const relsRoot = baseRelsDoc.documentElement;
+        const rel = baseRelsDoc.createElementNS(relsRoot.namespaceURI, 'Relationship');
+        rel.setAttribute('Id', id);
+        rel.setAttribute('Type', REL_TYPE_PREFIX + kind);
+        rel.setAttribute('Target', name);
+        relsRoot.appendChild(rel);
+        frameOverrides.push(['/word/' + name, 'application/vnd.openxmlformats-officedocument.wordprocessingml.' + kind + '+xml']);
+        const ref = baseDoc.createElementNS(W_NS, 'w:' + kind + 'Reference');
+        ref.setAttributeNS(W_NS, 'w:type', 'default');
+        ref.setAttributeNS(R_NS, 'r:id', id);
+        refs.push(ref);
+      };
+      if (DocxFrame.hasHeader(frame)) addPart('header', DocxFrame.headerPartXml(frame));
+      if (DocxFrame.hasFooter(frame)) addPart('footer', DocxFrame.footerPartXml(frame));
+      refs.reverse().forEach(ref => sectEl.insertBefore(ref, sectEl.firstChild));
+      if (frame.clearFirst) {
+        const titlePg = baseDoc.createElementNS(W_NS, 'w:titlePg');
+        const later = Array.from(sectEl.childNodes).find(n => n.nodeType === 1 && /^w:(textDirection|bidi|rtlGutter|docGrid|printerSettings)$/.test(n.tagName));
+        sectEl.insertBefore(titlePg, later || null);
+      }
+    }
+    baseBody.appendChild(sectEl);
 
     if (baseNumberingDoc) {
       baseZip.file('word/numbering.xml', xmlToString(baseNumberingDoc));
@@ -1102,7 +1241,7 @@
       }
     }
 
-    await updateContentTypes(baseZip, allExtensions, createdNewNumbering);
+    await updateContentTypes(baseZip, allExtensions, createdNewNumbering, frameOverrides);
 
     if (baseStylesDoc) baseZip.file('word/styles.xml', xmlToString(baseStylesDoc));
 

@@ -820,7 +820,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 60 | Path 20 P4, what is left — the way back from Timeline Builder into a map project (needs a route 015 does not accept; Devon's call on where an event's year goes on a map), and the slice sheet in the print preview (the kit's `preview()` does not cover 046's canvas export); time slices themselves shipped in v433 | 046, 015 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 65 | First-run "Load sample data" across the tools that open to an empty form (P15); 059, 072, 049 (v488) and 043, 042, 082, 038, 084 (v489) done; the people-content tools wait on Devon (question below) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 66 | Phone-sized layout pass beyond 005: sideways overflow is gone from all 90 pages at 360 px (v490-v491) and the three toolbars over half a 740 px screen fold behind a More button (011, 032, 054; v498, `test:phone-toolbar`); left: only that a real phone has not been tried | site | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 74 | Cover page, headers, and page numbers across the merged document | 031 | ½ | | [031 Word Doc Merger](#031--word-doc-merger) |
 | 75 | Printable parent reading report — one page per student, batch-printed for conferences | 033 | ½ | | [033 Silent Reading (SSR) Log Tracker](#033--silent-reading-ssr-log-tracker) |
 | 76 | Chart annotation layer — arrows, text callouts and shaded regions so a printed figure makes an argument | 038 | ½ | | [038 Data Table → Chart Builder](#038--data-table--chart-builder) |
 | 78 | Local math notation renderer — fractions, radicals, exponents, subscripts, Greek letters | 041 | ½ | | [041 Formula Reference Sheet Builder](#041--formula-reference-sheet-builder) |
@@ -11819,8 +11818,12 @@ work, and don't promote one without Devon saying so.
   orientation, and margins by keeping its `sectPr` — so a landscape rubric
   merged into a portrait packet stays landscape. `stripTrailingSectPr` and
   `createDefaultSectPr` show the groundwork is already understood.
-- **Headers, footers, and page numbers** across the merged document — the
-  single biggest gap between "merged file" and "packet you can hand out".
+- **Headers, footers, and page numbers — shipped (v502, AI-31).** A "Cover page,
+  header and page numbers" group of options: header text, footer text, "Page 1" /
+  "Page 1 of 5" / "1", left, center or right, and the first page kept clear. The
+  merged document is still one section, so these apply to every page.
+  Not built: a different header per source file, numbering that starts after the
+  cover, roman numerals, merging the source files' own headers.
 - **Split, extract, and reorder pages**, not just merge. The natural sibling
   operations, and there is no free local tool for them.
 - **Merge PDFs too, or export the merged result as PDF.** `011-image-to-pdf.html`
@@ -11830,7 +11833,8 @@ work, and don't promote one without Devon saying so.
   printable documents — rubric, permission slip, sub plan, worksheet, answer
   key. A tool that assembles those into one ordered packet with a cover page
   and a table of contents is more valuable than a generic merger.
-- **Cover page generator** with title, class, date, and teacher name.
+- **Cover page generator — shipped (v502, AI-31)** with title, class, teacher and date,
+  in front of the contents page. Not built: a logo (the repo takes none), a cover from the packet builder (P7).
 
 #### Moonshot / North Star
 
