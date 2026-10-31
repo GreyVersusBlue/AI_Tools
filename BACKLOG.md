@@ -820,7 +820,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 60 | Path 20 P4, what is left — the way back from Timeline Builder into a map project (needs a route 015 does not accept; Devon's call on where an event's year goes on a map), and the slice sheet in the print preview (the kit's `preview()` does not cover 046's canvas export); time slices themselves shipped in v433 | 046, 015 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 65 | First-run "Load sample data" across the tools that open to an empty form (P15); 059, 072, 049 (v488) and 043, 042, 082, 038, 084 (v489) done; the people-content tools wait on Devon (question below) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 66 | Phone-sized layout pass beyond 005: sideways overflow is gone from all 90 pages at 360 px (v490-v491) and the three toolbars over half a 740 px screen fold behind a More button (011, 032, 054; v498, `test:phone-toolbar`); left: only that a real phone has not been tried | site | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 78 | Local math notation renderer — fractions, radicals, exponents, subscripts, Greek letters | 041 | ½ | | [041 Formula Reference Sheet Builder](#041--formula-reference-sheet-builder) |
 | 79 | Templates as data — layout, fonts, borders and colors as template objects, so new designs need no code | 042 | ½ | | [042 Certificate & Award Maker](#042--certificate--award-maker) |
 | 80 | Evergreen emergency binder — date-independent sections only, with a staleness reminder | 045 | ½ | | [045 Sub Binder / Day Bundle Generator](#045--sub-binder--day-bundle-generator) |
 | 81 | Rubric-scored critique variant — an optional per-step point scale and teacher score column | 047 | ½ | | [047 Art Critique Worksheet Generator](#047--art-critique-worksheet-generator) |
@@ -12617,13 +12616,11 @@ work, and don't promote one without Devon saying so.
 
 #### Quick Wins
 
-- **Skipped — deferred.** **Real math rendering.** Formulas are currently text. Even a small
-  local subset renderer — superscripts, subscripts, fractions, radicals,
-  Greek letters — would transform how the output looks. A vendored KaTeX
-  build would be the complete answer and stays within the offline rule (P5)
-  as long as it's bundled, not CDN-loaded. *(Not part of this round's scoped
-  list — a genuinely separate effort; see Open Questions for the
-  KaTeX-vs-hand-rolled tradeoff, still unresolved.)*
+- **Done (v505).** **Real math rendering.** Built as a local subset renderer
+  (`Tools/formula-sheet-builder/fsb-math.js`, no library, no network): `\frac{a}{b}`, `\sqrt{x}`,
+  `\sqrt[n]{x}`, `^` and `_`, and Greek letters; plain text prints as typed. A vendored KaTeX
+  stays unneeded for middle school sheets. Left: matrices, sums/integrals and an on-screen
+  button palette for the notation.
 
 #### Major Features
 
@@ -12675,10 +12672,8 @@ work, and don't promote one without Devon saying so.
 
 #### Open Questions
 
-- Is vendoring KaTeX (a few hundred KB) acceptable given the site's
-  single-file-tool ethos? A minimal hand-rolled renderer covering fractions,
-  exponents, roots, and Greek would be much smaller and cover most of what a
-  middle school sheet needs.
+- ~~Is vendoring KaTeX acceptable?~~ Decided (AI-31, v505): no. The hand-rolled renderer
+  covers fractions, exponents, roots and Greek, which is most of a middle school sheet.
 - Should the formula library be shared with `026-math-drill-generator.html` and a
   future unit-conversion tool rather than living only here?
 

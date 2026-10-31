@@ -167,6 +167,7 @@
     "Tools/fitness-skill-assessment-tracker/test/smoke-report-cards.mjs",
     "Tools/formula-sheet-builder/test/smoke-allowed.mjs",
     "Tools/formula-sheet-builder/test/smoke-diagrams.mjs",
+    "Tools/formula-sheet-builder/test/smoke-math.mjs",
     "Tools/prompt-builder/test/smoke-placeholders.mjs",
     "Tools/prompt-builder/test/library-core.test.mjs",
     "Tools/prompt-builder/test/smoke-library.mjs",

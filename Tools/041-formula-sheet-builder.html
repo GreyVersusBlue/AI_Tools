@@ -25,6 +25,7 @@
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="formula-sheet-builder/fsb-templates.js"></script>
+<script src="formula-sheet-builder/fsb-math.js"></script>
 <script src="formula-sheet-builder/fsb-store.js"></script>
 <script src="../_shared/media-db.js"></script>
 <script src="formula-sheet-builder/fsb-image.js"></script>
@@ -195,6 +196,15 @@
     .print-page-grid .sheet { width: 100% !important; height: 100% !important; min-height: 0 !important; box-shadow: none; }
     @page { size: letter portrait; margin: 0; }
   }
+  /* Math notation (fsb-math.js) */
+  .fm{white-space:nowrap}
+  .fm sup,.fm sub{font-size:.7em;line-height:0}
+  .fm-frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 .15em}
+  .fm-num{border-bottom:1.5px solid currentColor;padding:0 .2em .05em}
+  .fm-den{padding:.05em .2em 0}
+  .fm-root{display:inline-flex;align-items:flex-end}
+  .fm-rootidx{margin-right:-.1em;align-self:flex-start}
+  .fm-rb{border-top:1.5px solid currentColor;padding:0 .12em;margin-left:-.05em}
 </style>
 </head>
 <body>
@@ -263,6 +273,7 @@
             <div><button type="button" id="addItemBtn">Add</button></div>
           </div>
           <p class="hint" style="margin:.4rem 0 0;">Add a worked example or a variable key to any formula afterward with its &#9998; button.</p>
+          <p class="hint" style="margin:.2rem 0 0;">Typeset notation: <code>\frac{a}{b}</code>, <code>\sqrt{x}</code>, <code>\sqrt[3]{x}</code>, <code>r^2</code>, <code>x_1</code>, and Greek like <code>\pi</code> <code>\theta</code> <code>\Delta</code>. Plain text prints as typed; use <code>\_</code> or <code>\^</code> for a literal underscore or caret.</p>
         </div>
 
         <div class="allow-controls">
@@ -413,7 +424,7 @@
       fields.className = 'fields';
       fields.innerHTML =
         '<div class="item-name">' + escapeHtml(item.name) + '</div>' +
-        '<div class="item-expr">' + escapeHtml(item.expression) + '</div>' +
+        '<div class="item-expr">' + FsbMath.toHtml(item.expression) + '</div>' +
         (item.note ? '<div class="item-note">' + escapeHtml(item.note) + '</div>' : '') +
         (item.variables && item.variables.length
           ? '<div class="item-vars">' + item.variables.map(function (v) { return escapeHtml(v.symbol) + ' = ' + escapeHtml(v.meaning); }).join(', ') + '</div>'
@@ -594,7 +605,7 @@
             // A diagram not in this browser is left off the page, not drawn broken.
             (imageSrc(item.image) ? '<img class="fimg" src="' + escapeHtml(imageSrc(item.image)) + '" alt="">' : '') +
             '<div class="fname">' + escapeHtml(item.name) + '</div>' +
-            '<div class="fexpr">' + escapeHtml(item.expression) + '</div>' +
+            '<div class="fexpr">' + FsbMath.toHtml(item.expression) + '</div>' +
             (item.note ? '<div class="fnote">' + escapeHtml(item.note) + '</div>' : '') +
             varsHtml + exampleHtml +
           '</div>';
@@ -806,7 +817,7 @@
         t.items.map(function (item, idx) {
           return '<div class="picker-item-row"><div class="picker-fields">' +
             '<div class="picker-name">' + escapeHtml(item.name) + '</div>' +
-            '<div class="picker-expr">' + escapeHtml(item.expression) + '</div>' +
+            '<div class="picker-expr">' + FsbMath.toHtml(item.expression) + '</div>' +
           '</div><button type="button" class="secondary small" data-add-tmpl="' + escapeHtml(t.key) + '" data-add-idx="' + idx + '">+ Add</button></div>';
         }).join('');
     }).join('');

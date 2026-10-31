@@ -9,6 +9,16 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-31: 041 local math notation, rank 78 (2026-10-31, v505)
+
+**What shipped.** Formulas on the 041 sheet, in its formula list and in the library picker are typeset from a small LaTeX-like notation by a new pure module, `Tools/formula-sheet-builder/fsb-math.js` (`FsbMath.toHtml`, `toText`): `\frac{a}{b}` (stacked, with a bar), `\sqrt{x}` and `\sqrt[3]{x}` (bar over the radicand), `x^2` / `x^{n+1}`, `x_1` / `x_{ab}`, Greek (`\pi \alpha \theta \Delta` and a dozen more) and `\\ \{ \} \^ \_` for the literal characters. Local code only: no vendored library, no network. Drawn notation carries a plain-text `aria-label` (`(a)/(b)`, `square root of (x)`). The styles are in 041's own `<style>`; the add-form hint lists the marks.
+
+**Decisions.** (1) The KaTeX-or-hand-rolled open question is closed as hand-rolled; reversible by swapping the one `toHtml` call. (2) Text with none of `\ ^ _` comes back exactly as the old `escapeHtml` did, so every shipped template and every saved sheet prints as before; the cost is that a typed `_` or `^` is now notation, escaped with `\_` / `\^`. (3) A formula that does not parse (missing brace, `\frac` with one part, unknown command, nesting past 6, over 600 characters) shows as typed, never half-drawn. (4) Saved data is still the typed text; no markup is stored.
+
+**Tests.** `test:formula-sheet-math` (port 8632; 45 assertions: each mark, escapes, fallbacks, markup escaped, a template unchanged, stacked geometry measured in the page, no sideways scroll at 360 px, nothing saved as markup). Four mutants (numerator/denominator swapped, brace check removed, `_` dropped, depth limit raised) each fail it. `smoke-allowed`, `smoke-diagrams`, `test:a11y --only 041` and `audit-print --check --only 041` pass. 8627 was already 014's port; the next free one was used.
+
+**Not verified.** Nothing printed on paper; the notation was not read by a screen reader; no matrices, sums or integrals.
+
 ## AI-31: 038 annotations on bar and line charts, rank 76 (2026-10-31, v504)
 
 **Found first.** The row asked for arrows, callouts and shaded regions. The scatter already had all three (Path 16 P5 step 4: `ChartSvg.cleanNotes`, `noteLayer`, the Annotations card, `chart-scatter-notes.test.mjs`), so none of that was rebuilt. What was missing was every other chart: bar and line had no layer and the card hid itself for them. This increment adds bar and line; the row's text says what is left.

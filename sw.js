@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v504';
+const CACHE_VERSION = 'v505';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -361,6 +361,7 @@ const PRECACHE_URLS = [
   "Tools/061-fraction-decimal-percent-drill-generator.html",
   "Tools/041-formula-sheet-builder.html",
   "Tools/formula-sheet-builder/fsb-image.js",
+  "Tools/formula-sheet-builder/fsb-math.js",
   "Tools/formula-sheet-builder/fsb-store.js",
   "Tools/formula-sheet-builder/fsb-templates.js",
   "Tools/017-gallery-walk-qr.html",

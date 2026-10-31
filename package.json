@@ -110,6 +110,7 @@
     "test:fitness-report-cards": "node Tools/fitness-skill-assessment-tracker/test/smoke-report-cards.mjs",
     "test:formula-sheet": "node Tools/formula-sheet-builder/test/smoke-allowed.mjs",
     "test:formula-sheet-diagrams": "node Tools/formula-sheet-builder/test/smoke-diagrams.mjs",
+    "test:formula-sheet-math": "node Tools/formula-sheet-builder/test/smoke-math.mjs",
     "test:prompt-builder": "node Tools/prompt-builder/test/smoke-placeholders.mjs",
     "test:prompt-library-core": "node Tools/prompt-builder/test/library-core.test.mjs",
     "test:prompt-library": "node Tools/prompt-builder/test/smoke-library.mjs",
