@@ -189,6 +189,8 @@
     "Tools/schedule-visualizer/test/smoke-step-free.mjs",
     "Tools/lab-safety-contract-tracker/test/smoke-contact-sheet.mjs",
     "Tools/ssr-log-tracker/test/smoke-genres.mjs",
+    "Tools/ssr-log-tracker/test/report-core.test.mjs",
+    "Tools/ssr-log-tracker/test/smoke-report.mjs",
     "Tools/grammar-mad-libs/test/smoke-storage.mjs",
     "Tools/grammar-mad-libs/test/smoke-saves.mjs",
     "Tools/science-fair-project-tracker/test/smoke-saves.mjs",

@@ -145,6 +145,8 @@
     "test:dbq-images": "node Tools/dbq-source-packet-builder/test/smoke-images.mjs",
     "test:lab-safety": "node Tools/lab-safety-contract-tracker/test/smoke-contact-sheet.mjs",
     "test:ssr": "node Tools/ssr-log-tracker/test/smoke-genres.mjs",
+    "test:ssr-report-core": "node Tools/ssr-log-tracker/test/report-core.test.mjs",
+    "test:ssr-report": "node Tools/ssr-log-tracker/test/smoke-report.mjs",
     "test:mad-libs": "node Tools/grammar-mad-libs/test/smoke-storage.mjs",
     "test:mad-libs-saves": "node Tools/grammar-mad-libs/test/smoke-saves.mjs",
     "test:science-fair-saves": "node Tools/science-fair-project-tracker/test/smoke-saves.mjs",

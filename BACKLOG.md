@@ -820,7 +820,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 60 | Path 20 P4, what is left — the way back from Timeline Builder into a map project (needs a route 015 does not accept; Devon's call on where an event's year goes on a map), and the slice sheet in the print preview (the kit's `preview()` does not cover 046's canvas export); time slices themselves shipped in v433 | 046, 015 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 65 | First-run "Load sample data" across the tools that open to an empty form (P15); 059, 072, 049 (v488) and 043, 042, 082, 038, 084 (v489) done; the people-content tools wait on Devon (question below) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 66 | Phone-sized layout pass beyond 005: sideways overflow is gone from all 90 pages at 360 px (v490-v491) and the three toolbars over half a 740 px screen fold behind a More button (011, 032, 054; v498, `test:phone-toolbar`); left: only that a real phone has not been tried | site | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 75 | Printable parent reading report — one page per student, batch-printed for conferences | 033 | ½ | | [033 Silent Reading (SSR) Log Tracker](#033--silent-reading-ssr-log-tracker) |
 | 76 | Chart annotation layer — arrows, text callouts and shaded regions so a printed figure makes an argument | 038 | ½ | | [038 Data Table → Chart Builder](#038--data-table--chart-builder) |
 | 78 | Local math notation renderer — fractions, radicals, exponents, subscripts, Greek letters | 041 | ½ | | [041 Formula Reference Sheet Builder](#041--formula-reference-sheet-builder) |
 | 79 | Templates as data — layout, fonts, borders and colors as template objects, so new designs need no code | 042 | ½ | | [042 Certificate & Award Maker](#042--certificate--award-maker) |
@@ -11966,9 +11965,14 @@ it is read by twenty.
   students reading assigned books with chapter checkpoints; this tracks
   independent reading. A student is doing both and the tools don't know about
   each other.
-- **Parent-facing reading report**, printable, showing what a child read this
-  quarter and how consistently — one of the most welcome things a parent can
-  receive.
+- **Parent-facing reading report — shipped (v503, AI-31).** A "Parent reading
+  reports" card: pick a period and one student or every student; one page each with
+  days read, pages, minutes, books finished, a week-by-week strip of days read
+  (symbols, not colour), the books with genre and finished/in progress, the
+  weekly goal if set, and an optional note box. Only that student's reading is on
+  their page. Not built: a pace-over-time comparison with an earlier period, "what to try
+  next" suggestions from the genre data, a take-home version without the note box
+  layout, and a preview (the page prints through its own `#printArea`, not the print kit).
 - **Classroom library inventory.** Which books exist, who has which one
   checked out, what's missing — the natural sibling problem, and one every
   classroom library has (QR codes on books; the site already has both a
