@@ -234,6 +234,7 @@
     "test:fraction-decimal-percent": "node Tools/fraction-decimal-percent-drill-generator/test/smoke-value-range.mjs",
     "test:music-warmup": "node Tools/music-sightreading-generator/test/smoke-glyph-fallback.mjs",
     "test:art-portfolio": "node Tools/art-portfolio-label-maker/test/smoke-reference-sheet.mjs",
+    "test:art-portfolio-bulk-photos": "node Tools/art-portfolio-label-maker/test/smoke-bulk-photos.mjs",
     "test:civics-roles": "node Tools/civics-role-card-generator/test/smoke-assign-roster.mjs",
     "test:scavenger-hunt": "node Tools/qr-scavenger-hunt-builder/test/smoke-staggered-starts.mjs && node Tools/qr-scavenger-hunt-builder/test/smoke-paper-mode.mjs",
     "test:lab-groups": "node Tools/lab-group-role-randomizer/test/smoke-equipment-mode.mjs && node Tools/lab-group-role-randomizer/test/smoke-safety-gate.mjs && node Tools/lab-group-role-randomizer/test/smoke-undo.mjs",

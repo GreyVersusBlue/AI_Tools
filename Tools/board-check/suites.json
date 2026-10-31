@@ -253,6 +253,7 @@
     "Tools/virtual-manipulatives-board/test/smoke-snap-grid.mjs",
     "Tools/virtual-manipulatives-board/test/smoke-rendered-pieces.mjs",
     "Tools/art-portfolio-label-maker/test/smoke-reference-sheet.mjs",
+    "Tools/art-portfolio-label-maker/test/smoke-bulk-photos.mjs",
     "Tools/civics-role-card-generator/test/smoke-assign-roster.mjs",
     "Tools/qr-scavenger-hunt-builder/test/smoke-staggered-starts.mjs",
     "Tools/qr-scavenger-hunt-builder/test/smoke-paper-mode.mjs",

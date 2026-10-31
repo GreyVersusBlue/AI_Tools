@@ -821,7 +821,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 65 | First-run "Load sample data" across the tools that open to an empty form (P15); 059, 072, 049 (v488) and 043, 042, 082, 038, 084 (v489) done; the people-content tools wait on Devon (question below) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 66 | Phone-sized layout pass beyond 005: sideways overflow is gone from all 90 pages at 360 px (v490-v491) and the three toolbars over half a 740 px screen fold behind a More button (011, 032, 054; v498, `test:phone-toolbar`); left: only that a real phone has not been tried | site | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 80 | Evergreen emergency binder — date-independent sections only, with a staleness reminder | 045 | ½ | | [045 Sub Binder / Day Bundle Generator](#045--sub-binder--day-bundle-generator) |
-| 82 | Bulk photo import — a whole folder at once, downscaled and auto-matched by filename | 048 | ½ | | [048 Student Art Portfolio Label & QR Tag Maker](#048--student-art-portfolio-label--qr-tag-maker) |
 | 83 | Spreadsheet book-list import via the shared SheetJS build, with a genre-balance warning | 049 | ½ | | [049 Book Tasting Menu Generator](#049--book-tasting-menu-generator) |
 | 85 | Practice worksheet variants — matching, fill-in-the-blank and "trap or true cognate" with answer keys | 052 | ½ | | [052 Cognates & False Friends Reference List Builder](#052--cognates--false-friends-reference-list-builder) |
 | 86 | Export into Review Game Board — a board built straight from 053’s questions, with categories and points. **Since v269 the sheet’s “Send to Quiz / Review Game Board” row puts a teacher’s own questions in 030’s bank by link (Path 6 P4), up to about fifty; since v297 a longer list is offered as a bank file instead (“Save a bank file instead”), which 030’s “Share the bank” import reads, shows first and only adds from (Devon, 2026-10-07: “yes, the file”). Left: the ready-made board (which categories and points it gets is not decided)** | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
@@ -13159,9 +13158,12 @@ one click away, every year.
   plain text, one per row) the way Gallery Walk QR Codes prints a
   reference sheet alongside its QR codes — handy for a teacher's own
   binder copy without needing to scan every code.
-- **Bulk photo import**: select a whole folder of photos at once and
-  match them to existing entries by filename or by upload order, instead
-  of clicking "Add photo" once per entry.
+- **Done (v508).** **Bulk photo import.** "Add photos in bulk" on the entries card: many photos or a
+  whole folder at once, each shrunk in the browser to 480 px on its long side as a JPEG, matched to entries
+  by file name (`Tools/art-portfolio-label-maker/apl-photos.js`), shown as a plan with a picker per line, and
+  stored only on Add. Options: fill the rest in file-name order, replace photos already there, a new entry
+  for each leftover. Left: photo cropping/rotation by hand (the browser's own EXIF turn is applied, which
+  no test covers), and matching by upload order across devices.
 
 #### Moonshot / North Star
 
