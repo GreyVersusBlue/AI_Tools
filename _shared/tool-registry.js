@@ -1517,6 +1517,8 @@
         { k: 'gvb-roleplay:levelFilter' },
         /* { className: [studentName, ...] } — a per-class copy of the roster. */
         { k: 'gvb-roleplay:roster', student: true, rollover: 'reduce' },
+        /* { className: { criteria: [text], marks: [{ id, date, scenario, title, students, scores }] } } — 014's speaking record; names of students. */
+        { k: 'gvb-roleplay:speaking', student: true, rollover: 'reduce' },
         { k: 'gvb-roleplay:ttsLang' },
         { k: 'gvb-roleplay:usefulFills' },
       ],

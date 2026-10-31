@@ -259,6 +259,8 @@
     "Tools/image-to-pdf/test/smoke-enhance.mjs",
     "Tools/image-to-pdf/test/smoke-portfolio.mjs",
     "Tools/roleplay-scenario-generator/test/smoke-success-criteria.mjs",
+    "Tools/roleplay-scenario-generator/test/speaking-core.test.mjs",
+    "Tools/roleplay-scenario-generator/test/smoke-speaking.mjs",
     "Tools/novel-study-circles-manager/test/smoke-multi-book-unit.mjs",
     "Tools/novel-study-circles-manager/test/smoke-undo.mjs",
     "Tools/seating-chart/test/drive-seating.mjs",

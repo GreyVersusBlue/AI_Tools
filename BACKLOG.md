@@ -820,7 +820,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 60 | Path 20 P4, what is left — the way back from Timeline Builder into a map project (needs a route 015 does not accept; Devon's call on where an event's year goes on a map), and the slice sheet in the print preview (the kit's `preview()` does not cover 046's canvas export); time slices themselves shipped in v433 | 046, 015 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 65 | First-run "Load sample data" across the tools that open to an empty form (P15); 059, 072, 049 (v488) and 043, 042, 082, 038, 084 (v489) done; the people-content tools wait on Devon (question below) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 66 | Phone-sized layout pass beyond 005: sideways overflow is gone from all 90 pages at 360 px (v490-v491) and the three toolbars over half a 740 px screen fold behind a More button (011, 032, 054; v498, `test:phone-toolbar`); left: only that a real phone has not been tried | site | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 72 | Speaking assessment layer — a short rubric per pair while circulating, stored per class, printed as a per-student speaking record | 014 | ½ | | [014 Immersion Roleplay Scenario Generator](#014--immersion-roleplay-scenario-generator) |
 | 73 | Task-organized prompt library — grouped by teaching task, each entry loading a full form state | 029 | ½ | | [029 Prompt Builder](#029--prompt-builder) |
 | 74 | Cover page, headers, and page numbers across the merged document | 031 | ½ | | [031 Word Doc Merger](#031--word-doc-merger) |
 | 75 | Printable parent reading report — one page per student, batch-printed for conferences | 033 | ½ | | [033 Silent Reading (SSR) Log Tracker](#033--silent-reading-ssr-log-tracker) |
@@ -10567,10 +10566,11 @@ end of the year.
 
 #### Major Features
 
-- **Assessment layer.** Speaking is the hardest thing to assess in a language
-  classroom. A quick rubric tap per pair during a roleplay, with a printable
-  record, would be genuinely valuable — and `003-rubric-builder.html` already has
-  scoring machinery to reuse (P7).
+- **Assessment layer — shipped (v500, AI-31).** A Speaking record panel: up to six
+  criteria per class, four levels tapped per pair, one mark filed under both
+  partners, a printed page per student (`gvb-roleplay:speaking`, student data).
+  Not built: a link to 003's rubric engine (the criteria are 014's own), notes
+  per mark, a term-over-term view.
 - **Audio.** `039-vocab-conjugation-drill.html` already uses `speechSynthesis`
   with a language selector; hearing the target-language prompts spoken would
   serve pronunciation directly, and the code already exists one file away.
