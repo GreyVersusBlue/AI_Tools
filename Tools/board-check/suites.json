@@ -102,6 +102,8 @@
     "Tools/data-chart-builder/test/chart-scatter-log.test.mjs",
     "Tools/data-chart-builder/test/chart-scatter-series.test.mjs",
     "Tools/data-chart-builder/test/chart-scatter-notes.test.mjs",
+    "Tools/data-chart-builder/test/chart-category-notes.test.mjs",
+    "Tools/data-chart-builder/test/smoke-annotations.mjs",
     "Tools/data-chart-builder/test/smoke-science.mjs",
     "Tools/group-team-generator/test/smoke-share.mjs",
     "Tools/group-team-generator/test/smoke-pairing-history.mjs",

@@ -178,8 +178,8 @@ eq((await svg()).html.includes('Scatter plot of'), true, 'and draws as a single 
 console.log('step 4 (annotations)');
 await setup();
 eq(await page.evaluate(() => getComputedStyle(document.getElementById('notes-card')).display), 'block', 'the annotation card shows for a scatter');
-await page.evaluate(() => { const r = document.querySelector('input[name="chart-type"][value="bar"]'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); });
-eq(await page.evaluate(() => getComputedStyle(document.getElementById('notes-card')).display), 'none', 'and hides for a bar chart');
+await page.evaluate(() => { const r = document.querySelector('input[name="chart-type"][value="pie"]'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); });
+eq(await page.evaluate(() => getComputedStyle(document.getElementById('notes-card')).display), 'none', 'and hides for a pie chart (bar and line have their own, smoke-annotations.mjs)');
 await page.evaluate(() => { const r = document.querySelector('input[name="chart-type"][value="scatter"]'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); });
 await settle(page, 300);
 const addNote = async (type, vals, text) => {

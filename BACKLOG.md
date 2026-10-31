@@ -820,7 +820,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 60 | Path 20 P4, what is left — the way back from Timeline Builder into a map project (needs a route 015 does not accept; Devon's call on where an event's year goes on a map), and the slice sheet in the print preview (the kit's `preview()` does not cover 046's canvas export); time slices themselves shipped in v433 | 046, 015 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 65 | First-run "Load sample data" across the tools that open to an empty form (P15); 059, 072, 049 (v488) and 043, 042, 082, 038, 084 (v489) done; the people-content tools wait on Devon (question below) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 66 | Phone-sized layout pass beyond 005: sideways overflow is gone from all 90 pages at 360 px (v490-v491) and the three toolbars over half a 740 px screen fold behind a More button (011, 032, 054; v498, `test:phone-toolbar`); left: only that a real phone has not been tried | site | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 76 | Chart annotation layer — arrows, text callouts and shaded regions so a printed figure makes an argument | 038 | ½ | | [038 Data Table → Chart Builder](#038--data-table--chart-builder) |
 | 78 | Local math notation renderer — fractions, radicals, exponents, subscripts, Greek letters | 041 | ½ | | [041 Formula Reference Sheet Builder](#041--formula-reference-sheet-builder) |
 | 79 | Templates as data — layout, fonts, borders and colors as template objects, so new designs need no code | 042 | ½ | | [042 Certificate & Award Maker](#042--certificate--award-maker) |
 | 80 | Evergreen emergency binder — date-independent sections only, with a staleness reminder | 045 | ½ | | [045 Sub Binder / Day Bundle Generator](#045--sub-binder--day-bundle-generator) |
@@ -12337,9 +12336,14 @@ list — locally, privately, with no gradebook integration required.
 - **Skipped — deferred.** **Templates by subject.** A lab data template (trial, measurement, average),
   a survey template, a grade template — each with the right chart type and
   stats preselected (P15). *(Not attempted this round.)*
-- **Skipped — deferred.** **Chart annotation.** Arrows, labels, a shaded region, a "line of best fit"
-  callout — the difference between a chart and a chart that makes an argument.
-  *(Not attempted this round.)*
+- **Partly done.** **Chart annotation.** Shaded regions, arrows and callouts: on the
+  scatter since Path 16 P5 step 4 (in the scatter's own X and Y), and on **bar and line
+  charts since v504 (AI-31)**, placed by category number (1 = the first row) and a value, named in
+  the chart's description ("category 2 (Tue)"), up to 12 per chart, carried in the share link as
+  `catNotes`. The scatter and the category notes are two lists. Not done: box plots and pie
+  charts (no axis to place a note on), annotations in the printed worksheet or the
+  multiple-charts-per-page idea, dragging a note on the chart, and a "line of best fit" callout
+  on a bar chart.
 - **Skipped — deferred.** **Multiple charts on one printed page**, for a lab report or a comparison.
   *(Not attempted this round.)*
 - **Skipped — deferred.** **XLSX import** (P13). Currently CSV-ish paste only; `036-final_grade_checker.html`
