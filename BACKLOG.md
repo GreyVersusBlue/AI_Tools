@@ -821,7 +821,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 65 | First-run "Load sample data" across the tools that open to an empty form (P15); 059, 072, 049 (v488) and 043, 042, 082, 038, 084 (v489) done; the people-content tools wait on Devon (question below) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 66 | Phone-sized layout pass beyond 005: sideways overflow is gone from all 90 pages at 360 px (v490-v491) and the three toolbars over half a 740 px screen fold behind a More button (011, 032, 054; v498, `test:phone-toolbar`); left: only that a real phone has not been tried | site | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 80 | Evergreen emergency binder — date-independent sections only, with a staleness reminder | 045 | ½ | | [045 Sub Binder / Day Bundle Generator](#045--sub-binder--day-bundle-generator) |
-| 83 | Spreadsheet book-list import via the shared SheetJS build, with a genre-balance warning | 049 | ½ | | [049 Book Tasting Menu Generator](#049--book-tasting-menu-generator) |
 | 85 | Practice worksheet variants — matching, fill-in-the-blank and "trap or true cognate" with answer keys | 052 | ½ | | [052 Cognates & False Friends Reference List Builder](#052--cognates--false-friends-reference-list-builder) |
 | 86 | Export into Review Game Board — a board built straight from 053’s questions, with categories and points. **Since v269 the sheet’s “Send to Quiz / Review Game Board” row puts a teacher’s own questions in 030’s bank by link (Path 6 P4), up to about fifty; since v297 a longer list is offered as a bank file instead (“Save a bank file instead”), which 030’s “Share the bank” import reads, shows first and only adds from (Devon, 2026-10-07: “yes, the file”). Left: the ready-made board (which categories and points it gets is not decided)** | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
 | 87 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
@@ -13218,18 +13217,18 @@ time.
 
 #### Major Features
 
-- **CSV/spreadsheet import** for a whole list of books at once (title,
-  author, genre, blurb columns), matching the bulk-import pattern already
-  used in Staff Directory Builder and Review Game Board — typing books one
-  at a time doesn't scale to a real classroom library cart.
+- **Done (v509).** **CSV/spreadsheet import** and the **genre-balance check**: an "Import a book list" card reads
+  an .xlsx or .xls (the vendored SheetJS, loaded only when one is chosen), a CSV or tab-separated file, or pasted
+  cells (`PasteTable`), finds title / author / genre / blurb by heading or by position, shows what will be added
+  and what is left out, and adds nothing until told to; the Books card warns when one genre is over half the list,
+  there is only one, many books have none, or most genres hold one book (`Tools/book-tasting-menu-generator/btmg-import.js`).
+  Left: covers by file name (the way 048 now matches photos), and a column-picker for a sheet with unusual headings.
 - **QR code per book linking to a longer review/trailer/Goodreads-style
   page**, reusing this toolkit's QR Code Generator pattern, for browsing
   beyond the blurb.
 - **Multiple named saved menus** (e.g. "Fall Book Tasting" vs "Spring Book
   Tasting"), matching the multi-save convention used elsewhere in this
   toolkit — right now it's one flat list per browser.
-- **A genre-balance check**: warn if one genre dominates the list, useful
-  for a teacher trying to build a deliberately varied tasting menu.
 
 #### Moonshot / North Star
 

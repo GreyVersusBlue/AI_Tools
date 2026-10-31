@@ -27,6 +27,8 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/paste-table.js"></script>
+<script src="book-tasting-menu-generator/btmg-import.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -109,6 +111,13 @@
   .rslip .rslip-foot { font-size: .78rem; margin-top: .45rem; }
   .rslip .rslip-foot .foot-line { display: inline-block; border-bottom: 1px solid #999; min-width: 14rem; height: 1rem; vertical-align: bottom; }
 
+  [hidden] { display: none !important; }
+  .import-card .hint { margin-top: 0; }
+  .import-card textarea { min-height: 5rem; font-family: Consolas, monospace; font-size: .82rem; }
+  .import-preview { margin-top: .7rem; padding: .7rem .9rem; border: 1px solid var(--line); border-radius: 8px; background: var(--card-2); }
+  .import-preview ul { margin: .3rem 0 .5rem 1.1rem; padding: 0; font-size: .82rem; }
+  .balance-warn { margin: 0 0 .7rem; padding: .5rem .75rem; border-radius: 6px; font-size: .84rem; background: var(--err-bg); color: var(--err); border: 1px solid var(--err-line); }
+  .balance-warn p { margin: .15rem 0; }
   @media print {
     .rslip { border-bottom: 1px dashed #999; min-height: 46vh; page-break-inside: avoid; }
     #printArea .rslip:nth-child(2n) { page-break-after: always; border-bottom: none; }
@@ -139,8 +148,29 @@
     <button id="addBookBtn">Add book</button>
   </div>
 
+  <div class="card import-card">
+    <h2>Import a book list</h2>
+    <p class="hint">A spreadsheet of the cart, one book a row: <strong>title, author, genre, blurb</strong>, with or without a header row. Open an .xlsx, .xls or .csv file, or paste the cells. You see what will be added before it is.</p>
+    <div class="add-grid">
+      <div><label for="importFile">Spreadsheet file</label><input type="file" id="importFile" accept=".xlsx,.xls,.csv,.tsv,.txt"></div>
+      <div></div>
+    </div>
+    <label for="importText">Or paste the cells here</label>
+    <textarea id="importText" placeholder="Title&#9;Author&#9;Genre&#9;Blurb"></textarea>
+    <button type="button" class="secondary" id="importPasteBtn">Preview the pasted list</button>
+    <div class="import-preview" id="importPreview" hidden>
+      <p id="importSummary" role="status"></p>
+      <ul id="importNotes"></ul>
+      <div class="btnrow">
+        <button type="button" id="importAddBtn">Add these books</button>
+        <button type="button" class="secondary" id="importCancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <div class="card">
     <h2>Books (<span id="bookCount">0</span>)</h2>
+    <div class="balance-warn" id="genreBalance" role="status" hidden></div>
     <div id="booksWrap"></div>
   </div>
 
@@ -175,6 +205,7 @@
   var els = {};
   ['newTitle', 'newAuthor', 'newGenre', 'newCover', 'newBlurb', 'addBookBtn', 'booksWrap', 'bookCount', 'printBtn', 'printArea',
    'slipOptions', 'slipRounds', 'slipCopies',
+   'importFile', 'importText', 'importPasteBtn', 'importPreview', 'importSummary', 'importNotes', 'importAddBtn', 'importCancelBtn', 'genreBalance',
    'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
@@ -203,6 +234,7 @@
 
   function renderBooks() {
     els.bookCount.textContent = books.length;
+    renderBalance();
     els.booksWrap.innerHTML = books.map(function (b) {
       var img = b.cover ? '<img class="thumb" src="' + b.cover + '" alt="">' : '';
       return '<div class="book-row" data-id="' + b.id + '">' + img +
@@ -218,6 +250,130 @@
     if (!id) return;
     books = books.filter(function (b) { return b.id !== id; });
     save(); renderBooks();
+  });
+
+  /* ---------- the genre-balance check ---------- */
+  function renderBalance() {
+    var warnings = BookImport.genreBalance(books).warnings;
+    els.genreBalance.textContent = '';
+    els.genreBalance.hidden = !warnings.length;
+    warnings.forEach(function (w) {
+      var p = document.createElement('p');
+      p.textContent = w;
+      els.genreBalance.appendChild(p);
+    });
+  }
+
+  /* ---------- importing a book list (btmg-import.js maps and merges) ---------- */
+  var XLSX_SRC = '../_shared/vendor/xlsx/xlsx.full.min.js';
+  var xlsxLoading = null;
+  function loadXlsx() {
+    if (window.XLSX) return Promise.resolve();
+    if (!xlsxLoading) {
+      xlsxLoading = new Promise(function (resolve, reject) {
+        var el = document.createElement('script');
+        el.src = XLSX_SRC;
+        el.onload = function () { resolve(); };
+        el.onerror = function () { xlsxLoading = null; reject(new Error('could not load the spreadsheet reader')); };
+        document.head.appendChild(el);
+      });
+    }
+    return xlsxLoading;
+  }
+
+  var pending = null;   // { add, text } while a preview is showing
+
+  function note(text) {
+    var li = document.createElement('li');
+    li.textContent = text;
+    els.importNotes.appendChild(li);
+  }
+
+  function previewRows(rows, lineNos, sourceName) {
+    var mapped = BookImport.mapRows(rows, lineNos);
+    var merged = BookImport.merge(books, mapped.books);
+    els.importNotes.textContent = '';
+    els.importPreview.hidden = false;
+    if (!mapped.books.length) {
+      pending = null;
+      els.importAddBtn.hidden = true;
+      els.importSummary.textContent = 'No books found in ' + sourceName + '. Each book needs a title, in the first column or under a “Title” heading.';
+      mapped.skipped.slice(0, 5).forEach(function (s) { note('Row ' + s.line + ': ' + s.reason + '.'); });
+      return;
+    }
+    pending = { add: merged.add };
+    els.importAddBtn.hidden = !merged.add.length;
+    els.importSummary.textContent = merged.add.length
+      ? merged.add.length + ' book' + (merged.add.length === 1 ? '' : 's') + ' from ' + sourceName + ' will be added to the ' + books.length + ' already here.'
+      : 'Every book in ' + sourceName + ' is already in the list.';
+    note(mapped.header ? 'Columns were found by their headings.' : 'No heading row, so the columns are read as title, author, genre, blurb.');
+    if (merged.duplicates.length) note(merged.duplicates.length + ' already here or listed twice (same title and author), left out.');
+    if (mapped.skipped.length) note(mapped.skipped.length + ' row' + (mapped.skipped.length === 1 ? '' : 's') + ' skipped for having no title (' + mapped.skipped.slice(0, 5).map(function (s) { return 'row ' + s.line; }).join(', ') + (mapped.skipped.length > 5 ? ', …' : '') + ').');
+    if (merged.genreCase) note(merged.genreCase + ' genre' + (merged.genreCase === 1 ? ' was' : 's were') + ' written in a different case from one already used, and takes that spelling.');
+    if (mapped.over) note(mapped.over + ' rows past the limit of ' + BookImport.MAX_ROWS + ' were left out.');
+    BookImport.genreBalance(books.concat(merged.add)).warnings.forEach(function (w) { note('Once added: ' + w); });
+  }
+
+  function previewText(text, sourceName) {
+    var t = PasteTable.parse(text, { header: false });
+    if (!t.rows.length) { previewRows([], [], sourceName); return; }
+    previewRows(t.rows, t.lines, sourceName);
+    if (t.ragged.length) note(t.ragged.length + ' line' + (t.ragged.length === 1 ? ' has' : 's have') + ' a different number of cells than the widest (line ' + t.ragged.slice(0, 5).map(function (g) { return g.line; }).join(', ') + '); missing cells are blank. A comma inside a blurb needs quotes round the cell.');
+  }
+
+  els.importPasteBtn.addEventListener('click', function () { previewText(els.importText.value, 'the pasted list'); });
+
+  els.importFile.addEventListener('change', function () {
+    var file = els.importFile.files && els.importFile.files[0];
+    if (!file) return;
+    var lower = file.name.toLowerCase();
+    els.importPreview.hidden = false;
+    els.importSummary.textContent = 'Reading ' + file.name + '…';
+    els.importNotes.textContent = '';
+    els.importAddBtn.hidden = true;
+    pending = null;
+    var done = function () { els.importFile.value = ''; };
+    /* SheetJS will read any bytes as if they were CSV text, so a file named .xlsx that is not a
+       workbook would come back as one made-up book. The first bytes decide: a zip (xlsx) or an
+       old binary workbook (xls). A .xls that is neither is usually a table saved as text. */
+    var isBook = function (b) { return (b[0] === 0x50 && b[1] === 0x4b) || (b[0] === 0xd0 && b[1] === 0xcf && b[2] === 0x11 && b[3] === 0xe0); };
+    if (/\.xlsx?$/.test(lower)) {
+      file.arrayBuffer().then(function (buf) {
+        var head = new Uint8Array(buf.slice(0, 4));
+        if (!isBook(head)) {
+          if (/\.xls$/.test(lower)) return file.text().then(function (text) { previewText(text, file.name); });
+          throw new Error('not a workbook');
+        }
+        return loadXlsx().then(function () {
+          var wb = window.XLSX.read(buf, { type: 'array' });
+          var sheet = wb.Sheets[wb.SheetNames[0]];
+          var rows = window.XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+          previewRows(rows.filter(function (r) { return r.some(function (c) { return String(c).trim(); }); }), null, file.name);
+          if (wb.SheetNames.length > 1) note('Only the first sheet (' + wb.SheetNames[0] + ') was read.');
+        });
+      }).catch(function () {
+        els.importSummary.textContent = 'Could not read ' + file.name + '. Save it as .csv from your spreadsheet program and open that instead.';
+      }).then(done);
+    } else {
+      file.text().then(function (text) { previewText(text, file.name); }, function () {
+        els.importSummary.textContent = 'Could not read ' + file.name + '.';
+      }).then(done);
+    }
+  });
+
+  els.importCancelBtn.addEventListener('click', function () { pending = null; els.importPreview.hidden = true; });
+  els.importAddBtn.addEventListener('click', function () {
+    if (!pending) return;
+    var n = pending.add.length;
+    pending.add.forEach(function (b) {
+      books.push({ id: uid(), title: b.title, author: b.author, genre: b.genre, blurb: b.blurb, cover: null });
+    });
+    pending = null;
+    save(); renderBooks();
+    els.importText.value = '';
+    els.importAddBtn.hidden = true;
+    els.importNotes.textContent = '';
+    els.importSummary.textContent = 'Added ' + n + ' book' + (n === 1 ? '' : 's') + '. Covers can be added one at a time; the list has ' + books.length + ' now.';
   });
 
   function addBook(cover) {

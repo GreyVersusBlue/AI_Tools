@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v508';
+const CACHE_VERSION = 'v509';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -291,6 +291,7 @@ const PRECACHE_URLS = [
   "Tools/blank-map-generator/data/us-nation-10m.json",
   "Tools/blank-map-generator/data/us-states-10m.json",
   "Tools/049-book-tasting-menu-generator.html",
+  "Tools/book-tasting-menu-generator/btmg-import.js",
   "Tools/020-bracket-tournament-generator.html",
   "Tools/bracket-tournament-generator/bt-store.js",
   "Tools/bracket-tournament-generator/bt-teams.js",
