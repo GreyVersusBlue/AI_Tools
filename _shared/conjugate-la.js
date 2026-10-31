@@ -18,9 +18,13 @@
  * -īvī), which is right for most of the first, second and fourth conjugations and wrong for many
  * third-conjugation verbs, so those cells are the first a teacher should read.
  *
- * Beyond the six (extraTenses): the present and imperfect subjunctive and the present, imperfect and future
- * passive. A deponent verb (loquī, sequī, cōnārī) wears the passive endings in the present, imperfect and future and
- * is marked unbuilt elsewhere. NOT BUILT: the perfect passive (a participle and sum), the imperative, the participles.
+ * Beyond the six (extraTenses): the present and imperfect subjunctive, the present, imperfect and future passive,
+ * the perfect, pluperfect and future perfect passive (the perfect passive participle and a form of sum: amātus sum,
+ * amātī erant; the participle is lexical, so a record carries `ppp`, and only -āre and -īre verbs have a default;
+ * the masculine is printed, the plural for nōs, vōs and eī, the way French and Italian print theirs) and the
+ * imperative (tū and vōs). A deponent verb (loquī, sequī, cōnārī) wears the passive endings in the present, imperfect
+ * and future and its imperative in -re / -minī, and is marked unbuilt elsewhere (the deponent perfect, locūtus sum,
+ * waits on Devon's L4). NOT BUILT: the future imperative (amātō), the participles, the gerund.
  *
  * NOTHING HERE HAS BEEN READ BY A LANGUAGE TEACHER. Records were written from the standard principal
  * parts as remembered, not copied from a dictionary. Macrons are the least certain part. A teacher
@@ -38,18 +42,22 @@
   function a1(inf, perf, stem) { var o = { 'class': 'a' }; if (perf) o.stems = { perfect: perf }; if (stem) o.stem = stem; return rec(inf, o); }
   function i4(inf, perf, stem) { var o = { 'class': 'i' }; if (perf) o.stems = { perfect: perf }; if (stem) o.stem = stem; return rec(inf, o); }
 
+  // the perfect passive participle (the fourth principal part, masculine): amātus, monitus, rēctus, audītus
+  var PASS = ['present-passive', 'imperfect-passive', 'future-passive'];
+  var PERFPASS = ['perfect-passive', 'pluperfect-passive', 'future-perfect-passive'];
+
   // ---- the irregulars ----------------------------------------------------------
-  rec('esse', { 'class': 'c', defective: { tenses: ['present-passive', 'imperfect-passive', 'future-passive'] }, forms: { 'present-subjunctive': pr('sim sīs sit sīmus sītis sint'), 'imperfect-subjunctive': pr('essem essēs esset essēmus essētis essent'), present: pr('sum es est sumus estis sunt'), imperfect: pr('eram erās erat erāmus erātis erant'), future: pr('erō eris erit erimus eritis erunt') }, stems: { perfect: 'fu' } });
-  rec('posse', { 'class': 'c', defective: { tenses: ['present-passive', 'imperfect-passive', 'future-passive'] }, forms: { 'present-subjunctive': pr('possim possīs possit possīmus possītis possint'), 'imperfect-subjunctive': pr('possem possēs posset possēmus possētis possent'), present: pr('possum potes potest possumus potestis possunt'), imperfect: pr('poteram poterās poterat poterāmus poterātis poterant'), future: pr('poterō poteris poterit poterimus poteritis poterunt') }, stems: { perfect: 'potu' } });
-  rec('ferre', { 'class': 'c', forms: { 'present-subjunctive': pr('feram ferās ferat ferāmus ferātis ferant'), 'imperfect-subjunctive': pr('ferrem ferrēs ferret ferrēmus ferrētis ferrent'), 'present-passive': pr('feror ferris fertur ferimur feriminī feruntur'), 'imperfect-passive': pr('ferēbar ferēbāris ferēbātur ferēbāmur ferēbāminī ferēbantur'), 'future-passive': pr('ferar ferēris ferētur ferēmur ferēminī ferentur'), present: pr('ferō fers fert ferimus fertis ferunt'), imperfect: pr('ferēbam ferēbās ferēbat ferēbāmus ferēbātis ferēbant'), future: pr('feram ferēs feret ferēmus ferētis ferent') }, stems: { perfect: 'tul' } });
-  rec('velle', { 'class': 'c', defective: { tenses: ['present-passive', 'imperfect-passive', 'future-passive'] }, forms: { 'present-subjunctive': pr('velim velīs velit velīmus velītis velint'), 'imperfect-subjunctive': pr('vellem vellēs vellet vellēmus vellētis vellent'), present: pr('volō vīs vult volumus vultis volunt'), imperfect: pr('volēbam volēbās volēbat volēbāmus volēbātis volēbant'), future: pr('volam volēs volet volēmus volētis volent') }, stems: { perfect: 'volu' } });
-  rec('ire', { 'class': 'i', defective: { tenses: ['present-passive', 'imperfect-passive', 'future-passive'] }, forms: { 'present-subjunctive': pr('eam eās eat eāmus eātis eant'), 'imperfect-subjunctive': pr('īrem īrēs īret īrēmus īrētis īrent'), present: pr('eō īs it īmus ītis eunt'), imperfect: pr('ībam ībās ībat ībāmus ībātis ībant'), future: pr('ībō ībis ībit ībimus ībitis ībunt'), perfect: pr('iī īstī iit iimus īstis iērunt') }, stems: { perfect: 'i' } });
-  rec('dare', { 'class': 'a', forms: { 'present-subjunctive': pr('dem dēs det dēmus dētis dent'), 'imperfect-subjunctive': pr('darem darēs daret darēmus darētis darent'), 'present-passive': pr('dor dāris dātur dāmur dāminī dantur'), 'imperfect-passive': pr('dabar dabāris dabātur dabāmur dabāminī dabantur'), 'future-passive': pr('dabor daberis dabitur dabimur dabiminī dabuntur'), present: pr('dō dās dat damus datis dant'), imperfect: pr('dabam dabās dabat dabāmus dabātis dabant'), future: pr('dabō dabis dabit dabimus dabitis dabunt') }, stems: { perfect: 'ded' } });
-  a1('stare', 'stet', 'st').defective = { tenses: ['present-passive', 'imperfect-passive', 'future-passive'] };
+  rec('esse', { 'class': 'c', defective: { tenses: PASS.concat(PERFPASS) }, forms: { imperative: { 1: 'es', 4: 'este' }, 'present-subjunctive': pr('sim sīs sit sīmus sītis sint'), 'imperfect-subjunctive': pr('essem essēs esset essēmus essētis essent'), present: pr('sum es est sumus estis sunt'), imperfect: pr('eram erās erat erāmus erātis erant'), future: pr('erō eris erit erimus eritis erunt') }, stems: { perfect: 'fu' } });
+  rec('posse', { 'class': 'c', defective: { tenses: PASS.concat(PERFPASS, ['imperative']) }, forms: { 'present-subjunctive': pr('possim possīs possit possīmus possītis possint'), 'imperfect-subjunctive': pr('possem possēs posset possēmus possētis possent'), present: pr('possum potes potest possumus potestis possunt'), imperfect: pr('poteram poterās poterat poterāmus poterātis poterant'), future: pr('poterō poteris poterit poterimus poteritis poterunt') }, stems: { perfect: 'potu' } });
+  rec('ferre', { 'class': 'c', ppp: 'lātus', forms: { imperative: { 1: 'fer', 4: 'ferte' }, 'present-subjunctive': pr('feram ferās ferat ferāmus ferātis ferant'), 'imperfect-subjunctive': pr('ferrem ferrēs ferret ferrēmus ferrētis ferrent'), 'present-passive': pr('feror ferris fertur ferimur feriminī feruntur'), 'imperfect-passive': pr('ferēbar ferēbāris ferēbātur ferēbāmur ferēbāminī ferēbantur'), 'future-passive': pr('ferar ferēris ferētur ferēmur ferēminī ferentur'), present: pr('ferō fers fert ferimus fertis ferunt'), imperfect: pr('ferēbam ferēbās ferēbat ferēbāmus ferēbātis ferēbant'), future: pr('feram ferēs feret ferēmus ferētis ferent') }, stems: { perfect: 'tul' } });
+  rec('velle', { 'class': 'c', defective: { tenses: PASS.concat(PERFPASS, ['imperative']) }, forms: { 'present-subjunctive': pr('velim velīs velit velīmus velītis velint'), 'imperfect-subjunctive': pr('vellem vellēs vellet vellēmus vellētis vellent'), present: pr('volō vīs vult volumus vultis volunt'), imperfect: pr('volēbam volēbās volēbat volēbāmus volēbātis volēbant'), future: pr('volam volēs volet volēmus volētis volent') }, stems: { perfect: 'volu' } });
+  rec('ire', { 'class': 'i', defective: { tenses: PASS.concat(PERFPASS) }, forms: { imperative: { 1: 'ī', 4: 'īte' }, 'present-subjunctive': pr('eam eās eat eāmus eātis eant'), 'imperfect-subjunctive': pr('īrem īrēs īret īrēmus īrētis īrent'), present: pr('eō īs it īmus ītis eunt'), imperfect: pr('ībam ībās ībat ībāmus ībātis ībant'), future: pr('ībō ībis ībit ībimus ībitis ībunt'), perfect: pr('iī īstī iit iimus īstis iērunt') }, stems: { perfect: 'i' } });
+  rec('dare', { 'class': 'a', ppp: 'datus', forms: { imperative: { 4: 'date' }, 'present-subjunctive': pr('dem dēs det dēmus dētis dent'), 'imperfect-subjunctive': pr('darem darēs daret darēmus darētis darent'), 'present-passive': pr('dor dāris dātur dāmur dāminī dantur'), 'imperfect-passive': pr('dabar dabāris dabātur dabāmur dabāminī dabantur'), 'future-passive': pr('dabor daberis dabitur dabimur dabiminī dabuntur'), present: pr('dō dās dat damus datis dant'), imperfect: pr('dabam dabās dabat dabāmus dabātis dabant'), future: pr('dabō dabis dabit dabimus dabitis dabunt') }, stems: { perfect: 'ded' } });
+  a1('stare', 'stet', 'st').defective = { tenses: PASS.concat(PERFPASS) };
 
   // ---- deponent verbs: passive endings, active meaning (loquor, sequor). Only the present, imperfect and future are built;
   // the perfect system (locūtus sum), the subjunctive and the passive tenses are not, and say so.
-  var NOT_BUILT = ['perfect', 'pluperfect', 'future-perfect', 'present-subjunctive', 'imperfect-subjunctive', 'present-passive', 'imperfect-passive', 'future-passive'];
+  var NOT_BUILT = ['perfect', 'pluperfect', 'future-perfect', 'present-subjunctive', 'imperfect-subjunctive', 'present-passive', 'imperfect-passive', 'future-passive'].concat(PERFPASS);
   function dep(inf, cls, stem) { return rec(inf, { 'class': cls, stem: stem, deponent: true, defective: { tenses: NOT_BUILT } }); }
   dep('loqui', 'c', 'loqu'); dep('sequi', 'c', 'sequ'); dep('uti', 'c', 'ūt'); dep('nasci', 'c', 'nasc'); dep('proficisci', 'c', 'proficisc');
   dep('conari', 'a', 'cōn'); dep('hortari', 'a', 'hort'); dep('mirari', 'a', 'mīr'); dep('arbitrari', 'a', 'arbitr');
@@ -92,6 +100,30 @@
   i4('scire', 'scīv'); i4('venire', 'vēn'); i4('invenire', 'invēn'); i4('aperire', 'aperu'); i4('sentire', 'sēns');
   pf(R.venire, ['ad', 'circum', 'con', 'e', 'inter', 'per', 'prae', 'pro', 'sub']);
 
+  // ---- the fourth principal part, and the verbs that have no personal passive ---------------------------------
+  // -āre and -īre verbs are regular (amātus, audītus) and need nothing; the rest are lexical, so a verb without one here
+  // has no perfect passive in this pack (its cells are empty rather than guessed).
+  var PPP = {
+    monere: 'monitus', habere: 'habitus', docere: 'doctus', tenere: 'tentus', debere: 'debitus', terrere: 'territus',
+    videre: 'vīsus', movere: 'mōtus', respondere: 'respōnsus', ridere: 'rīsus', iubere: 'iussus',
+    regere: 'rēctus', ducere: 'ductus', scribere: 'scrīptus', mittere: 'missus', dicere: 'dictus', agere: 'āctus',
+    legere: 'lēctus', vincere: 'victus', ponere: 'positus', petere: 'petītus', canere: 'cantus', bibere: 'bibitus',
+    trahere: 'tractus', claudere: 'clausus', defendere: 'dēfēnsus', pellere: 'pulsus', cognoscere: 'cognitus',
+    relinquere: 'relictus', constituere: 'constitūtus',
+    conficere: 'confectus', efficere: 'effectus', perficere: 'perfectus', interficere: 'interfectus', reficere: 'refectus',
+    recipere: 'receptus', suscipere: 'susceptus', excipere: 'exceptus', percipere: 'perceptus', concipere: 'conceptus',
+    capere: 'captus', facere: 'factus', iacere: 'iactus', accipere: 'acceptus', cupere: 'cupītus', rapere: 'raptus',
+    scire: 'scītus', invenire: 'inventus', aperire: 'apertus', sentire: 'sēnsus'
+  };
+  Object.keys(PPP).forEach(function (v) { R[v].ppp = PPP[v]; });
+  // verbs with no passive of their own in the perfect system: intransitive ones, and those with no fourth part
+  ('ambulare laborare natare valere placere timere manere sedere currere cadere vivere fugere cedere venire dormire servire discere').split(' ')
+    .forEach(function (v) { R[v].defective = { tenses: (R[v].defective ? R[v].defective.tenses : []).concat(PERFPASS) }; });
+  // dīc, dūc, fac and fer lose their -e (the compounds too: addūc)
+  R.dicere.forms = { imperative: { 1: 'dīc' } };
+  R.ducere.forms = { imperative: { 1: 'dūc' } };
+  R.facere.forms = { imperative: { 1: 'fac' } };
+
   // the perfect system on a stem: -ī -istī -it -imus -istis -ērunt, and eram.., erō..
   function perfectEnds(pre) { return [pre + 'ī', pre + 'istī', pre + 'it', pre + 'imus', pre + 'istis', pre + 'ērunt']; }
   function pluEnds(pre) { return ['eram', 'erās', 'erat', 'erāmus', 'erātis', 'erant'].map(function (e) { return pre + e; }); }
@@ -104,6 +136,16 @@
     persons: ['ego', 'tū', 'is / ea / id', 'nōs', 'vōs', 'eī / eae / ea'],
     subjects: ['ego', 'tū', 'is', 'nōs', 'vōs', 'eī'],
     pronouns: { words: ['ego', 'tu', 'nos', 'vos', 'is', 'ea', 'id', 'ei', 'eae'] },
+    // the perfect passive prints the masculine, plural for nōs, vōs and eī (amātus sum, amātī sumus), the way French and
+    // Italian print theirs; a deponent has none
+    agreementAux: 'esse', agreementPlural: [/us$/, 'ī'],
+    pppOf: function (ctx) {
+      var rec = ctx.rec || {};
+      if (rec.ppp) return rec.ppp;
+      if (ctx.cls === 'a') return ctx.stem + 'ātus';
+      if (ctx.cls === 'i') return ctx.stem + 'ītus';
+      return '';
+    },
     classes: {
       a: { name: '1st (-āre)', example: 'amāre', suffixes: ['āre', 'are'], cut: 3, not: /\s/ },
       e: { name: '2nd (-ēre)', example: 'monēre', suffixes: ['ēre'], cut: 3, not: /\s/ },
@@ -132,9 +174,21 @@
       { id: 'pluperfect', name: 'Pluperfect', mood: 'indicative', kind: 'simple', stemsAlias: 'perfect', strongEndings: pluEnds(''), endings: perfAll(PRE, pluEnds) },
       { id: 'future-perfect', name: 'Future perfect', mood: 'indicative', kind: 'simple', stemsAlias: 'perfect', strongEndings: futPerfEnds(''), endings: perfAll(PRE, futPerfEnds) }
     ],
-    // beyond the six: the present and imperfect subjunctive and the passive of the present, imperfect and future
-    // (the perfect passive is a participle and sum: not built)
+    // beyond the six: the present and imperfect subjunctive, the passive of the present, imperfect and future, the
+    // perfect, pluperfect and future perfect passive (participle and sum) and the imperative (tū, vōs)
     extraTenses: [
+      { id: 'perfect-passive', name: 'Perfect passive', mood: 'indicative', kind: 'compound', compound: { auxiliary: 'esse', tense: 'present', part: 'ppp', partFirst: true } },
+      { id: 'pluperfect-passive', name: 'Pluperfect passive', mood: 'indicative', kind: 'compound', compound: { auxiliary: 'esse', tense: 'imperfect', part: 'ppp', partFirst: true } },
+      { id: 'future-perfect-passive', name: 'Future perfect passive', mood: 'indicative', kind: 'compound', compound: { auxiliary: 'esse', tense: 'future', part: 'ppp', partFirst: true } },
+      { id: 'imperative', name: 'Imperative', mood: 'imperative', kind: 'simple', none: [0, 2, 3, 5],
+        endings: {
+          a: ['', 'ā', '', '', 'āte', ''], e: ['', 'ē', '', '', 'ēte', ''], c: ['', 'e', '', '', 'ite', ''],
+          io: ['', 'e', '', '', 'ite', ''], i: ['', 'ī', '', '', 'īte', '']
+        },
+        deponentEndings: {
+          a: ['', 'āre', '', '', 'āminī', ''], e: ['', 'ēre', '', '', 'ēminī', ''], c: ['', 'ere', '', '', 'iminī', ''],
+          io: ['', 'ere', '', '', 'iminī', ''], i: ['', 'īre', '', '', 'īminī', '']
+        } },
       { id: 'present-subjunctive', name: 'Present subjunctive', mood: 'subjunctive', kind: 'simple',
         endings: {
           a: ['em', 'ēs', 'et', 'ēmus', 'ētis', 'ent'], e: ['eam', 'eās', 'eat', 'eāmus', 'eātis', 'eant'], c: ['am', 'ās', 'at', 'āmus', 'ātis', 'ant'],

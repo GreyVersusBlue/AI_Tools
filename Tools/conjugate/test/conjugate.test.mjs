@@ -314,7 +314,7 @@ function suite(win) {
   const extras = (lang) => C.languages().find((l) => l.id === lang).extraTenses.map((t) => t.id);
   eq(six('es'), ['present', 'preterite', 'imperfect', 'future', 'conditional', 'subjunctive'], 'es the six do not move');
   eq(C.table('es', 'hablar').tenses.map((t) => t.id), six('es'), 'a default table holds the six only');
-  eq(extras('es'), ['present-perfect', 'imperfect-subjunctive', 'command'], 'es extra tenses');
+  eq(extras('es'), ['present-perfect', 'pluperfect', 'present-perfect-subjunctive', 'pluperfect-subjunctive', 'imperfect-subjunctive', 'command', 'infinitive-pronoun'], 'es extra tenses');
   cells('es', 'hablar', 'present-perfect', 'he hablado | has hablado | ha hablado | hemos hablado | habéis hablado | han hablado');
   cells('es', 'tener', 'present-perfect', 'he tenido | has tenido | ha tenido | hemos tenido | habéis tenido | han tenido');
   cells('es', 'abrir', 'present-perfect', 'he abierto | has abierto | ha abierto | hemos abierto | habéis abierto | han abierto');
@@ -337,11 +337,11 @@ function suite(win) {
   cells('es', 'proponer', 'command', ' | propón | proponga | propongamos | proponed | propongan');
   eq(C.conjugate('es', 'ir', 'command').alts[3], ['vayamos'], 'es ir nosotros command has both forms');
   eq(C.conjugate('es', 'hablar', 'command').notes.map((n) => n.kind), ['defective', 'regular', 'regular', 'regular', 'regular', 'regular'], 'es a command has no first person singular');
-  eq(C.conjugate('es', 'levantarse', 'command').complete, false, 'es a reflexive command is refused, not guessed');
+  eq(forms('es', 'levantarse', 'command'), ['', 'levántate', 'levántese', 'levantémonos', 'levantaos', 'levántense'], 'es a reflexive command takes its pronoun on the end');
   eq(C.conjugate('es', 'hablar', 'command').reviewed, false, 'es an extra tense is unreviewed too');
   eq(C.validate('es', { infinitive: 'hablar', forms: { command: { 1: 'habla' } } }), [], 'a teacher may correct an extra tense');
   // German: the Plusquamperfekt, the passive and the imperative
-  eq(extras('de'), ['pluperfect', 'passive', 'passive-preterite', 'imperative'], 'de extra tenses');
+  eq(extras('de'), ['konjunktiv2', 'pluperfect', 'passive', 'passive-preterite', 'imperative'], 'de extra tenses');
   eq(six('de'), ['present', 'perfect', 'preterite', 'future', 'conditional', 'subjunctive'], 'de the six do not move');
   cells('de', 'machen', 'pluperfect', 'hatte gemacht | hattest gemacht | hatte gemacht | hatten gemacht | hattet gemacht | hatten gemacht');
   cells('de', 'fahren', 'pluperfect', 'war gefahren | warst gefahren | war gefahren | waren gefahren | wart gefahren | waren gefahren');
@@ -386,7 +386,7 @@ function suite(win) {
   eq(C.conjugate('la', 'adducere', 'present').notes[0].kind, 'derived', 'la a compound by prefix is noted as derived');
   eq(C.conjugate('la', 'xducere', 'perfect').known, false, 'la a prefix not on the list is not a compound');
   // Italian: the congiuntivo imperfetto and the imperativo
-  eq(extras('it'), ['imperfect-subjunctive', 'command'], 'it extra tenses');
+  eq(extras('it'), ['pluperfect', 'past-subjunctive', 'pluperfect-subjunctive', 'imperfect-subjunctive', 'command', 'infinitive-pronoun'], 'it extra tenses');
   eq(six('it'), ['present', 'passato-prossimo', 'imperfect', 'future', 'conditional', 'subjunctive'], 'it the six do not move');
   cells('it', 'parlare', 'imperfect-subjunctive', 'parlassi | parlassi | parlasse | parlassimo | parlaste | parlassero');
   cells('it', 'vendere', 'imperfect-subjunctive', 'vendessi | vendessi | vendesse | vendessimo | vendeste | vendessero');
@@ -402,9 +402,9 @@ function suite(win) {
   cells('it', 'dire', 'command', " | di' | dica | diciamo | dite | dicano");
   cells('it', 'fare', 'command', " | fa' | faccia | facciamo | fate | facciano");
   eq(C.conjugate('it', 'andare', 'command').alts[1], ['vai'], 'it andare has va\' and vai');
-  eq(C.conjugate('it', 'lavarsi', 'command').complete, false, 'it a reflexive imperativo is refused');
+  eq(forms('it', 'lavarsi', 'command'), ['', 'lavati', 'si lavi', 'laviamoci', 'lavatevi', 'si lavino'], 'it a reflexive imperativo joins or fronts its pronoun');
   // French: the impératif
-  eq(extras('fr'), ['command'], 'fr extra tenses');
+  eq(extras('fr'), ['pluperfect', 'past-subjunctive', 'command', 'negative-command'], 'fr extra tenses');
   eq(six('fr'), ['present', 'passe-compose', 'imperfect', 'future', 'conditional', 'subjunctive'], 'fr the six do not move');
   cells('fr', 'parler', 'command', ' | parle |  | parlons | parlez | ');
   cells('fr', 'finir', 'command', ' | finis |  | finissons | finissez | ');
@@ -414,9 +414,9 @@ function suite(win) {
   cells('fr', 'être', 'command', ' | sois |  | soyons | soyez | ');
   cells('fr', 'avoir', 'command', ' | aie |  | ayons | ayez | ');
   cells('fr', 'manger', 'command', ' | mange |  | mangeons | mangez | ');
-  eq(C.conjugate('fr', 'se lever', 'command').complete, false, 'fr a reflexive impératif is refused');
+  eq(forms('fr', 'se lever', 'command'), ['', 'lève-toi', '', 'levons-nous', 'levez-vous', ''], 'fr a reflexive impératif takes -toi, -nous, -vous');
   // Latin: the subjunctive, the passive, the deponents
-  eq(extras('la'), ['present-subjunctive', 'imperfect-subjunctive', 'present-passive', 'imperfect-passive', 'future-passive'], 'la extra tenses');
+  eq(extras('la'), ['perfect-passive', 'pluperfect-passive', 'future-perfect-passive', 'imperative', 'present-subjunctive', 'imperfect-subjunctive', 'present-passive', 'imperfect-passive', 'future-passive'], 'la extra tenses');
   eq(six('la'), ['present', 'imperfect', 'future', 'perfect', 'pluperfect', 'future-perfect'], 'la the six do not move');
   cells('la', 'amare', 'present-subjunctive', 'amem | amēs | amet | amēmus | amētis | ament');
   cells('la', 'monere', 'present-subjunctive', 'moneam | moneās | moneat | moneāmus | moneātis | moneant');
@@ -541,7 +541,7 @@ function suite(win) {
   eq(forms('es', C.merge({ infinitive: 'hablar' }, { infinitive: 'hablar', forms: { future: { 1: 'hablarás!' } } }), 'future')[1], 'hablarás!', 'a new regular verb is one field');
   eq(C.validate('es', { infinitive: 'hablar', forms: { present: { 0: 'hablo' } } }), [], 'validate: a good record');
   ok(C.validate('es', { infinitive: 'hablar', forms: { present: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] } }).some((p) => /seventh/.test(p)), 'validate: a seventh form');
-  ok(C.validate('es', { infinitive: 'hablar', forms: { pluperfect: { 0: 'x' } } }).some((p) => /pluperfect/.test(p)), 'validate: an unknown tense');
+  ok(C.validate('es', { infinitive: 'hablar', forms: { aorist: { 0: 'x' } } }).some((p) => /aorist/.test(p)), 'validate: an unknown tense');
   ok(C.validate('es', { infinitive: 'hablar', forms: { present: { 6: 'x' } } }).some((p) => /slot 6/.test(p)), 'validate: slot 6');
   ok(C.validate('es', { infinitive: 'hablar', stemChange: 'o>ue' }).some((p) => /no o/.test(p)), 'validate: a stem change on a vowel the stem does not have');
   ok(C.validate('es', { infinitive: 'hablar', stems: { aorist: 'x' } }).some((p) => /aorist/.test(p)), 'validate: stems for an unknown tense');
@@ -577,7 +577,7 @@ function suite(win) {
       ok(!!C.participle(lang, v), `${lang} ${v}: has a participle`);
       for (const t of ids) {
         const r = C.conjugate(lang, v, t);
-        if (r.problem === 'not built for a reflexive verb') continue;
+        if (r.problem === 'not built for a reflexive verb' || r.problem === 'only for a reflexive verb') continue;
         ok(r.complete, `${lang} ${v} ${t}: complete`);
         r.forms.forEach((f, i) => {
           if (r.notes.some((n) => n.slot === i && n.kind === 'defective')) return;
@@ -805,7 +805,9 @@ function suite(win) {
       if (lang !== 'la') ok(!!C.participle(lang, v), `${lang} ${v}: has a participle`);
       for (const t of ids) {
         const r = C.conjugate(lang, v, t);
-        if (r.problem === 'not built for a reflexive verb') continue;
+        if (r.problem === 'not built for a reflexive verb' || r.problem === 'only for a reflexive verb') continue;
+        // a Latin verb with no fourth part has no perfect passive in the pack, so the cell is empty rather than guessed
+        if (lang === 'la' && /passive$/.test(t) && /^(?:perfect|pluperfect|future-perfect)-/.test(t) && !r.forms.some(Boolean)) continue;
         ok(r.complete && r.known, `${lang} ${v} ${t}: complete and known`);
         r.forms.forEach((f, i) => { if (r.notes.some((n) => n.slot === i && n.kind === 'defective')) return; ok(f && lowerOk(f), `${lang} ${v} ${t} slot ${i}: lowercase NFC, not empty (${f})`); });
       }
@@ -817,7 +819,7 @@ function suite(win) {
     ok(fut[0].slice(0, -1) === cond[0].slice(0, -2), `it ${v}: the condizionale stem is the futuro's (${fut[0]} / ${cond[0]})`);
   }
   // and the German future and conditional end in the infinitive
-  for (const v of C.inventory('de')) ok(forms('de', v, 'future')[0].endsWith(' ' + v.replace(/^sich /, '')) && forms('de', v, 'conditional')[0].endsWith(' ' + v.replace(/^sich /, '')), `de ${v}: the future and conditional end in the infinitive`);
+  for (const v of C.inventory('de')) ok(forms('de', v, 'future')[0].endsWith(' ' + v.replace(/^sich (?:\(dat\.\) )?/, '')) && forms('de', v, 'conditional')[0].endsWith(' ' + v.replace(/^sich (?:\(dat\.\) )?/, '')), `de ${v}: the future and conditional end in the infinitive`);
 
   // the six declared tenses are what Devon asked for ("The six", 2026-10-07)
   eq(C.languages().find((l) => l.id === 'es').tenses.map((t) => t.id), ['present', 'preterite', 'imperfect', 'future', 'conditional', 'subjunctive'], 'Spanish tense ids');
@@ -827,6 +829,181 @@ function suite(win) {
   eq(C.languages().map((l) => l.id), ['es', 'de', 'it', 'la', 'fr'], 'languages come in Devon\'s order (Spanish, German, Italian, Latin, French)');
   eq(C.languages().find((l) => l.id === 'la').tenses.map((t) => t.id), ['present', 'imperfect', 'future', 'perfect', 'pluperfect', 'future-perfect'], 'Latin tense ids');
   ok(C.languages().find((l) => l.id === 'es').persons.length === 6 && C.languages().find((l) => l.id === 'fr').persons[4] === 'vous', 'six persons, vosotros shown');
+
+
+  // ---- AI-27 P3e: pronouns joined to commands and infinitives, negative commands, compound subjunctives and the
+  // pluperfect, German dative reflexives and Konjunktiv II, the ge- rule, Latin's perfect passive and imperative.
+  // Every literal below was typed from the author's own knowledge of the language, never read off the engine; a form the
+  // author was not sure of is not here and not in the pack (the sheet lists those for the teacher).
+  const sx = (a, b, c, d, e, f) => [a, b, c, d, e, f];
+  const cmd = (lang, v, t, want, msg) => eq(forms(lang, v, t), want, `${lang} ${v} ${t}${msg ? ' ' + msg : ''}`);
+  // Spanish: a reflexive command and infinitive
+  cmd('es', 'levantarse', 'command', sx('', 'levántate', 'levántese', 'levantémonos', 'levantaos', 'levántense'));
+  cmd('es', 'lavarse', 'command', sx('', 'lávate', 'lávese', 'lavémonos', 'lavaos', 'lávense'));
+  cmd('es', 'sentarse', 'command', sx('', 'siéntate', 'siéntese', 'sentémonos', 'sentaos', 'siéntense'));
+  cmd('es', 'dormirse', 'command', sx('', 'duérmete', 'duérmase', 'durmámonos', 'dormíos', 'duérmanse'));
+  cmd('es', 'vestirse', 'command', sx('', 'vístete', 'vístase', 'vistámonos', 'vestíos', 'vístanse'));
+  cmd('es', 'ponerse', 'command', sx('', 'ponte', 'póngase', 'pongámonos', 'poneos', 'pónganse'));
+  cmd('es', 'irse', 'command', sx('', 'vete', 'váyase', 'vámonos', 'idos', 'váyanse'));
+  eq(C.conjugate('es', 'irse', 'command').alts[3], ['vayámonos'], 'es irse: the second nosotros command');
+  cmd('es', 'reírse', 'command', sx('', 'ríete', 'ríase', 'riámonos', 'reíos', 'ríanse'));
+  cmd('es', 'quedarse', 'command', sx('', 'quédate', 'quédese', 'quedémonos', 'quedaos', 'quédense'));
+  cmd('es', 'levantarse', 'infinitive-pronoun', sx('levantarme', 'levantarte', 'levantarse', 'levantarnos', 'levantaros', 'levantarse'));
+  cmd('es', 'irse', 'infinitive-pronoun', sx('irme', 'irte', 'irse', 'irnos', 'iros', 'irse'));
+  cmd('es', 'reírse', 'infinitive-pronoun', sx('reírme', 'reírte', 'reírse', 'reírnos', 'reíros', 'reírse'));
+  cmd('es', 'hablar', 'command', sx('', 'habla', 'hable', 'hablemos', 'hablad', 'hablen'), '(a verb with no pronoun is as it was)');
+  eq(C.conjugate('es', 'hablar', 'infinitive-pronoun').problem, 'only for a reflexive verb', 'es: the infinitive with a pronoun is for a reflexive verb');
+  ok(!C.languages().find((l) => l.id === 'es').extraTenses.some((t) => /negative/.test(t.id)), 'es: no negative command (Devon\'s S1)');
+  ok(!C.languages().find((l) => l.id === 'it').extraTenses.some((t) => /negative/.test(t.id)), 'it: no negative command (Devon\'s I4)');
+  // Spanish: the pluperfect and the compound subjunctives
+  cmd('es', 'hablar', 'pluperfect', w('había hablado | habías hablado | había hablado | habíamos hablado | habíais hablado | habían hablado'));
+  cmd('es', 'hacer', 'pluperfect', w('había hecho | habías hecho | había hecho | habíamos hecho | habíais hecho | habían hecho'));
+  cmd('es', 'hablar', 'present-perfect-subjunctive', w('haya hablado | hayas hablado | haya hablado | hayamos hablado | hayáis hablado | hayan hablado'));
+  cmd('es', 'ver', 'present-perfect-subjunctive', w('haya visto | hayas visto | haya visto | hayamos visto | hayáis visto | hayan visto'));
+  cmd('es', 'hablar', 'pluperfect-subjunctive', w('hubiera hablado | hubieras hablado | hubiera hablado | hubiéramos hablado | hubierais hablado | hubieran hablado'));
+  cmd('es', 'escribir', 'pluperfect-subjunctive', w('hubiera escrito | hubieras escrito | hubiera escrito | hubiéramos escrito | hubierais escrito | hubieran escrito'));
+  cmd('es', 'levantarse', 'pluperfect', w('me había levantado | te habías levantado | se había levantado | nos habíamos levantado | os habíais levantado | se habían levantado'));
+  cmd('es', 'levantarse', 'pluperfect-subjunctive', w('me hubiera levantado | te hubieras levantado | se hubiera levantado | nos hubiéramos levantado | os hubierais levantado | se hubieran levantado'));
+
+  // French: -toi / -nous / -vous, the negative command, the plus-que-parfait and the passé du subjonctif
+  cmd('fr', 'se lever', 'command', sx('', 'lève-toi', '', 'levons-nous', 'levez-vous', ''));
+  cmd('fr', 'se dépêcher', 'command', sx('', 'dépêche-toi', '', 'dépêchons-nous', 'dépêchez-vous', ''));
+  cmd('fr', "s'appeler", 'command', sx('', 'appelle-toi', '', 'appelons-nous', 'appelez-vous', ''));
+  cmd('fr', 'se lever', 'negative-command', sx('', 'ne te lève pas', '', 'ne nous levons pas', 'ne vous levez pas', ''));
+  cmd('fr', "s'appeler", 'negative-command', sx('', "ne t'appelle pas", '', 'ne nous appelons pas', 'ne vous appelez pas', ''));
+  cmd('fr', 'parler', 'negative-command', sx('', 'ne parle pas', '', 'ne parlons pas', 'ne parlez pas', ''));
+  cmd('fr', 'aimer', 'negative-command', sx('', "n'aime pas", '', "n'aimons pas", "n'aimez pas", ''));
+  cmd('fr', 'finir', 'negative-command', sx('', 'ne finis pas', '', 'ne finissons pas', 'ne finissez pas', ''));
+  cmd('fr', 'être', 'negative-command', sx('', 'ne sois pas', '', 'ne soyons pas', 'ne soyez pas', ''));
+  cmd('fr', 'avoir', 'negative-command', sx('', "n'aie pas", '', "n'ayons pas", "n'ayez pas", ''));
+  cmd('fr', 'manger', 'negative-command', sx('', 'ne mange pas', '', 'ne mangeons pas', 'ne mangez pas', ''));
+  cmd('fr', 'parler', 'command', sx('', 'parle', '', 'parlons', 'parlez', ''), '(a verb with no pronoun is as it was)');
+  cmd('fr', 'parler', 'pluperfect', w('avais parlé | avais parlé | avait parlé | avions parlé | aviez parlé | avaient parlé'));
+  cmd('fr', 'faire', 'pluperfect', w('avais fait | avais fait | avait fait | avions fait | aviez fait | avaient fait'));
+  cmd('fr', 'aller', 'pluperfect', w('étais allé | étais allé | était allé | étions allé | étiez allé | étaient allé'));
+  cmd('fr', 'se lever', 'pluperfect', w("m'étais levé | t'étais levé | s'était levé | nous étions levé | vous étiez levé | s'étaient levé"));
+  cmd('fr', 'parler', 'past-subjunctive', w('aie parlé | aies parlé | ait parlé | ayons parlé | ayez parlé | aient parlé'));
+  cmd('fr', 'faire', 'past-subjunctive', w('aie fait | aies fait | ait fait | ayons fait | ayez fait | aient fait'));
+  cmd('fr', 'aller', 'past-subjunctive', w('sois allé | sois allé | soit allé | soyons allé | soyez allé | soient allé'));
+  cmd('fr', 'se lever', 'past-subjunctive', w('me sois levé | te sois levé | se soit levé | nous soyons levé | vous soyez levé | se soient levé'));
+  eq(forms('fr', 'parler', 'pluperfect', { pronouns: true }), w("j'avais parlé | tu avais parlé | il avait parlé | nous avions parlé | vous aviez parlé | ils avaient parlé"), 'fr parler pluperfect with subject pronouns');
+  eq(C.match('lève toi', 'lève-toi', { lang: 'fr' }).verdict, 'close', 'fr: lève toi for lève-toi is close');
+  eq(C.match('ne aime pas', "n'aime pas", { lang: 'fr' }).verdict, 'close', "fr: ne aime for n'aime is close");
+
+  // Italian: -ti / -ci / -vi, si before Lei and Loro, the infinitive with its pronoun, the compound tenses
+  cmd('it', 'lavarsi', 'command', sx('', 'lavati', 'si lavi', 'laviamoci', 'lavatevi', 'si lavino'));
+  cmd('it', 'vestirsi', 'command', sx('', 'vestiti', 'si vesta', 'vestiamoci', 'vestitevi', 'si vestano'));
+  cmd('it', 'mettersi', 'command', sx('', 'mettiti', 'si metta', 'mettiamoci', 'mettetevi', 'si mettano'));
+  cmd('it', 'alzarsi', 'command', sx('', 'alzati', 'si alzi', 'alziamoci', 'alzatevi', 'si alzino'));
+  cmd('it', 'farsi', 'command', sx('', 'fatti', 'si faccia', 'facciamoci', 'fatevi', 'si facciano'));
+  cmd('it', 'lavarsi', 'infinitive-pronoun', sx('lavarmi', 'lavarti', 'lavarsi', 'lavarci', 'lavarvi', 'lavarsi'));
+  cmd('it', 'mettersi', 'infinitive-pronoun', sx('mettermi', 'metterti', 'mettersi', 'metterci', 'mettervi', 'mettersi'));
+  cmd('it', 'vestirsi', 'infinitive-pronoun', sx('vestirmi', 'vestirti', 'vestirsi', 'vestirci', 'vestirvi', 'vestirsi'));
+  cmd('it', 'parlare', 'command', sx('', 'parla', 'parli', 'parliamo', 'parlate', 'parlino'), '(a verb with no pronoun is as it was)');
+  cmd('it', 'parlare', 'pluperfect', w('avevo parlato | avevi parlato | aveva parlato | avevamo parlato | avevate parlato | avevano parlato'));
+  cmd('it', 'andare', 'pluperfect', w('ero andato | eri andato | era andato | eravamo andati | eravate andati | erano andati'));
+  cmd('it', 'lavarsi', 'pluperfect', w('mi ero lavato | ti eri lavato | si era lavato | ci eravamo lavati | vi eravate lavati | si erano lavati'));
+  cmd('it', 'parlare', 'past-subjunctive', w('abbia parlato | abbia parlato | abbia parlato | abbiamo parlato | abbiate parlato | abbiano parlato'));
+  cmd('it', 'andare', 'past-subjunctive', w('sia andato | sia andato | sia andato | siamo andati | siate andati | siano andati'));
+  cmd('it', 'parlare', 'pluperfect-subjunctive', w('avessi parlato | avessi parlato | avesse parlato | avessimo parlato | aveste parlato | avessero parlato'));
+  cmd('it', 'andare', 'pluperfect-subjunctive', w('fossi andato | fossi andato | fosse andato | fossimo andati | foste andati | fossero andati'));
+  cmd('it', 'fare', 'pluperfect-subjunctive', w('avessi fatto | avessi fatto | avesse fatto | avessimo fatto | aveste fatto | avessero fatto'));
+
+  // German: Konjunktiv II proper
+  cmd('de', 'sein', 'konjunktiv2', sx('wäre', 'wärest', 'wäre', 'wären', 'wäret', 'wären'));
+  eq([C.conjugate('de', 'sein', 'konjunktiv2').alts[1], C.conjugate('de', 'sein', 'konjunktiv2').alts[4]], [['wärst'], ['wärt']], 'de sein konjunktiv2: wärst, wärt');
+  cmd('de', 'haben', 'konjunktiv2', sx('hätte', 'hättest', 'hätte', 'hätten', 'hättet', 'hätten'));
+  cmd('de', 'werden', 'konjunktiv2', sx('würde', 'würdest', 'würde', 'würden', 'würdet', 'würden'));
+  cmd('de', 'tun', 'konjunktiv2', sx('täte', 'tätest', 'täte', 'täten', 'tätet', 'täten'));
+  cmd('de', 'kommen', 'konjunktiv2', sx('käme', 'kämest', 'käme', 'kämen', 'kämet', 'kämen'));
+  cmd('de', 'gehen', 'konjunktiv2', sx('ginge', 'gingest', 'ginge', 'gingen', 'ginget', 'gingen'));
+  cmd('de', 'geben', 'konjunktiv2', sx('gäbe', 'gäbest', 'gäbe', 'gäben', 'gäbet', 'gäben'));
+  cmd('de', 'bleiben', 'konjunktiv2', sx('bliebe', 'bliebest', 'bliebe', 'blieben', 'bliebet', 'blieben'));
+  cmd('de', 'finden', 'konjunktiv2', sx('fände', 'fändest', 'fände', 'fänden', 'fändet', 'fänden'));
+  cmd('de', 'nehmen', 'konjunktiv2', sx('nähme', 'nähmest', 'nähme', 'nähmen', 'nähmet', 'nähmen'));
+  cmd('de', 'sehen', 'konjunktiv2', sx('sähe', 'sähest', 'sähe', 'sähen', 'sähet', 'sähen'));
+  cmd('de', 'fahren', 'konjunktiv2', sx('führe', 'führest', 'führe', 'führen', 'führet', 'führen'));
+  cmd('de', 'lassen', 'konjunktiv2', sx('ließe', 'ließest', 'ließe', 'ließen', 'ließet', 'ließen'));
+  cmd('de', 'tragen', 'konjunktiv2', sx('trüge', 'trügest', 'trüge', 'trügen', 'trüget', 'trügen'));
+  cmd('de', 'ziehen', 'konjunktiv2', sx('zöge', 'zögest', 'zöge', 'zögen', 'zöget', 'zögen'));
+  cmd('de', 'können', 'konjunktiv2', sx('könnte', 'könntest', 'könnte', 'könnten', 'könntet', 'könnten'));
+  cmd('de', 'müssen', 'konjunktiv2', sx('müsste', 'müsstest', 'müsste', 'müssten', 'müsstet', 'müssten'));
+  cmd('de', 'dürfen', 'konjunktiv2', sx('dürfte', 'dürftest', 'dürfte', 'dürften', 'dürftet', 'dürften'));
+  cmd('de', 'mögen', 'konjunktiv2', sx('möchte', 'möchtest', 'möchte', 'möchten', 'möchtet', 'möchten'));
+  cmd('de', 'sollen', 'konjunktiv2', sx('sollte', 'solltest', 'sollte', 'sollten', 'solltet', 'sollten'));
+  cmd('de', 'wollen', 'konjunktiv2', sx('wollte', 'wolltest', 'wollte', 'wollten', 'wolltet', 'wollten'));
+  cmd('de', 'wissen', 'konjunktiv2', sx('wüsste', 'wüsstest', 'wüsste', 'wüssten', 'wüsstet', 'wüssten'));
+  cmd('de', 'bringen', 'konjunktiv2', sx('brächte', 'brächtest', 'brächte', 'brächten', 'brächtet', 'brächten'));
+  cmd('de', 'denken', 'konjunktiv2', sx('dächte', 'dächtest', 'dächte', 'dächten', 'dächtet', 'dächten'));
+  cmd('de', 'machen', 'konjunktiv2', sx('machte', 'machtest', 'machte', 'machten', 'machtet', 'machten'));
+  cmd('de', 'arbeiten', 'konjunktiv2', sx('arbeitete', 'arbeitetest', 'arbeitete', 'arbeiteten', 'arbeitetet', 'arbeiteten'));
+  cmd('de', 'ankommen', 'konjunktiv2', w('käme an | kämest an | käme an | kämen an | kämet an | kämen an'));
+  cmd('de', 'stehen', 'konjunktiv2', sx('stände', 'ständest', 'stände', 'ständen', 'ständet', 'ständen'));
+  eq(C.conjugate('de', 'stehen', 'konjunktiv2').alts.map((a) => a[0]), ['stünde', 'stündest', 'stünde', 'stünden', 'stündet', 'stünden'], 'de stehen konjunktiv2: stünde');
+  eq(C.conjugate('de', 'kennen', 'konjunktiv2').forms.filter(Boolean), [], 'de kennen konjunktiv2 is left to the teacher');
+  // German: the dative reflexive
+  cmd('de', 'sich (dat.) vorstellen', 'present', w('stelle mir vor | stellst dir vor | stellt sich vor | stellen uns vor | stellt euch vor | stellen sich vor'));
+  cmd('de', 'sich (dat.) vorstellen', 'perfect', w('habe mir vorgestellt | hast dir vorgestellt | hat sich vorgestellt | haben uns vorgestellt | habt euch vorgestellt | haben sich vorgestellt'));
+  cmd('de', 'sich vorstellen', 'present', w('stelle mich vor | stellst dich vor | stellt sich vor | stellen uns vor | stellt euch vor | stellen sich vor'), '(no marker: introducing oneself, accusative)');
+  cmd('de', 'sich merken', 'present', w('merke mir | merkst dir | merkt sich | merken uns | merkt euch | merken sich'));
+  cmd('de', 'sich kaufen', 'perfect', w('habe mir gekauft | hast dir gekauft | hat sich gekauft | haben uns gekauft | habt euch gekauft | haben sich gekauft'));
+  cmd('de', 'sich (dat.) waschen', 'present', w('wasche mir | wäschst dir | wäscht sich | waschen uns | wascht euch | waschen sich'));
+  cmd('de', 'sich waschen', 'present', w('wasche mich | wäschst dich | wäscht sich | waschen uns | wascht euch | waschen sich'), '(accusative stays the default)');
+  eq(forms('de', 'sich waschen', 'present', { dative: true }), w('wasche mir | wäschst dir | wäscht sich | waschen uns | wascht euch | waschen sich'), 'de: opts.dative turns the pronoun');
+  eq(forms('de', { infinitive: 'sich anziehen', dative: true }, 'present'), w('ziehe mir an | ziehst dir an | zieht sich an | ziehen uns an | zieht euch an | ziehen sich an'), 'de: a record marked dative');
+  eq(C.match('wasche mir', 'wasche mir', { lang: 'de' }).verdict, 'correct', 'de: a typed dative pronoun matches');
+  eq(C.match('stelle vor', 'stelle mir vor', { lang: 'de' }).verdict, 'close', 'de: a missing dative pronoun is close');
+  // German: the participle's ge- rule, the old exceptions kept and the rule behind them
+  const PARTS = { bellen: 'gebellt', betteln: 'gebettelt', ernten: 'geerntet', gerben: 'gegerbt', erben: 'geerbt', beten: 'gebetet', beugen: 'gebeugt', beichten: 'gebeichtet', entern: 'geentert',
+    besuchen: 'besucht', erklären: 'erklärt', entdecken: 'entdeckt', bestellen: 'bestellt', zerstören: 'zerstört', enttäuschen: 'enttäuscht', vergnügen: 'vergnügt', erinnern: 'erinnert',
+    beachten: 'beachtet', erlauben: 'erlaubt', gehören: 'gehört', verbrennen: 'verbrennt', begrüßen: 'begrüßt', studieren: 'studiert', verkaufen: 'verkauft', bezahlen: 'bezahlt' };
+  for (const v of Object.keys(PARTS)) eq(C.participle('de', v), PARTS[v], `de ${v}: the participle`);
+
+  // Latin: the perfect passive
+  cmd('la', 'amare', 'perfect-passive', sx('amātus sum', 'amātus es', 'amātus est', 'amātī sumus', 'amātī estis', 'amātī sunt'));
+  cmd('la', 'monere', 'perfect-passive', sx('monitus sum', 'monitus es', 'monitus est', 'monitī sumus', 'monitī estis', 'monitī sunt'));
+  cmd('la', 'regere', 'perfect-passive', sx('rēctus sum', 'rēctus es', 'rēctus est', 'rēctī sumus', 'rēctī estis', 'rēctī sunt'));
+  cmd('la', 'capere', 'perfect-passive', sx('captus sum', 'captus es', 'captus est', 'captī sumus', 'captī estis', 'captī sunt'));
+  cmd('la', 'audire', 'perfect-passive', sx('audītus sum', 'audītus es', 'audītus est', 'audītī sumus', 'audītī estis', 'audītī sunt'));
+  cmd('la', 'mittere', 'perfect-passive', sx('missus sum', 'missus es', 'missus est', 'missī sumus', 'missī estis', 'missī sunt'));
+  cmd('la', 'ducere', 'perfect-passive', sx('ductus sum', 'ductus es', 'ductus est', 'ductī sumus', 'ductī estis', 'ductī sunt'));
+  cmd('la', 'adducere', 'perfect-passive', sx('adductus sum', 'adductus es', 'adductus est', 'adductī sumus', 'adductī estis', 'adductī sunt'));
+  cmd('la', 'scribere', 'perfect-passive', sx('scrīptus sum', 'scrīptus es', 'scrīptus est', 'scrīptī sumus', 'scrīptī estis', 'scrīptī sunt'));
+  cmd('la', 'facere', 'perfect-passive', sx('factus sum', 'factus es', 'factus est', 'factī sumus', 'factī estis', 'factī sunt'));
+  cmd('la', 'ferre', 'perfect-passive', sx('lātus sum', 'lātus es', 'lātus est', 'lātī sumus', 'lātī estis', 'lātī sunt'));
+  cmd('la', 'dare', 'perfect-passive', sx('datus sum', 'datus es', 'datus est', 'datī sumus', 'datī estis', 'datī sunt'));
+  cmd('la', 'amare', 'pluperfect-passive', sx('amātus eram', 'amātus erās', 'amātus erat', 'amātī erāmus', 'amātī erātis', 'amātī erant'));
+  cmd('la', 'amare', 'future-perfect-passive', sx('amātus erō', 'amātus eris', 'amātus erit', 'amātī erimus', 'amātī eritis', 'amātī erunt'));
+  for (const v of ['esse', 'ire', 'posse', 'velle', 'stare', 'loqui', 'conari', 'mori', 'sequi', 'ambulare', 'venire', 'discere']) {
+    for (const t of ['perfect-passive', 'pluperfect-passive', 'future-perfect-passive']) eq(forms('la', v, t).filter(Boolean), [], `la ${v} ${t}: none (no personal passive, or a deponent: Devon's L4)`);
+  }
+  eq(forms('la', 'loqui', 'perfect'), sx('', '', '', '', '', ''), 'la loqui: the deponent perfect is still not built (Devon\'s L4)');
+  // Latin: the imperative
+  const imp = (a, b) => sx('', a, '', '', b, '');
+  cmd('la', 'amare', 'imperative', imp('amā', 'amāte'));
+  cmd('la', 'monere', 'imperative', imp('monē', 'monēte'));
+  cmd('la', 'regere', 'imperative', imp('rege', 'regite'));
+  cmd('la', 'capere', 'imperative', imp('cape', 'capite'));
+  cmd('la', 'audire', 'imperative', imp('audī', 'audīte'));
+  cmd('la', 'scribere', 'imperative', imp('scrībe', 'scrībite'));
+  cmd('la', 'dicere', 'imperative', imp('dīc', 'dīcite'));
+  cmd('la', 'ducere', 'imperative', imp('dūc', 'dūcite'));
+  cmd('la', 'adducere', 'imperative', imp('addūc', 'addūcite'));
+  cmd('la', 'facere', 'imperative', imp('fac', 'facite'));
+  cmd('la', 'ferre', 'imperative', imp('fer', 'ferte'));
+  cmd('la', 'esse', 'imperative', imp('es', 'este'));
+  cmd('la', 'ire', 'imperative', imp('ī', 'īte'));
+  cmd('la', 'dare', 'imperative', imp('dā', 'date'));
+  cmd('la', 'stare', 'imperative', imp('stā', 'stāte'));
+  cmd('la', 'loqui', 'imperative', imp('loquere', 'loquiminī'));
+  cmd('la', 'sequi', 'imperative', imp('sequere', 'sequiminī'));
+  cmd('la', 'conari', 'imperative', imp('cōnāre', 'cōnāminī'));
+  cmd('la', 'vereri', 'imperative', imp('verēre', 'verēminī'));
+  cmd('la', 'mori', 'imperative', imp('morere', 'moriminī'));
+  eq(forms('la', 'posse', 'imperative').filter(Boolean), [], 'la posse has no imperative');
+
+  // every language still offers the six it always did (a page's default list does not move)
+  eq(C.languages().find((l) => l.id === 'la').tenses.map((t) => t.id), ['present', 'imperfect', 'future', 'perfect', 'pluperfect', 'future-perfect'], 'la: the six unchanged');
 
   return fails;
 }
@@ -915,7 +1092,7 @@ const BROKEN = [
   ['German a>ä is a>a', '_shared/conjugate-de.js', "'a>ä': { find: 'a', boot: 'ä',", "'a>ä': { find: 'a', boot: 'a',"],
   ['German e>ie loses its i', '_shared/conjugate-de.js', "'e>ie': { find: 'e', boot: 'ie' }", "'e>ie': { find: 'e', boot: 'i' }"],
   ['German participle forgets ge-', '_shared/conjugate-de.js', "return (noGe ? '' : 'ge') + stem", "return stem"],
-  ['German be- verbs get ge-', '_shared/conjugate-de.js', "/^(?:be|emp|ent|er|ge|miss|ver|zer).{4}/", "/^(?:xxxx).{4}/"],
+  ['German be- verbs get ge-', '_shared/conjugate-de.js', "/^(?:be|emp|ent|er|ge|miss|ver|zer)(.{4,})$/", "/^(?:xxxx)(.{4,})$/"],
   ['German -ieren verbs get ge-', '_shared/conjugate-de.js', "/ieren$/.test(inf) || ", ""],
   ['German Konjunktiv I loses its -est', '_shared/conjugate-de.js', "endings: { en: ['e', 'est', 'e', 'en', 'et', 'en']", "endings: { en: ['e', 'st', 'e', 'en', 't', 'en']"],
   ['German the separable prefix is not placed', '_shared/conjugate.js', "c.forms = c.forms.map(function (f) { return f + ' ' + ctx.sep; });", ""],
@@ -993,13 +1170,13 @@ const BROKEN = [
   ['Latin present passive of the 3rd conjugation', '_shared/conjugate-la.js', "c: ['or', 'eris', 'itur', 'imur', 'iminī', 'untur']", "c: ['or', 'ēris', 'itur', 'imur', 'iminī', 'untur']"],
   ['Latin future passive of the 3rd conjugation', '_shared/conjugate-la.js', "c: ['ar', 'ēris', 'ētur', 'ēmur', 'ēminī', 'entur']", "c: ['abor', 'ēris', 'ētur', 'ēmur', 'ēminī', 'entur']"],
   ['Latin imperfect passive', '_shared/conjugate-la.js', "a: ['ābar', 'ābāris', 'ābātur', 'ābāmur', 'ābāminī', 'ābantur']", "a: ['ābar', 'ābāris', 'ābātur', 'ābāmur', 'ābāminī', 'ābuntur']"],
-  ['Latin esse gets a passive', '_shared/conjugate-la.js', "rec('esse', { 'class': 'c', defective: { tenses: ['present-passive', 'imperfect-passive', 'future-passive'] }, ", "rec('esse', { 'class': 'c', "],
+  ['Latin esse gets a passive', '_shared/conjugate-la.js', "rec('esse', { 'class': 'c', defective: { tenses: PASS.concat(PERFPASS) }, ", "rec('esse', { 'class': 'c', "],
   ['Latin sim', '_shared/conjugate-la.js', "pr('sim sīs sit", "pr('sum sīs sit"],
   ['Latin ferre passive', '_shared/conjugate-la.js', "pr('feror ferris fertur", "pr('feror ferēris fertur"],
   ['Latin deponents are active', '_shared/conjugate.js', "if (rec.deponent && tdef.deponentAs)", "if (false)"],
   ['Latin loquor is a 1st conjugation verb', '_shared/conjugate-la.js', "dep('loqui', 'c', 'loqu')", "dep('loqui', 'a', 'loqu')"],
   ['Latin a deponent perfect is guessed', '_shared/conjugate-la.js', "function dep(inf, cls, stem) { return rec(inf, { 'class': cls, stem: stem, deponent: true, defective: { tenses: NOT_BUILT } }); }", "function dep(inf, cls, stem) { return rec(inf, { 'class': cls, stem: stem, deponent: true }); }"],
-  ['German bellen gets no ge-', '_shared/conjugate-de.js', "var NOT_PREFIXED = ['bellen', 'betteln', 'ernten', 'gerben'];", "var NOT_PREFIXED = [];"],
+  ['German bellen gets no ge-', '_shared/conjugate-de.js', "var NOT_PREFIXED = ['beugen', 'beichten', 'entern'];", "var NOT_PREFIXED = [];"],
   ['German beißen is weak', '_shared/conjugate-de.js', "strong('beißen', 'biss', 'gebissen');", "rec('beißen', {});"],
   ['German entgegen- is not a prefix', '_shared/conjugate-de.js', "'auseinander', 'entgegen', ", "'auseinander', "],
   ['Latin ducere compounds are gone', '_shared/conjugate-la.js', "pf(R.ducere, ['ab', 'ad',", "pf(R.ducere, ['xx',"],
@@ -1007,7 +1184,43 @@ const BROKEN = [
   ['Latin mittere prefix com-', '_shared/conjugate-la.js', "pf(R.mittere, ['ad', 'com',", "pf(R.mittere, ['ad', 'con',"],
   ['Latin conficere keeps the short a', '_shared/conjugate-la.js', "io('conficere', 'confēc')", "io('conficere', 'confec')"],
   ['079 irregulars: a verb loses a form in the engine', '_shared/conjugate-es.js', "present: pr('soy eres es somos sois son')", "present: pr('soy eres es somos sois sois')"],
-  ['a derived tense keeps duplicates', '_shared/conjugate.js', "if (c.forms.indexOf(j.text) < 0) c.forms.push(j.text);", "c.forms.push(j.text);"]
+  ['a derived tense keeps duplicates', '_shared/conjugate.js', "if (c.forms.indexOf(j.text) < 0) c.forms.push(j.text);", "c.forms.push(j.text);"],
+  // AI-27 P3e: a joined pronoun, a negative command, the compound subjunctives, the dative reflexive, Konjunktiv II, the ge- rule, Latin's perfect passive and imperative
+  ['es a joined pronoun gets no written accent', '_shared/conjugate-es.js', "var mark = natural !== at || hiatus;", "var mark = hiatus;"],
+  ['es a joined pronoun gets an accent it does not need', '_shared/conjugate-es.js', "var mark = natural !== at || hiatus;", "var mark = true;"],
+  ['es vosotros keeps its d before os', '_shared/conjugate-es.js', "if (slot === 4) drop = 'd';", "if (slot === 4) drop = '';"],
+  ['es nosotros keeps its s before nos', '_shared/conjugate-es.js', "if (slot === 3) drop = 's';", "if (slot === 3) drop = '';"],
+  ['es irse has iros for idos', '_shared/conjugate-es.js', "if (slot === 4 && f === 'id') return 'idos';", ""],
+  ['es the pluperfect borrows the present', '_shared/conjugate-es.js', "kind: 'compound', compound: { auxiliary: 'haber', tense: 'imperfect' } }", "kind: 'compound', compound: { auxiliary: 'haber', tense: 'present' } }"],
+  ['es the pluperfect subjunctive borrows the present subjunctive', '_shared/conjugate-es.js', "compound: { auxiliary: 'haber', tense: 'imperfect-subjunctive' }", "compound: { auxiliary: 'haber', tense: 'subjunctive' }"],
+  ['es the infinitive takes the wrong pronoun', '_shared/conjugate-es.js', "return joinClitic(f, pron, drop);", "return joinClitic(f, ctx.p.reflexivePronouns[2], drop);"],
+  ['the pronoun is put in front and on the end both', '_shared/conjugate.js', "if (!placed && ctx.reflexive && ctx.p.reflexivePronouns) {", "if (ctx.reflexive && ctx.p.reflexivePronouns) {"],
+  ['fr ne is not elided', '_shared/conjugate-fr.js', `se: "s'", ne: "n'" },`, `se: "s'" },`],
+  ['fr vous becomes nous after the verb', '_shared/conjugate-fr.js', "{ 1: 'toi', 3: 'nous', 4: 'vous' }[slot]", "{ 1: 'toi', 3: 'nous', 4: 'nous' }[slot]"],
+  ['fr the negative command ignores the affirmative one', '_shared/conjugate.js', "if (tdef.negateOf) {", "if (false) {"],
+  ['fr the pluperfect takes the présent', '_shared/conjugate-fr.js', "compound: { auxiliary: 'avoir', tense: 'imperfect' } }", "compound: { auxiliary: 'avoir', tense: 'present' } }"],
+  ['fr lève toi is wrong, not close', '_shared/conjugate.js', "if (e.indexOf('-') >= 0 && t === e.replace(/-/g, ' ')) return", "if (false && t === e.replace(/-/g, ' ')) return"],
+  ['it Lei gets the pronoun on the end', '_shared/conjugate-it.js', "if (slot === 2 || slot === 5) return pron + ' ' + form;", "if (slot === 2 || slot === 5) return form + pron;"],
+  ['it fa\' + ti is not doubled', '_shared/conjugate-it.js', "form.slice(0, -1) + pron.charAt(0) + pron", "form.slice(0, -1) + pron"],
+  ['it the infinitive keeps its e', '_shared/conjugate-it.js', "return form.replace(/e$/, '') + pron;", "return form + pron;"],
+  ['it the trapassato borrows the presente', '_shared/conjugate-it.js', "compound: { auxiliary: 'avere', tense: 'imperfect' } }", "compound: { auxiliary: 'avere', tense: 'present' } }"],
+  ['it the congiuntivo trapassato borrows the presente', '_shared/conjugate-it.js', "compound: { auxiliary: 'avere', tense: 'imperfect-subjunctive' } }", "compound: { auxiliary: 'avere', tense: 'subjunctive' } }"],
+  ['de kommen gets no umlaut', '_shared/conjugate-de.js', "{ au: 'äu', a: 'ä', o: 'ö', u: 'ü' }", "{ au: 'au', a: 'a', o: 'o', u: 'u' }"],
+  ['de brächte is brachte', '_shared/conjugate-de.js', "rec.k2 === 'umlaut' ? umlaut(x) : x", "x"],
+  ['de the dative pronouns are the accusative ones', '_shared/conjugate-de.js', "reflexivePronounsDative: ['mir', 'dir', 'sich', 'uns', 'euch', 'sich'],", "reflexivePronounsDative: ['mich', 'dich', 'sich', 'uns', 'euch', 'sich'],"],
+  ['de sich merken is accusative', '_shared/conjugate-de.js', "dativeVerbs: ['vornehmen', 'merken', ", "dativeVerbs: ['vornehmen', "],
+  ['de a record cannot be dative', '_shared/conjugate.js', "if (reflexive && rec && rec.dative) dative = true;", ""],
+  ['de the marked dative is not read', '_shared/conjugate-de.js', "dativePrefixes: ['sich (dat.) ',", "dativePrefixesX: ['sich (dat.) ',"],
+  ['de the ge- rule has no onsets', '_shared/conjugate-de.js', "return !!m && ONSET.test(m[1]) && NOT_PREFIXED.indexOf(inf) < 0;", "return !!m && NOT_PREFIXED.indexOf(inf) < 0;"],
+  ['de beugen is prefixed', '_shared/conjugate-de.js', "var NOT_PREFIXED = ['beugen', 'beichten', 'entern'];", "var NOT_PREFIXED = ['beichten', 'entern'];"],
+  ['de the second stehen form is lost', '_shared/conjugate-de.js', "if (rec.k2alt) f.push(rec.k2alt + e);", ""],
+  ['la the perfect passive participle has no macron', '_shared/conjugate-la.js', "if (ctx.cls === 'a') return ctx.stem + 'ātus';", "if (ctx.cls === 'a') return ctx.stem + 'atus';"],
+  ['la the perfect passive plural is amātus', '_shared/conjugate-la.js', "agreementPlural: [/us$/, 'ī'],", "agreementPlural: [/us$/, 'us'],"],
+  ['la the participle goes after sum', '_shared/conjugate.js', "cd.partFirst ? part + ' ' + ac.forms[0] : ac.forms[0] + ' ' + part", "ac.forms[0] + ' ' + part"],
+  ['la a deponent has a perfect passive', '_shared/conjugate-la.js', "'future-passive'].concat(PERFPASS);\n  function dep", "'future-passive'];\n  function dep"],
+  ['la dūc is dūce', '_shared/conjugate-la.js', "R.ducere.forms = { imperative: { 1: 'dūc' } };", ""],
+  ['la a deponent imperative is active', '_shared/conjugate-la.js', "deponentEndings: {", "deponentEndingsX: {"],
+  ['la the imperative plural of the third conjugation is -ete', '_shared/conjugate-la.js', "c: ['', 'e', '', '', 'ite', ''],\n          io:", "c: ['', 'e', '', '', 'ete', ''],\n          io:"]
 ];
 
 // the check sheet for the language teacher (print-corpus.mjs)

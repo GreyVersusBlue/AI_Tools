@@ -16,17 +16,20 @@
  * to a verb this pack knows: the engine moves the prefix to the end of a finite form (ich mache
  * auf) and puts it between ge- and the stem in the participle (aufgemacht).
  *
- * Reflexive verbs (sich waschen, sich anziehen) put the accusative pronoun after the finite verb. NOT BUILT: a
- * dative reflexive (sich etwas vorstellen).
+ * Reflexive verbs (sich waschen, sich anziehen) put the accusative pronoun after the finite verb. A dative reflexive
+ * (sich etwas vorstellen: ich stelle mir etwas vor) takes mir, dir, sich, uns, euch, sich: a verb the pack lists as
+ * always dative (sich merken), a record marked `dative: true`, or an infinitive typed `sich (dat.) vorstellen`.
+ * The object itself (etwas, die Zähne) is not part of any form.
  *
  * NOTHING HERE HAS BEEN READ BY A LANGUAGE TEACHER. The records were written from the standard
  * paradigm as remembered, not copied from a table; the forms in Tools/conjugate/test are the
  * author's own, and they are the teacher's to check. A teacher reads the sheet
  * (node Tools/conjugate/print-corpus.mjs de) before any table is called reviewed.
  *
- * Known gaps: the participle's "no ge-" test is a prefix heuristic (be-, emp-, ent-, er-, ge-,
- * miss-, ver-, zer- before four more letters, and -ieren) with a short list of verbs that only look prefixed
- * (bellen, betteln, ernten...), so a verb like them that is not on the list still comes out wrong; a verb
+ * Known gaps: the participle's "no ge-" test is a prefix heuristic (be-, emp-, ent-, er-, ge-, miss-, ver-,
+ * zer- followed by something that can begin a German word, with at least four more letters, and -ieren): bellen,
+ * betteln, ernten and gerben fail it because ll, tt, nt and rb cannot begin a word. A short list covers the verbs
+ * that look prefixed to a vowel (beugen, beichten, entern); any other still comes out wrong. A verb
  * the pack does not list is accepted as regular and marked unchecked.
  */
 (function () {
@@ -46,19 +49,21 @@
     return rec(inf, o);
   }
   var SEIN = { auxiliary: 'sein' };
+  // kennte, nennte, rennte: the Konjunktiv II of a mixed verb with a vowel change to e, which the pack leaves to the teacher
+  var NO_K2 = { defective: { tenses: ['konjunktiv2'] } };
 
   // ---- the auxiliaries and the modals ---------------------------------------
-  rec('sein', { 'class': 'n', defective: { tenses: ['passive', 'passive-preterite'] }, forms: { imperative: { 1: 'sei', 3: 'seien wir', 4: 'seid', 5: 'seien Sie' }, present: pr('bin bist ist sind seid sind'), preterite: pr('war warst war waren wart waren'), subjunctive: pr('sei seiest sei seien seiet seien') }, participle: 'gewesen', auxiliary: 'sein' });
-  rec('haben', { forms: { present: pr('habe hast hat haben habt haben'), preterite: pr('hatte hattest hatte hatten hattet hatten') }, participle: 'gehabt' });
-  rec('werden', { defective: { tenses: ['passive', 'passive-preterite'] }, forms: { imperative: { 1: 'werde', 3: 'werden wir', 4: 'werdet', 5: 'werden Sie' }, present: pr('werde wirst wird werden werdet werden'), preterite: pr('wurde wurdest wurde wurden wurdet wurden') }, participle: 'geworden', auxiliary: 'sein' });
-  rec('tun', { 'class': 'n', forms: { present: pr('tue tust tut tun tut tun'), preterite: pr('tat tatest tat taten tatet taten') }, participle: 'getan' });
-  rec('können', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, forms: { present: pr('kann kannst kann können könnt können') }, stems: { preterite: 'konn' }, participle: 'gekonnt' });
-  rec('müssen', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, forms: { present: pr('muss musst muss müssen müsst müssen') }, stems: { preterite: 'muss' }, participle: 'gemusst' });
-  rec('dürfen', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, forms: { present: pr('darf darfst darf dürfen dürft dürfen') }, stems: { preterite: 'durf' }, participle: 'gedurft' });
-  rec('mögen', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, forms: { present: pr('mag magst mag mögen mögt mögen') }, stems: { preterite: 'moch' }, participle: 'gemocht' });
+  rec('sein', { 'class': 'n', defective: { tenses: ['passive', 'passive-preterite'] }, forms: { konjunktiv2: { 0: 'wäre', 1: 'wärest / wärst', 2: 'wäre', 3: 'wären', 4: 'wäret / wärt', 5: 'wären' }, imperative: { 1: 'sei', 3: 'seien wir', 4: 'seid', 5: 'seien Sie' }, present: pr('bin bist ist sind seid sind'), preterite: pr('war warst war waren wart waren'), subjunctive: pr('sei seiest sei seien seiet seien') }, participle: 'gewesen', auxiliary: 'sein' });
+  rec('haben', { forms: { konjunktiv2: pr('hätte hättest hätte hätten hättet hätten'), present: pr('habe hast hat haben habt haben'), preterite: pr('hatte hattest hatte hatten hattet hatten') }, participle: 'gehabt' });
+  rec('werden', { defective: { tenses: ['passive', 'passive-preterite'] }, forms: { konjunktiv2: pr('würde würdest würde würden würdet würden'), imperative: { 1: 'werde', 3: 'werden wir', 4: 'werdet', 5: 'werden Sie' }, present: pr('werde wirst wird werden werdet werden'), preterite: pr('wurde wurdest wurde wurden wurdet wurden') }, participle: 'geworden', auxiliary: 'sein' });
+  rec('tun', { 'class': 'n', forms: { konjunktiv2: pr('täte tätest täte täten tätet täten'), present: pr('tue tust tut tun tut tun'), preterite: pr('tat tatest tat taten tatet taten') }, participle: 'getan' });
+  rec('können', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, forms: { konjunktiv2: pr('könnte könntest könnte könnten könntet könnten'), present: pr('kann kannst kann können könnt können') }, stems: { preterite: 'konn' }, participle: 'gekonnt' });
+  rec('müssen', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, forms: { konjunktiv2: pr('müsste müsstest müsste müssten müsstet müssten'), present: pr('muss musst muss müssen müsst müssen') }, stems: { preterite: 'muss' }, participle: 'gemusst' });
+  rec('dürfen', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, forms: { konjunktiv2: pr('dürfte dürftest dürfte dürften dürftet dürften'), present: pr('darf darfst darf dürfen dürft dürfen') }, stems: { preterite: 'durf' }, participle: 'gedurft' });
+  rec('mögen', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, forms: { konjunktiv2: pr('möchte möchtest möchte möchten möchtet möchten'), present: pr('mag magst mag mögen mögt mögen') }, stems: { preterite: 'moch' }, participle: 'gemocht' });
   rec('sollen', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, forms: { present: pr('soll sollst soll sollen sollt sollen') } });
   rec('wollen', { defective: { tenses: ['imperative', 'passive', 'passive-preterite'] }, forms: { present: pr('will willst will wollen wollt wollen') } });
-  rec('wissen', { forms: { imperative: { 1: 'wisse', 3: 'wissen wir', 4: 'wisst', 5: 'wissen Sie' }, present: pr('weiß weißt weiß wissen wisst wissen') }, stems: { preterite: 'wuss' }, participle: 'gewusst' });
+  rec('wissen', { forms: { konjunktiv2: pr('wüsste wüsstest wüsste wüssten wüsstet wüssten'), imperative: { 1: 'wisse', 3: 'wissen wir', 4: 'wisst', 5: 'wissen Sie' }, present: pr('weiß weißt weiß wissen wisst wissen') }, stems: { preterite: 'wuss' }, participle: 'gewusst' });
 
   // ---- strong verbs: vowel change at du/er (stemChange) and the Präteritum stem ----
   strong('gehen', 'ging', 'gegangen', SEIN);
@@ -72,11 +77,11 @@
   strong('sprechen', 'sprach', 'gesprochen', { stemChange: 'e>i' });
   strong('schlafen', 'schlief', 'geschlafen', { stemChange: 'a>ä' });
   strong('laufen', 'lief', 'gelaufen', { stemChange: 'au>äu', auxiliary: 'sein' });
-  strong('helfen', 'half', 'geholfen', { stemChange: 'e>i' });
+  strong('helfen', 'half', 'geholfen', { stemChange: 'e>i', k2alt: 'hülf' });
   strong('treffen', 'traf', 'getroffen', { stemChange: 'e>i' });
   strong('werfen', 'warf', 'geworfen', { stemChange: 'e>i' });
   strong('finden', 'fand', 'gefunden');
-  strong('stehen', 'stand', 'gestanden');
+  strong('stehen', 'stand', 'gestanden', { k2alt: 'stünd' });
   strong('lassen', 'ließ', 'gelassen', { stemChange: 'a>ä' });
   strong('halten', 'hielt', 'gehalten', { forms: { present: pr('halte hältst hält halten haltet halten') } });
   strong('fallen', 'fiel', 'gefallen', { stemChange: 'a>ä', auxiliary: 'sein' });
@@ -88,49 +93,74 @@
   strong('liegen', 'lag', 'gelegen');
   strong('ziehen', 'zog', 'gezogen');
   strong('fliegen', 'flog', 'geflogen', SEIN);
-  strong('schwimmen', 'schwamm', 'geschwommen', SEIN);
+  strong('schwimmen', 'schwamm', 'geschwommen', { auxiliary: 'sein', k2alt: 'schwömm' });
   strong('rufen', 'rief', 'gerufen');
   strong('waschen', 'wusch', 'gewaschen', { stemChange: 'a>ä' });
   strong('schneiden', 'schnitt', 'geschnitten');
   strong('tragen', 'trug', 'getragen', { stemChange: 'a>ä' });
   strong('schlagen', 'schlug', 'geschlagen', { stemChange: 'a>ä' });
-  strong('beginnen', 'begann', 'begonnen');
-  strong('gewinnen', 'gewann', 'gewonnen');
+  strong('beginnen', 'begann', 'begonnen', { k2alt: 'begönn' });
+  strong('gewinnen', 'gewann', 'gewonnen', { k2alt: 'gewönn' });
   strong('bekommen', 'bekam', 'bekommen');
-  strong('verstehen', 'verstand', 'verstanden');
+  strong('verstehen', 'verstand', 'verstanden', { k2alt: 'verstünd' });
   strong('vergessen', 'vergaß', 'vergessen', { stemChange: 'e>i' });
   strong('verlieren', 'verlor', 'verloren');
   strong('beißen', 'biss', 'gebissen');
-  strong('gelten', 'galt', 'gegolten', { forms: { present: pr('gelte giltst gilt gelten geltet gelten') } });
+  strong('gelten', 'galt', 'gegolten', { k2alt: 'gölt',  forms: { present: pr('gelte giltst gilt gelten geltet gelten') } });
   strong('laden', 'lud', 'geladen', { forms: { present: pr('lade lädst lädt laden ladet laden') } });
   // mixed verbs: a new stem, weak endings (brachte, kannte)
-  mixed('bringen', 'brach', 'gebracht');
-  mixed('denken', 'dach', 'gedacht');
-  mixed('kennen', 'kann', 'gekannt');
-  mixed('nennen', 'nann', 'genannt');
-  mixed('rennen', 'rann', 'gerannt', SEIN);
+  mixed('bringen', 'brach', 'gebracht', { k2: 'umlaut' });
+  mixed('denken', 'dach', 'gedacht', { k2: 'umlaut' });
+  mixed('kennen', 'kann', 'gekannt', NO_K2);
+  mixed('nennen', 'nann', 'genannt', NO_K2);
+  mixed('rennen', 'rann', 'gerannt', { auxiliary: 'sein', defective: { tenses: ['konjunktiv2'] } });
   // regular, but conjugated with sein
   ['reisen', 'wandern', 'wachsen'].slice(0, 2).forEach(function (v) { rec(v, { auxiliary: 'sein' }); });
 
   var REG = {};
   ('machen spielen lernen arbeiten wohnen kaufen sagen fragen hören lieben leben brauchen öffnen reisen tanzen ' +
     'sammeln wandern studieren besuchen verkaufen erklären bezahlen holen räumen schauen zählen stellen setzen ' +
-    'legen packen putzen suchen zeigen bauen lachen antworten warten rechnen freuen').split(' ')
+    'legen packen putzen suchen zeigen bauen lachen antworten warten rechnen freuen merken wünschen leisten').split(' ')
     .forEach(function (v) { REG[v] = true; });
 
   var E_RE = /(?:[dt]|(?:[^aeiouäöüyhlrmn]|ch)[mn])$/; // a stem that takes an e before -st, -t, -te...
-  var INSEP = /^(?:be|emp|ent|er|ge|miss|ver|zer).{4}/;
-  // verbs that begin like a prefixed one and are not (bellen is bell-en, not be-llen): they take ge- in the participle
-  var NOT_PREFIXED = ['bellen', 'betteln', 'ernten', 'gerben'];
+  // An inseparable prefix (no ge- in the participle) is one that is followed by something that can begin a German word:
+  // a vowel, a consonant and a vowel, or one of the clusters a word may start with. bell-en, bett-eln, ern-ten and
+  // gerb-en are not be-llen, be-tteln, er-nten and ge-rben, because ll, tt, nt and rb cannot begin a word.
+  var ONSET = /^(?:sch[lmnprtw]?|sp[lr]?|st[r]?|pf[lr]?|ps|qu|zw|chr?|sk|sl|sm|sn|sw|th|ph|rh|gn|kn|wr|[bdfgkp][lr]|tr|[bcdfghjklmnprstvwxyz])?[aeiouäöüy]/;
+  var INSEP = /^(?:be|emp|ent|er|ge|miss|ver|zer)(.{4,})$/;
+  // verbs that look prefixed to a vowel (beug-en, beicht-en, enter-n): they take ge- in the participle
+  var NOT_PREFIXED = ['beugen', 'beichten', 'entern'];
+  function prefixed(inf) { var m = INSEP.exec(inf); return !!m && ONSET.test(m[1]) && NOT_PREFIXED.indexOf(inf) < 0; }
+  // Konjunktiv II proper (wäre, käme, hätte, könnte): a strong verb's Präteritum stem with umlaut and -e, -est, -e, -en, -et,
+  // -en; a weak verb's is its Präteritum; a mixed verb marked `k2: 'umlaut'` takes the umlaut on the Präteritum (brächte).
+  // `k2alt` is the second stem a few verbs have (stünde / stände). The irregular few (sein, haben, werden, tun, the modals,
+  // wissen) are typed as forms on the record.
+  function umlaut(s) { return s.replace(/(au|[aou])([^aou]*)$/, function (m, v, rest) { return { au: 'äu', a: 'ä', o: 'ö', u: 'ü' }[v] + rest; }); }
+  function konjunktiv2(ctx, slot, api) {
+    var rec = ctx.rec || {}, st = rec.stems && rec.stems.preterite, e = ['e', 'est', 'e', 'en', 'et', 'en'][slot];
+    if (rec.strong && typeof st === 'string') {
+      var f = [umlaut(st) + e];
+      if (rec.k2alt) f.push(rec.k2alt + e);
+      return { forms: f, kinds: ['irregular'], from: rec.as || rec.infinitive || '' };
+    }
+    var pc = api.cell('preterite', slot);
+    if (!pc.forms.length) return null;
+    return { forms: pc.forms.map(function (x) { return rec.k2 === 'umlaut' ? umlaut(x) : x; }), kinds: rec.k2 === 'umlaut' ? ['irregular'] : pc.kinds, from: pc.from };
+  }
 
   window.Conjugate.register({
     id: 'de', name: 'German', reviewed: false,
     persons: ['ich', 'du', 'er / sie / es', 'wir', 'ihr', 'sie / Sie'],
     subjects: ['ich', 'du', 'er', 'wir', 'ihr', 'sie'],
     // sich waschen: the accusative pronoun after the finite verb (ich wasche mich). Reflexive verbs take
-    // haben in the Perfekt; a dative reflexive (sich etwas vorstellen: mir) is not built.
-    reflexive: { prefixes: ['sich '] },
+    // haben in the Perfekt.
+    reflexive: { prefixes: ['sich '], dativePrefixes: ['sich (dat.) ', 'sich (dat) ', 'sich(dat) ', 'sich (d) '] },
     reflexivePronouns: ['mich', 'dich', 'sich', 'uns', 'euch', 'sich'], reflexivePlacement: 'after', reflexiveAux: 'haben',
+    // sich etwas vorstellen / kaufen / merken: the pronoun is dative (ich kaufe mir ...). These verbs are listed because
+    // their reflexive use is always dative; any other verb is marked `sich (dat.) ...` or `dative: true`
+    reflexivePronounsDative: ['mir', 'dir', 'sich', 'uns', 'euch', 'sich'],
+    dativeVerbs: ['vornehmen', 'merken', 'wünschen', 'ansehen', 'anschauen', 'holen', 'bestellen', 'kaufen', 'leisten'],
     pronouns: { words: ['ich', 'du', 'er', 'sie', 'es', 'wir', 'ihr'] },
     separable: { prefixes: ['auseinander', 'entgegen', 'zusammen', 'herunter', 'hinunter', 'heraus', 'herein', 'herauf', 'hinaus', 'hinein', 'hinauf', 'voraus', 'nieder', 'zurück', 'vorbei', 'weiter', 'wieder', 'statt', 'fort', 'fest', 'heim', 'los', 'mit', 'nach', 'teil', 'weg', 'vor', 'her', 'hin', 'ab', 'an', 'auf', 'aus', 'bei', 'ein', 'um', 'zu'] },
     classes: {
@@ -150,7 +180,7 @@
     // inseparable prefix or on -ieren. The engine puts a separable prefix in front of what this returns.
     participleOf: function (ctx) {
       var inf = ctx.base, stem = ctx.stem;
-      var noGe = /ieren$/.test(inf) || (INSEP.test(inf) && NOT_PREFIXED.indexOf(inf) < 0);
+      var noGe = /ieren$/.test(inf) || prefixed(inf);
       return (noGe ? '' : 'ge') + stem + (E_RE.test(stem) ? 'e' : '') + 't';
     },
     tenses: [
@@ -170,6 +200,7 @@
     // beyond the six: the Plusquamperfekt, the Vorgangspassiv (werden + Partizip II; a transitive verb makes sense of it,
     // and the pack does not check that) and the imperative (du, wir, ihr, Sie; no er form, and nothing for a modal)
     extraTenses: [
+      { id: 'konjunktiv2', name: 'Konjunktiv II (wäre, käme)', mood: 'subjunctive', kind: 'custom', custom: konjunktiv2 },
       { id: 'pluperfect', name: 'Plusquamperfekt', mood: 'indicative', kind: 'compound', compound: { auxiliary: 'haben', tense: 'preterite' } },
       { id: 'passive', name: 'Vorgangspassiv (Präsens)', mood: 'indicative', kind: 'compound', noReflexive: true,
         compound: { auxiliary: 'werden', forms: ['werde', 'wirst', 'wird', 'werden', 'werdet', 'werden'], part: 'participle' } },
@@ -192,7 +223,7 @@
       { id: 'eln', tenses: ['present', 'subjunctive', 'imperative'], cls: ['eln'], stem: /el$/, next: /^$/, stemRepl: [/el$/, 'le'] }
     ],
     // separable verbs are not records (they are a prefix on one); these are listed so the check sheet prints them
-    examples: 'aufmachen zumachen einkaufen anrufen mitkommen ankommen aufstehen ansehen abholen mitbringen einladen zurückkommen sich_waschen sich_anziehen sich_freuen'.split(' ').map(function (v) { return v.replace('_', ' '); }),
+    examples: 'aufmachen zumachen einkaufen anrufen mitkommen ankommen aufstehen ansehen abholen mitbringen einladen zurückkommen sich_waschen sich_anziehen sich_freuen sich_merken sich_(dat.)_vorstellen sich_(dat.)_waschen sich_kaufen'.split(' ').map(function (v) { return v.replace(/_/g, ' '); }),
     records: R,
     regulars: REG
   });
