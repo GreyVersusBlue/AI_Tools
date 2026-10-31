@@ -820,7 +820,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 60 | Path 20 P4, what is left — the way back from Timeline Builder into a map project (needs a route 015 does not accept; Devon's call on where an event's year goes on a map), and the slice sheet in the print preview (the kit's `preview()` does not cover 046's canvas export); time slices themselves shipped in v433 | 046, 015 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 65 | First-run "Load sample data" across the tools that open to an empty form (P15); 059, 072, 049 (v488) and 043, 042, 082, 038, 084 (v489) done; the people-content tools wait on Devon (question below) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 66 | Phone-sized layout pass beyond 005: sideways overflow is gone from all 90 pages at 360 px (v490-v491) and the three toolbars over half a 740 px screen fold behind a More button (011, 032, 054; v498, `test:phone-toolbar`); left: only that a real phone has not been tried | site | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 79 | Templates as data — layout, fonts, borders and colors as template objects, so new designs need no code | 042 | ½ | | [042 Certificate & Award Maker](#042--certificate--award-maker) |
 | 80 | Evergreen emergency binder — date-independent sections only, with a staleness reminder | 045 | ½ | | [045 Sub Binder / Day Bundle Generator](#045--sub-binder--day-bundle-generator) |
 | 81 | Rubric-scored critique variant — an optional per-step point scale and teacher score column | 047 | ½ | | [047 Art Critique Worksheet Generator](#047--art-critique-worksheet-generator) |
 | 82 | Bulk photo import — a whole folder at once, downscaled and auto-matched by filename | 048 | ½ | | [048 Student Art Portfolio Label & QR Tag Maker](#048--student-art-portfolio-label--qr-tag-maker) |
@@ -12700,12 +12699,12 @@ work, and don't promote one without Devon saying so.
 - **Skipped — deferred.** **Data-driven batch generation.** Pull from another tool: everyone above a
   reading-goal threshold, everyone with a positive behavior trend, everyone
   who finished the novel study — and generate that certificate set in one pass.
-- **Skipped — deferred.** **A real template system.** Templates as data (fonts, layout boxes, border,
-  colours) rather than code, so a new design is a small JSON object. This
-  makes seasonal and subject-specific designs cheap, and would let a teacher
-  build their own. *(This round's three new templates are still code, just
-  with a configurable kicker string — a real step toward this would be
-  layout-as-data, not layout-as-markup.)*
+- **Partly done (v506).** **A real template system.** The five designs are data
+  (`Tools/certificate-award-maker/cam-templates.js`: font key, ink, paper, title look and
+  size, kicker colour, an optional suggested seal) and a teacher can make up to twelve of
+  their own on the page, kept in `gvb-certificate-maker:templates`. Left: layout as data
+  (where the blocks sit, left-aligned or portrait-first designs), a border colour of its
+  own, and sharing a template between teachers by file.
 - **Skipped — deferred.** **Full-page design surface.** Drag text blocks, resize, choose fonts — the
   step from "fill in five fields" to "make the certificate look how I want."
 - **Skipped — deferred.** **Postcards and notes home.** Same engine, different output: a printable

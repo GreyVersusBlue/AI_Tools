@@ -9,6 +9,18 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-31: 042 templates as data, rank 79 (2026-10-31, v506)
+
+**What shipped.** The five certificate designs were CSS classes (`.theme-playful` ... `.theme-ribbon`); they are now objects in a new pure module, `Tools/certificate-award-maker/cam-templates.js` (`CertificateTemplates`): a font key into a fixed list of six system stacks, ink, paper (one colour or a pair drawn at 135 degrees), the title's colour, case, italic, weight, spacing and size, the small line's colour, and an optional suggested seal (Ribbon's gold seal and blue ribbon, which the page used to special-case by name). The page writes a template onto each certificate as `--t-*` variables and one set of rules reads them, so a new design is a new object. A "Make your own template" panel in the Template card builds one (name, font, four colours, a title look, a title size), saves it and chooses it; Remove deletes it and puts Elegant back. Up to 12, in the new key `gvb-certificate-maker:templates` (registry row added, not student data, no rollover).
+
+**Decisions.** (1) Layout stayed out of the data: block positions and alignment are still the page's. The row says "layout, fonts, borders and colors"; fonts, colours and the title's look are done and layout and border colour are left in the row. (2) Fonts are a list of keys, never typed text, and every colour must be `#rrggbb`, so a stored template cannot put anything else in the CSS. (3) A preset naming a template that is gone, or a stored custom template reusing a built-in's key, falls back to Elegant or is dropped. (4) Presets still store only the template key, so sharing a preset between devices carries the name and not the design; a custom template travels by being made again. Reverse (1)-(4) in the module alone.
+
+**What it caught.** The first run drew nothing: the font stacks have double quotes (`"Trebuchet MS"`) and the variables go into a `style="..."` attribute, which ended the attribute at the first one. `vars()` writes them with single quotes and the suite pins the form.
+
+**Tests.** `test:certificate-templates` (port 8633; 59 assertions): the five built-ins against the old classes' computed colours, fonts, backgrounds and title looks; junk and hostile values cleaned; dedupe and cap; make, use, print, reload, remove; Ribbon's seal suggestion; 360 px. Six mutants (quote swap, font allowlist, colour check, dedupe, unknown-key fallback, seal suggestion) each fail it; the last survived the first version and got its own assertion. `smoke-stock-inset`, `-images`, `-seals`, `-print` (815), `test:theme`, `test:a11y --only 042` and `audit-print --check --only 042` pass.
+
+**Not verified.** Nothing printed on paper; no contrast check on a teacher's own colour pair (the panel only says to check); fonts other than the system stacks (the row's licensed-fonts question stays open).
+
 ## AI-31: 041 local math notation, rank 78 (2026-10-31, v505)
 
 **What shipped.** Formulas on the 041 sheet, in its formula list and in the library picker are typeset from a small LaTeX-like notation by a new pure module, `Tools/formula-sheet-builder/fsb-math.js` (`FsbMath.toHtml`, `toText`): `\frac{a}{b}` (stacked, with a bar), `\sqrt{x}` and `\sqrt[3]{x}` (bar over the radicand), `x^2` / `x^{n+1}`, `x_1` / `x_{ab}`, Greek (`\pi \alpha \theta \Delta` and a dozen more) and `\\ \{ \} \^ \_` for the literal characters. Local code only: no vendored library, no network. Drawn notation carries a plain-text `aria-label` (`(a)/(b)`, `square root of (x)`). The styles are in 041's own `<style>`; the add-form hint lists the marks.

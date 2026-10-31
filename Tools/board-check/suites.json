@@ -31,6 +31,7 @@
     "Tools/certificate-award-maker/test/smoke-stock-inset.mjs",
     "Tools/certificate-award-maker/test/smoke-images.mjs",
     "Tools/certificate-award-maker/test/smoke-seals.mjs",
+    "Tools/certificate-award-maker/test/smoke-templates.mjs",
     "Tools/timeline-builder/test/smoke-photos.mjs",
     "Tools/hall-pass-log/test/smoke-export.mjs",
     "Tools/hall-pass-log/test/smoke-hallway-sync.mjs",

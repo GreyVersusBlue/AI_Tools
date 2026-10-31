@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v505';
+const CACHE_VERSION = 'v506';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -307,6 +307,7 @@ const PRECACHE_URLS = [
   "Tools/certificate-award-maker/cam-borders.js",
   "Tools/certificate-award-maker/cam-image.js",
   "Tools/certificate-award-maker/cam-store.js",
+  "Tools/certificate-award-maker/cam-templates.js",
   "Tools/082-citation-generator.html",
   "Tools/050-civics-role-card-generator.html",
   "Tools/civics-role-card-generator/crcg-store.js",

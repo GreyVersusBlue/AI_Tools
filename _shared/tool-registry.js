@@ -777,6 +777,7 @@
         { k: 'gvb-certificate-maker:current' },
         { k: 'gvb-certificate-maker:last', rollover: 'reduce' },
         { k: 'gvb-certificate-maker:list', rollover: 'reduce' },
+        { k: 'gvb-certificate-maker:templates' },
       ],
       prefixes: [
         { p: 'gvb-certificate-maker:', legacy: true },
