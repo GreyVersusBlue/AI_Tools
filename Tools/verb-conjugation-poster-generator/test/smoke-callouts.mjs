@@ -47,6 +47,8 @@ const KEY = 'vcp_poster_v1';
 const GOLDEN = JSON.parse(fs.readFileSync(new URL('./golden-old-posters.json', import.meta.url), 'utf8'));
 const DATA_SRC = fs.readFileSync(new URL('../' + (process.env.DATA_FILE || 'irregulars.js'), import.meta.url), 'utf8');
 
+const ENGINE = ['conjugate', 'conjugate-es', 'conjugate-de', 'conjugate-it', 'conjugate-la', 'conjugate-fr'];
+
 let passed = 0, failed = 0;
 const ok = (cond, label) => {
   if (cond) { passed++; return true; }
@@ -165,7 +167,10 @@ if (want('A')) {
 if (want('B')) {
   console.log('\nB. the data');
   const win = {};
-  vm.runInNewContext(DATA_SRC, { window: win });
+  // irregulars.js computes its forms from the engine, which the page loads first
+  const cx = vm.createContext({ window: win });
+  for (const f of ENGINE) vm.runInContext(fs.readFileSync(new URL('../../../_shared/' + f + '.js', import.meta.url), 'utf8'), cx);
+  vm.runInContext(DATA_SRC, cx);
   const D = win.VCP_IRREGULARS;
   eq(Object.keys(D.tenses), tenseKeys, 'exactly the six tenses the page has starters for');
   eq(Object.keys(D.languages), ['es', 'fr'], 'two languages');

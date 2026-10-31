@@ -186,6 +186,10 @@
     #cardSheet .wc-page:last-child { break-after: auto; }
     #cardSheet .wc-card { break-inside: avoid; }
   }
+  /* Phone width (AI-30, rank 66). */
+  @media (max-width: 480px) {
+    .add-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  }
 </style>
 </head>
 <body>
@@ -210,7 +214,7 @@
 
   <div class="card">
     <h2>Add staff member</h2>
-    <div style="display:grid;grid-template-columns:1.3fr .8fr .8fr 1fr 1.2fr auto;gap:.6rem;align-items:end;">
+    <div class="add-grid" style="display:grid;grid-template-columns:1.3fr .8fr .8fr 1fr 1.2fr auto;gap:.6rem;align-items:end;">
       <div><label for="newName">Name</label><input type="text" id="newName" placeholder="Full name"></div>
       <div><label for="newRoom">Room</label><input type="text" id="newRoom" placeholder="e.g. 214"></div>
       <div><label for="newExt">Extension</label><input type="text" id="newExt" placeholder="e.g. 4214"></div>
@@ -241,7 +245,7 @@
       <label class="group-toggle" for="groupByDeptBox"><input type="checkbox" id="groupByDeptBox"> Group by department</label>
       <button class="secondary small" id="clearAllBtn">Clear all</button>
     </div>
-    <table class="dir">
+    <div style="overflow-x:auto;"><table class="dir">
       <thead>
         <tr>
           <th data-sort="name">Name <span class="arrow"></span></th>
@@ -254,7 +258,7 @@
         </tr>
       </thead>
       <tbody id="dirRows"></tbody>
-    </table>
+    </table></div>
     <p class="empty-state" id="emptyMsg" style="display:none;">No staff added yet — use the form above.</p>
   </div>
 

@@ -41,21 +41,21 @@
   function withPrefix(o, inf) { if (PREFIX[inf]) o.prefixes = PREFIX[inf]; return o; }
 
   // ---- the irregulars --------------------------------------------------------
-  rec('ser', { forms: { present: pr('soy eres es somos sois son'), preterite: pr('fui fuiste fue fuimos fuisteis fueron'), imperfect: pr('era eras era éramos erais eran') }, stems: { subjunctive: 'se' }, participle: 'sido' });
+  rec('ser', { forms: { command: pr('. sé . . . .'), present: pr('soy eres es somos sois son'), preterite: pr('fui fuiste fue fuimos fuisteis fueron'), imperfect: pr('era eras era éramos erais eran') }, stems: { subjunctive: 'se' }, participle: 'sido' });
   rec('estar', { forms: { present: pr('estoy estás está estamos estáis están'), subjunctive: pr('esté estés esté estemos estéis estén') }, stems: { preterite: 'estuv' } });
-  rec('ir', { forms: { present: pr('voy vas va vamos vais van'), preterite: pr('fui fuiste fue fuimos fuisteis fueron'), imperfect: pr('iba ibas iba íbamos ibais iban') }, stems: { subjunctive: 'vay' }, gerund: 'yendo' });
+  rec('ir', { forms: { command: { 1: 've', 3: 'vamos / vayamos' }, present: pr('voy vas va vamos vais van'), preterite: pr('fui fuiste fue fuimos fuisteis fueron'), imperfect: pr('iba ibas iba íbamos ibais iban') }, stems: { subjunctive: 'vay' }, gerund: 'yendo' });
   rec('haber', { forms: { present: pr('he has ha hemos habéis han') }, stems: { preterite: 'hub', future: 'habr', subjunctive: 'hay' } });
-  withPrefix(rec('tener', { stemChange: 'e>ie', forms: { present: pr('tengo . . . . .') }, stems: { preterite: 'tuv', future: 'tendr' } }), 'tener');
-  withPrefix(rec('hacer', { forms: { present: pr('hago . . . . .'), preterite: pr('. . hizo . . .') }, stems: { preterite: 'hic', future: 'har' }, participle: 'hecho' }), 'hacer');
+  withPrefix(rec('tener', { stemChange: 'e>ie', forms: { present: pr('tengo . . . . .'), command: pr('. ten . . . .') }, stems: { preterite: 'tuv', future: 'tendr' } }), 'tener');
+  withPrefix(rec('hacer', { forms: { command: pr('. haz . . . .'), present: pr('hago . . . . .'), preterite: pr('. . hizo . . .') }, stems: { preterite: 'hic', future: 'har' }, participle: 'hecho' }), 'hacer');
   rec('poder', { stemChange: 'o>ue', stems: { preterite: 'pud', future: 'podr' }, gerund: 'pudiendo' });
-  withPrefix(rec('poner', { forms: { present: pr('pongo . . . . .') }, stems: { preterite: 'pus', future: 'pondr' }, participle: 'puesto' }), 'poner');
-  withPrefix(rec('decir', { stemChange: 'e>i', forms: { present: pr('digo . . . . .') }, stems: { preterite: 'dij', future: 'dir' }, participle: 'dicho', except: ['bendecir', 'maldecir'] }), 'decir');
-  withPrefix(rec('venir', { stemChange: 'e>ie', forms: { present: pr('vengo . . . . .') }, stems: { preterite: 'vin', future: 'vendr' } }), 'venir');
+  withPrefix(rec('poner', { forms: { present: pr('pongo . . . . .'), command: pr('. pon . . . .') }, stems: { preterite: 'pus', future: 'pondr' }, participle: 'puesto' }), 'poner');
+  withPrefix(rec('decir', { stemChange: 'e>i', forms: { present: pr('digo . . . . .'), command: pr('. di . . . .') }, stems: { preterite: 'dij', future: 'dir' }, participle: 'dicho', except: ['bendecir', 'maldecir'] }), 'decir');
+  withPrefix(rec('venir', { stemChange: 'e>ie', forms: { present: pr('vengo . . . . .'), command: pr('. ven . . . .') }, stems: { preterite: 'vin', future: 'vendr' } }), 'venir');
   rec('querer', { stemChange: 'e>ie', stems: { preterite: 'quis', future: 'querr' } });
   rec('saber', { forms: { present: pr('sé . . . . .') }, stems: { preterite: 'sup', future: 'sabr', subjunctive: 'sep' } });
   rec('dar', { forms: { present: pr('doy . . . dais .'), preterite: pr('di diste dio dimos disteis dieron'), subjunctive: pr('dé des dé demos deis den') } });
   withPrefix(rec('ver', { forms: { present: pr('veo ves ve vemos veis ven'), preterite: pr('vi viste vio vimos visteis vieron') }, stems: { imperfect: 've' }, participle: 'visto' }), 'ver');
-  withPrefix(rec('salir', { forms: { present: pr('salgo . . . . .') }, stems: { future: 'saldr' } }), 'salir');
+  withPrefix(rec('salir', { forms: { present: pr('salgo . . . . .'), command: pr('. sal . . . .') }, stems: { future: 'saldr' } }), 'salir');
   withPrefix(rec('traer', { forms: { present: pr('traigo . . . . .') }, stems: { preterite: 'traj' } }), 'traer');
   withPrefix(rec('caer', { forms: { present: pr('caigo . . . . .') } }), 'caer');
   withPrefix(rec('oír', { forms: { present: pr('oigo oyes oye oímos oís oyen') } }), 'oír');
@@ -85,8 +85,9 @@
   rec('jugar', { stemChange: 'u>ue' });
 
   // defective
-  rec('llover', { stemChange: 'o>ue', defective: { slots: [2] } });
-  rec('nevar', { stemChange: 'e>ie', defective: { slots: [2] } });
+  // the -ra subjunctive is built on the ellos preterite, which a weather verb lacks: its one form is typed
+  rec('llover', { stemChange: 'o>ue', defective: { slots: [2] }, forms: { 'imperfect-subjunctive': { 2: 'lloviera' } } });
+  rec('nevar', { stemChange: 'e>ie', defective: { slots: [2] }, forms: { 'imperfect-subjunctive': { 2: 'nevara' } } });
   rec('soler', { stemChange: 'o>ue', defective: { tenses: ['future', 'conditional'] } });
 
   // regular verbs the pack knows (spelling changers are among them: the rules do the work)
@@ -131,6 +132,17 @@
       { id: 'conditional', name: 'Conditional', mood: 'conditional', kind: 'simple', stemFrom: 'infinitive', stemsAlias: 'future', endings: { all: CV } },
       { id: 'subjunctive', name: 'Present subjunctive', mood: 'subjunctive', kind: 'subjunctive', boot: [0, 1, 2, 5], weak: [3, 4],
         endings: { ar: ['e', 'es', 'e', 'emos', 'éis', 'en'], er: ['a', 'as', 'a', 'amos', 'áis', 'an'], ir: ['a', 'as', 'a', 'amos', 'áis', 'an'] } }
+    ],
+    // beyond the six: the present perfect, the -ra imperfect subjunctive and the affirmative command
+    // (a negative command is the present subjunctive after no: not built; a reflexive command takes its
+    // pronoun after the verb: not built)
+    extraTenses: [
+      { id: 'present-perfect', name: 'Present perfect', mood: 'indicative', kind: 'compound', compound: { auxiliary: 'haber', tense: 'present' } },
+      { id: 'imperfect-subjunctive', name: 'Imperfect subjunctive (-ra)', mood: 'subjunctive', kind: 'derived',
+        derived: { from: 'preterite', pick: [5, 5, 5, 5, 5, 5], cut: [3, 3, 3, 3, 3, 3], accent: [3] },
+        endings: { all: ['ra', 'ras', 'ra', 'ramos', 'rais', 'ran'] } },
+      { id: 'command', name: 'Command (affirmative)', mood: 'imperative', kind: 'pick', noReflexive: true,
+        pick: [null, { from: 'present', slot: 2 }, { from: 'subjunctive', slot: 2 }, { from: 'subjunctive', slot: 3 }, { infinitive: [/r$/, 'd'] }, { from: 'subjunctive', slot: 5 }] }
     ],
     spelling: [
       { id: 'c>qu', cls: ['ar'], stem: /c$/, next: /^[eé]/, stemRepl: [/c$/, 'qu'] },

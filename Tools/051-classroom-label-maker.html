@@ -33,6 +33,9 @@
 <!-- The site's word lists (Path 19 P2): a list saved on 040 or 039 can be added to this one. -->
 <script src="../_shared/store.js"></script>
 <script src="../_shared/word-list.js"></script>
+<script src="../_shared/media-db.js"></script>
+<script src="../_shared/speak.js"></script>
+<script src="classroom-label-maker/clm-pron.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
@@ -164,6 +167,8 @@
   <div class="card">
     <h2>Words (<span id="wordCount">0</span>)</h2>
     <table class="word-table" id="wordTable"></table>
+    <p class="hint" id="sayNote" style="margin:.6rem 0 0;"></p>
+    <p class="hint" id="recStatus" role="status" aria-live="polite" style="margin:.2rem 0 0;"></p>
   </div>
 </div>
 
@@ -184,7 +189,7 @@
   var els = {};
   ['langSelect', 'wordInput', 'saveWordsBtn', 'wordCount', 'wordTable', 'printBtn', 'previewBtn', 'printArea', 'fileWarning',
    'listSwitch', 'listName', 'newListBtn', 'duplicateListBtn', 'deleteListBtn',
-   'wordListRow', 'wordListSelect', 'wordListAddBtn', 'wordListNote',
+   'wordListRow', 'wordListSelect', 'wordListAddBtn', 'wordListNote', 'sayNote', 'recStatus',
    'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
@@ -349,14 +354,82 @@
     var words = state.words;
     els.wordCount.textContent = words.length;
     var lang = els.langSelect.value;
-    var head = '<tr><th>Target word</th><th>English</th><th>Pronunciation</th></tr>';
+    var head = '<tr><th>Target word</th><th>English</th><th>Pronunciation</th><th>Say it</th></tr>';
     var rows = words.map(function (w) {
       return '<tr><td>' + escapeHtml(w.target) + '</td><td>' + escapeHtml(w.english) + '</td>' +
-        '<td><a class="test-link" target="_blank" rel="noopener" href="' + escapeHtml(speakUrl(w.target, lang)) + '">Test &#9658;</a></td></tr>';
+        '<td><a class="test-link" target="_blank" rel="noopener" href="' + escapeHtml(speakUrl(w.target, lang)) + '">Test &#9658;</a></td><td class="say"></td></tr>';
     }).join('');
     els.wordTable.innerHTML = head + rows;
+    renderSayCells();
     renderSheet();
   }
+
+  /* ---------- hear it, or record it (Path 19 P5) ----------
+     Hear speaks the word with this device's voice for the language (_shared/speak.js). When the
+     device has none, the teacher can say the word instead (ClmPron, clm-pron.js): the recording
+     is kept in this browser and plays here. The printed label's QR is unchanged: a phone that
+     scans it speaks the word with its own voice, and a recording cannot ride in a QR. */
+  var recording = null; // { word, ctl }
+
+  function sayBtn(text, label, fn) {
+    var b = node('button', 'secondary small', text);
+    b.type = 'button'; b.setAttribute('aria-label', label); b.addEventListener('click', fn);
+    return b;
+  }
+  function setRecStatus(t) { els.recStatus.textContent = t || ''; }
+
+  function renderSayCells() {
+    var lang = state.lang, tag = lang;
+    var cells = els.wordTable.querySelectorAll('td.say');
+    var canSay = Speak.supported(), canRec = ClmPron.supported();
+    var noVoice = canSay && !Speak.hasVoice(tag);
+    els.sayNote.textContent = !canSay
+      ? 'This browser cannot speak words aloud' + (canRec ? ', but you can record them.' : '.')
+      : noVoice
+        ? 'This device has no voice for ' + tag + (canRec ? ', so Hear may sound wrong. Record the word yourself; the recording plays here, on this device. The QR on a printed label still speaks with the scanning phone\u2019s own voice.' : '.')
+        : '';
+    ClmPron.has().then(function (have) {
+      state.words.forEach(function (w, i) {
+        var cell = cells[i];
+        if (!cell) return;
+        cell.textContent = '';
+        if (canSay) cell.appendChild(sayBtn('Hear', 'Hear ' + w.target, function () { Speak.say(w.target, tag); }));
+        if (!canRec) return;
+        var mine = have[ClmPron.key(tag, w.target)];
+        var rec = recording && recording.word === w.target;
+        cell.appendChild(sayBtn(rec ? 'Stop' : 'Record', (rec ? 'Stop recording ' : 'Record ') + w.target, function () { toggleRecord(w); }));
+        if (mine) {
+          cell.appendChild(sayBtn('Play', 'Play your recording of ' + w.target, function () {
+            ClmPron.play(tag, w.target).then(function (okp) { if (!okp) setRecStatus('That recording could not be played.'); });
+          }));
+          cell.appendChild(sayBtn('Delete', 'Delete your recording of ' + w.target, function () {
+            ClmPron.remove(tag, w.target).then(function () { setRecStatus('Deleted the recording of ' + w.target + '.'); renderSayCells(); });
+          }));
+        }
+      });
+    });
+  }
+
+  function toggleRecord(w) {
+    if (recording) {
+      var r = recording; recording = null;
+      r.ctl.stop().then(function (blob) { return ClmPron.save(state.lang, r.word, blob); })
+        .then(function () { setRecStatus('Saved your recording of ' + r.word + ' on this device.'); },
+          function (e) { setRecStatus(e && e.message ? e.message : 'Could not save the recording.'); })
+        .then(renderSayCells);
+      renderSayCells();
+      return;
+    }
+    var ctl = ClmPron.record();
+    recording = { word: w.target, ctl: ctl };
+    setRecStatus('Recording ' + w.target + '\u2026 press Stop when done (it stops by itself after ' + Math.round(ClmPron.MAX_MS / 1000) + ' seconds).');
+    ctl.started.then(renderSayCells, function (e) {
+      recording = null; setRecStatus(e && e.message ? e.message : 'Could not record.'); renderSayCells();
+    });
+    /* the recorder stops itself at its limit: save what it has, as Stop would */
+    setTimeout(function () { if (recording && recording.ctl === ctl) toggleRecord(w); }, ClmPron.MAX_MS + 200);
+  }
+  Speak.onVoices(function () { if (state) renderSayCells(); });
 
   function buildQR(text) {
     var qr = qrcode(0, 'M');

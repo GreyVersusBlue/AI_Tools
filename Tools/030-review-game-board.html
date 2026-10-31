@@ -34,6 +34,7 @@
 <script src="../_shared/export.js"></script>
 <script src="review-game-board/rgb-store.js"></script>
 <!-- Every-team-answers and the printed quiz and study guide (Path 12 P3). -->
+<script src="../_shared/list-sentence.js"></script>
 <script src="review-game-board/rgb-play.js"></script>
 <script src="../_shared/question-bank.js"></script>
 <!-- Questions another tool sends by link (Path 6 P4): share.js reads `?questions=`. -->
@@ -588,6 +589,10 @@
     body.printing-sheet { padding: 0; }
     body.printing-sheet > *:not(#printArea) { display: none !important; }
     body.printing-sheet #printArea { position: static; padding: 0; }
+  }
+  /* Phone width (AI-30, rank 66). */
+  @media (max-width: 480px) {
+    .clue-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 </style>
 </head>

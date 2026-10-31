@@ -65,12 +65,15 @@
      Do this every time, even for small tweaks. Do not skip it and do not remove
      this note in future passes.
 
-  5. KEEP TOOL-COUNT TEXT IN SYNC
-     "N records" (.app-bar .rhs) and "N files" (memo Attach line) are static
-     text, NOT derived from the DOM — unlike the "X / X present" filter count,
-     which already computes live from #rows .row. Any pass that adds or removes
-     a REAL (built, clickable) tool row must manually update both of these to
-     match the new row count. See note 6 below for why placeholders don't count.
+  5. THE TOOL ROWS ARE GENERATED (AI-30, 2026-10-30)
+     The category blocks below (every <details class="cat"> except the
+     JS-filled "My Tools" shell) are written by Tools/board-check/build-index.mjs
+     from Tools/board-check/index-rows.json. Do NOT edit a row, a category's
+     "N tools" count, or the "N records" / "N files" text by hand: change the
+     data and run `npm run build:index` (`npm run check:index` fails CI if the
+     two disagree). The counts are counted from the data. The page itself is
+     still plain static HTML, so it works from file:// and needs no script to
+     list its tools. See note 6 for what a row carries.
 
   6. CATEGORY SECTIONS, TAGS, AND PINS (rewritten 2026-08-17; the former
      single "general" catch-all was split into 5 function categories —
@@ -86,8 +89,8 @@
      subject categories plus "platform" for site-wide tools.
        - A NEW TOOL ROW goes inside whichever category fits best (a subject
          category if it teaches one, otherwise the closest-fitting function
-         category), and its summary's "N tools" count must be bumped by hand
-         (notes 4/5 still apply too). Don't let a function category regrow
+         category) — add its object to that category in index-rows.json
+         (note 5; the "N tools" count follows by itself; note 4 still applies). Don't let a function category regrow
          past ~10-12 tools without considering a further split.
        - Every row carries TWO tag attributes: data-tags (free-text search
          keywords for the live filter + Cmd+K — legacy vocabulary, fine to
@@ -790,7 +793,7 @@
 
   <div class="app-bar ink" style="--d:40ms">
     <span><span class="wordmark">ASPERMYLESSONPLAN<span class="tld">.COM</span></span> · Unofficial Toolbook · Term 2026–27 · Q1</span>
-    <span class="rhs"><span class="dot" aria-hidden="true"></span>88 records · local only · nothing syncs<span class="offline-status" id="offlineStatus" data-sw-offline-status role="status" aria-live="polite" hidden></span><a class="backup-status" id="backupStatus" href="Tools/009-backup-restore.html" hidden></a><a class="backup-status stale" id="binderStatus" href="Tools/090-packet-builder.html?preset=emergency" hidden></a><button type="button" class="clear-rosters" id="clearRostersBtn" aria-haspopup="dialog" aria-controls="clearRostersDlg" hidden>Clear all rosters</button><button type="button" class="cmdk-hint" id="cmdkOpenBtn" aria-haspopup="dialog" aria-controls="cmdkOverlay" aria-label="Open quick jump search (Control or Command plus K)"><span aria-hidden="true">&#8984;K</span> Quick jump</button></span>
+    <span class="rhs"><span class="dot" aria-hidden="true"></span>90 records · local only · nothing syncs<span class="offline-status" id="offlineStatus" data-sw-offline-status role="status" aria-live="polite" hidden></span><a class="backup-status" id="backupStatus" href="Tools/009-backup-restore.html" hidden></a><a class="backup-status stale" id="binderStatus" href="Tools/090-packet-builder.html?preset=emergency" hidden></a><button type="button" class="clear-rosters" id="clearRostersBtn" aria-haspopup="dialog" aria-controls="clearRostersDlg" hidden>Clear all rosters</button><button type="button" class="cmdk-hint" id="cmdkOpenBtn" aria-haspopup="dialog" aria-controls="cmdkOverlay" aria-label="Open quick jump search (Control or Command plus K)"><span aria-hidden="true">&#8984;K</span> Quick jump</button></span>
   </div>
 
   <div class="letterhead ink" style="--d:90ms" aria-hidden="true">
@@ -813,7 +816,7 @@
             <dt>From</dt><dd>D. Moore</dd>
             <dt>Date</dt><dd id="memo-date">2026-10-02</dd>
             <dt>CC</dt><dd>Whoever asked for the link again</dd>
-            <dt>Attach</dt><dd>88 files <span class="note">(browser-only, nothing to install)</span></dd>
+            <dt>Attach</dt><dd>90 files <span class="note">(browser-only, nothing to install)</span></dd>
           </dl>
         </div>
       </div>
@@ -1071,7 +1074,6 @@
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
-
     </details>
 
     <details class="cat" data-cat="scheduling-subs">
@@ -1199,14 +1201,13 @@
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
-
     </details>
 
     <details class="cat" data-cat="assessment-grading">
     <summary class="section-head ink" style="--d:500ms">
       <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       <h2>Assessment &amp; Grading</h2>
-      <span class="cat-count">6 tools</span>
+      <span class="cat-count">7 tools</span>
     </summary>
 
     <a class="row ink" style="--d:760ms" href="Tools/036-final_grade_checker.html"
@@ -1294,7 +1295,7 @@
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
-        <a class="row ink" style="--d:1420ms" href="Tools/089-progress-report-parser.html"
+    <a class="row ink" style="--d:1420ms" href="Tools/089-progress-report-parser.html"
        data-tool="progress-report-parser" data-tags="progress report parser family parent student detail report pdf grades missing work class overview summative formative letter grade print csv"
        data-filter-tags="grades export printable">
       <span class="per"><span class="lbl">Per</span><b>89</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Progress Report Parser to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
@@ -1310,7 +1311,7 @@
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
-        <a class="row ink" style="--d:1420ms" href="Tools/090-packet-builder.html"
+    <a class="row ink" style="--d:1420ms" href="Tools/090-packet-builder.html"
        data-tool="packet-builder" data-tags="packet builder print pages combine sub plan emergency information binder preset order preview substitute bundle"
        data-filter-tags="printable planning">
       <span class="per"><span class="lbl">Per</span><b>90</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Packet Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
@@ -1325,7 +1326,6 @@
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
-
     </details>
 
     <details class="cat" data-cat="games-rewards">
@@ -1436,7 +1436,6 @@
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
-
     </details>
 
     <details class="cat" data-cat="docs-comm">
@@ -1564,7 +1563,6 @@
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
-
     </details>
 
     <details class="cat" data-cat="math">
@@ -1726,7 +1724,6 @@
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
-
     </details>
 
     <details class="cat" data-cat="ela">
@@ -1888,7 +1885,6 @@
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
-
     </details>
 
     <details class="cat" data-cat="science">
@@ -2033,7 +2029,6 @@
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
-
     </details>
 
     <details class="cat" data-cat="social-studies">
@@ -2212,7 +2207,6 @@
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
-
     </details>
 
     <details class="cat" data-cat="world-language">
@@ -2356,7 +2350,6 @@
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
-
     </details>
 
     <details class="cat" data-cat="arts-pe">
@@ -2484,7 +2477,6 @@
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
-
     </details>
 
     <details class="cat" data-cat="platform">

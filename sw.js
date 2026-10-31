@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v475';
+const CACHE_VERSION = 'v496';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -168,6 +168,9 @@ const SHELL_URLS = [
   "_shared/a11y.js",
   "_shared/backup-crypto.js",
   "_shared/chart-svg.js",
+  "_shared/levels.js",
+  "_shared/ss-glossary.js",
+  "_shared/list-sentence.js",
   "_shared/paste-table.js",
   "_shared/base.css",
   "_shared/gvb-save.js",
@@ -191,7 +194,9 @@ const SHELL_URLS = [
   "_shared/binder-stale.js",
   "_shared/school-day.js",
   "_shared/seating-read.js",
+  "_shared/sample-data.js",
   "_shared/share.js",
+  "_shared/speak.js",
   "_shared/stage.js",
   "_shared/state-link.js",
   "_shared/stations-bank.js",
@@ -309,6 +314,7 @@ const PRECACHE_URLS = [
   "Tools/006-class-roster-hub.html",
   "Tools/051-classroom-label-maker.html",
   "Tools/classroom-label-maker/speak.html",
+  "Tools/classroom-label-maker/clm-pron.js",
   "Tools/classroom-timer/ct-app.js",
   "Tools/classroom-timer/ct-board-core.js",
   "Tools/classroom-timer/ct-board.js",
@@ -543,6 +549,7 @@ const PRECACHE_URLS = [
   "Tools/vocab-flashcard-generator/vfg-bank.js",
   "Tools/vocab-flashcard-generator/vfg-layout.js",
   "Tools/vocab-flashcard-generator/vfg-printables.js",
+  "Tools/vocab-flashcard-generator/vfg-study.js",
   "Tools/vocab-flashcard-generator/vfg-store.js",
   "Tools/086-wiki-race.html",
   "Tools/087-class-screen.html",
@@ -562,6 +569,9 @@ const PRECACHE_URLS = [
   "_shared/a11y.js",
   "_shared/backup-crypto.js",
   "_shared/chart-svg.js",
+  "_shared/levels.js",
+  "_shared/ss-glossary.js",
+  "_shared/list-sentence.js",
   "_shared/paste-table.js",
   "_shared/base.css",
   "_shared/gvb-save.js",
@@ -576,9 +586,13 @@ const PRECACHE_URLS = [
   "_shared/grouping.js",
   "_shared/geo-project.js",
   "_shared/word-list.js",
+  "_shared/speak.js",
   "_shared/conjugate.js",
   "_shared/conjugate-es.js",
+  "_shared/conjugate-de.js",
   "_shared/conjugate-fr.js",
+  "_shared/conjugate-it.js",
+  "_shared/conjugate-la.js",
   "_shared/question-bank.js",
   "_shared/countdown.js",
   "_shared/qr-draw.js",
@@ -589,6 +603,7 @@ const PRECACHE_URLS = [
   "_shared/binder-stale.js",
   "_shared/school-day.js",
   "_shared/seating-read.js",
+  "_shared/sample-data.js",
   "_shared/share.js",
   "_shared/stage.js",
   "_shared/state-link.js",

@@ -166,6 +166,7 @@
 
 <div id="printArea"></div>
 
+<script src="../_shared/sample-data.js"></script>
 <script>
 (function () {
   'use strict';
@@ -451,6 +452,38 @@
   importSharedMenu(hadSaved);
   loadSlipSettings();
   renderBooks();
+
+  /* ---------- sample (P15, _shared/sample-data.js) ----------
+     Six invented books, none real. This page saves the list as you go, so a loaded
+     sample is stored like books you add; Clear sample removes exactly those six. */
+  var SAMPLE_BOOKS = [
+    ['The Clockmaker\'s Apprentice', 'Sample Author One', 'Mystery', 'A boy who repairs clocks finds a note hidden inside one that stopped at midnight.'],
+    ['Two Rivers Home', 'Sample Author Two', 'Historical fiction', 'A family follows the river west and learns what they can carry and what they must leave.'],
+    ['The Last Lantern', 'Sample Author Three', 'Fantasy', 'When the lights of the valley go out one by one, a girl sets out to find the lamplighters.'],
+    ['Seven Ways to Build a Bridge', 'Sample Author Four', 'Nonfiction', 'Engineers explain, with diagrams, how a bridge stays up and what happens when it does not.'],
+    ['Quiet Thunder', 'Sample Author Five', 'Realistic fiction', 'A new student who never speaks in class finds her voice on the school radio.'],
+    ['Orbit Club', 'Sample Author Six', 'Science fiction', 'Five friends on a small station race to fix a broken air pump before the supply ship arrives.']
+  ];
+  function sampleIds() { return SAMPLE_BOOKS.map(function (_, i) { return 'sample-book-' + (i + 1); }).join(); }
+  if (window.SampleData) SampleData.mount({
+    before: els.newTitle.closest('.card'),
+    label: 'Load six sample books',
+    what: 'This page saves the list as you go, so the books are saved until you clear them.',
+    isEmpty: function () {
+      return !books.length && ['newTitle', 'newAuthor', 'newGenre', 'newBlurb'].every(function (id) { return !els[id].value.trim(); });
+    },
+    snapshot: function () { return books.map(function (b) { return b.id; }).join(); },
+    fill: function () {
+      books = SAMPLE_BOOKS.map(function (b, i) {
+        return { id: 'sample-book-' + (i + 1), title: b[0], author: b[1], genre: b[2], blurb: b[3], cover: null };
+      });
+      save(); renderBooks();
+    },
+    clear: function () {
+      books = books.filter(function (b) { return sampleIds().split(',').indexOf(b.id) === -1; });
+      save(); renderBooks();
+    }
+  });
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

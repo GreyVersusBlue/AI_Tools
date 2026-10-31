@@ -450,6 +450,13 @@ const TOOLS = [
       { name: 'a crossword', list: vlist({ mode: 'crossword', words: PUZZLE }), only: 'previewBtn' },
       { name: 'four bingo cards', list: vlist({ mode: 'bingo', words: PUZZLE }), only: 'previewBtn' },
       { name: 'a matching quiz', list: vlist({ mode: 'matching', words: PUZZLE }), only: 'previewBtn' },
+      { name: 'a Frayer page for each of twelve words', list: vlist({ mode: 'frayer', words: vocab(12) }), only: 'previewBtn' },
+      { name: 'Frayer pages two to a page, filled in', list: vlist({ mode: 'frayer', words: vocab(12), study: { frayerFill: 'known', frayerPerPage: 2 } }), only: 'previewBtn' },
+      { name: 'a fill in the blank sheet with its key', list: vlist({ mode: 'cloze', words: Array.from({ length: 30 }, (_, i) => `word${i + 1}: the made-up meaning ${i + 1} | A made-up sentence that uses word${i + 1} once.`).join('\n') }), only: 'previewBtn' },
+      { name: 'a review schedule for forty words', list: vlist({ mode: 'schedule', words: vocab(40), study: { srStart: '2026-10-30', srPerDay: 4 } }), only: 'previewBtn' },
+      { name: "one day's drill sheet", list: vlist({ mode: 'schedule', words: vocab(40), study: { srPart: 'day', srDay: 6, srPerDay: 4 } }), only: 'previewBtn' },
+      { name: 'the word wall cards of one unit', list: vlist({ mode: 'wallsystem', words: vocab(10) }), only: 'previewBtn' },
+      { name: 'the word wall index', list: vlist({ mode: 'wallsystem', words: vocab(40), study: { wallPart: 'index' } }), only: 'previewBtn' },
     ],
   },
   {

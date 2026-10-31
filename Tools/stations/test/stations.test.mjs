@@ -35,6 +35,7 @@ function loadModule(src) {
   win.qrcode = ctx.qrcode;   // a vm top-level var lands on the context; qr-draw.js reads it off window
   ctx.TextEncoder = TextEncoder;
   vm.runInContext(read('_shared/qr-draw.js'), ctx);
+  vm.runInContext(read('_shared/list-sentence.js'), ctx);
   vm.runInContext(src, ctx);
   // the matcher as it stood before it was folded into the module (v382's er-match.js, frozen), in its own
   // context, so the module's copy is held to it and cannot drift unseen

@@ -21,6 +21,7 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/levels.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
@@ -173,7 +174,7 @@
   var DATA_PREFIX = 'propa:data:';
   var CURRENT_KEY = 'propa:current';
 
-  var LEVEL_LABEL = { academic: 'Academic', honors: 'Honors', gt: 'Honors GT' };
+  var LEVEL_LABEL = Levels.labels();
 
   var TECHNIQUES = [
     { key: 'bandwagon', label: 'Bandwagon', def: 'Everyone else is doing it, so you should too.' },

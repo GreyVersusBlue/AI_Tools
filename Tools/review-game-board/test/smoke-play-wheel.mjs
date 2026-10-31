@@ -37,7 +37,9 @@ const PRINT = process.argv.includes('--print');
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const win = {};
-vm.runInContext(fs.readFileSync(path.join(here, '..', 'rgb-play.js'), 'utf8'), vm.createContext({ window: win }));
+const wheelCtx = vm.createContext({ window: win });
+vm.runInContext(fs.readFileSync(path.join(here, '..', '..', '..', '_shared', 'list-sentence.js'), 'utf8'), wheelCtx);
+vm.runInContext(fs.readFileSync(path.join(here, '..', 'rgb-play.js'), 'utf8'), wheelCtx);
 const P = win.ReviewBoardPlay;
 
 let passed = 0, failed = 0;

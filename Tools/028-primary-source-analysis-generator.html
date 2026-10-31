@@ -27,6 +27,8 @@
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<script src="../_shared/levels.js"></script>
+<script src="../_shared/ss-glossary.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
@@ -803,7 +805,7 @@
     },
     honorsgt: {
       key: 'honorsgt',
-      name: 'Honors GT',
+      name: Levels.label('gt'),
       blurb: 'Adds an open-ended “go further” prompt to every step and a closing synthesis question, and trims the pre-lined answer space so students shape their own response.',
       keyNote: 'A complete Honors GT answer goes past the source itself: it weighs perspective and reliability, and the synthesis question should tie this source to a larger pattern, another source, or something happening now.'
     }
@@ -918,86 +920,7 @@
      grade social studies sources. Only words actually present in the
      teacher's own source text are printed, and anything the teacher already
      glossed in the Vocabulary box is skipped rather than repeated. */
-  var PLAIN_GLOSSARY = {
-    abolition: 'the movement to end slavery',
-    allies: 'countries that agree to help each other, especially in a war',
-    amendment: 'an official change or addition to a constitution or law',
-    armistice: 'an agreement to stop fighting',
-    bias: 'leaning toward one side instead of being fair to all sides',
-    blockade: 'shutting off a place so people and supplies cannot get in or out',
-    boycott: 'refusing to buy or use something as a protest',
-    cabinet: 'the group of advisers who help a president run the government',
-    census: 'an official count of the people living in a place',
-    citizen: 'an official member of a country, with rights and duties',
-    civilian: 'a person who is not in the military',
-    colonist: 'a person living in a colony, ruled by a country far away',
-    colony: 'land settled and controlled by a country far away',
-    commerce: 'buying and selling goods; trade',
-    compromise: 'a deal where each side gives something up to reach agreement',
-    constitution: 'the written plan for how a government works',
-    declaration: 'an official public statement',
-    delegate: 'a person sent to speak or vote for a group',
-    democracy: 'a government in which the people choose their leaders',
-    depression: 'a long stretch when the economy is bad and many people lose work',
-    discrimination: 'treating people unfairly because of who they are',
-    drought: 'a long period with little or no rain',
-    economy: 'how a place makes, sells, and uses money and goods',
-    emancipation: 'setting people free, especially from slavery',
-    embargo: 'an official order stopping trade with another country',
-    engraving: 'a picture printed from lines carved into metal or wood',
-    famine: 'a severe shortage of food across a whole area',
-    federal: 'having to do with the national government',
-    genocide: 'the deliberate killing of an entire group of people',
-    globalization: 'the world becoming more connected through trade and communication',
-    grievance: 'a complaint about something unfair',
-    immigrant: 'a person who moves to a new country to live there',
-    imperialism: 'one country taking control of other lands and peoples',
-    inflation: 'when prices rise so the same money buys less',
-    industry: 'the business of making goods, usually in factories',
-    legislature: 'the part of government that writes and passes laws',
-    liberty: 'freedom to live and act without unfair control',
-    loyalist: 'a colonist who stayed loyal to Britain',
-    massacre: 'the killing of many people who could not defend themselves',
-    migration: 'the movement of people from one place to another to live',
-    militia: 'ordinary citizens trained to fight in an emergency',
-    monopoly: 'when one company controls all of something, with no competition',
-    musket: 'an old-fashioned long gun loaded from the front',
-    nationalism: 'strong pride in your own country, often placed above others',
-    naturalization: 'the legal process of becoming a citizen of a new country',
-    neutral: 'not taking either side in a fight or argument',
-    pandemic: 'a disease outbreak that spreads across many countries',
-    parliament: 'the lawmaking body in Britain and some other countries',
-    patriot: 'a colonist who supported breaking away from Britain',
-    petition: 'a written request signed by many people',
-    plantation: 'a large farm growing one main crop, often worked by enslaved people',
-    propaganda: 'information shaped on purpose to make you think or feel a certain way',
-    prosperity: 'a stretch of time when people have money and things go well',
-    ratify: 'to officially approve something, such as a treaty or amendment',
-    rebellion: 'an organized fight against the people in charge',
-    redcoat: 'a British soldier, named for the red uniform',
-    reform: 'a change made to fix a problem in society or government',
-    refugee: 'a person forced to leave home because it is not safe there',
-    repeal: 'to cancel a law',
-    representative: 'a person chosen to speak and vote for others',
-    republic: 'a country where citizens elect the people who govern them',
-    revolution: 'the overthrow of a government, or a huge change in how things work',
-    sanction: 'a penalty one country places on another to force a change',
-    segregation: 'keeping groups of people separated by law or by custom',
-    sovereignty: 'a government’s power to rule itself',
-    strike: 'when workers stop working to demand better pay or conditions',
-    suffrage: 'the right to vote',
-    surveillance: 'closely watching people in order to gather information',
-    tariff: 'a tax on goods brought in from another country',
-    taxation: 'the collecting of taxes',
-    tenement: 'a crowded, run-down apartment building in a city',
-    testimony: 'what a witness says officially, usually in court',
-    treaty: 'an official agreement between countries',
-    tyranny: 'cruel and unfair rule by someone with total power',
-    unalienable: 'cannot be taken away',
-    urbanization: 'the growth of cities as more people move into them',
-    veto: 'the power to reject a law or decision',
-    volley: 'many guns fired at the same moment'
-  };
+  var PLAIN_GLOSSARY = SSGlossary.set('psa');
   var GLOSS_MAX = 8;
 
   function glossaryMatches() {

@@ -30,6 +30,7 @@
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
+<script src="../_shared/list-sentence.js"></script>
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
@@ -562,8 +563,7 @@
   }
   function namesOf(ids) { return ids.map(typeName).filter(Boolean); }
   function listText(items) {
-    if (items.length <= 1) return items.join('');
-    return items.slice(0, -1).join(', ') + ' and ' + items[items.length - 1];
+    return ListSentence.join(items);
   }
   function roomLabel(r) { return String(r.name || '').trim() || 'Unnamed room'; }
   function roomById(id) { return roomList().filter(function (r) { return r.id === id; })[0]; }

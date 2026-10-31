@@ -28,6 +28,9 @@
 <script src="../_shared/share.js"></script>
 <script src="../_shared/conjugate.js"></script>
 <script src="../_shared/conjugate-es.js"></script>
+<script src="../_shared/conjugate-de.js"></script>
+<script src="../_shared/conjugate-it.js"></script>
+<script src="../_shared/conjugate-la.js"></script>
 <script src="../_shared/conjugate-fr.js"></script>
 <script src="verb-conjugation-poster-generator/irregulars.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
@@ -514,7 +517,7 @@
     var lang = els.addVerbLang.value, tense = els.addVerbTense.value;
     var inf = els.addVerbInf.value.trim(), gloss = els.addVerbGloss.value.trim();
     if (!inf) {
-      els.addVerbStatus.textContent = 'Type an infinitive first, e.g. ' + (lang === 'fr' ? 'danser' : 'bailar') + '.';
+      els.addVerbStatus.textContent = 'Type an infinitive first, e.g. ' + ({ fr: 'danser', de: 'machen', it: 'parlare', la: 'amare' }[lang] || 'bailar') + '.';
       els.addVerbInf.focus(); return;
     }
     var res = window.Conjugate.conjugate(lang, inf, tense);

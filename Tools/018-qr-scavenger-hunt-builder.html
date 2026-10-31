@@ -28,6 +28,7 @@
 <script src="../_shared/share.js"></script>
 <script src="../_shared/media-db.js"></script>
 <script src="escape-room-builder/er-image.js"></script>
+<script src="../_shared/list-sentence.js"></script>
 <script src="../_shared/stations.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/question-bank.js"></script>
@@ -256,6 +257,10 @@
     padding: .55rem .75rem; border-radius: 8px; background: var(--surface2);
     border: 1px solid var(--border); color: var(--text); word-break: break-word; }
   .share-note.error { border-color: var(--danger); color: var(--danger); }
+  /* Phone width (AI-30, rank 66). */
+  @media (max-width: 480px) {
+    .stations-table td.code-cell { width: auto; }
+  }
 </style>
 </head>
 <body>
@@ -290,10 +295,10 @@
         <span>1 · Stations</span>
         <button class="btn-link" id="toggle-import" type="button">Paste from a spreadsheet instead</button>
       </div>
-      <table class="stations-table">
+      <div style="overflow-x:auto;"><table class="stations-table">
         <thead><tr><th></th><th>Label</th><th>QR content (link or text)</th><th>Answer key note (optional)</th><th>Type</th><th>Code word</th><th></th></tr></thead>
         <tbody id="stations-body"></tbody>
-      </table>
+      </table></div>
       <div class="btn-row" style="margin-top:0.75rem;">
         <button class="btn-secondary" id="add-row-btn" type="button">+ Add Station</button>
       </div>
@@ -431,10 +436,10 @@
   <div class="col-right">
     <div class="card">
       <div class="card-title">Leaderboard</div>
-      <table class="stations-table" id="leaderboard-table">
+      <div style="overflow-x:auto;"><table class="stations-table" id="leaderboard-table">
         <thead><tr><th>#</th><th>Team</th><th>Stations</th><th>Heading to</th><th>Hints</th><th>Status</th></tr></thead>
         <tbody id="leaderboard-body"></tbody>
-      </table>
+      </table></div>
     </div>
   </div>
 </div>

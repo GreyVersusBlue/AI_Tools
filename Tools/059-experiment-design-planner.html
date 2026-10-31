@@ -136,6 +136,7 @@
 
 <div id="printArea"></div>
 
+<script src="../_shared/sample-data.js"></script>
 <script>
 (function () {
   'use strict';
@@ -278,6 +279,53 @@
   /* ---------- boot ---------- */
   load();
   renderAll();
+
+  /* ---------- sample (P15, _shared/sample-data.js) ----------
+     Made-up and about sugar and water. This page saves as you go, so a loaded
+     sample is stored like anything typed; Clear sample puts the blank form back. */
+  function texts(list) { return list.map(function (x) { return x.text; }); }
+  function plan() {
+    return JSON.stringify([state.title, state.question, state.hypIf, state.hypThen, state.hypBecause,
+      state.varIndependent, state.varDependent, texts(state.controlled), texts(state.materials), texts(state.procedure)]);
+  }
+  function rows(a) { return a.map(function (t) { return { id: uid(), text: t }; }); }
+  var SAMPLE = {
+    title: 'Does water temperature change how fast sugar dissolves?',
+    question: 'How does the temperature of water affect how quickly a spoonful of sugar dissolves?',
+    hypIf: 'the water is warmer', hypThen: 'the sugar will dissolve faster',
+    hypBecause: 'warm water molecules move faster and pull the sugar apart sooner',
+    varIndependent: 'water temperature', varDependent: 'seconds for the sugar to dissolve',
+    controlled: ['amount of water (200 mL)', 'amount of sugar (1 teaspoon)', 'how often the water is stirred'],
+    materials: ['3 clear cups', 'thermometer', 'stopwatch', 'sugar', 'cold, room-temperature and warm water'],
+    procedure: ['Pour 200 mL of cold water into the first cup and record its temperature.',
+      'Add 1 teaspoon of sugar, start the stopwatch and stir the same way each time.',
+      'Stop the stopwatch when no sugar can be seen. Record the seconds.',
+      'Repeat with room-temperature water, then warm water.']
+  };
+  if (window.SampleData) SampleData.mount({
+    before: els.expTitle.closest('.card'),
+    label: 'Load a sample experiment',
+    what: 'This page saves as you go, so it is saved until you clear it.',
+    isEmpty: function () {
+      return !state.title.trim() && !state.question.trim() && !state.hypIf.trim() && !state.hypThen.trim() &&
+        !state.hypBecause.trim() && !state.varIndependent.trim() && !state.varDependent.trim() &&
+        [state.controlled, state.materials, state.procedure].every(function (l) { return l.every(function (x) { return !x.text.trim(); }); });
+    },
+    snapshot: plan,
+    fill: function () {
+      state.title = SAMPLE.title; state.question = SAMPLE.question;
+      state.hypIf = SAMPLE.hypIf; state.hypThen = SAMPLE.hypThen; state.hypBecause = SAMPLE.hypBecause;
+      state.varIndependent = SAMPLE.varIndependent; state.varDependent = SAMPLE.varDependent;
+      state.controlled = rows(SAMPLE.controlled); state.materials = rows(SAMPLE.materials); state.procedure = rows(SAMPLE.procedure);
+      save(); renderAll();
+    },
+    clear: function () {
+      state.title = state.question = state.hypIf = state.hypThen = state.hypBecause = '';
+      state.varIndependent = state.varDependent = '';
+      state.controlled = rows(['']); state.materials = rows(['']); state.procedure = rows(['']);
+      save(); renderAll();
+    }
+  });
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

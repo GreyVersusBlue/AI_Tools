@@ -164,6 +164,26 @@ html.a11y-dyslexic button {
 }
 .a11y-reset:hover { color: #2A6DB0; }
 
+/* School branding (Track B2). The panel grew by a section, so on a short
+   window it scrolls instead of running off the top. */
+.a11y-panel { max-height: calc(100vh - 80px); overflow-y: auto; }
+.a11y-brand { margin-top: 6px; border-top: 1px solid #E1E5EA; padding-top: 8px; }
+.a11y-brand h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin: 0 0 4px;
+  color: #5B6B78;
+}
+.a11y-color { width: 44px; height: 28px; padding: 0; border: 1px solid #C7CFD6; border-radius: 5px; background: #F6F7F9; cursor: pointer; }
+.a11y-color:disabled { opacity: .45; cursor: default; }
+.a11y-color:focus-visible,
+.a11y-brand input[type="checkbox"]:focus-visible { outline: 2px solid #2A6DB0; outline-offset: 2px; }
+.a11y-brand-warn { margin: 6px 0 0; font-size: 12px; color: #7A4B00; }
+.a11y-brand-warn:empty { display: none; }
+.a11y-brand-note { margin: 6px 0 0; font-size: 12px; color: #5B6B78; }
+.a11y-brand-reset { margin-top: 8px; width: 100%; }
+
 @media (prefers-reduced-motion: no-preference) {
   .a11y-panel { transition: opacity .12s ease; }
 }

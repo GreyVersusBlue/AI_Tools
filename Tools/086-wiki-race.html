@@ -306,6 +306,13 @@ input, select, textarea { font: inherit; }
 /* ---- verify screen ---- */
 #screenVerify .results-card h2 { color: var(--green); }
 #verifyInput { width: 100%; min-height: 80px; border: 2px solid var(--line); border-radius: 10px; padding: 10px; }
+#boardInput { width: 100%; min-height: 110px; border: 2px solid var(--line); border-radius: 10px; padding: 10px; font-family: monospace; font-size: .8rem; }
+.board-table { border-collapse: collapse; width: 100%; margin: 6px 0 14px; font-size: .92rem; }
+.board-table caption { text-align: left; font-weight: 800; padding: 6px 0; color: var(--green); }
+.board-table th, .board-table td { text-align: left; padding: 5px 10px 5px 0; border-bottom: 1px solid var(--line); }
+.board-table th { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+.board-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.board-note { color: var(--danger); font-size: .8rem; font-weight: 600; }
 .badge { display: inline-block; border-radius: 8px; padding: 4px 14px; font-weight: 800; }
 .badge-ok { background: var(--green); color: var(--gold-bright); }
 .badge-bad { background: var(--danger); color: #fff; }
@@ -429,6 +436,15 @@ input, select, textarea { font: inherit; }
       <button id="verifyBackBtn" class="btn btn-ghost" type="button">Back to start</button>
     </div>
     <div id="verifyResult" style="margin-top:18px"></div>
+    <h2 style="margin-top:34px;font-size:1.4rem">Rank a whole class</h2>
+    <p class="help">Paste one finish code per line, with a name or initials in front if you like (for example <code>Maria WR1.abc123.&hellip;</code>). The codes are ranked by final time within each seed and difficulty. Names stay on this page: nothing is saved or sent.</p>
+    <label for="boardInput" class="help" style="display:block;margin-top:8px">Finish codes, one per line</label>
+    <textarea id="boardInput" placeholder="Maria WR1.xxxxxx.&hellip;"></textarea>
+    <div style="display:flex;gap:10px;margin-top:10px">
+      <button id="boardBtn" class="btn btn-gold" type="button">Rank the class</button>
+      <button id="boardCopyBtn" class="btn btn-ghost" type="button" hidden>Copy as text</button>
+    </div>
+    <div id="boardResult" style="margin-top:18px" aria-live="polite"></div>
   </div>
 </section>
 
@@ -1157,6 +1173,125 @@ function runVerify() {
 }
 
 /* =====================================================================
+   class scoreboard — the teacher pastes many finish codes, one per line,
+   with an optional label in front; we rank them. Each label stays in the
+   page and is never stored. The pure parts (parseCodeLines, finalMs,
+   rankRaces) are cut out of this file and tested by
+   Tools/wiki-race/test/seed-logic.test.mjs.
+   ===================================================================== */
+var CODE_TOKEN = /WR[01]\.[0-9a-z]{6}\.[A-Za-z0-9_-]+/;
+function parseCodeLines(text) {
+  var out = [];
+  String(text || '').split(/\r?\n/).forEach(function (line, i) {
+    if (!line.trim()) return;
+    var m = line.match(CODE_TOKEN);
+    if (!m) { out.push({ line: i + 1, error: 'No finish code on this line.' }); return; }
+    var label = (line.slice(0, m.index) + ' ' + line.slice(m.index + m[0].length))
+      .replace(/\s+/g, ' ').replace(/^[\s:;,|\-\u2013\u2014]+|[\s:;,|\-\u2013\u2014]+$/g, '');
+    out.push({ line: i + 1, label: label, code: m[0] });
+  });
+  return out;
+}
+function finalMs(p) { return p.t + p.h * 30000; }
+function validNumbers(p) {
+  return [p.t, p.c, p.h].every(function (n) { return typeof n === 'number' && isFinite(n) && n >= 0; });
+}
+/* items: [{ line, label, payload }] in the order pasted. Returns one group per
+   seed + difficulty (the biggest first), each with its rows ranked by final time,
+   then clicks, then hints; equal on all three share a rank; a code pasted twice
+   is flagged and left out of the ranking. */
+function rankRaces(items) {
+  var groups = [], byKey = {}, seenData = {};
+  items.forEach(function (it) {
+    var p = it.payload, seed = normSeed(p.s), key = seed + '\n' + p.d;
+    if (!byKey[key]) { byKey[key] = { seed: seed, difficulty: p.d, rows: [], dupes: [] }; groups.push(byKey[key]); }
+    var data = JSON.stringify([key, p.t, p.c, p.h, p.p]);
+    if (seenData[data]) { byKey[key].dupes.push({ line: it.line, label: it.label, sameAs: seenData[data] }); return; }
+    seenData[data] = it.line;
+    var exp = computeMatchup(seed, p.d);
+    byKey[key].rows.push({
+      line: it.line, label: it.label, ms: finalMs(p), baseMs: p.t, clicks: p.c, hints: p.h,
+      visited: p.p.length, from: p.p[0], to: p.p[p.p.length - 1],
+      endsOk: tnorm(p.p[0]) === tnorm(exp.start) && tnorm(p.p[p.p.length - 1]) === tnorm(exp.target)
+    });
+  });
+  groups.forEach(function (g) {
+    g.rows.sort(function (a, b) { return a.ms - b.ms || a.clicks - b.clicks || a.hints - b.hints || a.line - b.line; });
+    g.rows.forEach(function (r, i) {
+      var prev = g.rows[i - 1];
+      r.rank = (prev && prev.ms === r.ms && prev.clicks === r.clicks && prev.hints === r.hints) ? prev.rank : i + 1;
+    });
+  });
+  return groups.map(function (g, i) { return { g: g, i: i }; }).sort(function (a, b) {
+    return (b.g.rows.length + b.g.dupes.length) - (a.g.rows.length + a.g.dupes.length) || a.i - b.i;
+  }).map(function (x) { return x.g; });
+}
+
+var boardText = '';
+function runBoard() {
+  var box = $('boardResult');
+  var parsed = parseCodeLines($('boardInput').value);
+  box.replaceChildren();
+  $('boardCopyBtn').hidden = true;
+  if (!parsed.length) return;
+  var line = function (tag, text, cls) {
+    var e = document.createElement(tag); e.textContent = text; if (cls) e.className = cls; box.appendChild(e); return e;
+  };
+  line('p', 'Checking ' + parsed.filter(function (x) { return x.code; }).length + ' codes…', 'help');
+  Promise.all(parsed.map(function (x) {
+    if (x.error) return Promise.resolve({ x: x, err: x.error });
+    return decodeFinishCode(x.code).then(function (p) {
+      if (!validNumbers(p)) throw new Error('The code is missing its time, clicks or hints.');
+      return { x: x, payload: p };
+    }).catch(function (err) { return { x: x, err: err.message }; });
+  })).then(function (res) {
+    box.replaceChildren();
+    var good = res.filter(function (r) { return r.payload; }).map(function (r) {
+      return { line: r.x.line, label: r.x.label, payload: r.payload };
+    });
+    var bad = res.filter(function (r) { return r.err; });
+    var groups = rankRaces(good);
+    var text = [];
+    groups.forEach(function (g) {
+      var table = document.createElement('table'); table.className = 'board-table';
+      var cap = document.createElement('caption');
+      cap.textContent = 'Seed “' + g.seed + '” · ' + g.difficulty + ' · ' + g.rows.length + ' ranked';
+      table.appendChild(cap);
+      var head = document.createElement('tr');
+      ['Rank', 'Who', 'Final time', 'Clicks', 'Hints', 'Articles', 'Notes'].forEach(function (h, k) {
+        var th = document.createElement('th'); th.scope = 'col'; th.textContent = h;
+        if (k === 0 || (k >= 2 && k <= 5)) th.className = 'num'; head.appendChild(th);
+      });
+      table.appendChild(head);
+      text.push('Seed ' + g.seed + ' (' + g.difficulty + ')');
+      g.rows.forEach(function (r) {
+        var tr = document.createElement('tr');
+        var cells = [r.rank, r.label || '(line ' + r.line + ')', fmtTime(r.ms), r.clicks, r.hints, r.visited,
+          r.endsOk ? '' : 'Path does not start and end at this seed’s articles (a redirect can cause this).'];
+        cells.forEach(function (c, k) {
+          var td = document.createElement('td'); td.textContent = c;
+          if (k === 0 || (k >= 2 && k <= 5)) td.className = 'num';
+          if (k === 6 && c) td.className = 'board-note';
+          tr.appendChild(td);
+        });
+        table.appendChild(tr);
+        text.push([r.rank, r.label || 'line ' + r.line, fmtTime(r.ms), r.clicks + ' clicks', r.hints + ' hints'].join('\t'));
+      });
+      box.appendChild(table);
+      g.dupes.forEach(function (d) {
+        line('p', 'Line ' + d.line + (d.label ? ' (' + d.label + ')' : '') + ' repeats the code on line ' + d.sameAs + ' and was left out.', 'board-note');
+      });
+    });
+    bad.forEach(function (r) {
+      line('p', 'Line ' + r.x.line + ': ' + r.err, 'board-note');
+    });
+    if (!groups.length) line('p', 'No valid codes to rank.', 'board-note');
+    boardText = text.join('\n');
+    $('boardCopyBtn').hidden = !boardText;
+  });
+}
+
+/* =====================================================================
    stuck helpers (peek / hint / find)
    ===================================================================== */
 var targetPreview = null;
@@ -1313,6 +1448,10 @@ $('againBtn').addEventListener('click', function () {
 $('toVerifyBtn').addEventListener('click', function () { showScreen('verify'); });
 $('verifyBackBtn').addEventListener('click', function () { showScreen('start'); });
 $('verifyBtn').addEventListener('click', runVerify);
+$('boardBtn').addEventListener('click', runBoard);
+$('boardCopyBtn').addEventListener('click', function () {
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(boardText).catch(function () {});
+});
 
 $('peekBtn').addEventListener('click', doPeek);
 $('hintBtn').addEventListener('click', doHint);
@@ -1353,7 +1492,8 @@ refreshOnline();
 /* tiny debug/test hook (used by the repo's throwaway e2e checks) */
 window.__wr = {
   state: state, navigateTo: navigateTo, computeMatchup: computeMatchup,
-  TOPICS: TOPICS, buildFinishCode: buildFinishCode, decodeFinishCode: decodeFinishCode
+  TOPICS: TOPICS, buildFinishCode: buildFinishCode, decodeFinishCode: decodeFinishCode,
+  parseCodeLines: parseCodeLines, rankRaces: rankRaces
 };
 
 })();

@@ -18,7 +18,10 @@ every edit. The deduplication work that established them is summarised in
   WebRTC pairing). Extend this; never invent a parallel shared location.
 - `sw.js` — the hand-maintained service worker that precaches the whole site.
 - `index.html` + `README.md` — the landing page and tools table; both must be
-  updated when a tool is added.
+  updated when a tool is added. **index.html's tool rows are generated**
+  (AI-30): add the tool to `Tools/board-check/index-rows.json`, run
+  `npm run build:index`, and let `npm run check:index` hold the two together;
+  the category and page-wide counts are counted, never typed.
 
 ## Vendored third-party libraries
 
@@ -241,6 +244,11 @@ copy of the boilerplate:
   follows. Leave it alone; do not adopt a11y.js there cold. `test:theme`'s
   `OWN_THEME` list names it and fails if any other page writes `data-theme`
   without a11y.js, or if 035 stops (delete the entry then).
+- **The school accent is the `/* === brand === */` block in `a11y.js`** (Track B, v487): one optional key,
+  `gvb-brand:settings.v1`, applied as a screen-only `<style id="gvb-brand-style">` before first paint, so no key
+  means no element and no change. A page with a palette of its own sets `window.BRAND_OPT_OUT = true` before the
+  script (007 does); never set `--accent` on `<html>` yourself and never add a logo (Devon, 2026-10-21). Read it
+  through `window.Brand`. `npm run test:brand`.
 - `<script src="../_shared/sw-register.js" defer></script>` — service-worker
   registration, the update bar, the deferred precache pass, and (since v180) the
   request for persistent storage. It exists and is precached; link it rather than
@@ -652,12 +660,25 @@ files must be added there too.
   question bank's `do-now`-tagged questions through the packet providers (`test:sub-plan-donow`), and its "what the sub said" notes
   (`subPlanBuilder.subSaid.v1`, this device only, student data) are in no link, history, file or copy (`test:sub-plan-said`).
 - **Verb forms come from `_shared/conjugate.js`** (`Conjugate`, Path 19 P3, v469-v475): the engine and a pack a language
-  (`conjugate-es.js`, `conjugate-fr.js`), six tenses each, pure functions, no storage. A tool that needs a conjugated form calls
+  (`conjugate-es.js`, `-de.js`, `-it.js`, `-la.js`, `-fr.js`; German has separable prefixes and haben/sein, Italian a per-verb `isc` flag, Latin principal parts and deponents; German and Italian reflexives), six tenses each, and per pack `extraTenses` (commands, the present perfect, subjunctives, passives: offered in 039's menu and on the check sheet, never in `languages().tenses`, a default `table()` or 079), pure functions, no storage. A tool that needs a conjugated form calls
   `Conjugate.conjugate()` and does not type a table. A teacher's correction is a verb record merged over the pack's (`merge`), and it
   lives on the word (`WordList.setVerb`, `lang` on a list), for its list only. **No table it makes is called reviewed until a language
   teacher has read it** (Devon, 2026-10-21): every result says `unreviewed` and a page that shows one says so. 039 drills from it and
-  079's starter posters are computed from it (v474; held byte-for-byte by `test:verb-poster-callouts` against `golden-old-posters.json`) and its Add a verb card is the engine's `conjugate()` (v475, `npm run test:verb-poster-add-verb`); 079's irregular call-out tables are held equal to it by `npm run test:conjugate`, which reads `irregulars.js` by text. `node Tools/conjugate/print-corpus.mjs
+  079's starter posters are computed from it (v474; held byte-for-byte by `test:verb-poster-callouts` against `golden-old-posters.json`) and its Add a verb card is the engine's `conjugate()` (v475, `npm run test:verb-poster-add-verb`); 079's irregular call-out tables (`irregulars.js`) are computed from it, and `npm run test:conjugate` holds both to the literals frozen in `_079-irregulars-frozen.json`. `node Tools/conjugate/print-corpus.mjs
   es|fr` writes the teacher's check sheet. The suite also runs the page-driven `npm run test:conjugate-039`.
+- **040's study printables are `Tools/vocab-flashcard-generator/vfg-study.js`** (`VfgStudy`, Path 19 P4, v477): Frayer, fill in the blank, the
+  review schedule and the word wall system, pure, with the page turning its output into nodes in `studyBuild()`. Their settings are **one optional
+  `study` field on the list's record, present only once a setting differs from its default** (`smoke-bank.mjs` pins the stored record; do not add
+  fields to it that every list gets). A word's unit is a `unit:<name>` tag on the word in Word Lists. `npm run test:vocab-study-logic`,
+  `npm run test:vocab-study`.
+- **Reading a word aloud is `_shared/speak.js`** (`Speak`, Path 19 P5, v478), used by 040's self-quiz, 051 and, since v486, 039, 014 and 044
+  (`npm run test:speak-adopters`, port 8621); a page does not call `speechSynthesis` itself (a11y.js, which reads a whole page, is the one exception). A teacher's recording of a word is 051's `clm-pron.js` (MediaRecorder into `gvb-media`, namespace `labels`): it plays on that device and is not in
+  the label's QR. `npm run test:speak`, `npm run test:label-pron`.
+- **Three small shared helpers (AI-30, v492-v494).** A "A, B and C" list is `_shared/list-sentence.js` (`ListSentence.join`, `.caption`; an ES module
+  imports it for the side effect and reads `globalThis.ListSentence`, a classic script loads it first, and a suite that runs a classic file in a `vm`
+  loads it into the context first); the Academic / Honors / Honors GT names are `_shared/levels.js` (`Levels`; a page keeps its own stored key and its own
+  footer markup); the 7th-grade glossaries are `_shared/ss-glossary.js` (`SSGlossary`, sets `dbq` and `psa`, deliberately not merged: the wording
+  differs). Do not write another list joiner, level list or glossary table. `npm run test:list-sentence`, `npm run test:ss-glossary`.
 - **A pasted spreadsheet region is read by `_shared/paste-table.js`** (`PasteTable`, Path 16 P2, v404): `splitLine`,
   `pickDelimiter`, `parse` (rows padded, short rows named in `ragged`), `columnReport` (the cells that stopped a column reading
   as numbers), and 046's name-and-value parsers. 046, 038, 036, 037, 075 and 006 use it; do not write another `split('\t')`. A line a
