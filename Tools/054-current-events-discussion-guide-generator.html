@@ -76,6 +76,15 @@
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   button.full { width: 100%; }
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
+  /* Phone fold (AI-30, rank 66): the header's buttons. The wrappers are invisible to the flex row
+     on a desktop; at 600px and under Print stays up and the other three fold behind More. */
+  #hdrBar .tb-more { display: contents; }
+  #hdrBar .tb-toggle { display: none; }
+  @media (max-width: 600px) {
+    #hdrBar .tb-toggle { display: inline-block; }
+    #hdrBar .tb-more { display: none; flex-wrap: wrap; gap: .5rem; flex: 0 0 100%; order: 2; }
+    #hdrBar.expanded .tb-more { display: flex; }
+  }
 
   .vocab-row, .q-row { display: flex; align-items: center; gap: .5rem; padding: .3rem 0; }
   .vocab-row input.term { flex: 0 0 9rem; font-weight: 700; margin-bottom: 0; }
@@ -173,11 +182,17 @@
       <h1>Current Events Discussion Guide Generator</h1>
       <p class="sub">Paste an article, pull out vocabulary and a summary starter, pick discussion questions, print a guide &mdash; add a second article on the same event to compare bias and framing.</p>
     </div>
-    <div class="btnrow">
-      <button class="secondary" id="loadExampleBtn">Load two-article example</button>
-      <button class="secondary" id="clearBtn">Clear &amp; start over</button>
+    <div class="btnrow" id="hdrBar">
+      <div class="tb-more" id="hdrFile">
+        <button class="secondary" id="loadExampleBtn">Load two-article example</button>
+        <button class="secondary" id="clearBtn">Clear &amp; start over</button>
+      </div>
       <button class="secondary" id="printBtn">Print discussion guide</button>
-      <button class="secondary" id="printAllLevelsBtn">Print all three levels</button>
+      <div class="tb-more" id="hdrLevels">
+        <button class="secondary" id="printAllLevelsBtn">Print all three levels</button>
+      </div>
+      <button type="button" class="secondary tb-toggle" id="hdrMoreBtn" aria-expanded="false" aria-controls="hdrFile hdrLevels"
+              title="Show the example, clear and print-all-levels buttons">More &#9662;</button>
     </div>
   </div>
 
@@ -1430,6 +1445,14 @@
   }
   renderAll();
 })();
+
+/* Phone header: the More button unfolds the example, clear and print-all-levels buttons (display:none above 600px). */
+document.getElementById('hdrMoreBtn').addEventListener('click', function () {
+  var bar = document.getElementById('hdrBar'), open = bar.classList.toggle('expanded');
+  this.setAttribute('aria-expanded', open ? 'true' : 'false');
+  this.textContent = open ? 'Less ▴' : 'More ▾';
+  this.title = open ? 'Hide the example, clear and print-all-levels buttons' : 'Show the example, clear and print-all-levels buttons';
+});
 </script>
 <script src="../_shared/sw-register.js" defer></script>
 </body>

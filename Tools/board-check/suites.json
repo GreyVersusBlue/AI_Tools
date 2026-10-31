@@ -316,6 +316,7 @@
     "Tools/grade-distribution-visualizer/test/chart-svg-parity.test.mjs",
     "Tools/grade-distribution-visualizer/test/gd-items.test.mjs",
     "Tools/board-check/test/build-index.test.mjs",
+    "Tools/phone-toolbar/test/smoke-phone-toolbar.mjs",
     "Tools/wiki-race/test/seed-logic.test.mjs",
     "Tools/wiki-race/test/corpus-graph.test.mjs",
     "Tools/wiki-race/test/smoke-corpus.mjs",
