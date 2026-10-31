@@ -820,7 +820,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 60 | Path 20 P4, what is left — the way back from Timeline Builder into a map project (needs a route 015 does not accept; Devon's call on where an event's year goes on a map), and the slice sheet in the print preview (the kit's `preview()` does not cover 046's canvas export); time slices themselves shipped in v433 | 046, 015 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 65 | First-run "Load sample data" across the tools that open to an empty form (P15); 059, 072, 049 (v488) and 043, 042, 082, 038, 084 (v489) done; the people-content tools wait on Devon (question below) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 66 | Phone-sized layout pass beyond 005: sideways overflow is gone from all 90 pages at 360 px (v490-v491) and the three toolbars over half a 740 px screen fold behind a More button (011, 032, 054; v498, `test:phone-toolbar`); left: only that a real phone has not been tried | site | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 73 | Task-organized prompt library — grouped by teaching task, each entry loading a full form state | 029 | ½ | | [029 Prompt Builder](#029--prompt-builder) |
 | 74 | Cover page, headers, and page numbers across the merged document | 031 | ½ | | [031 Word Doc Merger](#031--word-doc-merger) |
 | 75 | Printable parent reading report — one page per student, batch-printed for conferences | 033 | ½ | | [033 Silent Reading (SSR) Log Tracker](#033--silent-reading-ssr-log-tracker) |
 | 76 | Chart annotation layer — arrows, text callouts and shaded regions so a printed figure makes an argument | 038 | ½ | | [038 Data Table → Chart Builder](#038--data-table--chart-builder) |
@@ -11671,10 +11670,14 @@ work, and don't promote one without Devon saying so.
   hands it straight to that tool (P7). This would make the AI a content
   supplier for the whole site without any of the tools themselves needing an
   API key or a network call.
-- **A prompt library organized by teaching task**, not by prompt technique —
-  differentiation, translation for families, reading-level adjustment, IEP
-  accommodation ideas, feedback comment banks, parent communication for
-  difficult conversations.
+- **A prompt library organized by teaching task — shipped (v501, AI-31).** A
+  "Prompt library" panel: five task groups, thirteen entries (the page's eight
+  examples filed by task, plus feedback comment bank, reading-level rewrite,
+  accommodation ideas, family-letter translation and a difficult-conversation
+  email), each loading a full form state with `{{blanks}}`; your name, grade,
+  subject and class stay. Data in `Tools/prompt-builder/pb-library.js`. The five
+  new entries' wording is unread by a teacher (see HISTORY). Not built: a user-saved
+  library entry (saved presets already do that) and 030/040/Rubric Builder paste-back.
 - **Prompt versioning and comparison.** Keep v1 and v2 of a prompt with notes
   on what changed and which worked better — the actual skill of prompting,
   made visible.

@@ -111,6 +111,8 @@
     "test:formula-sheet": "node Tools/formula-sheet-builder/test/smoke-allowed.mjs",
     "test:formula-sheet-diagrams": "node Tools/formula-sheet-builder/test/smoke-diagrams.mjs",
     "test:prompt-builder": "node Tools/prompt-builder/test/smoke-placeholders.mjs",
+    "test:prompt-library-core": "node Tools/prompt-builder/test/library-core.test.mjs",
+    "test:prompt-library": "node Tools/prompt-builder/test/smoke-library.mjs",
     "test:review-board": "node Tools/review-game-board/test/smoke-clue-image.mjs && node Tools/review-game-board/test/smoke-clue-audio.mjs && node Tools/review-game-board/test/smoke-question-bank.mjs && node Tools/review-game-board/test/smoke-bank-file.mjs",
     "test:exit-ticket": "node Tools/exit-ticket-generator/test/smoke-response-area.mjs && node Tools/exit-ticket-generator/test/sequence-logic.test.mjs && node Tools/exit-ticket-generator/test/smoke-prompt-sets.mjs",
     "test:writing-prompt-scaffolds-core": "node Tools/writing-prompt-generator/test/smoke-scaffolds-core.mjs",

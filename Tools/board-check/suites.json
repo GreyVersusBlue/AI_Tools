@@ -166,6 +166,8 @@
     "Tools/formula-sheet-builder/test/smoke-allowed.mjs",
     "Tools/formula-sheet-builder/test/smoke-diagrams.mjs",
     "Tools/prompt-builder/test/smoke-placeholders.mjs",
+    "Tools/prompt-builder/test/library-core.test.mjs",
+    "Tools/prompt-builder/test/smoke-library.mjs",
     "Tools/review-game-board/test/smoke-clue-image.mjs",
     "Tools/review-game-board/test/smoke-clue-image-store.mjs",
     "Tools/review-game-board/test/smoke-board-art.mjs",
