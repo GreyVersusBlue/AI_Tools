@@ -1534,7 +1534,7 @@
      "filterTags": "review-game projector social-studies",
      "per": "86",
      "name": "Wiki Race",
-     "pitch": "Give the class one seed phrase and everyone gets the identical Wikipedia race &mdash; same start article, same target &mdash; with a live timer, click count, breadcrumb path, and a verifiable finish code you can check on the projector. Standalone file: works handed to students directly.",
+     "pitch": "Give the class one seed phrase and everyone gets the identical Wikipedia race &mdash; same start article, same target &mdash; with a live timer, click count, breadcrumb path, and a verifiable finish code you can check on the projector. Standalone file: works handed to students directly. Offline? Play the same race on 66 short articles written for the tool.",
      "comment": "Six clicks from Cheese to Charlemagne.",
      "chips": [
       "review-game",
