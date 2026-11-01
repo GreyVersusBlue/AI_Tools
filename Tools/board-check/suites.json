@@ -91,6 +91,7 @@
     "Tools/classroom-timer/test/smoke-board-core.mjs",
     "Tools/classroom-timer/test/smoke-board.mjs",
     "Tools/classroom-timer/test/smoke-engine.mjs",
+    "Tools/classroom-timer/test/engine.test.mjs",
     "Tools/final-grade-checker/grade-math.test.mjs",
     "Tools/final-grade-checker/test/smoke-whatif.mjs",
     "Tools/final-grade-checker/scenario-math.test.mjs",

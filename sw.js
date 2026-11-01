@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v535';
+const CACHE_VERSION = 'v536';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -111,6 +111,7 @@ const SHELL_URLS = [
   "Tools/behavior-points-tracker/term.js",
   "Tools/006-class-roster-hub.html",
   "Tools/classroom-timer/ct-app.js",
+  "Tools/classroom-timer/ct-engine.js",
   "Tools/classroom-timer/ct-board-core.js",
   "Tools/classroom-timer/ct-board.js",
   "Tools/classroom-timer/ct-mirror.js",
@@ -322,6 +323,7 @@ const PRECACHE_URLS = [
   "Tools/classroom-label-maker/speak.html",
   "Tools/classroom-label-maker/clm-pron.js",
   "Tools/classroom-timer/ct-app.js",
+  "Tools/classroom-timer/ct-engine.js",
   "Tools/classroom-timer/ct-board-core.js",
   "Tools/classroom-timer/ct-board.js",
   "Tools/classroom-timer/ct-mirror.js",
