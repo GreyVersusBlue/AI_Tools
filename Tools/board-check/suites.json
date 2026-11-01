@@ -234,6 +234,7 @@
     "Tools/school-calendar/test/school-day.test.mjs",
     "Tools/school-calendar/test/smoke-bell.mjs",
     "Tools/schedule-visualizer/test/smoke-bell-from-calendar.mjs",
+    "Tools/schedule-visualizer/test/smoke-settings-editors.mjs",
     "Tools/school-calendar/test/plan.test.mjs",
     "Tools/school-calendar/test/smoke-plan.mjs",
     "Tools/school-calendar/test/smoke-plan-units.mjs",
