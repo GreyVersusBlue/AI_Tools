@@ -691,6 +691,11 @@ files must be added there too.
   already stored (no new key, no name shown), draws through `ChartSvg`, and prints the reteach list and the "What this says" page
   through the print kit in one `#reteachSheet` under `body.printing-reteach` (the preview's page count is held to Chromium's PDF in
   `test:gd-items-smoke`, port 8578). A new reader of the item table calls `GradeItems.analyze` and does not split the paste itself.
+- **A paired-phone data channel is `_shared/remote-channel.js`** (`RemoteChannel.host(label, opts)` / `.join(offer, opts)`, Path 22 P14, v537):
+  handler lists, JSON in and out, send only while open, over `webrtc-pair.js` (load that first). 010's `cc-remote.js`, 087's `cs-remote.js` and
+  004's `ct-mirror.js` are one call each and keep their own labels and export names; a message's vocabulary stays in the tool. A new wrapper calls
+  it and does not copy the plumbing (`npm run test:remote-channel`). 004's phase arithmetic is `Tools/classroom-timer/ct-engine.js` on `countdown.js`,
+  pinned by `smoke-engine.mjs` and `engine.test.mjs`; overtime stays 004's own.
 - **A WebRTC pairing code is drawn with `QrDraw.fit(canvas, text)`** (`_shared/qr-draw.js`,
   AI-10, v223), which takes the size from the room the canvas's parent has, draws whole px per
   module and never under 4, and puts a note on the page when there is not room. Do not write
