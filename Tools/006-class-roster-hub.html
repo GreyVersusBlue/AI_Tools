@@ -33,6 +33,7 @@
 <script src="../_shared/share.js"></script>
 <script src="../_shared/export.js"></script>
 <script src="../_shared/paste-table.js"></script>
+<script src="../_shared/list-sentence.js"></script>
 <!-- Device-to-device transfer ("Move Everything to Another Device"): manual-
      signaling WebRTC pairing, no server — see _shared/webrtc-pair.js's header
      for why. The QR decoder is shared site-wide; the qrcode.js encoder above
@@ -1651,6 +1652,11 @@
     { re: /^pe-tournament-stations$/, label: 'Tournament Bracket & Station Rotation', href: '021-pe-tournament-stations.html' },
     { re: /^gvb-bracket[:\-]/, label: 'Bracket / Tournament Generator', href: '020-bracket-tournament-generator.html' }
   ];
+  /* The eight tools that call Roster.trackRenames: they keep the student's stable id
+     and move their history to the new name when they next open. The rest match by name. */
+  var RENAME_FOLLOWERS = ['Behavior & Points Tracker', 'Digital Hall Pass / Sign-Out Log', 'Silent Reading (SSR) Log Tracker',
+    'Lab Safety Contract Tracker', 'Lab Group & Role Randomizer', 'Group / Team Generator',
+    'Novel Study / Reading Circles Manager'];
   var OWN_KEYS = [STORE_KEY, ARCHIVE_KEY, RECORDS_KEY, ROSTER_ARCHIVE_KEY, FLAGS_KEY];
 
   function scanDependencies(names) {
@@ -1695,7 +1701,12 @@
       return '<li><a href="' + d.href + '">' + escapeHtml(d.label) + '</a>' +
              '<span class="n">' + d.hits + ' of ' + names.length + ' students</span></li>';
     }).join('');
-    els.depHint.textContent = 'Those tools key their history to the student’s name. Renaming a student here does not rename them there.';
+    var keep = [], byName = [];
+    deps.forEach(function (d) { (RENAME_FOLLOWERS.indexOf(d.label) !== -1 ? keep : byName).push(d.label); });
+    var bits = [];
+    if (keep.length) bits.push('Renaming a student here is followed by ' + ListSentence.join(keep) + ' the next time ' + (keep.length === 1 ? 'it opens' : 'they open') + '.');
+    if (byName.length) bits.push(ListSentence.join(byName) + (byName.length === 1 ? ' keys' : ' key') + ' history to the student’s name, so a rename here does not carry over.');
+    els.depHint.textContent = bits.join(' ');
   }
 
   // ── Confirm modal with dependency context ────────────────────────────────
