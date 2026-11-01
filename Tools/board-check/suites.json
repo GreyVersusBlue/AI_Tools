@@ -235,6 +235,7 @@
     "Tools/school-calendar/test/smoke-week.mjs",
     "Tools/school-calendar/test/smoke-weeks-core.mjs",
     "Tools/school-calendar/test/smoke-weeks.mjs",
+    "Tools/school-calendar/test/smoke-week-start.mjs",
     "Tools/school-calendar/test/school-day.test.mjs",
     "Tools/school-calendar/test/smoke-bell.mjs",
     "Tools/schedule-visualizer/test/smoke-bell-from-calendar.mjs",

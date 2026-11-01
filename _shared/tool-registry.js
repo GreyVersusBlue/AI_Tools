@@ -428,6 +428,7 @@
            that one is declared on the `shared` row. */
         { k: 'scv_calendar_v1' },
         { k: 'scv_view_cols' },
+        { k: 'scv_week_start' },
       ],
       /* 035's settings, for "Import from the Schedule Visualizer" on the bell
          schedules card (Path 9 P1). Read once on a click, never written. */

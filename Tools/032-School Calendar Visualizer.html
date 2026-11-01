@@ -479,6 +479,11 @@
         <option value="2">2 months across</option>
         <option value="compact">Compact (3+ across)</option>
       </select>
+      <select id="weekStart" aria-label="Week starts on" title="Week starts on">
+        <option value="0">Week starts Sunday</option>
+        <option value="1">Week starts Monday</option>
+        <option value="6">Week starts Saturday</option>
+      </select>
     </div>
     <div class="tb-more print-opts" id="tbPrintOpts">
       <span class="print-mode">
@@ -733,6 +738,23 @@ const PATTERNS = ["solid", "diagonal", "dots", "cross", "stripe"];
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const WEEKDAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
+/* --- week starts on ---
+   A per-device display choice in its own key, like months-across below: it is not in the calendar
+   blob (010 reads scv_calendar_v1 raw), so a saved calendar is the same bytes either way. No key
+   means Sunday, which is how every grid has always been laid out. */
+const WEEK_START_KEY = "scv_week_start";
+function loadWeekStart() {
+  try {
+    const v = localStorage.getItem(WEEK_START_KEY);
+    return v === "1" || v === "6" ? Number(v) : 0;
+  } catch (e) { return 0; }
+}
+let weekStart = loadWeekStart();
+/** WEEKDAYS rotated so the chosen day is first. */
+function weekdayOrder() { return WEEKDAYS.slice(weekStart).concat(WEEKDAYS.slice(0, weekStart)); }
+/** Blank cells before the 1st of a month in a grid that starts on weekStart. */
+function leadBlanksFor(y, m) { return (new Date(y, m, 1).getDay() - weekStart + 7) % 7; }
+
 /* --- Path 9 P2: every change is a commit ---
    save() is the one commit point (BACKLOG.md, Path 9 P2, "Recomputing when the calendar
    changes under a plan"): it places every course, compares the dates stamped into the blob
@@ -898,14 +920,14 @@ function renderMonths() {
     monthEl.className = "month";
     monthEl.id = `month-${y}-${m}`;
     monthEl.innerHTML = `<h3>${MONTH_NAMES[m]} ${y}</h3>
-      <div class="weekdays">${WEEKDAYS.map(w => `<div>${w}</div>`).join("")}</div>
+      <div class="weekdays">${weekdayOrder().map(w => `<div>${w}</div>`).join("")}</div>
       <div class="weeks" id="grid-${y}-${m}"></div>`;
     wrap.appendChild(monthEl);
 
     const grid = monthEl.querySelector(".weeks");
     const first = new Date(y, m, 1);
     const daysInMonth = new Date(y, m + 1, 0).getDate();
-    const leadBlanks = first.getDay();
+    const leadBlanks = leadBlanksFor(y, m);
 
     for (let i = 0; i < leadBlanks; i++) {
       grid.appendChild(document.createElement("div")).className = "day empty";
@@ -992,14 +1014,14 @@ function renderYearGrid() {
     const monthEl = document.createElement("div");
     monthEl.className = "ymonth";
     monthEl.innerHTML = `<h4>${MONTH_NAMES[m]} ${y}</h4>
-      <div class="yweekdays">${WEEKDAYS.map(w => `<div>${w[0]}</div>`).join("")}</div>
+      <div class="yweekdays">${weekdayOrder().map(w => `<div>${w[0]}</div>`).join("")}</div>
       <div class="yweeks"></div>`;
     wrap.appendChild(monthEl);
 
     const grid = monthEl.querySelector(".yweeks");
     const first = new Date(y, m, 1);
     const daysInMonth = new Date(y, m + 1, 0).getDate();
-    const leadBlanks = first.getDay();
+    const leadBlanks = leadBlanksFor(y, m);
 
     for (let i = 0; i < leadBlanks; i++) {
       grid.appendChild(document.createElement("div")).className = "yday empty";
@@ -1299,6 +1321,16 @@ document.getElementById("viewCols").addEventListener("change", e => {
   try { localStorage.setItem(VIEW_COLS_KEY, e.target.value); } catch (e2) { /* view-only pref */ }
 });
 applyViewCols(loadViewCols());
+
+document.getElementById("weekStart").value = String(weekStart);
+document.getElementById("weekStart").addEventListener("change", e => {
+  weekStart = Number(e.target.value);
+  try {
+    if (weekStart === 0) localStorage.removeItem(WEEK_START_KEY);
+    else localStorage.setItem(WEEK_START_KEY, String(weekStart));
+  } catch (e2) { /* view-only pref */ }
+  render();
+});
 
 document.getElementById("jumpMonth").addEventListener("change", e => {
   const el = document.getElementById(`month-${e.target.value}`);
@@ -2920,8 +2952,8 @@ function renderWallSheet() {
     const box = wallEl("div", "wmonth");
     box.appendChild(wallEl("h3", "", MONTH_NAMES[m] + " " + y));
     const g = wallEl("div", "wgrid");
-    WEEKDAYS.forEach(w => g.appendChild(wallEl("div", "wdow", w[0])));
-    const lead = new Date(y, m, 1).getDay();
+    weekdayOrder().forEach(w => g.appendChild(wallEl("div", "wdow", w[0])));
+    const lead = leadBlanksFor(y, m);
     for (let i = 0; i < lead; i++) g.appendChild(wallEl("div", "wcell wempty"));
     const days = new Date(y, m + 1, 0).getDate();
     for (let d = 1; d <= days; d++) {
