@@ -221,6 +221,20 @@
   .chaperone-group h3 { font-size: 1rem; margin: 0 0 .3rem; }
   .chaperone-group .phone { font-size: .82rem; color: #333; margin-bottom: .4rem; }
   .headcount-print { background: #fff; width: 8.5in; max-width: 100%; margin: 0 auto; padding: .5in; color: #000; font-family: Georgia, "Times New Roman", serif; }
+  .letter-print, .em-print, .sched-print { background: #fff; width: 8.5in; max-width: 100%; margin: 0 auto; padding: .5in; color: #000; font-family: Georgia, "Times New Roman", serif; }
+  .letter-print h2, .em-print h2, .sched-print h2 { font-size: 1.3rem; margin: 0 0 .8rem; text-align: center; }
+  .letter-print p { font-size: 1rem; line-height: 1.5; margin: 0 0 .8rem; white-space: pre-line; }
+  .em-print h3 { font-size: 1rem; margin: 1rem 0 .3rem; }
+  .em-print table, .sched-print table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  .em-print th, .em-print td, .sched-print th, .sched-print td { border: 1px solid #000; padding: .35rem .5rem; text-align: left; vertical-align: top; }
+  .em-print td.em-fill { height: 1.9rem; }
+  .em-print p { margin: 0 0 .5rem; font-size: .92rem; white-space: pre-line; }
+  .sched-print td.sc-time { width: 7rem; white-space: nowrap; font-weight: 700; }
+  .trip-tag { border: 1.5px solid #000; border-radius: 6px; padding: .5rem .7rem; display: flex; flex-direction: column; justify-content: center; text-align: center; color: #000; background: #fff; font-family: Georgia, "Times New Roman", serif; }
+  .trip-tag .tt-name { font-size: 1.9rem; font-weight: 700; line-height: 1.1; }
+  .trip-tag .tt-trip { font-size: .85rem; margin-top: .3rem; }
+  .trip-tag .tt-group { font-size: .95rem; margin-top: .25rem; font-weight: 700; }
+  .trip-tag .tt-phone { font-size: .8rem; margin-top: .2rem; }
   .hc-group + .hc-group { break-before: page; }
   .hc-group h2 { font-size: 1.25rem; margin: 0 0 .2rem; text-align: center; }
   .hc-group .hc-who { font-size: .9rem; text-align: center; margin: 0 0 .7rem; }
@@ -443,6 +457,29 @@
         <button type="button" class="secondary full" id="previewHeadcountBtn">Preview headcount checklist</button>
         <button type="button" class="secondary full" id="printHeadcountBtn">Print headcount checklist</button>
       </div>
+
+      <div class="card">
+        <div class="card-title">Trip packet</div>
+        <p class="hint">The rest of the paper a trip needs, from the same details. <strong>The wording of the parent
+          letter is a draft that no one but its author has read: read it, and change anything that is not how your
+          school says it, before it goes home.</strong></p>
+        <label for="schedule">Day schedule (one stop to a line)</label>
+        <textarea id="schedule" placeholder="e.g.&#10;8:30 Leave school&#10;10:00 Planetarium show&#10;12:00 Lunch&#10;2:15 Back at school"></textarea>
+        <p class="hint">A line that starts with a time puts the time in its own column. With nothing here, the
+          schedule is the leave and return times above.</p>
+        <button type="button" class="secondary full" id="previewLetterBtn">Preview parent letter</button>
+        <button type="button" class="secondary full" id="printLetterBtn">Print parent letter</button>
+        <button type="button" class="secondary full" id="previewEmergencyBtn">Preview emergency contact sheet</button>
+        <button type="button" class="secondary full" id="printEmergencyBtn">Print emergency contact sheet</button>
+        <p class="hint" style="margin-top:.7rem;">It lists the trip leader and chaperones and leaves lines to write in
+          the venue, the bus and the nearest hospital. It holds nothing about any student&rsquo;s health.</p>
+        <button type="button" class="secondary full" id="previewTagsBtn">Preview name tags</button>
+        <button type="button" class="secondary full" id="printTagsBtn">Print name tags</button>
+        <p class="hint" style="margin-top:.7rem;">A tag shows first name and last initial only, with the group&rsquo;s
+          chaperone and the trip leader&rsquo;s phone, from the class list in the batch tab.</p>
+        <button type="button" class="secondary full" id="previewScheduleBtn">Preview day schedule</button>
+        <button type="button" class="secondary full" id="printScheduleBtn">Print day schedule</button>
+      </div>
     </div>
 
     <div class="preview-wrap">
@@ -523,13 +560,14 @@
     'deleteUndoBar', 'deleteUndoName', 'undoDeleteTripBtn',
     'tripName', 'schoolTeacher', 'destination', 'tripStartDate', 'tripEndDate',
     'departureTime', 'returnTime', 'purpose', 'cost', 'whatToBring',
-    'chaperoneName', 'chaperonePhone', 'emergencyInstructions', 'dueDate', 'downloadIcsBtn',
+    'chaperoneName', 'chaperonePhone', 'emergencyInstructions', 'dueDate', 'schedule', 'downloadIcsBtn',
     'singleFields', 'batchFields', 'blankFields',
     'studentName', 'rosterSelect', 'loadRosterBtn', 'batchNames', 'batchNameCount', 'blankCount',
     'printBtn', 'previewBtn', 'previewArea', 'previewNote', 'deadlineLine', 'collectionWrap',
     'printMissingListBtn', 'printReminderSlipsBtn', 'previewMissingListBtn', 'previewReminderSlipsBtn',
     'scanSlipBtn', 'scanStatus', 'scanCamOverlay', 'scanCamVideo', 'scanCamStatus', 'scanCamClose', 'scanCamCancel',
     'chaperoneRows', 'addChaperoneBtn', 'chaperoneAssignWrap', 'printChaperoneBtn', 'previewChaperoneBtn', 'printHeadcountBtn', 'previewHeadcountBtn',
+    'printLetterBtn', 'previewLetterBtn', 'printEmergencyBtn', 'previewEmergencyBtn', 'printTagsBtn', 'previewTagsBtn', 'printScheduleBtn', 'previewScheduleBtn',
     'secondLang', 'langLayout', 'langOptions', 'untranslatedHint',
     'purposeAlt', 'whatToBringAlt', 'emergencyInstructionsAlt'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -537,7 +575,7 @@
   var FIELD_KEYS = [
     'schoolTeacher', 'destination', 'tripStartDate', 'tripEndDate',
     'departureTime', 'returnTime', 'purpose', 'cost', 'whatToBring',
-    'chaperoneName', 'chaperonePhone', 'emergencyInstructions', 'dueDate'
+    'chaperoneName', 'chaperonePhone', 'emergencyInstructions', 'dueDate', 'schedule'
   ];
 
   var state = null; // { name, mode, studentName, batchNames, blankCount, collected, chaperones, chaperoneAssignments, ...FIELD_KEYS }
@@ -1477,6 +1515,131 @@
       { mode: 'one', name: state.name, sheet: 'page', header: !!(head.title || head.class || head.date), footer: false });
   }
 
+
+  /* ---------- the rest of the trip packet (rank 143): letter, emergency
+     sheet, name tags, day schedule. All four read the trip's own details and
+     the chaperone groups; the schedule is the one new field (`schedule`, a
+     text box, in the trip's record and its share link like the others). None
+     holds a student's health or a parent's number. ---------- */
+  function paragraph(text) { return text ? '<p>' + escapeHtml(text) + '</p>' : ''; }
+
+  /* DRAFT wording: nobody but the tool's author has read it. */
+  function letterPrintHtml() {
+    var when = tripDateLine();
+    var go = 'Our class is going on a field trip' + (state.name ? ': ' + escapeHtml(state.name) : '') +
+      (state.destination ? ' to ' + escapeHtml(state.destination) : '') + (when ? ' on ' + when : '') + '.';
+    var times = '';
+    if (state.departureTime && state.returnTime) times = 'We will leave school at ' + formatTime(state.departureTime) + ' and expect to be back at ' + formatTime(state.returnTime) + '.';
+    else if (state.departureTime) times = 'We will leave school at ' + formatTime(state.departureTime) + '.';
+    else if (state.returnTime) times = 'We expect to be back at school at ' + formatTime(state.returnTime) + '.';
+    var cost = state.cost && state.cost.trim() ? 'The cost is ' + state.cost.trim() + '.' : '';
+    var bring = state.whatToBring && state.whatToBring.trim() ? 'Please send with your child: ' + state.whatToBring.trim() : '';
+    var slip = 'A permission slip comes with this letter. Please sign it and return it' +
+      (state.dueDate ? ' by ' + formatDate(state.dueDate) : '') + '.';
+    var contact = state.chaperoneName
+      ? 'If you have questions, please contact ' + state.chaperoneName + (state.chaperonePhone ? ' at ' + state.chaperonePhone : '') + '.'
+      : (state.chaperonePhone ? 'If you have questions, please call ' + state.chaperonePhone + '.' : '');
+    return '<div class="letter-print paper-sheet">' +
+      '<h2>' + (escapeHtml(state.name) || 'Field Trip') + '</h2>' +
+      '<p>Dear families,</p>' +
+      '<p>' + go + '</p>' +
+      paragraph(state.purpose && state.purpose.trim()) +
+      paragraph(times) + paragraph(cost) + paragraph(bring) + paragraph(slip) +
+      paragraph(state.emergencyInstructions && state.emergencyInstructions.trim()) +
+      paragraph(contact) +
+      '<p>Thank you,<br>' + (escapeHtml(state.schoolTeacher) || '&nbsp;') + '</p>' +
+      '</div>';
+  }
+
+  function emergencyPrintHtml() {
+    var cg = chaperoneGroups();
+    var rows = [];
+    if (state.chaperoneName || state.chaperonePhone) {
+      rows.push('<tr><td>' + escapeHtml(state.chaperoneName) + ' <em>(trip leader)</em></td><td>' + escapeHtml(state.chaperonePhone) + '</td><td></td></tr>');
+    }
+    state.chaperones.forEach(function (c) {
+      var n = c.name.trim();
+      if (!n) return;
+      rows.push('<tr><td>' + escapeHtml(n) + '</td><td>' + escapeHtml(c.phone) + '</td><td>' +
+        (cg.groups[n] ? cg.groups[n].students.length : 0) + '</td></tr>');
+    });
+    var blanks = ['School office', 'Venue contact', 'Bus company / driver', 'Nearest hospital or urgent care']
+      .map(function (l) { return '<tr><td>' + l + '</td><td class="em-fill"></td></tr>'; }).join('');
+    var when = [tripDateLine(), state.departureTime ? 'leave ' + formatTime(state.departureTime) : '', state.returnTime ? 'back ' + formatTime(state.returnTime) : ''].filter(Boolean).join(' &middot; ');
+    return '<div class="em-print paper-sheet">' +
+      '<h2>' + (escapeHtml(state.name) || 'Field Trip') + ' &mdash; Emergency Contacts</h2>' +
+      (state.destination ? '<p><strong>' + escapeHtml(state.destination) + '</strong></p>' : '') +
+      (when ? '<p>' + when + '</p>' : '') +
+      '<h3>Adults on the trip</h3>' +
+      '<table><thead><tr><th>Name</th><th>Phone</th><th>Students</th></tr></thead><tbody>' +
+      (rows.join('') || '<tr><td colspan="3"><em>No trip leader or chaperones added yet</em></td></tr>') + '</tbody></table>' +
+      '<h3>Write in before you go</h3>' +
+      '<table><tbody>' + blanks + '</tbody></table>' +
+      (state.emergencyInstructions && state.emergencyInstructions.trim() ? '<h3>Emergency instructions</h3><p>' + escapeHtml(state.emergencyInstructions.trim()) + '</p>' : '') +
+      '<p style="margin-top:1rem;"><em>Parents&rsquo; numbers and any health information stay with the school&rsquo;s records; none is on this sheet.</em></p>' +
+      '</div>';
+  }
+
+  /* A schedule line that starts with a time ("9:15 Show", "12 pm - Lunch")
+     puts the time in its own column; any other line is all activity. */
+  function scheduleRows() {
+    return String(state.schedule || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) {
+      var m = /^(\d{1,2}(?::\d{2})?(?:\s*[ap]\.?m\.?)?)(?=[\s:–-])\s*(?:[-–:]\s*|\s+)(.+)$/i.exec(l);
+      return m ? { time: m[1], what: m[2] } : { time: '', what: l };
+    });
+  }
+
+  function schedulePrintHtml() {
+    var rows = scheduleRows();
+    if (!rows.length) {
+      if (state.departureTime) rows.push({ time: formatTime(state.departureTime), what: 'Leave school' });
+      if (state.returnTime) rows.push({ time: formatTime(state.returnTime), what: 'Back at school' });
+    }
+    var body = rows.map(function (r) {
+      return '<tr><td class="sc-time">' + escapeHtml(r.time) + '</td><td>' + escapeHtml(r.what) + '</td></tr>';
+    }).join('');
+    return '<div class="sched-print paper-sheet">' +
+      '<h2>' + (escapeHtml(state.name) || 'Field Trip') + ' &mdash; Day Schedule</h2>' +
+      (body ? '<table><thead><tr><th>Time</th><th>What</th></tr></thead><tbody>' + body + '</tbody></table>'
+            : '<p>No schedule yet: type one stop to a line in the Trip packet card, or set the leave and return times.</p>') +
+      '</div>';
+  }
+
+  function buildSheetArea(htmlFn) {
+    var head = PrintKit.setHeader({ title: state.destination, class: state.schoolTeacher, date: tripDateText() });
+    PrintKit.renderSet(printArea, function () { return nodeFrom(htmlFn()); },
+      { mode: 'one', name: state.name, sheet: 'page', header: !!(head.title || head.class || head.date), footer: false });
+  }
+  function buildLetterPrintArea() { buildSheetArea(letterPrintHtml); }
+  function buildEmergencyPrintArea() { buildSheetArea(emergencyPrintHtml); }
+  function buildSchedulePrintArea() { buildSheetArea(schedulePrintHtml); }
+
+  /* "Jordan Smith" -> "Jordan S."; a one-word name stays as typed. */
+  function tagName(n) {
+    var parts = n.trim().split(/\s+/);
+    return parts.length < 2 ? parts[0] : parts[0] + ' ' + parts[parts.length - 1].charAt(0) + '.';
+  }
+  function buildTagsPrintArea() {
+    var names = batchNamesList();
+    if (!names.length) {
+      buildSheetArea(function () { return '<div class="sched-print paper-sheet"><p>No name tags yet: add the class list in the batch tab, then assign each student to a chaperone.</p></div>'; });
+      return;
+    }
+    var cg = chaperoneGroups();
+    var groupOf = {};
+    Object.keys(cg.groups).forEach(function (k) { cg.groups[k].students.forEach(function (s) { groupOf[s] = k; }); });
+    function div(cls, text) { var d = document.createElement('div'); d.className = cls; d.textContent = text; return d; }
+    PrintKit.renderCards(printArea, names, '2x4', function (n) {
+      var card = div('trip-tag', '');
+      card.appendChild(div('tt-name', tagName(n)));
+      if (state.name) card.appendChild(div('tt-trip', state.name));
+      if (groupOf[n]) card.appendChild(div('tt-group', 'Group: ' + groupOf[n]));
+      var lead = [state.chaperoneName, state.chaperonePhone].filter(Boolean).join(' ');
+      if (lead) card.appendChild(div('tt-phone', 'Trip leader: ' + lead));
+      return card;
+    });
+  }
+
   /* A button builds its sheet and prints it. Ctrl+P presses no button, so
      `beforeprint` builds the permission slips then: it used to print whichever
      sheet a button or a preview had built last, and an empty page on a visit
@@ -1500,6 +1663,11 @@
     buildHeadcountPrintArea();
     printBuilt();
   });
+
+  els.printLetterBtn.addEventListener('click', function () { buildLetterPrintArea(); printBuilt(); });
+  els.printEmergencyBtn.addEventListener('click', function () { buildEmergencyPrintArea(); printBuilt(); });
+  els.printScheduleBtn.addEventListener('click', function () { buildSchedulePrintArea(); printBuilt(); });
+  els.printTagsBtn.addEventListener('click', function () { buildTagsPrintArea(); printBuilt(); });
 
   els.printMissingListBtn.addEventListener('click', function () {
     buildMissingListPrintArea();
@@ -1525,6 +1693,10 @@
   }
   wirePreview(els.previewChaperoneBtn, buildChaperonePrintArea, els.printChaperoneBtn);
   wirePreview(els.previewHeadcountBtn, buildHeadcountPrintArea, els.printHeadcountBtn);
+  wirePreview(els.previewLetterBtn, buildLetterPrintArea, els.printLetterBtn);
+  wirePreview(els.previewEmergencyBtn, buildEmergencyPrintArea, els.printEmergencyBtn);
+  wirePreview(els.previewScheduleBtn, buildSchedulePrintArea, els.printScheduleBtn);
+  wirePreview(els.previewTagsBtn, buildTagsPrintArea, els.printTagsBtn);
   wirePreview(els.previewMissingListBtn, buildMissingListPrintArea, els.printMissingListBtn);
   wirePreview(els.previewReminderSlipsBtn, buildReminderPrintArea, els.printReminderSlipsBtn);
   wirePreview(els.previewBtn, function () { buildPrintArea(); }, els.printBtn);

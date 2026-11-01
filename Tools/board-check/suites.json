@@ -416,6 +416,7 @@
     "Tools/testing-accommodations-card-generator/test/smoke-rooms.mjs",
     "Tools/field-trip-permission-slip/test/smoke-print.mjs",
     "Tools/field-trip-permission-slip/test/smoke-headcount.mjs",
+    "Tools/field-trip-permission-slip/test/smoke-packet.mjs",
     "Tools/exit-ticket-generator/test/smoke-print.mjs",
     "Tools/certificate-award-maker/test/smoke-print.mjs",
     "Tools/science-safety-label-maker/test/smoke-print.mjs",

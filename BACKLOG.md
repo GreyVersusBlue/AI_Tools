@@ -836,7 +836,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 138 | The A/B cycle's anchor date shows the other letter when the anchor is a school day after the calendar's first school day (`scv-weeks.js`, `ANCHOR_QUIRK`; fixing it flips every letter of such a saved calendar, so it is a decision, not a quiet fix); cycle labels beyond A and B (needs a field in `scv_calendar_v1`, which 010 reads raw); a "week starts on" setting (none exists; the week print is Monday to Friday). Year-grid badges and the page-per-week print shipped v292 | 032 | ¼ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
 | 139 | "Where is this student right now?"; the published pathfinder | 034 | ½ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
 | 140 | 035 what is left: the page's inline script is still ~2,900 lines (settings and layout persistence, the onboarding and presentation glue; the bell and subjects editors went to `sv-settings-editors.js` at v543), and the snapshot manager went to `sv-snapshots.js` at v550, so the next increment is the autosave/storage-headroom block or the recovery manager. Accessibility routing (Path 11 P3) is built; what is left of it is accessibility-aware *evacuation* routing (a wheelchair user's route out: step-free and no elevator), which turns on P3's Devon question about what counts as an exit, so it stays out | 035 | ½ | | [035 School Layout Visualizer](#035--school-layout-visualizer) |
-| 143 | A second language beyond Spanish (needs a translation a person has checked); the rest of the trip packet (parent letter, emergency sheet, name tags, day schedule) | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
+| 143 | A second language beyond Spanish (needs a translation a person has checked), including for the new parent letter; the phone/projector trip-day view | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
 | 144 | 044 what is left of references by name: the plan saying *which* section the Sub Binder prints. 045's choice is built and saved (v549); 044 reads no key of 045 and the Sub Binder's included-sections object is its own, so the line would need a packet provider or a registry `reads` entry, a Path 10 call | 044 | ¼ | | [044 Sub Plan Builder](#044--sub-plan-builder) |
 | 145 | Time-slice maps; live vectors | 046 | ½ | | [046 Blank Map Generator](#046--blank-map-generator) |
 | 149 | Buzz-in from student devices (deferred); map-question tournaments | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
@@ -12826,7 +12826,17 @@ enough that the result doesn't look like a form.
   chaperone-grouped roster and the missing list are now printable — two of
   the several pieces this item describes. The parent letter, emergency
   sheet, headcount checklist, name tags, and day schedule are still
-  unbuilt.)*
+  unbuilt.)* *(Built since: the headcount checklist, v548, and the parent letter, emergency sheet, name tags and day schedule, v551: see the two lines below.)*
+- **Partly done — 2026-11-01 (AI-31, v551, rank 143). The rest of the trip packet.** A "Trip packet" card: Preview and Print for a
+  **parent letter** (one page, built from the trip's details; every empty field's line is left out), an **emergency contact sheet**
+  (the trip leader and each chaperone with phone and group size, four write-in lines for the school office, venue, bus and nearest
+  hospital, the emergency instructions; nothing about any student's health, no parent numbers), **name tags** (first name and last
+  initial only, the group's chaperone, the trip leader's phone; eight to a page) and a **day schedule** (a new `schedule` field in
+  the trip's record, one stop to a line, a leading time in its own column; with none, the leave and return times). **The letter's
+  wording is an unreviewed draft** and the card says so; **name tags show a last initial, not a surname, on a call made here that
+  Devon may reverse.** No new storage key (`schedule` rides the trip's record and its share link like the other fields).
+  `smoke-packet.mjs` (port 8666, 55 assertions); not printed on paper. Left: a letter in a second language (needs a checked
+  translation), the phone/projector view.
 - **Partly done — 2026-11-01 (AI-31, v548, rank 143). Trip-day headcount checklist.** "Print headcount checklist" (with a
   Preview): one page per chaperone with students, one for anyone with none, a row per student with three tick boxes (left
   school, arrived, back), a Slip column from the collection tracker and a count line; no new data stored

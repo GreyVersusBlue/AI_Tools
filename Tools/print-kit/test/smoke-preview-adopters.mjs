@@ -333,13 +333,17 @@ const TOOLS = [
     ].map(s => ({ ...s, deck: deck(s.n, s.size, s.theme, s.long), name: `${s.n} ${s.size} card${s.n === 1 ? '' : 's'}${s.theme ? ', ' + s.theme : ''}${s.long ? ', one long' : ''}` })),
   },
   {
-    n: '043', file: '043-field-trip-permission-slip.html', piece: '.pk-sheet, .nothing-missing', paper: LETTER, several: true,
+    n: '043', file: '043-field-trip-permission-slip.html', piece: '.pk-sheet, .nothing-missing, .pk-card', paper: LETTER, several: true,
     buttons: [
       { preview: 'previewBtn', print: 'printBtn', what: ' slips', label: 'Preview pages' },
       { preview: 'previewMissingListBtn', print: 'printMissingListBtn', what: ' missing list', label: 'Preview missing list' },
       { preview: 'previewReminderSlipsBtn', print: 'printReminderSlipsBtn', what: ' reminder slips', label: 'Preview reminder slips' },
       { preview: 'previewChaperoneBtn', print: 'printChaperoneBtn', what: ' chaperone groups', label: 'Preview chaperone groups' },
       { preview: 'previewHeadcountBtn', print: 'printHeadcountBtn', what: ' headcount checklist', label: 'Preview headcount checklist' },
+      { preview: 'previewLetterBtn', print: 'printLetterBtn', what: ' parent letter', label: 'Preview parent letter' },
+      { preview: 'previewEmergencyBtn', print: 'printEmergencyBtn', what: ' emergency contact sheet', label: 'Preview emergency contact sheet' },
+      { preview: 'previewTagsBtn', print: 'printTagsBtn', what: ' name tags', label: 'Preview name tags' },
+      { preview: 'previewScheduleBtn', print: 'printScheduleBtn', what: ' day schedule', label: 'Preview day schedule' },
     ],
     store: s => s.state ? [
       ['gvb-field-trip:list', JSON.stringify(['Museum Trip'])],
