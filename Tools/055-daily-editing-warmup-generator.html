@@ -25,6 +25,8 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/paste-table.js"></script>
+<script src="daily-editing-warmup-generator/deg-import.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -95,6 +97,10 @@
   .bank-row .broken-txt { color: var(--err); }
   .bank-row .fixed-txt { color: var(--ok); }
   .bank-list { max-height: 40vh; overflow-y: auto; }
+  .bulk-note { font-size: .84rem; line-height: 1.5; margin: .2rem 0 .5rem; padding: .55rem .7rem; border-radius: 6px;
+    background: var(--info-bg); border: 1px solid var(--info-line); }
+  .bulk-note.error { background: var(--err-bg); border-color: var(--err-line); }
+  .bulk-skipped { margin: 0 0 .6rem 1.2rem; padding: 0; font-size: .82rem; color: var(--muted); }
 
   .sheet-page { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 1.5rem 1.8rem; margin-bottom: 1rem; }
   .sheet-title { font-size: 1.2rem; margin: 0 0 .2rem; }
@@ -209,6 +215,31 @@
       </select>
       <button id="addSentenceBtn">Add to bank</button>
     </div>
+    <div class="card" id="bulkCard">
+      <h2>Add many sentences at once</h2>
+      <p class="hint">One sentence per line: the broken sentence, then the corrected one, with a <b>tab</b> between them (a spreadsheet paste) or a <b>|</b>. A third cell may name the error type (<i>capitalization</i>, <i>punctuation</i>, <i>homophones</i>, <i>subject-verb</i>, <i>run-ons</i>, <i>other</i>). A heading line is fine. Commas are not separators. You will see what would be added before anything is.</p>
+      <label for="bulkText">Pasted sentences</label>
+      <textarea id="bulkText" rows="6" placeholder="me and him is going to the store | He and I are going to the store. | subject-verb"></textarea>
+      <label for="bulkCategory">Error type for lines that do not name one</label>
+      <select id="bulkCategory">
+        <option value="capitalization">Capitalization</option>
+        <option value="punctuation">Punctuation &amp; Apostrophes</option>
+        <option value="homophones">Homophones</option>
+        <option value="subject-verb">Subject-Verb Agreement</option>
+        <option value="run-ons">Run-ons &amp; Comma Splices</option>
+        <option value="other" selected>Other</option>
+      </select>
+      <button type="button" class="secondary" id="bulkCheckBtn">Check the list</button>
+      <div id="bulkPreview" hidden>
+        <p class="bulk-note" id="bulkSummary" aria-live="polite"></p>
+        <ul class="bulk-skipped" id="bulkSkipped"></ul>
+        <div class="btnrow">
+          <button type="button" id="bulkAddBtn">Add to bank</button>
+          <button type="button" class="secondary" id="bulkCancelBtn">Cancel</button>
+        </div>
+      </div>
+      <p class="bulk-note" id="bulkDone" style="display:none;" aria-live="polite"></p>
+    </div>
     <div class="card">
       <h2>Full bank (<span id="bankCount">0</span> sentences)</h2>
       <p class="hint">Built-in sentences can't be deleted, but you can <b>hide</b> the ones that don't fit your class &mdash; hidden sentences stay out of the projector rotation and the worksheet until you unhide them. Your own custom sentences can be edited or deleted.</p>
@@ -261,7 +292,8 @@
   ['displayNum', 'displayBroken', 'displayFixed', 'displayCat', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
    'sheetCount', 'buildSheetBtn', 'printBtn', 'sheetProblems', 'sheetKey', 'categoryFilter',
    'newBroken', 'newFixed', 'newCategory', 'addSentenceBtn', 'bankCount', 'bankList',
-   'shareBtn', 'shareNote'].forEach(function (id) {
+   'shareBtn', 'shareNote', 'bulkText', 'bulkCategory', 'bulkCheckBtn', 'bulkPreview', 'bulkSummary', 'bulkSkipped',
+   'bulkAddBtn', 'bulkCancelBtn', 'bulkDone'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -396,6 +428,78 @@
     renderBank();
   });
 
+  /* ---------- add many at once: daily-editing-warmup-generator/deg-import.js ----------
+     Reads the paste and shows what it would do; custom[] is written only by Add to bank. The same
+     key (deg_custom_v1) and the same record as one typed in the form above, so a bank built this
+     way shares, hides, edits and deletes like any other. */
+  var pending = null;
+  function bulkMessage(text, isError) {
+    els.bulkDone.textContent = text || '';
+    els.bulkDone.style.display = text ? '' : 'none';
+    els.bulkDone.classList.toggle('error', !!isError);
+  }
+  function bulkClosePreview() {
+    pending = null;
+    els.bulkPreview.hidden = true;
+    els.bulkSkipped.textContent = '';
+  }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+  els.bulkCheckBtn.addEventListener('click', function () {
+    bulkMessage('');
+    bulkClosePreview();
+    var cats = Object.keys(CAT_LABELS);
+    var parsed = DegImport.parse(els.bulkText.value, { categories: cats, labels: CAT_LABELS, fallback: els.bulkCategory.value });
+    var p = DegImport.plan(parsed.rows, allSentencesIncludingHidden());
+    if (!parsed.rows.length && !parsed.skipped.length) {
+      bulkMessage('Paste some sentences first, one broken sentence and its correction per line.', true);
+      return;
+    }
+    pending = p.add;
+    var msg = plural(p.add.length, 'sentence', 'sentences') + ' will be added';
+    if (p.repeats.length) msg += '; ' + plural(p.repeats.length, 'is', 'are') + ' already in the bank and left out';
+    if (parsed.skipped.length) msg += '; ' + plural(parsed.skipped.length, 'line', 'lines') + ' could not be read';
+    msg += '.';
+    if (parsed.over) msg += ' The list is cut at ' + DegImport.MAX_ROWS + ' sentences; ' + plural(parsed.over, 'more was', 'more were') + ' left out.';
+    if (parsed.unknown) msg += ' ' + plural(parsed.unknown, 'line names', 'lines name') + ' an error type this tool does not have; ' + (parsed.unknown === 1 ? 'it goes' : 'they go') + ' under the type chosen above.';
+    els.bulkSummary.textContent = msg;
+    els.bulkSummary.classList.toggle('error', !p.add.length);
+    parsed.skipped.slice(0, 5).forEach(function (sk) {
+      var li = document.createElement('li');
+      li.textContent = 'Line ' + sk.line + ': ' + sk.reason + '.';
+      els.bulkSkipped.appendChild(li);
+    });
+    if (parsed.skipped.length > 5) {
+      var more = document.createElement('li');
+      more.textContent = 'and ' + (parsed.skipped.length - 5) + ' more.';
+      els.bulkSkipped.appendChild(more);
+    }
+    els.bulkAddBtn.hidden = !p.add.length;
+    els.bulkAddBtn.textContent = 'Add ' + plural(p.add.length, 'sentence', 'sentences') + ' to the bank';
+    els.bulkPreview.hidden = false;
+  });
+  els.bulkCancelBtn.addEventListener('click', function () { bulkClosePreview(); bulkMessage(''); });
+  els.bulkAddBtn.addEventListener('click', function () {
+    if (!pending || !pending.length) return;
+    var before = custom.length;
+    pending.forEach(function (r) { custom.push({ id: uid(), broken: r.broken, fixed: r.fixed, category: r.category }); });
+    saveCustom();
+    var wrote = false;
+    try { wrote = localStorage.getItem(CUSTOM_KEY) === JSON.stringify(custom); } catch (e) { /* blocked */ }
+    if (!wrote) {
+      custom.length = before;
+      bulkClosePreview();
+      bulkMessage('This browser would not save them (its storage is full or blocked), so nothing was added.', true);
+      return;
+    }
+    var n = pending.length;
+    els.bulkText.value = '';
+    bulkClosePreview();
+    resetOrder();
+    renderDisplay();
+    renderBank();
+    bulkMessage('Added ' + plural(n, 'sentence', 'sentences') + ' to the bank.', false);
+  });
+
   function catOptionsHtml(selected) {
     return Object.keys(CAT_LABELS).map(function (key) {
       return '<option value="' + key + '"' + (key === selected ? ' selected' : '') + '>' + CAT_LABELS[key] + '</option>';
@@ -410,9 +514,9 @@
       if (item.custom) {
         return '<div class="bank-row" data-id="' + item.id + '" style="align-items:flex-start;">' +
           '<span class="btext" style="display:flex;flex-direction:column;gap:.3rem;">' +
-          '<textarea class="edit-broken" style="margin:0;">' + escapeHtml(item.broken) + '</textarea>' +
-          '<textarea class="edit-fixed" style="margin:0;">' + escapeHtml(item.fixed) + '</textarea>' +
-          '<select class="edit-cat">' + catOptionsHtml(item.category) + '</select>' +
+          '<textarea class="edit-broken" aria-label="Broken sentence" style="margin:0;">' + escapeHtml(item.broken) + '</textarea>' +
+          '<textarea class="edit-fixed" aria-label="Corrected sentence" style="margin:0;">' + escapeHtml(item.fixed) + '</textarea>' +
+          '<select class="edit-cat" aria-label="Error type">' + catOptionsHtml(item.category) + '</select>' +
           '</span>' +
           '<button type="button" class="danger small" data-del="' + item.id + '">Delete</button></div>';
       }

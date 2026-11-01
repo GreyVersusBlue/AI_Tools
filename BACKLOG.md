@@ -821,7 +821,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 65 | First-run "Load sample data" across the tools that open to an empty form (P15); 059, 072, 049 (v488) and 043, 042, 082, 038, 084 (v489) done; the people-content tools wait on Devon (question below) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 66 | Phone-sized layout pass beyond 005: sideways overflow is gone from all 90 pages at 360 px (v490-v491) and the three toolbars over half a 740 px screen fold behind a More button (011, 032, 054; v498, `test:phone-toolbar`); left: only that a real phone has not been tried | site | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 86 | Export into Review Game Board — a board built straight from 053’s questions, with categories and points. **Since v269 the sheet’s “Send to Quiz / Review Game Board” row puts a teacher’s own questions in 030’s bank by link (Path 6 P4), up to about fifty; since v297 a longer list is offered as a bank file instead (“Save a bank file instead”), which 030’s “Share the bank” import reads, shows first and only adds from (Devon, 2026-10-07: “yes, the file”). Left: the ready-made board (which categories and points it gets is not decided)** | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
-| 87 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
 | 90 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 96 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
 | 110 | Correlate hall-pass trips with the schedule; a student-initiated request flow | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
@@ -13576,11 +13575,7 @@ this gets without a server" version of this tool.
 
 #### Major Features
 
-- **Import a whole custom bank from a pasted list** (one broken/fixed pair
-  per line, tab- or `|`-separated), matching the bulk-paste pattern already
-  used elsewhere in this toolkit (Staff Directory Builder, Review Game
-  Board's spreadsheet import) — typing sentences one at a time in the Add
-  form doesn't scale past a handful.
+- **Done (rank 87, 2026-11-01, v511).** Import a whole custom bank from a pasted list: an "Add many sentences at once" card on the Sentence bank tab (`daily-editing-warmup-generator/deg-import.js`), tab or `|` between the broken and the fixed sentence, an optional third cell for the error type, a preview before anything is stored. Left out on purpose: a file chooser (paste only), and the 500-sentence cap is a guess.
 - **Difficulty/grade-band tiers** in the built-in bank (elementary vs
   middle vs high school errors), the way Math Fact Drill Sheet Generator
   scales by grade band, instead of one fixed difficulty for everyone.

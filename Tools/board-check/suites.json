@@ -257,6 +257,8 @@
     "Tools/book-tasting-menu-generator/test/smoke-import.mjs",
     "Tools/cognates-false-friends-builder/test/worksheets-logic.test.mjs",
     "Tools/cognates-false-friends-builder/test/smoke-worksheets.mjs",
+    "Tools/daily-editing-warmup-generator/test/import-logic.test.mjs",
+    "Tools/daily-editing-warmup-generator/test/smoke-import.mjs",
     "Tools/civics-role-card-generator/test/smoke-assign-roster.mjs",
     "Tools/qr-scavenger-hunt-builder/test/smoke-staggered-starts.mjs",
     "Tools/qr-scavenger-hunt-builder/test/smoke-paper-mode.mjs",
