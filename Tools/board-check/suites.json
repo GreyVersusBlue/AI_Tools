@@ -148,6 +148,8 @@
     "Tools/vocab-flashcard-generator/test/smoke-printables.mjs",
     "Tools/vocab-flashcard-generator/test/study-logic.test.mjs",
     "Tools/vocab-flashcard-generator/test/smoke-study.mjs",
+    "Tools/vocab-flashcard-generator/test/pictures-logic.test.mjs",
+    "Tools/vocab-flashcard-generator/test/smoke-pictures.mjs",
     "Tools/speak/test/speak.test.mjs",
     "Tools/speak/test/smoke-adopters.mjs",
     "Tools/sample-data/test/smoke-adopters.mjs",

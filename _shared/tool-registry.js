@@ -152,7 +152,7 @@
           namespaces: [
             { ns: 'seating', student: true },
             { ns: 'cam' }, { ns: 'class-screen' }, { ns: 'dbq' }, { ns: 'escape-room' }, { ns: 'fsb' }, { ns: 'htcm' },
-            { ns: 'labels' }, { ns: 'ppg' }, { ns: 'psa' }, { ns: 'rgb' }, { ns: 'scavenger-hunt' }, { ns: 'stviz-trace' }, { ns: 'tlb' },
+            { ns: 'labels' }, { ns: 'ppg' }, { ns: 'psa' }, { ns: 'rgb' }, { ns: 'scavenger-hunt' }, { ns: 'stviz-trace' }, { ns: 'tlb' }, { ns: 'vocab' },
           ] },
       ],
       /* _shared/roster.js writes both of these on a tool's behalf, so a
@@ -1015,6 +1015,10 @@
       file: 'Tools/040-vocab-flashcard-generator.html',
       category: 'ela',
       share: { param: 'deck' },
+      /* A picture on a card (rank 142) is a Blob in `gvb-media` (declared on the
+         site row above) under the `vocab/` namespace, keyed by the term, downscaled
+         to 480 px. No localStorage key holds one and no list record names one;
+         a share link, a list file and Word Lists carry words only. Teacher content. */
       keys: [
         { k: 'gvb-vocab-flashcards:current' },
         { k: 'gvb-vocab-flashcards:list' },

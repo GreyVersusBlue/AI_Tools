@@ -35,6 +35,9 @@
 <script src="vocab-flashcard-generator/vfg-printables.js"></script>
 <script src="vocab-flashcard-generator/vfg-study.js"></script>
 <script src="vocab-flashcard-generator/vfg-store.js"></script>
+<!-- A picture on a card (rank 142): Blobs in the shared gvb-media store under the `vocab` namespace, keyed by the term. -->
+<script src="../_shared/media-db.js"></script>
+<script src="vocab-flashcard-generator/vfg-pictures.js"></script>
 <!-- The site's question bank (Path 12 P2): a question is a card. This page reads
      it with QuestionBank.peek(), which writes nothing, and stores a question
      only from the Send review's Add button. The two data files are the
@@ -173,6 +176,15 @@
   .flash-card .pos { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; font-weight: 700; margin-bottom: .15rem; }
   .flash-card .def { font-size: .82rem; color: var(--muted); margin-top: .3rem; overflow-wrap: break-word; }
   .flash-card .example { font-style: italic; color: var(--muted); margin-top: .2rem; overflow-wrap: break-word; }
+  /* A picture on a card: its size is set in script from the card's share of the page. */
+  .card-pic { display: block; max-width: 100%; object-fit: contain; margin: 0 auto .08in; min-height: 0; flex-shrink: 1; }
+  .pic-list { list-style: none; margin: 0 0 .6rem; padding: 0; max-height: 16rem; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+  .pic-list li { display: flex; gap: .5rem; align-items: center; padding: .3rem .5rem; border-bottom: 1px solid var(--line); }
+  .pic-list li:last-child { border-bottom: 0; }
+  .pic-list .pic-term { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .pic-list img, .pic-list .pic-none { width: 2.4rem; height: 2.4rem; object-fit: cover; border-radius: 4px; border: 1px solid var(--line); flex-shrink: 0; }
+  .pic-list .pic-none { background: var(--card); }
+  .pic-list button { width: auto; margin: 0; }
 
   .wordwall-card {
     border: 1px dashed #999; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -193,6 +205,7 @@
   .fold-half .pos { font-size: .64rem; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; font-weight: 700; margin-bottom: .1rem; }
   .fold-half .def { color: var(--muted); overflow-wrap: break-word; }
   .fold-half .example { font-style: italic; color: var(--muted); margin-top: .15rem; overflow-wrap: break-word; }
+  .fold-term-text { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; max-width: 100%; }
   .fold-line { border-top: 1px dashed #888; margin: 0 0.15in; flex-shrink: 0; }
   .fold-def-inner { transform: rotate(180deg); display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; }
 
@@ -332,6 +345,15 @@
             <button type="button" class="secondary" id="addFromListBtn" style="width:100%;margin:0;">Add words to this list</button>
           </div>
         </div>
+      </div>
+
+      <div class="card" id="picCard">
+        <h2>Pictures</h2>
+        <p class="hint" style="margin-top:0;">Give a word a picture and it prints above the word on its flashcard, foldable card and word-wall card. Pictures are kept in this browser only, shrunk to fit a card, and belong to the word, so the same word in another list shows the same picture. A shared link, a list file and Word Lists carry the words, not the pictures.</p>
+        <ul class="pic-list" id="picList" aria-label="Words and their pictures"></ul>
+        <input type="file" id="picFile" accept="image/png,image/jpeg,image/gif,image/webp" hidden aria-label="Picture file">
+        <p class="bank-status" id="picStatus" role="status"></p>
+        <button type="button" class="secondary" id="picClearBtn" hidden>Remove all pictures</button>
       </div>
 
       <div class="card">
@@ -636,7 +658,8 @@
    'bankCard','bankSource','bankSourceNote','bankUnit','bankList','bankRefused','bankAllBtn','bankAddBtn','bankStatus',
    'bankSendBtn','bankReview','bankReviewText','bankReviewList','bankConfirmBtn','bankCancelBtn','bankSendStatus',
    'hubList','hubPaste','hubPasteName','hubReadBtn','hubFileBtn','hubFile','hubReview','hubReviewText','hubReviewList',
-   'hubConfirmBtn','hubCancelBtn','hubStatus','hubJsonBtn','hubCsvBtn','hubTemplateBtn'
+   'hubConfirmBtn','hubCancelBtn','hubStatus','hubJsonBtn','hubCsvBtn','hubTemplateBtn',
+   'picCard','picList','picFile','picStatus','picClearBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   // state: { name, words: "raw textarea text", mode, flashCols, flashRows, wallPerPage, wallShowDef,
@@ -764,6 +787,69 @@
   }
   function sized(n, rem) { n.style.fontSize = rem + 'rem'; return n; }
 
+  /* ---------- pictures (rank 142) ----------
+     `pics` is { key: data URL }, loaded from the media store at boot and after each change; the
+     card builders read it synchronously through picEl(). Nothing about a picture is in a list's
+     record, a share link or a file. */
+  var picStore = VfgPictures.create(window.MediaDB);
+  var pics = {};
+  var picTarget = '';
+  var picTerms = '';
+
+  /** The largest a picture may be on a card, in inches, by how many cards share the page. */
+  function flashPicIn(perPage) { return perPage <= 2 ? 2.2 : (perPage <= 4 ? 1.3 : (perPage <= 6 ? 1 : 0.7)); }
+
+  function picEl(term, maxIn) {
+    var url = VfgPictures.urlFor(pics, term);
+    if (!url) return null;
+    var img = el('img', 'card-pic');
+    img.alt = '';
+    img.src = url;
+    img.style.maxHeight = maxIn + 'in';
+    return img;
+  }
+
+  function picSay(msg, bad) {
+    els.picStatus.textContent = msg || '';
+    els.picStatus.style.color = bad ? 'var(--err, #b00020)' : '';
+  }
+
+  function renderPictures(items) {
+    var terms = VfgPictures.termsOf(items);
+    var sig = terms.join('\n') + '\u0000' + Object.keys(pics).sort().join('\n');
+    if (sig === picTerms) return;
+    picTerms = sig;
+    els.picList.textContent = '';
+    if (!terms.length) { var none = el('li', '', 'Add some words to give them pictures.'); els.picList.appendChild(none); }
+    terms.forEach(function (term) {
+      var li = el('li');
+      var url = VfgPictures.urlFor(pics, term);
+      if (url) { var im = el('img'); im.src = url; im.alt = ''; li.appendChild(im); } else li.appendChild(el('span', 'pic-none'));
+      li.appendChild(el('span', 'pic-term', term));
+      var add = el('button', 'secondary', url ? 'Change' : 'Add picture');
+      add.type = 'button';
+      add.setAttribute('aria-label', (url ? 'Change the picture for ' : 'Add a picture for ') + term);
+      add.addEventListener('click', function () { picTarget = term; els.picFile.value = ''; els.picFile.click(); });
+      li.appendChild(add);
+      if (url) {
+        var rm = el('button', 'secondary', 'Remove');
+        rm.type = 'button';
+        rm.setAttribute('aria-label', 'Remove the picture for ' + term);
+        rm.addEventListener('click', function () {
+          picStore.remove(term).then(refreshPictures, function () {}).then(function () { picSay('Removed the picture for ' + term + '.'); });
+        });
+        li.appendChild(rm);
+      }
+      els.picList.appendChild(li);
+    });
+    els.picClearBtn.hidden = !Object.keys(pics).length;
+  }
+
+  /** Reload the pictures from the store, then draw the preview and the list again. */
+  function refreshPictures() {
+    return picStore.load().then(function (map) { pics = map; picTerms = ''; renderPreview(); });
+  }
+
   /* ---------- the cards ----------
      One card is a node built with textContent. A mode's cards are described
      once, by a *Spec() function ({ cards, cols, perPage, build }), and
@@ -772,6 +858,8 @@
   function frontCard(item) {
     if (!item) return el('div', guideClass('flash-card blank'));
     var card = el('div', guideClass('flash-card'));
+    var pic = picEl(item.term, flashPicIn(state.flashCols * state.flashRows));
+    if (pic) card.appendChild(pic);
     card.appendChild(el('div', 'term', item.term));
     if (item.pronunciation) card.appendChild(el('div', 'pron', item.pronunciation));
     return card;
@@ -826,7 +914,13 @@
     var allowance = Math.max(15, Math.round(120 / Math.sqrt(perPage)));
     var card = el('div', guideClass('fold-card'));
     var top = el('div', 'fold-half fold-term');
-    top.appendChild(el('div', 'term', item.term));
+    var foldPic = picEl(item.term, Math.max(0.4, flashPicIn(perPage) / 2));
+    if (foldPic) {
+      var topText = el('div', 'fold-term-text');
+      topText.appendChild(foldPic);
+      topText.appendChild(el('div', 'term', item.term));
+      top.appendChild(topText);
+    } else top.appendChild(el('div', 'term', item.term));
     if (item.pronunciation) top.appendChild(el('div', 'pron', item.pronunciation));
     var inner = el('div', 'fold-def-inner');
     if (item.partOfSpeech) inner.appendChild(el('div', 'pos', item.partOfSpeech));
@@ -886,6 +980,8 @@
   function wallCard(item) {
     var card = el('div', guideClass('wordwall-card'));
     if (!item) return card;
+    var wallPic = picEl(item.term, state.wallPerPage === 1 ? 4.2 : (state.wallPerPage === 2 ? 2.6 : 1.5));
+    if (wallPic) card.appendChild(wallPic);
     card.appendChild(el('div', 'term', item.term));
     if (item.pronunciation) card.appendChild(el('div', 'pron', item.pronunciation));
     if (state.wallShowDef && item.definition) {
@@ -1483,6 +1579,7 @@
     refreshSwitcher();
 
     var items = currentItems();
+    renderPictures(items);
     els.sheetView.innerHTML = '';
 
     if (!items.length) {
@@ -2394,6 +2491,20 @@
       newList('New List');
     }
   }
+  els.picFile.addEventListener('change', function () {
+    var file = els.picFile.files && els.picFile.files[0];
+    var term = picTarget;
+    if (!file || !term) return;
+    picSay('Adding the picture for ' + term + '\u2026');
+    picStore.add(term, file).then(refreshPictures).then(function () {
+      picSay('Added a picture for ' + term + '.');
+    }, function (err) { picSay((err && err.message) || 'That file could not be used as a picture.', true); });
+  });
+  els.picClearBtn.addEventListener('click', function () {
+    if (!window.confirm('Remove every picture from the cards? The words stay.')) return;
+    picStore.removeAll().then(refreshPictures).then(function () { picSay('Removed every picture.'); }, function () {});
+  });
+  picStore.load().then(function (map) { if (Object.keys(map).length) { pics = map; picTerms = ''; renderPreview(); } });
   renderBank();
 })();
 </script>

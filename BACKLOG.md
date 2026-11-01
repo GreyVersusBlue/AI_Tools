@@ -837,7 +837,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 138 | The A/B cycle's anchor date shows the other letter when the anchor is a school day after the calendar's first school day (`scv-weeks.js`, `ANCHOR_QUIRK`; fixing it flips every letter of such a saved calendar, so it is a decision, not a quiet fix); cycle labels beyond A and B (needs a field in `scv_calendar_v1`, which 010 reads raw); a "week starts on" setting (none exists; the week print is Monday to Friday). Year-grid badges and the page-per-week print shipped v292 | 032 | ¼ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
 | 139 | "Where is this student right now?"; the published pathfinder | 034 | ½ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
 | 140 | 035 what is left: the page's inline script is still ~2,900 lines (settings and layout persistence, snapshots, the onboarding and presentation glue; the bell and subjects editors went to `sv-settings-editors.js` at v543), so the next increment is the snapshot manager (`saveSnapshot` … `initSnapshotManager`) or the autosave/storage-headroom block. Accessibility routing (Path 11 P3) is built; what is left of it is accessibility-aware *evacuation* routing (a wheelchair user's route out: step-free and no elevator), which turns on P3's Devon question about what counts as an exit, so it stays out | 035 | ½ | | [035 School Layout Visualizer](#035--school-layout-visualizer) |
-| 142 | Image on a card; the Frayer model page | 040 | ½ | | [040 Vocabulary Flashcard & Word Wall Generator](#040--vocabulary-flashcard--word-wall-generator) |
 | 143 | A second language version; trip-day rosters | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
 | 144 | Seating chart and roster references by name | 044 | ½ | | [044 Sub Plan Builder](#044--sub-plan-builder) |
 | 145 | Time-slice maps; live vectors | 046 | ½ | | [046 Blank Map Generator](#046--blank-map-generator) |
@@ -12552,11 +12551,12 @@ work, and don't promote one without Devon saying so.
 
 #### Quick Wins
 
-- **Skipped — deferred.** **Image on a card.** For vocabulary — especially language and science
-  vocabulary — a picture is often the definition. Requires downscaling and a
-  storage warning (P12). *(Not part of this round's scoped list. The
-  downscale-on-import pattern already exists in `041-formula-sheet-builder.html`
-  — `readAndDownscaleImage` — and would be the template to copy.)*
+- **Done — 2026-11-01 (AI-31, v544, rank 142). Image on a card.** One picture per word, from the new Pictures
+  card (Add picture, Change, Remove, Remove all): a Blob in `gvb-media` under the `vocab` namespace, keyed by the
+  normalised term (`vfg-pictures.js`), downscaled to 480 px; above the word on the flashcard front, the foldable card
+  and the word-wall card, not on the definition side. No localStorage key, no field on a list's record, and
+  **no picture in a share link, a list file or Word Lists** (the card says so). Left: a picture on the self-quiz and the
+  printables (word search, bingo, matching); a picture in a backup file is 009's `gvb-media` row, not tested here.
 
 #### Major Features
 

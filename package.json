@@ -412,6 +412,8 @@
     "test:sample-data": "node Tools/sample-data/test/smoke-adopters.mjs",
     "test:label-pron": "node Tools/classroom-label-maker/test/smoke-pron.mjs",
     "test:vocab-study": "node Tools/vocab-flashcard-generator/test/smoke-study.mjs",
+    "test:vocab-pictures-logic": "node Tools/vocab-flashcard-generator/test/pictures-logic.test.mjs",
+    "test:vocab-pictures": "node Tools/vocab-flashcard-generator/test/smoke-pictures.mjs",
     "test:vocab-print": "node Tools/vocab-flashcard-generator/test/smoke-print.mjs",
     "test:vocab-imposition": "node Tools/vocab-flashcard-generator/test/smoke-imposition.mjs",
     "test:vocab-bank-logic": "node Tools/vocab-flashcard-generator/test/bank-logic.test.mjs",
