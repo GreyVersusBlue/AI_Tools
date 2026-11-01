@@ -832,7 +832,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 120 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
 | 126 | Hints with a time penalty; branching and station images | 018 | ½ | | [018 QR Scavenger Hunt Builder](#018--qr-scavenger-hunt-builder) |
 | 127 | Attempt limits and feedback; a non-QR fallback | 019 | ½ | | [019 Digital Escape Room / Puzzle Lock Builder](#019--digital-escape-room--puzzle-lock-builder) |
-| 129 | Uneven groups and stations; a shared rotation engine | 021 | ½ | | [021 Tournament Bracket & Station Rotation (PE)](#021--tournament-bracket--station-rotation-pe) |
 | 131 | Name and date lines on the slips; response collection questions | 023 | ½ | | [023 Exit Ticket / Bell Ringer Generator](#023--exit-ticket--bell-ringer-generator) |
 | 135 | Discussion assessment; role recency across a book | 027 | ½ | | [027 Novel Study / Reading Circles Manager](#027--novel-study--reading-circles-manager) |
 | 136 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
@@ -11190,11 +11189,16 @@ work, and don't promote one without Devon saying so.
 
 #### Quick Wins
 
-- **Skipped — partial, Round 4.** **Uneven groups and stations.** More groups than stations, or a station that
-  takes two rotations — currently the schedule assumes a clean cycle. *(More/
-  fewer groups than stations already wraps via `computeAssignment`; a station
-  taking two full rotations, or locking a group out of the cycle, is still
-  unmodeled.)*
+- **Done (v540) —** **Uneven groups and stations.** A station takes one, two or three rotations ("Rotations
+  here", saved as an optional `turns` on the station): it holds that many slots of the cycle, a group stays
+  through them and the station holds that many groups at once, and the printed schedule runs the whole cycle.
+  A group can *Sit out* (an optional `sitOut` on the group): it is left out of the cycle, shown in a "Sitting
+  out" tile on the stage and under the printed table. A line under the stations says how long the cycle is
+  and whether there are more groups than places or the reverse. More or fewer groups than stations already
+  wrapped through `computeAssignment`. Done in the page on top of `Rotation.computeAssignment`, unchanged
+  (`test:rotation-parity` stays at 64,000 / 0), so `_shared/` is untouched; a unit saved before has neither
+  field and draws as it did. Suite `test:pe-uneven` (port 8657; five mutants caught). Not done: the remote
+  window's tiles do not show who sits out, and 069 and 017 do not have either option.
 - **Print a wall-sized station card**, one per page, with the activity
   instructions and a diagram space.
 

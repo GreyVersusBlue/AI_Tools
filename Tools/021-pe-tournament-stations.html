@@ -378,6 +378,7 @@
         <button class="secondary" id="splitBtn" type="button">Randomly split into groups</button>
       </div>
     </div>
+    <p class="hint" id="cycleHint" role="status" aria-live="polite"></p>
     <div class="card-title" style="margin-top:.9rem;"><span>Groups</span><button class="link-btn" id="addGroupBtn" type="button">+ Add group</button></div>
     <p class="hint">Edit names/members directly, or use the random split above to fill this in. Members are comma-separated.</p>
     <div id="groupsList"></div>
@@ -519,9 +520,10 @@
   var STORAGE_KEY = 'pe-tournament-stations';
   var TICK_MS = 250;
 
+  var MAX_TURNS = 3;
   var els = {};
   ['toolbar', 'projectSwitch', 'newProjectBtn', 'deleteProjectBtn', 'undoBtn', 'printBtn', 'printCardsBtn',
-   'projectName', 'addStationBtn', 'stationsList', 'templateSelect', 'loadTemplateBtn', 'templateHint',
+   'projectName', 'cycleHint', 'addStationBtn', 'stationsList', 'templateSelect', 'loadTemplateBtn', 'templateHint',
    'rosterHubSelect', 'rosterHubLoadBtn', 'rosterText', 'splitCount', 'splitBtn', 'addGroupBtn', 'groupsList',
    'rotMinutes', 'rotSeconds', 'soundToggle', 'hiContrastToggle',
    'stage', 'stageSub', 'stageTime', 'stageStatus', 'startBtn', 'pauseBtn', 'resumeBtn', 'rotateNowBtn', 'resetRotationBtn', 'fullscreenBtn', 'openRemoteBtn', 'stationTiles',
@@ -646,9 +648,10 @@
       if (typeof st.scoreUnit !== 'string') st.scoreUnit = '';
       st.isRest = !!st.isRest;
       if (st.isRest) st.scored = false; // rest/water stations never carry a score, even if old data set both flags
+      if (st.turns !== undefined) { var tn = Math.floor(Number(st.turns)); if (tn >= 2 && tn <= MAX_TURNS) st.turns = tn; else delete st.turns; } // absent means one rotation, as every saved unit before v540
     });
     if (!Array.isArray(s.groups)) s.groups = [];
-    s.groups.forEach(function (g) { if (!g.id) g.id = uid('grp'); if (typeof g.name !== 'string') g.name = ''; if (typeof g.members !== 'string') g.members = ''; });
+    s.groups.forEach(function (g) { if (!g.id) g.id = uid('grp'); if (typeof g.name !== 'string') g.name = ''; if (typeof g.members !== 'string') g.members = ''; if (g.sitOut) g.sitOut = true; else delete g.sitOut; });
     if (!s.rotation || typeof s.rotation !== 'object') s.rotation = {};
     var r = s.rotation;
     if (typeof r.minutes !== 'number') r.minutes = 4;
@@ -731,6 +734,8 @@
         '<div class="row-line station-meta-row">' +
         '<div class="grow"><input type="text" class="st-equipment" placeholder="Equipment (optional)" value="' + escapeAttr(st.equipment) + '"></div>' +
         '<label class="checkline station-rest-check"><input type="checkbox" class="st-rest"' + (st.isRest ? ' checked' : '') + '> Rest / water station</label>' +
+        '<label class="checkline station-turns-check">Rotations here <select class="st-turns" aria-label="Rotations a group stays at ' + escapeAttr(st.name || ('station ' + (i + 1))) + '">' +
+          [1, 2, 3].map(function (n) { return '<option value="' + n + '"' + (turnsOf(st) === n ? ' selected' : '') + '>' + (n === 1 ? '1 (the usual)' : n + ' (stays ' + n + ' rotations)') + '</option>'; }).join('') + '</select></label>' +
         (st.isRest ? '' :
           '<label class="checkline station-scored-check"><input type="checkbox" class="st-scored"' + (st.scored ? ' checked' : '') + '> Scored station</label>' +
           '<div style="flex:0 0 9rem;"><input type="text" class="st-unit" placeholder="unit e.g. reps" value="' + escapeAttr(st.scoreUnit) + '"' + (st.scored ? '' : ' disabled') + '></div>') +
@@ -762,6 +767,12 @@
       var unitInput = row.querySelector('.st-unit');
       if (unitInput) unitInput.disabled = !st.scored;
       save();
+      renderStage();
+    } else if (e.target.classList.contains('st-turns')) {
+      var tv = parseInt(e.target.value, 10);
+      if (tv >= 2 && tv <= MAX_TURNS) st.turns = tv; else delete st.turns;
+      save();
+      renderCycleHint();
       renderStage();
     } else if (e.target.classList.contains('st-rest')) {
       st.isRest = e.target.checked;
@@ -820,6 +831,7 @@
       return '<div class="row-line" data-id="' + escapeAttr(g.id) + '">' +
         '<div class="grow" style="flex:0 0 26%;"><input type="text" class="grp-name" placeholder="Group ' + (i + 1) + '" value="' + escapeAttr(g.name) + '"></div>' +
         '<div class="grow"><input type="text" class="grp-members" placeholder="Members, comma-separated" value="' + escapeAttr(g.members) + '"></div>' +
+        '<label class="checkline group-sit-check" title="Leave this group out of the rotation for now"><input type="checkbox" class="grp-sit"' + (g.sitOut ? ' checked' : '') + ' aria-label="Sit out: ' + escapeAttr(g.name || ('group ' + (i + 1))) + '"> Sit out</label>' +
         '<button type="button" class="remove-row-btn" data-remove-group="' + escapeAttr(g.id) + '" title="Remove group">&#10005;</button>' +
         '</div>';
     }).join('');
@@ -833,6 +845,16 @@
     if (e.target.classList.contains('grp-name')) g.name = e.target.value;
     else if (e.target.classList.contains('grp-members')) g.members = e.target.value;
     save();
+    renderStage();
+  });
+  els.groupsList.addEventListener('change', function (e) {
+    if (!e.target.classList.contains('grp-sit')) return;
+    var row = e.target.closest('.row-line');
+    var g = row && state.groups.filter(function (x) { return x.id === row.dataset.id; })[0];
+    if (!g) return;
+    if (e.target.checked) g.sitOut = true; else delete g.sitOut;
+    save();
+    renderCycleHint();
     renderStage();
   });
   els.groupsList.addEventListener('click', function (e) {
@@ -969,9 +991,26 @@
   });
 
   /* ---------- rotation timer / stage ---------- */
+  /* Uneven groups and stations (v540). The engine puts group gi at slot (gi + count) mod S. A station that takes
+     two (or three) rotations holds that many slots in a row, so a group stays through them and the station holds
+     that many groups at once; a group that sits out is left out of the cycle and shown beside it. With no
+     station's `turns` set and no group sitting out, every slot is a station and the map is the engine's own. */
+  function turnsOf(st) { return st.turns >= 2 ? st.turns : 1; }
+  function cycleSlots() {
+    var slots = [];
+    state.stations.forEach(function (st, i) { for (var k = 0; k < turnsOf(st); k++) slots.push(i); });
+    return slots;
+  }
+  function activeGroups() { return state.groups.filter(function (g) { return !g.sitOut; }); }
+  function sitOutGroups() { return state.groups.filter(function (g) { return g.sitOut; }); }
   function computeAssignment(countOverride) {
     var baseCount = typeof countOverride === 'number' ? countOverride : state.rotation.count;
-    return Rotation.computeAssignment(state.groups, state.stations.length, baseCount);
+    var slots = cycleSlots();
+    var map = state.stations.map(function () { return []; });
+    Rotation.computeAssignment(activeGroups(), slots.length, baseCount).forEach(function (gs, k) {
+      gs.forEach(function (g) { map[slots[k]].push(g); });
+    });
+    return map;
   }
 
   function updateStageButtons() {
@@ -981,10 +1020,32 @@
     els.resumeBtn.hidden = !r.paused;
   }
 
+  function sitOutTile() {
+    var out = sitOutGroups();
+    if (!out.length) return '';
+    return '<div class="station-tile is-rest"><span class="rest-badge">Not in the rotation</span><h3>Sitting out</h3><div class="activity">&nbsp;</div><div class="groups-here">' +
+      out.map(function (g) { return '<span class="station-chip">' + escapeHtml(g.name || 'Group') + '</span>'; }).join('') + '</div></div>';
+  }
+
+  /* One line under the stations: how many rotations until the schedule repeats, and who is sitting out. */
+  function renderCycleHint() {
+    var slots = cycleSlots().length;
+    var out = sitOutGroups().length;
+    var parts = [];
+    if (state.stations.some(function (st) { return turnsOf(st) > 1; })) parts.push('The schedule repeats every ' + slots + ' rotations (a station that takes more than one counts once for each).');
+    if (out) parts.push(out + ' group' + (out === 1 ? ' is' : 's are') + ' sitting out and not in the rotation.');
+    if (state.stations.length && slots !== activeGroups().length && activeGroups().length) {
+      var diff = activeGroups().length - slots;
+      parts.push(diff > 0 ? 'There are ' + diff + ' more group' + (diff === 1 ? '' : 's') + ' than places, so some stations hold two groups at once.' : 'There are ' + (-diff) + ' more place' + (diff === -1 ? '' : 's') + ' than groups, so some stations are empty each rotation.');
+    }
+    els.cycleHint.textContent = parts.join(' ');
+  }
+
   function renderStage() {
+    renderCycleHint();
     els.stageSub.textContent = 'Rotation ' + (state.rotation.count + 1);
     var map = computeAssignment();
-    var nextMap = state.stations.length > 1 ? computeAssignment(state.rotation.count + 1) : map;
+    var nextMap = cycleSlots().length > 1 ? computeAssignment(state.rotation.count + 1) : map;
     if (!state.stations.length) {
       els.stationTiles.innerHTML = '<p class="empty-hint" style="color:#e8e6de;">Add stations above to start a rotation.</p>';
     } else {
@@ -994,13 +1055,13 @@
         var chips = here.length
           ? '<div class="groups-here">' + here.map(function (g) { return '<span class="station-chip">' + escapeHtml(g.name || 'Group') + '</span>'; }).join('') + '</div>'
           : '<div class="none-here">No group here right now</div>';
-        var nextLine = state.stations.length > 1
+        var nextLine = cycleSlots().length > 1
           ? '<div class="next-line">Next: <strong>' + (upNext.length ? upNext.map(function (g) { return escapeHtml(g.name || 'Group'); }).join(', ') : '&mdash;') + '</strong></div>'
           : '';
         var restBadge = st.isRest ? '<span class="rest-badge">Rest / Water</span>' : '';
         return '<div class="station-tile' + (st.isRest ? ' is-rest' : '') + '">' + restBadge + '<h3>' + escapeHtml(st.name || ('Station ' + (i + 1))) + '</h3>' +
           '<div class="activity">' + (st.activity ? escapeHtml(st.activity) : '&nbsp;') + '</div>' + chips + nextLine + '</div>';
-      }).join('');
+      }).join('') + sitOutTile();
     }
     updateStageButtons();
     tickDisplay();
@@ -1180,7 +1241,7 @@
 
   function buildStateMessage() {
     var map = computeAssignment();
-    var nextMap = state.stations.length > 1 ? computeAssignment(state.rotation.count + 1) : map;
+    var nextMap = cycleSlots().length > 1 ? computeAssignment(state.rotation.count + 1) : map;
     var tiles = state.stations.map(function (st, i) {
       return {
         name: st.name || ('Station ' + (i + 1)),
@@ -1680,21 +1741,21 @@
   function buildPrintSchedule() {
     var s = state.stations.length;
     if (!s) return '<p>No stations set up.</p>';
-    var rounds = s; // assignment pattern repeats every `s` rotations
+    var rounds = cycleSlots().length; // assignment pattern repeats every cycle (a station of two rotations counts twice)
     var savedCount = state.rotation.count;
     var html = '<table><thead><tr><th>Rotation</th>' +
       state.stations.map(function (st) { return '<th>' + escapeHtml(st.name || 'Station') + (st.activity ? ' &mdash; ' + escapeHtml(st.activity) : '') + '</th>'; }).join('') +
       '</tr></thead><tbody>';
     for (var round = 0; round < rounds; round++) {
       var count = round;
-      var map = [];
-      for (var i = 0; i < s; i++) map.push([]);
-      state.groups.forEach(function (g, gi) { map[(gi + count) % s].push(g.name || 'Group'); });
+      var map = computeAssignment(count).map(function (gs) { return gs.map(function (g) { return g.name || 'Group'; }); });
       html += '<tr><td>' + (round + 1) + '</td>' + map.map(function (names) {
         return '<td>' + (names.length ? names.map(escapeHtml).join(', ') : '&mdash;') + '</td>';
       }).join('') + '</tr>';
     }
     html += '</tbody></table>';
+    var sit = sitOutGroups();
+    if (sit.length) html += '<p>Sitting out: ' + sit.map(function (g) { return escapeHtml(g.name || 'Group'); }).join(', ') + '</p>';
     return html;
   }
 

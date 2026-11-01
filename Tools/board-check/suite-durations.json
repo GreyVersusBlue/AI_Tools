@@ -385,6 +385,7 @@
     "Tools/bracket-tournament-generator/test/smoke-display.mjs": 60,
     "Tools/pe-tournament-stations/test/rotation.test.mjs": 2,
     "Tools/pe-tournament-stations/test/rotation-parity.test.mjs": 3,
+    "Tools/pe-tournament-stations/test/smoke-uneven.mjs": 25,
     "Tools/gallery-walk-qr/test/rotation-parity.test.mjs": 3,
     "Tools/review-game-board/test/smoke-named-sets.mjs": 24,
     "Tools/question-bank/test/smoke-seed-sets.mjs": 22,

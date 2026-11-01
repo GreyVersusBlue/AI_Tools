@@ -9,6 +9,21 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-31: 021 uneven groups and stations, rank 129 (2026-11-01, v540)
+
+The row's "more or fewer groups than stations" already worked (the engine wraps). What was unmodelled was a station that takes
+two rotations and a group that is out of the cycle. Both are optional fields (`turns` 2 or 3 on a station, `sitOut` on a group),
+absent on every unit saved before. The rule: a station holds `turns` consecutive slots of the cycle, groups are dealt to slots by
+the engine's own `computeAssignment(active groups, slot count, count)` and folded back to stations, so with neither option set the
+fold is the identity and `_shared/rotation.js` is not touched (`test:rotation-parity` unchanged). **Call made:** a two-rotation
+station holds two groups at once, one in each of its rotations, rather than idling the others while a group stays on; it is the
+reading that keeps every group moving and keeps `groups == slots` a clean cycle. Reversible by changing `cycleSlots()` and nothing
+else. The printed schedule now runs one row per slot, not per station. The suite's model is written out in the test from the
+rule, not read from the page. Found along the way: the stage's "Next" line and the schedule used the station count; both now
+use the slot count. Not on paper.
+
+---
+
 ## AI-31: 017 the link under the code and a comment area, rank 125 (2026-11-01, v539)
 
 Checking first: of the row's quick wins, 017 already had the peer feedback slips (stars, rubric, open prompt), the walking
