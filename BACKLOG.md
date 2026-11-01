@@ -825,7 +825,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 96 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
 | 110 | Correlate hall-pass trips with the schedule; a student-initiated request flow | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
 | 111 | Project-team mode: longer-lived named teams, a shared task list, a printable team contract (roles and the year-long pair memory shipped, v277; this part waits on the questions in 002's section) | 002 | ½ | | [002 Group / Team Generator](#002--group--team-generator) |
-| 112 | Peer review mode; rubric handoff to the grades tools | 003 | ½ | | [003 Rubric Builder](#003--rubric-builder) |
 | 113 | Bell-schedule awareness (reads 032's `scv_calendar_v1`; needs a registry and cross-tool decision); a reconnecting mirror (`_shared/webrtc-pair.js`, a platform edit). The multi-timer board shipped v279 | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
 | 114 | A constraint solver worth the name; the room, not the grid | 005 | ½ | | [005 Seating Chart Generator](#005--seating-chart-generator) |
 | 117 | Per-day team history, so a term view can show house points by week (today a team total is one running total; the term view of student points shipped v515). Needs a new stored shape: Devon's design call | 008 | ½ | | [008 Behavior & Points Tracker](#008--behavior--points-tracker) |
@@ -9899,15 +9898,16 @@ every tool on the site that forms groups, using the same memory.
 
 - **Peer review mode.** The same rubric, reduced, as a peer feedback form —
   which this backlog lists as a separate tool and which is a print mode
-  here. **Skipped this round** — the student-friendly print with a
-  self-assessment column substantially covers this use case per the brief.
+  here. **Done** (`b0d2e86`): the "Peer feedback form (no points)" print format,
+  held by `smoke-peer-form.mjs`. The earlier "skipped" note was stale.
 - **Feed the grade tools** (P7). Rubric scores should flow into
   `036-final_grade_checker.html` and `037-grade-distribution-visualizer.html` instead
   of being retyped. **Done 2026-08-13, for Grade Distribution Visualizer** —
   see Status. Final Grade Checker has no saved-gradebook storage contract to
   write into (verified, not assumed — see Status), so that leg stays
   not-applicable until that tool's storage model changes, not because it was
-  skipped.
+  skipped. **Left, and Devon's: a hand-off to 036 waits on his
+  persistence question (should 036 ever remember scores? default: no).**
 - **Standards alignment.** Tag criteria to standards, and report by standard
   rather than by assignment — the shape standards-based grading needs.
   **Skipped this round** — a larger schema decision; recorded as an Open

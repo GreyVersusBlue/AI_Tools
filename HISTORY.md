@@ -9,6 +9,10 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-31: 003 peer review mode and the grades hand-off, rank 112 closed (2026-11-01, no code, no version bump)
+
+Checked first, as the row asked. The peer review mode was built in `b0d2e86` (the "Peer feedback form (no points)" print format, `smoke-peer-form.mjs`, in `npm run test:rubric`); 003's section still called it skipped. The hand-off to 037 is `rb-gdv-handoff.js` (2026-08-13). What remained was 036, which has no store to write into, and giving it one is Devon's persistence question (rank 43's row), so it is not built. Row 112 deleted (ranks not renumbered); 003's section corrected.
+
 ## AI-31: 017 three card settings that did not survive a reload (selector's extra row, 2026-11-01, v547)
 
 The "Show entry number above the name" box, "Codes per printed page" and "Error correction" shared one `change` listener that called `save()` and `scheduleRender()` but never copied the control into `state`, so the gallery was saved with whatever the three held when it was created: a reload (or reopening the gallery) put back 4 per page, level Q and the number shown. The cards printed from the controls (`els.showNumber.checked`), so the fault was invisible until the page was reopened. Fixed in `017-gallery-walk-qr.html` by writing `state[...]` from each control in that listener (the same shape as the showLink/commentArea pair beside it); a gallery already saved keeps what it has. `smoke-card-options.mjs` gained four checks (27 total): the three values are in the saved gallery, a reload keeps all three, the cards after it have no entry number, and ticking the box again is kept. **Mutant:** the old listener (no copy into `state`) fails three of them. The five gallery-walk-qr suites and the 017 axe sweep pass. **Not verified:** nothing printed on paper.
