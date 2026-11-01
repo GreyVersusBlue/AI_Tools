@@ -4,16 +4,16 @@
 //   node Tools/schedule-visualizer/test/smoke-autosave.mjs
 //   (or: npm run test:layout-autosave)
 //
-// Held: the module's functions are on window; one change shows "Saving…" at once, tells the
+// Held: the module's functions (the write too) are on window; one change shows "Saving…" at once, tells the
 // recovery ring something changed, and writes nothing for the first 400 ms; a burst of changes
-// is one write about 800 ms after the last; the write is the page's own (the blueprint under
-// its key) and leaves "Saved <time>" in the indicator and the status bar; the indicator
+// is one write about 800 ms after the last; the write (the blueprint under its key, asking
+// about headroom once, a refused write saying nothing is saved) and leaves "Saved <time>" in the indicator and the status bar; the indicator
 // reports exactly the time it was given and does nothing for none; a saved plan round-trips
 // through a reload (the rooms come back, the load says it restored, the indicator says Saved
 // at the save's own time); a save from before this change (a stored string with no new fields)
 // opens as it did. Exits 1 on any failure.
 
-/* global BLUEPRINT_KEY, applyFullProject, roomRegistry, RecoveryManager, setLastBlueprintSaveTime, updateSaveIndicator, scheduleBlueprintAutosave, _blueprintLoadStatus -- 035's globals, read inside page.evaluate() */
+/* global BLUEPRINT_KEY, saveBlueprintToLocalStorage, applyFullProject, roomRegistry, RecoveryManager, setLastBlueprintSaveTime, updateSaveIndicator, scheduleBlueprintAutosave, _blueprintLoadStatus -- 035's globals, read inside page.evaluate() */
 import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
 import { fixtureProject } from './fixture-northwind.mjs';
 
@@ -83,6 +83,35 @@ eq(await page.evaluate(() => window.__writes), 0, 'a change 500 ms later pushes 
 await settle(page, 700);
 eq(await page.evaluate(() => window.__writes), 1, 'and the burst is written once');
 await page.evaluate(() => { Storage.prototype.setItem = window.__real; });
+
+console.log('3b. the write itself');
+eq(await page.evaluate(() => typeof saveBlueprintToLocalStorage), 'function', 'saveBlueprintToLocalStorage is on window');
+const w = await page.evaluate(() => {
+  const calls = { head: 0 };
+  const realHead = window.checkStorageHeadroom;
+  window.checkStorageHeadroom = () => { calls.head++; return realHead(); };
+  setLastBlueprintSaveTime(null);
+  document.getElementById('bp-autosave-text').textContent = 'x';
+  const before = localStorage.getItem(BLUEPRINT_KEY);
+  saveBlueprintToLocalStorage();
+  const after = JSON.parse(localStorage.getItem(BLUEPRINT_KEY));
+  window.checkStorageHeadroom = realHead;
+  return { calls, text: document.getElementById('bp-autosave-text').textContent, floors: after.floors.length, savedAt: typeof after.savedAt, same: before === JSON.stringify(after), rooms: roomRegistry.length };
+});
+ok(/^Saved /.test(w.text), 'a write sets the indicator to Saved by itself');
+eq(w.calls.head, 1, 'and asks about storage headroom once');
+ok(w.floors > 0 && w.savedAt === 'string', 'the stored payload has its floors and a savedAt');
+await page.evaluate(() => {
+  const real = Storage.prototype.setItem;
+  Storage.prototype.setItem = function (k, v) { if (k === BLUEPRINT_KEY) { const e = new Error('full'); e.name = 'QuotaExceededError'; throw e; } return real.call(this, k, v); };
+  setLastBlueprintSaveTime(null);
+  document.getElementById('bp-autosave-text').textContent = 'y';
+  window.__before = localStorage.getItem(BLUEPRINT_KEY);
+  saveBlueprintToLocalStorage();
+  Storage.prototype.setItem = real;
+});
+eq((await text()).ind, 'y', 'a refused write does not say Saved');
+eq(await page.evaluate(() => localStorage.getItem(BLUEPRINT_KEY) === window.__before), true, 'and leaves the stored plan as it was');
 
 console.log('4. a saved plan round-trips');
 const rooms = await page.evaluate(() => roomRegistry.length);

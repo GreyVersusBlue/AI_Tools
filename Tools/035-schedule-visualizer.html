@@ -3168,33 +3168,6 @@ function applyBlueprintData(data) {
   return true;
 }
 
-/**
- * Save blueprint to localStorage (debounced, called automatically on every change).
- */
-function saveBlueprintToLocalStorage() {
-  try {
-    const payload = serializeBlueprint();
-    localStorage.setItem(BLUEPRINT_KEY, JSON.stringify(payload));
-    setLastBlueprintSaveTime(new Date());
-    updateSaveIndicator();
-    rebuildRoomRegistry();
-    checkStorageHeadroom();
-    // A trace image still inline (IndexedDB refused it last time, or it came
-    // back by undo) gets another try at the media store; that pass saves again
-    // only if it moved something, so this cannot loop.
-    const ti = window.SVTraceImage;
-    if (ti && ti.valuesIn(AppState.blueprint.floors).some(ti.isInline)) adoptTraceImages();
-  } catch(e) {
-    console.warn('[STVIZ] Blueprint auto-save failed:', e);
-    if (e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014)) {
-      showStorageBanner('fail',
-        'Your last change could NOT be saved — this browser’s storage for this site is full. ' +
-        'Export a backup right now (Blueprint → Export) before you lose more work, then use Backup & Restore ' +
-        'or a different browser profile to make room.');
-    }
-  }
-}
-
 /* Why the last load did what it did: 'restored', 'empty' (nothing saved yet —
    a genuine first run) or 'corrupt' (there WAS a payload and it could not be
    read). Only the third case means work is missing, and it's the one that used
