@@ -1,16 +1,17 @@
 // sv-autosave.js — the School Layout Visualizer's autosave: the debounce, the write to
 // localStorage and the "Saved 3:04:05 PM" indicator. Moved out of the page's classic script as a
 // view module, the way sv-storage.js is (rank 140, the fourth and fifth increments): behaviour,
-// ids and wording are unchanged. What stays on the page is the load, which holds applyBlueprintData
-// and the quarantine copy. The write reaches the page's serializeBlueprint(), BLUEPRINT_KEY,
+// ids and wording are unchanged. The load, with the quarantine copy of an unreadable save, is here
+// too (rank 140, the sixth increment); applyBlueprintData() and validateBlueprintData() stay on the
+// page. The write reaches the page's serializeBlueprint(), BLUEPRINT_KEY,
 // rebuildRoomRegistry() and adoptTraceImages() by bare name, at call time. The module owns two
 // pieces of state, the debounce timer and the time of the last save; the page sets the second
-// through setLastBlueprintSaveTime() (after a load, on "clear"). The page's module
+// through setLastBlueprintSaveTime() (on "clear"; the load and the write set it themselves). The page's module
 // script copies the exports onto window, which is how the page reaches them by bare name.
 //
 // Its browser check is test/smoke-autosave.mjs.
 
-/* global AppState, serializeBlueprint, BLUEPRINT_KEY, rebuildRoomRegistry, adoptTraceImages, checkStorageHeadroom, showStorageBanner -- 035's page globals and sv-storage.js's, read at call time */
+/* global AppState, validateBlueprintData, applyBlueprintData, serializeBlueprint, BLUEPRINT_KEY, rebuildRoomRegistry, adoptTraceImages, checkStorageHeadroom, showStorageBanner -- 035's page globals and sv-storage.js's, read at call time */
 
 let _autosaveTimer = null;
 let _lastBlueprintSaveTime = null;
@@ -81,5 +82,47 @@ export function saveBlueprintToLocalStorage() {
         'Export a backup right now (Blueprint → Export) before you lose more work, then use Backup & Restore ' +
         'or a different browser profile to make room.');
     }
+  }
+}
+
+/* Why the last load did what it did: 'restored', 'empty' (nothing saved yet —
+   a genuine first run) or 'corrupt' (there WAS a payload and it could not be
+   read). Only the third case means work is missing, and it's the one that used
+   to look identical to a first run — a console warning and an empty editor. */
+let _blueprintLoadStatus = 'empty';
+export function getBlueprintLoadStatus() { return _blueprintLoadStatus; }
+
+/**
+ * Load blueprint from localStorage on startup.
+ */
+export function loadBlueprintFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(BLUEPRINT_KEY);
+    if (!raw) { _blueprintLoadStatus = 'empty'; return false; }
+
+    const data = JSON.parse(raw);
+    validateBlueprintData(data);
+    applyBlueprintData(data);
+
+    // Restore settings from blueprint if present
+    if (data.settings && data.settings.schoolName) {
+      // Don't overwrite schoolName if settings were also loaded; settings win
+    }
+
+    _lastBlueprintSaveTime = data.savedAt ? new Date(data.savedAt) : new Date();
+    updateSaveIndicator();
+    _blueprintLoadStatus = 'restored';
+    return true;
+  } catch(e) {
+    console.warn('[STVIZ] Could not restore blueprint from localStorage:', e);
+    _blueprintLoadStatus = 'corrupt';
+    // Park the unreadable payload somewhere the autosave can't tread on it.
+    // It may still be salvageable by hand, and the very next edit would
+    // otherwise overwrite the only copy of it that exists.
+    try {
+      const raw = localStorage.getItem(BLUEPRINT_KEY);
+      if (raw) localStorage.setItem(BLUEPRINT_KEY + '_unreadable', raw);
+    } catch (e2) { /* no room to quarantine it — nothing more we can do */ }
+    return false;
   }
 }

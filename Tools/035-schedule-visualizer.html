@@ -3168,47 +3168,6 @@ function applyBlueprintData(data) {
   return true;
 }
 
-/* Why the last load did what it did: 'restored', 'empty' (nothing saved yet —
-   a genuine first run) or 'corrupt' (there WAS a payload and it could not be
-   read). Only the third case means work is missing, and it's the one that used
-   to look identical to a first run — a console warning and an empty editor. */
-let _blueprintLoadStatus = 'empty';
-
-/**
- * Load blueprint from localStorage on startup.
- */
-function loadBlueprintFromLocalStorage() {
-  try {
-    const raw = localStorage.getItem(BLUEPRINT_KEY);
-    if (!raw) { _blueprintLoadStatus = 'empty'; return false; }
-
-    const data = JSON.parse(raw);
-    validateBlueprintData(data);
-    applyBlueprintData(data);
-
-    // Restore settings from blueprint if present
-    if (data.settings && data.settings.schoolName) {
-      // Don't overwrite schoolName if settings were also loaded; settings win
-    }
-
-    setLastBlueprintSaveTime(data.savedAt ? new Date(data.savedAt) : new Date());
-    updateSaveIndicator();
-    _blueprintLoadStatus = 'restored';
-    return true;
-  } catch(e) {
-    console.warn('[STVIZ] Could not restore blueprint from localStorage:', e);
-    _blueprintLoadStatus = 'corrupt';
-    // Park the unreadable payload somewhere the autosave can't tread on it.
-    // It may still be salvageable by hand, and the very next edit would
-    // otherwise overwrite the only copy of it that exists.
-    try {
-      const raw = localStorage.getItem(BLUEPRINT_KEY);
-      if (raw) localStorage.setItem(BLUEPRINT_KEY + '_unreadable', raw);
-    } catch (e2) { /* no room to quarantine it — nothing more we can do */ }
-    return false;
-  }
-}
-
 /* ==============================================
    JSON EXPORT
 =============================================== */
@@ -4635,7 +4594,7 @@ const RecoveryManager = {
     const api = this.api;
     if (!api) return;
     const crashed = !!this._prevSession;
-    const corrupt = _blueprintLoadStatus === 'corrupt';
+    const corrupt = getBlueprintLoadStatus() === 'corrupt';
     if (!crashed && !corrupt) return;
     api.listPointHeaders().then(points => {
       if (!points.length) {

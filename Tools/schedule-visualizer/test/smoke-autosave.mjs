@@ -13,7 +13,7 @@
 // at the save's own time); a save from before this change (a stored string with no new fields)
 // opens as it did. Exits 1 on any failure.
 
-/* global BLUEPRINT_KEY, saveBlueprintToLocalStorage, applyFullProject, roomRegistry, RecoveryManager, setLastBlueprintSaveTime, updateSaveIndicator, scheduleBlueprintAutosave, _blueprintLoadStatus -- 035's globals, read inside page.evaluate() */
+/* global BLUEPRINT_KEY, saveBlueprintToLocalStorage, applyFullProject, roomRegistry, RecoveryManager, setLastBlueprintSaveTime, updateSaveIndicator, scheduleBlueprintAutosave, getBlueprintLoadStatus, loadBlueprintFromLocalStorage -- 035's globals, read inside page.evaluate() */
 import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
 import { fixtureProject } from './fixture-northwind.mjs';
 
@@ -120,7 +120,7 @@ const savedAt = await page.evaluate(() => JSON.parse(localStorage.getItem(BLUEPR
 await page.reload({ waitUntil: 'networkidle' });
 await settle(page, 500);
 eq(await page.evaluate(() => roomRegistry.length), rooms, 'after a reload the rooms are back');
-eq(await page.evaluate(() => _blueprintLoadStatus), 'restored', 'the load says it restored');
+eq(await page.evaluate(() => getBlueprintLoadStatus()), 'restored', 'the load says it restored');
 const want = await page.evaluate((t) => `Saved ${new Date(t).toLocaleTimeString()}`, savedAt);
 eq((await text()).ind, want, 'the indicator shows the save\'s own time');
 
@@ -134,6 +134,24 @@ await page.reload({ waitUntil: 'networkidle' });
 await settle(page, 500);
 eq(await page.evaluate(() => roomRegistry.length), rooms, 'a save with no savedAt still opens with its rooms');
 ok(/^Saved /.test((await text()).ind), 'and says Saved');
+
+console.log('6. the load says why it did what it did');
+const load = (raw) => page.evaluate((r) => {
+  localStorage.removeItem(BLUEPRINT_KEY + '_unreadable');
+  if (r === null) localStorage.removeItem(BLUEPRINT_KEY); else localStorage.setItem(BLUEPRINT_KEY, r);
+  const ret = loadBlueprintFromLocalStorage();
+  return { ret, status: getBlueprintLoadStatus(), quarantine: localStorage.getItem(BLUEPRINT_KEY + '_unreadable'), rooms: roomRegistry.length };
+}, raw);
+const good = await page.evaluate(() => localStorage.getItem(BLUEPRINT_KEY));
+let l = await load(null);
+eq([l.ret, l.status, l.quarantine], [false, 'empty', null], 'nothing saved: false, "empty", nothing parked');
+l = await load('{not json');
+eq([l.ret, l.status, l.quarantine], [false, 'corrupt', '{not json'], 'unreadable text: false, "corrupt", the text parked under _unreadable');
+l = await load('{"a":1}');
+eq([l.ret, l.status, l.quarantine], [false, 'corrupt', '{"a":1}'], 'readable but not a blueprint: the same');
+eq(l.rooms, rooms, 'and the plan on screen is untouched by either');
+l = await load(good);
+eq([l.ret, l.status, l.quarantine, l.rooms], [true, 'restored', null, rooms], 'the good save: true, "restored", nothing parked, the rooms back');
 
 await browser.close(); server.close();
 console.log(`${passed} passed, ${failed} failed`);
