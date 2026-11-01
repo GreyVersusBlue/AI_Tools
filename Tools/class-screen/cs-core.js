@@ -36,7 +36,7 @@
   'use strict';
 
   var TYPES = ['text', 'timer', 'stopwatch', 'clock', 'youtube', 'traffic', 'names', 'dice',
-               'symbols', 'noise', 'draw', 'image', 'qr', 'groups', 'agenda', 'pie', 'sequence'];
+               'symbols', 'noise', 'draw', 'image', 'qr', 'groups', 'agenda', 'pie', 'sequence', 'bell'];
 
   /* Default size of a new widget, as a fraction of the board. */
   var DEFAULT_SIZE = {
@@ -56,7 +56,8 @@
     groups:    { w: 0.40, h: 0.40 },
     agenda:    { w: 0.30, h: 0.40 },
     pie:       { w: 0.26, h: 0.46 },
-    sequence:  { w: 0.34, h: 0.42 }
+    sequence:  { w: 0.34, h: 0.42 },
+    bell:      { w: 0.30, h: 0.26 }
   };
 
   var MIN_W = 0.08, MIN_H = 0.08;
@@ -535,6 +536,18 @@
     return { current: current, next: next };
   }
 
+  /* How long until the bell, for the bell countdown widget. `mins` is minutes
+     since midnight (fractions allowed). Inside a period it is the time until
+     that period ends; between periods, the time until the next one starts;
+     after the last, none. Seconds are rounded up, so it never reads 0:00 with
+     time left. Reads the same rows as periodAt and writes nothing. */
+  function untilBell(list, mins) {
+    var at = periodAt(list, mins);
+    if (at.current) return { kind: 'ends', label: at.current.label, secs: Math.max(0, Math.ceil((at.current.e - mins) * 60 - 1e-6)) };
+    if (at.next) return { kind: 'starts', label: at.next.label, secs: Math.max(0, Math.ceil((at.next.s - mins) * 60 - 1e-6)) };
+    return { kind: 'none', label: '', secs: 0 };
+  }
+
   function screenForPeriod(state, periodId) {
     if (!periodId) return null;
     var list = (state && state.screens) || [];
@@ -703,6 +716,7 @@
     fromTemplate: fromTemplate,
     readPeriods: readPeriods,
     periodAt: periodAt,
+    untilBell: untilBell,
     minutesOf: minutesOf,
     screenForPeriod: screenForPeriod,
     exportScreen: exportScreen,

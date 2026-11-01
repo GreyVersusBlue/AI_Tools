@@ -29,7 +29,8 @@ const eq = (a, b, label) => ok(JSON.stringify(a) === JSON.stringify(b), `${label
 
 const server = await serve(PORT);
 const browser = await launch();
-const page = await prepPage(browser, BASE, { width: 1400, height: 900 });
+let page = await prepPage(browser, BASE, { width: 1400, height: 900 });
+const mainPage = page;
 
 console.log('Class Screen — more widgets');
 
@@ -228,6 +229,48 @@ eq(await widget('sequence').getByRole('button', { name: /^(Start|Pause|Restart)$
 await widget('sequence').getByRole('button', { name: 'Pause', exact: true }).click();
 await widget('sequence').locator('summary', { hasText: 'Edit steps' }).click();
 await modes('sequence', widget('sequence').locator('.big.seq'), widget('sequence').getByLabel('Steps, like Think 1:00, Pair 2:00, Share 3:00'), 'sequence');
+
+// ── countdown to the bell ────────────────────────────────────────────
+// Its own page with a pinned clock: every period time is derived from T0, so the
+// result does not depend on when the suite runs.
+console.log(' bell countdown');
+const T0 = new Date(2026, 8, 14, 10, 0, 0);
+const BELL = { periods: [
+  { id: 'p1', label: 'Period 1', start: '09:30', end: '10:20' },
+  { id: 'p2', label: 'Period 2', start: '10:25', end: '11:15' }] };
+const bp = await prepPage(browser, BASE, { width: 1400, height: 900 });
+await bp.clock.install({ time: T0 });
+await bp.goto(URL_PAGE);
+await bp.evaluate(([k]) => { localStorage.clear(); localStorage.setItem(k, JSON.stringify({ periods: [] })); }, ['gvb-command-center:settings']);
+await bp.reload();
+await bp.clock.runFor(500);
+page = bp;
+await add('bell');
+const bw = widget('bell');
+eq(await page.locator('#dock button[data-add="bell"]').count(), 1, 'the dock offers the bell countdown');
+eq(await bw.locator('.bell-label').textContent(), 'No bell times yet', 'with no schedule it says so');
+eq(await bw.locator('.note a').getAttribute('href'), '010-command-center-dashboard.html', 'and points at Command Center');
+await page.evaluate(([k, b]) => { localStorage.setItem(k, JSON.stringify(b)); window.dispatchEvent(new StorageEvent('storage', { key: k })); }, ['gvb-command-center:settings', BELL]);
+await page.clock.runFor(400);
+eq(await bw.locator('.bell-label').textContent(), 'Period 1 ends in', 'a schedule written in Command Center is picked up');
+eq(await bw.locator('.big-text').textContent(), '19:59', 'at 10:00:01 a period ending 10:20 has 19:59 left');
+await page.clock.runFor(60000);
+eq(await bw.locator('.big-text').textContent(), '18:59', 'and a minute later 18:59');
+await page.clock.runFor(19 * 60000 + 30000);
+eq(await bw.locator('.bell-label').textContent(), 'Period 2 starts in', 'between the periods it counts to the next start');
+eq(await bw.locator('.big-text').textContent(), '4:29', 'at 10:20:31 a start at 10:25 is 4:29 away');
+await page.clock.runFor(60 * 60000);
+eq(await bw.locator('.bell-label').textContent(), 'No more bells today', 'after the last bell it says so');
+eq(await bw.locator('.big-text').textContent(), '', 'and shows no time');
+ok(await bw.evaluate((n) => !n.querySelector('.note a')), 'with no pointer to Command Center, which has times');
+eq(Object.keys((await dataOf('bell'))).length, 0, 'the widget saves nothing of its own');
+// back inside a period to look at it in the modes
+await page.evaluate(([k, b]) => { b.periods[1].end = '23:59'; localStorage.setItem(k, JSON.stringify(b)); window.dispatchEvent(new StorageEvent('storage', { key: k })); }, ['gvb-command-center:settings', BELL]);
+await page.clock.runFor(400);
+await modes('bell', bw.locator('.big-text'), null, 'bell countdown');
+eq(page.__errs, [], 'the bell page has no page or console errors');
+await bp.close();
+page = mainPage;
 
 // an older board (no agenda; a timer with no link) still opens, link-free
 await settle(page, 600);   // let the page's own save land first

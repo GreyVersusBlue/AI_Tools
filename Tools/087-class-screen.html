@@ -152,6 +152,11 @@
     font: inherit; font-size: calc(var(--fs, 2) * 1rem); line-height: 1.25; padding: .1rem;
   }
 
+  /* bell countdown */
+  .big.bell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; }
+  .bell-label { font-weight: 700; font-size: min(7cqw, 16cqh); line-height: 1.1; text-align: center; overflow-wrap: anywhere; }
+  .bell .big-text { font-size: min(20cqw, 44cqh); }
+
   /* sequence timer */
   .big.seq { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; }
   .seq-name { font-weight: 700; font-size: min(11cqw, 22cqh); line-height: 1.1; text-align: center; overflow-wrap: anywhere; }
@@ -816,6 +821,44 @@
           else if (cmd.action === 'add') { Countdown.add(c, 60000, Date.now()); sync(); render(); }
         },
         snap: function () { return { text: shown.textContent, running: running(), done: ctx.el.classList.contains('timer-done') }; }
+      };
+    }
+  };
+
+  /* Countdown to the bell: the time left in this period, or until the next one
+     starts, from 010's schedule (read, never written). Nothing is saved. */
+  TYPES.bell = {
+    title: 'Bell countdown', icon: ['M6 16V11a6 6 0 0 1 12 0v5l2 2H4z', 'M10 21h4'],
+    build: function (ctx) {
+      var label = el('span', { className: 'bell-label', 'aria-live': 'polite' });
+      var shown = el('span', { className: 'big-text' });
+      var note = el('p', { className: 'note' });
+      var bellList = readBell();
+      function update() {
+        var r = Core.untilBell(bellList, nowMinutes());
+        note.textContent = '';
+        if (r.kind === 'none') {
+          label.textContent = bellList.length ? 'No more bells today' : 'No bell times yet';
+          shown.textContent = '';
+          if (!bellList.length) {
+            note.appendChild(document.createTextNode('Add them in '));
+            note.appendChild(el('a', { href: COMMAND_CENTER, text: 'Command Center' }));
+            note.appendChild(document.createTextNode('.'));
+          }
+        } else {
+          label.textContent = r.label + (r.kind === 'ends' ? ' ends in' : ' starts in');
+          shown.textContent = Core.formatClock(r.secs * 1000);
+        }
+      }
+      function onStorage(e) { if (e.key === BELL_KEY) { bellList = readBell(); update(); } }
+      window.addEventListener('storage', onStorage);
+      ctx.body.appendChild(el('div', { className: 'big bell' }, [label, shown]));
+      ctx.body.appendChild(note);
+      update();
+      return {
+        tick: update,
+        destroy: function () { window.removeEventListener('storage', onStorage); },
+        snap: function () { return { label: label.textContent, text: shown.textContent }; }
       };
     }
   };

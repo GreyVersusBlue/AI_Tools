@@ -91,7 +91,7 @@ for (const t of C.TYPES) {
   if (firstOverlap === -1 && all.some((q) => hit(r, q))) firstOverlap = all.length;
   all.push(r);
 }
-ok(firstOverlap === -1 || firstOverlap >= 9, `one of each of the seventeen: at least nine place before any overlap (first overlap at ${firstOverlap})`);
+ok(firstOverlap === -1 || firstOverlap >= 9, `one of each of the eighteen: at least nine place before any overlap (first overlap at ${firstOverlap})`);
 const full = Array.from({ length: 20 }, () => C.placeNew('youtube', []));
 ok(full.every((r) => r.x >= 0 && r.y >= 0 && r.x + r.w <= 1 && r.y + r.h <= 1), 'placement on a crowded board stays on the board');
 
@@ -181,7 +181,7 @@ eq(C.mediaIds({ screens: [
   { bgImage: 'bg1', widgets: [{ type: 'image', data: { mediaId: 'img1' } }, { type: 'text', data: {} }] },
   { bgImage: '', widgets: [{ type: 'image', data: { mediaId: 'img1' } }, { type: 'image', data: { mediaId: '' } }] }
 ] }), ['bg1', 'img1'], 'media ids: backgrounds and images, each once');
-eq(C.TYPES.length, 17, 'seventeen widget types');
+eq(C.TYPES.length, 18, 'eighteen widget types');
 C.TYPES.forEach((t) => ok(C.DEFAULT_SIZE[t], `a default size for ${t}`));
 
 // ── P3: periods, starters, files ─────────────────────────────────────
@@ -334,6 +334,22 @@ for (const bad of [null, 'pick', [], { cmd: 5 }, { cmd: 'eval' }, { cmd: '__prot
   eq(sq({ steps: [{ label: 'A', sec: 30 }, { label: '', sec: 5 }, { label: 'B', sec: 0 }, 7], i: 9 }), { steps: [{ label: 'A', sec: 30 }], i: 0, endsAt: 0, remaining: 30 }, 'bad steps are dropped and the position is clamped');
   eq(sq({ steps: [{ label: 'A', sec: 30 }, { label: 'B', sec: 40 }], i: 1, remaining: 12, link: { flash: true } }).i, 1, 'a position inside the list is kept');
   ok('link' in sq({ link: { flash: true } }) && !('link' in sq({})), 'a sequence has a link only once one is on');
+}
+
+// ── countdown to the bell (Path 22 P9) ───────────────────────────────
+{
+  const bell = C.readPeriods({ periods: [
+    { id: 'p1', label: 'Period 1', start: '09:30', end: '10:20' },
+    { id: 'p2', label: 'Period 2', start: '10:25', end: '11:15' }] });
+  eq(C.untilBell(bell, 10 * 60), { kind: 'ends', label: 'Period 1', secs: 20 * 60 }, 'inside a period: time until it ends');
+  eq(C.untilBell(bell, 10 * 60 + 20.5), { kind: 'starts', label: 'Period 2', secs: 270 }, 'between periods: time until the next starts');
+  eq(C.untilBell(bell, 9 * 60), { kind: 'starts', label: 'Period 1', secs: 30 * 60 }, 'before the first: time until it starts');
+  eq(C.untilBell(bell, 11 * 60 + 15), { kind: 'none', label: '', secs: 0 }, 'at the last end: no more bells (end is outside the period)');
+  eq(C.untilBell(bell, 9 * 60 + 30), { kind: 'ends', label: 'Period 1', secs: 50 * 60 }, 'at a start: that period is on');
+  eq(C.untilBell(bell, 10 * 60 + 19 + 59.9 / 60).secs, 1, 'seconds round up, so it never reads 0:00 with time left');
+  eq(C.untilBell([], 600), { kind: 'none', label: '', secs: 0 }, 'no schedule: none');
+  eq(C.untilBell(null, 600).kind, 'none', 'a missing list is none, not a crash');
+  eq(C.defaultData('bell'), {}, 'the bell widget saves nothing');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);
