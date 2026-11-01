@@ -270,6 +270,8 @@
     "test:roleplay-speaking-core": "node Tools/roleplay-scenario-generator/test/speaking-core.test.mjs",
     "test:roleplay-speaking": "node Tools/roleplay-scenario-generator/test/smoke-speaking.mjs",
     "test:novel-study": "node Tools/novel-study-circles-manager/test/smoke-multi-book-unit.mjs && node Tools/novel-study-circles-manager/test/smoke-undo.mjs",
+    "test:nsc-assess-core": "node Tools/novel-study-circles-manager/test/nsc-assess.test.mjs",
+    "test:nsc-assess": "node Tools/novel-study-circles-manager/test/smoke-assess.mjs",
     "test:bracket": "node Tools/bracket-tournament-generator/test/smoke-standings.mjs && node Tools/bracket-tournament-generator/test/smoke-pools-swiss.mjs && node Tools/bracket-tournament-generator/test/smoke-share.mjs",
     "test:bracket-academic-core": "node Tools/bracket-tournament-generator/test/smoke-academic-core.mjs",
     "test:bracket-academic": "node Tools/bracket-tournament-generator/test/smoke-academic.mjs",

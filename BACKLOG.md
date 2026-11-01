@@ -832,7 +832,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 120 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
 | 126 | Hints with a time penalty; branching and station images | 018 | ½ | | [018 QR Scavenger Hunt Builder](#018--qr-scavenger-hunt-builder) |
 | 127 | Attempt limits and feedback; a non-QR fallback | 019 | ½ | | [019 Digital Escape Room / Puzzle Lock Builder](#019--digital-escape-room--puzzle-lock-builder) |
-| 135 | Discussion assessment; role recency across a book | 027 | ½ | | [027 Novel Study / Reading Circles Manager](#027--novel-study--reading-circles-manager) |
 | 136 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
 | 137 | 030 projector view: remember it across visits. The view shipped at v293 (AI-31-030) and is kept for the browser tab only, in `sessionStorage`, because a `localStorage` key `gvb-review-board:projector` needs a row in `_shared/tool-registry.js` (`check:registry` fails without it) and a per-tool worker may not edit that file. The fix is three small edits: add `{ k: 'gvb-review-board:projector' }` to 030's `keys`, change `sessionStorage` to `localStorage` in `getProjector`/`setProjector` (`rgb-store.js`), and in `smoke-projector.mjs` section 2, `openStress`, `turnOnForTab` and section 10 (the key moves from `sessionStorage` to `localStorage`; `openWith` can seed it) | 030 | ¼ | | [030 Quiz / Review Game Board](#030--quiz--review-game-board) |
 | 138 | The A/B cycle's anchor date shows the other letter when the anchor is a school day after the calendar's first school day (`scv-weeks.js`, `ANCHOR_QUIRK`; fixing it flips every letter of such a saved calendar, so it is a decision, not a quiet fix); cycle labels beyond A and B (needs a field in `scv_calendar_v1`, which 010 reads raw); a "week starts on" setting (none exists; the week print is Monday to Friday). Year-grid badges and the page-per-week print shipped v292 | 032 | ¼ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
@@ -11559,10 +11558,18 @@ as the student improves.
 
 #### Major Features
 
-- **Discussion assessment.** A quick per-meeting rubric tap (participated /
-  prepared / advanced the conversation) with a printable summary. This is the
-  hardest thing to grade in an ELA classroom and the tool is already in the
-  room when it happens.
+- **Done (v541) — Discussion assessment.** In Meeting History each meeting has a *Discussion assessment* table:
+  a box per student for Participated, Prepared and Advanced the conversation, tapped round blank, yes, some,
+  not yet; the row shows its points over the boxes marked. A *Discussion Record* card adds the meetings up per
+  student ("1 yes, 1 some of 2", points over possible; a blank box is not a zero) and prints. Stored as an
+  optional `assess` list on the meeting (`{ name, participated?, prepared?, advanced? }`, 2/1/0), absent on a
+  meeting never tapped; `Tools/novel-study-circles-manager/nsc-assess.js` (`NscAssess`) is the arithmetic, pure.
+  A rename in Class Roster Hub moves the row; Delete meeting takes the marks and Undo returns them. The open
+  question under it is decided here: built in 027, not called from 003 (the criteria are fixed at these three,
+  so 003 has nothing to own). Suites `test:nsc-assess-core` and `test:nsc-assess` (port 8658). Not done: custom
+  criteria, a CSV of the record, the marks in the full meeting log print, and 003 as the rubric. The rename path
+  is held by the pure suite only, not by a page that renames. Not on paper. *Role recency across a book was
+  already built (the role-fairness memory, `groupHistory`, carries across every meeting of a project).*
 - **Book and reading-log integration** (P7). `033-ssr-log-tracker.html` already
   tracks books and pages; a student in a novel study is doing both, in two
   tools that don't know about each other.

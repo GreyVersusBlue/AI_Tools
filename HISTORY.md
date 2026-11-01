@@ -9,6 +9,22 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-31: 027 discussion assessment, rank 135 (2026-11-01, v541)
+
+Checked first: the row's second half, role recency across a book, is the role-fairness memory (`groupHistory`, through the grouping
+engine) that every logged meeting already writes and the next assignment already reads; nothing to build. The first half was
+absent. **Call made, the section's open question:** built in 027 and not as a call into 003's rubric builder, because the three
+criteria the row names are fixed and there is no rubric to own; reversible by hiding the card. The data is one optional `assess`
+list on each meeting (array of `{ name, participated?, prepared?, advanced? }`, levels 2/1/0), not an object keyed by name, so a
+student named "constructor" or "__proto__" is a string; a meeting never tapped has no field, so every saved project opens
+unchanged and the registry needs no row (same key, already `student: true`). Tapping updates the box in place and saves, so an open
+meeting and the focus stay put. The record counts only boxes marked: a blank is not a zero. `a11y-sweep/seeds.mjs` gained an
+`assess` on 027's seed so the print audit reaches the new button (it listed it as never printed before). Suites:
+`nsc-assess.test.mjs` (37 checks, six mutants) and `smoke-assess.mjs` (42 checks; five mutants fail it: no save, no record redraw,
+unescaped name, wrong total, sheet not shown). Rename-follow is in `renameStudentData` and held only by the pure suite. Not on paper.
+
+---
+
 ## AI-31: 023 name and date lines, rank 131 closed as already built (2026-11-01, no CACHE_VERSION change)
 
 Read the page before the row: `Tools/023-exit-ticket-generator.html` has had "Name:" and "Date:" line checkboxes (`showNameCheck`,

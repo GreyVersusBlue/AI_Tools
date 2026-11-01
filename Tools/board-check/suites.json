@@ -297,6 +297,8 @@
     "Tools/roleplay-scenario-generator/test/smoke-speaking.mjs",
     "Tools/novel-study-circles-manager/test/smoke-multi-book-unit.mjs",
     "Tools/novel-study-circles-manager/test/smoke-undo.mjs",
+    "Tools/novel-study-circles-manager/test/nsc-assess.test.mjs",
+    "Tools/novel-study-circles-manager/test/smoke-assess.mjs",
     "Tools/seating-chart/test/drive-seating.mjs",
     "Tools/seating-chart/test/smoke-share.mjs",
     "Tools/seating-chart/test/smoke-photos.mjs",
