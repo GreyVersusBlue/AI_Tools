@@ -838,7 +838,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 140 | 035 what is left: the page's inline script is still ~2,900 lines (settings and layout persistence, the onboarding and presentation glue; the bell and subjects editors went to `sv-settings-editors.js` at v543), and the snapshot manager went to `sv-snapshots.js` at v550, so the next increment is the autosave/storage-headroom block or the recovery manager. Accessibility routing (Path 11 P3) is built; what is left of it is accessibility-aware *evacuation* routing (a wheelchair user's route out: step-free and no elevator), which turns on P3's Devon question about what counts as an exit, so it stays out | 035 | ½ | | [035 School Layout Visualizer](#035--school-layout-visualizer) |
 | 143 | A second language beyond Spanish (needs a translation a person has checked), including for the new parent letter; the phone/projector trip-day view | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
 | 144 | 044 what is left of references by name: the plan saying *which* section the Sub Binder prints. 045's choice is built and saved (v549); 044 reads no key of 045 and the Sub Binder's included-sections object is its own, so the line would need a packet provider or a registry `reads` entry, a Path 10 call | 044 | ¼ | | [044 Sub Plan Builder](#044--sub-plan-builder) |
-| 149 | Buzz-in from student devices (deferred); map-question tournaments | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
+| 149 | Buzz-in from student devices (deferred, student-facing); a timed "bee" mode (turns on 062's open question about whether timing adds anything a teacher wants) | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
 | 150 | A student-facing fill-in mode; review-game theme packs | 064 | ½ | | [064 Historical Figure / Country Trading Card Maker](#064--historical-figure--country-trading-card-maker) |
 | 151 | 080 what is left: snap is built (the Snap to grid box and Align pieces) and the piece families and a board file are done (v546); left is **combining** (ten units become a ten-rod, a +1 and a -1 cancel) and pattern blocks, which cannot rotate and do not sit on the unit grid, both of which wait on the open question of whether snap/cancel is worth its complexity (080's Open Questions, second bullet) | 080 | ½ | | [080 Virtual Manipulatives Board](#080--virtual-manipulatives-board) |
 | 161 | Conference sign-up — run the Worker under workerd (`wrangler dev --local`) in a suite: the bundle, the JSON import, the Durable Object migration, the PIN and CORS paths. Nothing has run on Cloudflare's runtime yet | `conference-signup/` | ½ | | [Conference sign-up](#conference-sign-up--parent-bookings-outside-tools) |
@@ -14075,7 +14075,13 @@ Major Features below, or find a genuinely new gap.
 
 #### Major Features
 
-- **Buzz-in from student devices** — the tournament's natural next step, and
+- **Map questions and the team tournament — shipped (SS demo round 2,
+  `smoke-map-tournament.mjs`, 74 assertions):** a Map Questions category drawn
+  from 046's vector data, and a tournament mode (teams, turn rotation, points,
+  an in-progress game kept in `gbq_tournament_v1`) that plays any category,
+  map questions included.
+- **Buzz-in from student devices** — deferred, student-facing (Devon, 2026-10-05:
+  nothing is student-facing right now); the tournament's natural next step, and
   the explicit non-goal of round 2. `_shared/` already has the WebRTC pairing
   layer that 021 and 004 use, so this needs no server.
 - **A timed "bee" mode**: sudden-death elimination format with a visible
