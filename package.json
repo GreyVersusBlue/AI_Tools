@@ -124,6 +124,7 @@
     "test:writing-prompt-scaffolds-core": "node Tools/writing-prompt-generator/test/smoke-scaffolds-core.mjs",
     "test:writing-prompt-scaffolds": "node Tools/writing-prompt-generator/test/smoke-scaffolds.mjs",
     "test:writing-prompt": "node Tools/writing-prompt-generator/test/smoke-half-sheet.mjs && node Tools/writing-prompt-generator/test/smoke-writing-record.mjs",
+    "test:number-talks-sketch": "node Tools/number-talks-board/test/smoke-strategy-sketch.mjs",
     "test:number-talks": "node Tools/number-talks-board/test/smoke-session-record.mjs && node Tools/number-talks-board/test/smoke-strategy-library.mjs && node Tools/number-talks-board/test/smoke-stage.mjs",
     "test:escape-room": "node Tools/escape-room-builder/test/smoke-test-run.mjs",
     "test:escape-room-images": "node Tools/escape-room-builder/test/smoke-images.mjs",

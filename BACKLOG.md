@@ -835,7 +835,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 127 | Attempt limits and feedback; a non-QR fallback | 019 | ½ | | [019 Digital Escape Room / Puzzle Lock Builder](#019--digital-escape-room--puzzle-lock-builder) |
 | 129 | Uneven groups and stations; a shared rotation engine | 021 | ½ | | [021 Tournament Bracket & Station Rotation (PE)](#021--tournament-bracket--station-rotation-pe) |
 | 131 | Name and date lines on the slips; response collection questions | 023 | ½ | | [023 Exit Ticket / Bell Ringer Generator](#023--exit-ticket--bell-ringer-generator) |
-| 132 | Draw on a strategy card; a shared stage | 024 | ½ | | [024 Number Talks / Mental Math Routine Board](#024--number-talks--mental-math-routine-board) |
 | 135 | Discussion assessment; role recency across a book | 027 | ½ | | [027 Novel Study / Reading Circles Manager](#027--novel-study--reading-circles-manager) |
 | 136 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
 | 137 | 030 projector view: remember it across visits. The view shipped at v293 (AI-31-030) and is kept for the browser tab only, in `sessionStorage`, because a `localStorage` key `gvb-review-board:projector` needs a row in `_shared/tool-registry.js` (`check:registry` fails without it) and a per-tool worker may not edit that file. The fix is three small edits: add `{ k: 'gvb-review-board:projector' }` to 030's `keys`, change `sessionStorage` to `localStorage` in `getProjector`/`setProjector` (`rgb-store.js`), and in `smoke-projector.mjs` section 2, `openStress`, `turnOnForTab` and section 10 (the key moves from `sessionStorage` to `localStorage`; `openWith` can seed it) | 030 | ¼ | | [030 Quiz / Review Game Board](#030--quiz--review-game-board) |
@@ -11354,9 +11353,16 @@ work, and don't promote one without Devon saying so.
 
 #### Quick Wins
 
-- **Draw on a strategy card.** Number talk strategies are frequently
-  visual — a number line, an array, a decomposition tree. A minimal drawing
-  surface would capture what typing can't.
+- ~~Draw on a strategy card~~ — **done 2026-11-01 (v516)**. A Draw button on each strategy
+  card opens a drawing pad (three named pens, thin/thick, eraser, undo by stroke, clear;
+  pointer input only, so a teacher who cannot draw types as before). The drawing is one PNG data
+  URL in the card's optional `sketch` field, kept to 60,000 characters (`NTSketch`,
+  `Tools/number-talks-board/sketch.js`), and it travels to the class library (a card with only a
+  drawing can be kept), the wall poster and the printed session record; the text file says a
+  drawing is on the card and does not hold it. A stored value is put in an `<img src>` only if
+  it is a PNG data URL under the cap. No new key. `test:number-talks-sketch` (port 8643).
+  Not done: drawing on the projector stage, a drawing in a share link or a backup beyond the
+  library's existing key, and any check on paper.
 - **Turn-and-talk timer** built into the reveal flow (P7 — the timer exists).
 - **A "wait time" pause** between reveal and discussion, since the routine
   depends on silent think time.

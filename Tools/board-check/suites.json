@@ -188,6 +188,7 @@
     "Tools/writing-prompt-generator/test/smoke-scaffolds.mjs",
     "Tools/number-talks-board/test/smoke-session-record.mjs",
     "Tools/number-talks-board/test/smoke-strategy-library.mjs",
+    "Tools/number-talks-board/test/smoke-strategy-sketch.mjs",
     "Tools/escape-room-builder/test/smoke-test-run.mjs",
     "Tools/escape-room-builder/test/smoke-images.mjs",
     "Tools/escape-room-builder/test/smoke-station-qr.mjs",
