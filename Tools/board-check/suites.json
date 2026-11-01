@@ -159,6 +159,7 @@
     "Tools/class-screen/test/smoke-periods.mjs",
     "Tools/class-screen/test/smoke-remote.mjs",
     "Tools/class-screen/test/smoke-present.mjs",
+    "Tools/class-screen/test/smoke-shortcuts.mjs",
     "Tools/braille-trainer/test/core.test.mjs",
     "Tools/braille-trainer/test/smoke-braille-trainer.mjs",
     "Tools/countdown/test/countdown.test.mjs",

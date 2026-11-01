@@ -105,6 +105,7 @@
     "test:braille-trainer": "node Tools/braille-trainer/test/core.test.mjs && node Tools/braille-trainer/test/smoke-braille-trainer.mjs",
     "test:class-screen": "node Tools/class-screen/test/core.test.mjs && node Tools/class-screen/test/smoke-class-screen.mjs && node Tools/class-screen/test/smoke-widgets.mjs && node Tools/class-screen/test/smoke-periods.mjs && node Tools/class-screen/test/smoke-remote.mjs",
     "test:class-screen-present": "node Tools/class-screen/test/smoke-present.mjs",
+    "test:class-screen-shortcuts": "node Tools/class-screen/test/smoke-shortcuts.mjs",
     "test:command-center": "node Tools/command-center/test/smoke-seating-panel.mjs && node Tools/command-center/test/smoke-remote-commands.mjs",
     "test:gallery-walk": "node Tools/gallery-walk-qr/test/smoke-projector.mjs && node Tools/gallery-walk-qr/test/smoke-scan-verify.mjs",
     "test:accommodations": "node Tools/testing-accommodations-card-generator/test/smoke-filter.mjs",

@@ -63,7 +63,7 @@ ok(!(await visible('.w-bar')), 'present hides the title bars');
 ok(!(await visible('.w-close')), 'present hides close buttons');
 ok(!(await visible('.w-resize')), 'present hides resize corners');
 ok(await visible('#presentExit'), 'present shows a way back');
-ok(await page.evaluate(() => document.activeElement.id === 'presentExit'), 'the way back takes focus');
+ok(await page.evaluate(() => document.activeElement === document.body), 'focus is left on the page, so Space still reaches the timer instead of pressing the exit button');
 const boardIn = await rectOf(page.locator('#board'));
 ok(boardIn.h > boardBefore.h, 'the board grows into the freed room');
 eq(JSON.stringify((await cur()).widgets.map((w) => [w.id, w.x, w.y, w.w, w.h, w.z])), saved0, 'widgets keep their saved fractions');

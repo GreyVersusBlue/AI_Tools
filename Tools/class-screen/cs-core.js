@@ -16,6 +16,7 @@
      ClassScreenCore.exportScreen(s, med) → the .json file's object
      ClassScreenCore.readImport(obj)      → { screen, media } | { error }
      ClassScreenCore.readCommand(msg)     → a phone-remote command, or null
+     ClassScreenCore.readKey(e, where)    → a keyboard shortcut, or null
 
    Positions are FRACTIONS of the board (0..1), never pixels, so a screen laid
    out on a laptop lands in the same place on a 1080p projector.
@@ -596,9 +597,33 @@
     return null;
   }
 
+  /* ---- keyboard and clicker shortcuts (Path 22 P7) ------------------------ */
+
+  /* Which shortcut, if any, a keydown is. `e` is the event's key, repeat and
+     modifier flags; `where` says what had focus: `typing` (a field that
+     swallows keys: an input, a text box, a select, an editable region) and
+     `control` (a button, link or summary, which Space already presses). Nothing
+     fires while someone types, or with Ctrl, Cmd or Alt held (the browser's own
+     shortcuts), or on a held key. A presentation clicker sends Right and Left,
+     and PageDown and PageUp. */
+  function readKey(e, where) {
+    if (!isObj(e) || typeof e.key !== 'string') return null;
+    where = isObj(where) ? where : {};
+    if (where.typing || e.ctrlKey || e.metaKey || e.altKey) return null;
+    switch (e.key) {
+      case '?': return { act: 'help' };
+      case ' ': return e.repeat || where.control || e.shiftKey ? null : { act: 'timer' };
+      case 'n': case 'N': return e.repeat ? null : { act: 'pick' };
+      case 'ArrowRight': case 'PageDown': return e.shiftKey ? null : { act: 'next' };
+      case 'ArrowLeft': case 'PageUp': return e.shiftKey ? null : { act: 'prev' };
+    }
+    return null;
+  }
+
   var ClassScreenCore = {
     TYPES: TYPES,
     readCommand: readCommand,
+    readKey: readKey,
     TEMPLATES: TEMPLATES.map(function (t) { return { id: t.id, name: t.name }; }),
     fromTemplate: fromTemplate,
     readPeriods: readPeriods,

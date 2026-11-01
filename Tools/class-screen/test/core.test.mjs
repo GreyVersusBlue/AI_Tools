@@ -257,6 +257,30 @@ eq(C.readCommand({ cmd: 'timer', action: 'explode' }), null, 'unknown timer acti
 eq(C.readCommand({ cmd: 'screen', id: 's_abc-1' }), { cmd: 'screen', id: 's_abc-1' }, 'screen switch');
 eq(C.readCommand({ cmd: 'screen', id: '<img src=x>' }), null, 'a bad screen id refused');
 eq(C.readCommand({ cmd: 'light', color: 'purple' }), null, 'unknown light refused');
+
+// ── keyboard and clicker shortcuts ───────────────────────────────────
+eq(C.readKey({ key: ' ' }, {}), { act: 'timer' }, 'Space runs the timer');
+eq(C.readKey({ key: 'n' }, {}), { act: 'pick' }, 'n picks a name');
+eq(C.readKey({ key: 'N' }, {}), { act: 'pick' }, 'N picks a name');
+eq(C.readKey({ key: 'ArrowRight' }, {}), { act: 'next' }, 'Right is the next screen');
+eq(C.readKey({ key: 'PageDown' }, {}), { act: 'next' }, 'a clicker\'s PageDown is the next screen');
+eq(C.readKey({ key: 'ArrowLeft' }, {}), { act: 'prev' }, 'Left is the previous screen');
+eq(C.readKey({ key: 'PageUp' }, {}), { act: 'prev' }, 'a clicker\'s PageUp is the previous screen');
+eq(C.readKey({ key: '?' }, {}), { act: 'help' }, '? opens the list');
+for (const k of [' ', 'n', 'N', 'ArrowRight', 'ArrowLeft', 'PageDown', 'PageUp', '?']) {
+  eq(C.readKey({ key: k }, { typing: true }), null, `${JSON.stringify(k)} types into a field and is not a shortcut`);
+}
+eq(C.readKey({ key: ' ' }, { control: true }), null, 'Space on a focused button presses the button');
+eq(C.readKey({ key: 'n' }, { control: true }), { act: 'pick' }, 'n works with a button focused');
+eq(C.readKey({ key: 'n', ctrlKey: true }, {}), null, 'Ctrl+N stays the browser\'s');
+eq(C.readKey({ key: 'ArrowRight', altKey: true }, {}), null, 'Alt+Right stays the browser\'s');
+eq(C.readKey({ key: 'n', metaKey: true }, {}), null, 'Cmd+N stays the browser\'s');
+eq(C.readKey({ key: ' ', repeat: true }, {}), null, 'a held Space does not flip the timer');
+eq(C.readKey({ key: 'n', repeat: true }, {}), null, 'a held n does not pick again');
+eq(C.readKey({ key: 'ArrowRight', shiftKey: true }, {}), null, 'Shift+Right is a resize, not a screen');
+eq(C.readKey({ key: 'q' }, {}), null, 'other keys are left alone');
+eq(C.readKey(null, {}), null, 'no event');
+eq(C.readKey({ key: 5 }, {}), null, 'a malformed event');
 eq(C.readCommand({ cmd: 'light', color: 'red', extra: 1 }), { cmd: 'light', color: 'red' }, 'extra fields dropped');
 eq(C.readCommand({ cmd: 'symbol', mode: 'ask3' }), { cmd: 'symbol', mode: 'ask3' }, 'symbol');
 eq(C.readCommand({ cmd: 'stopwatch', action: 'add' }), null, 'stopwatch has no add');

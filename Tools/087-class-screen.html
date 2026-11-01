@@ -251,11 +251,16 @@
   /* phone remote */
   .live-badge { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; font-weight: 700; color: var(--accent-2); }
   .live-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-2); }
-  #remoteDialog {
+  #remoteDialog, #keysDialog {
     width: min(460px, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); overflow: auto;
     border: 1px solid var(--line-strong); border-radius: 12px; background: var(--card); color: var(--ink); padding: 1rem 1.1rem;
   }
-  #remoteDialog::backdrop { background: rgba(0, 0, 0, .45); }
+  #remoteDialog::backdrop, #keysDialog::backdrop { background: rgba(0, 0, 0, .45); }
+  .keys-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  .keys-table th, .keys-table td { text-align: left; padding: .3rem .4rem; border-bottom: 1px solid var(--line); font-weight: 400; }
+  .keys-table thead th { font-weight: 700; }
+  .keys-table tbody th { white-space: nowrap; }
+  kbd { font: inherit; font-size: .85em; padding: .05rem .4rem; border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 5px; background: var(--card-2); }
   .rd-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; }
   .rd-head h2 { margin: 0; font-size: 1.1rem; }
   .rd-head button { border: 0; background: transparent; font-size: 1.3rem; line-height: 1; padding: .1rem .4rem; }
@@ -342,6 +347,7 @@
     <input type="file" id="importFile" accept=".json,application/json" hidden>
     <span class="live-badge" id="remoteLive" hidden><span class="dot" aria-hidden="true"></span>Phone connected</span>
     <button type="button" id="remoteBtn">Phone remote</button>
+    <button type="button" id="keysBtn" title="Keyboard and clicker shortcuts (?)">Keys</button>
     <button type="button" id="presentBtn" aria-pressed="false" title="Lock the layout for the projector and hide the controls (Esc to come back)">Present</button>
     <button type="button" id="fsBtn" class="primary">Fullscreen</button>
   </div>
@@ -355,6 +361,26 @@
   <nav class="dock" id="dock" aria-label="Add a widget">
     <span class="dock-label">Add:</span>
   </nav>
+  <dialog id="keysDialog" aria-labelledby="keysTitle">
+    <div class="rd-head">
+      <h2 id="keysTitle">Keyboard and clicker shortcuts</h2>
+      <button type="button" id="keysClose" aria-label="Close">×</button>
+    </div>
+    <table class="keys-table">
+      <caption class="sr-only">Shortcuts</caption>
+      <thead><tr><th scope="col">Key</th><th scope="col">Does</th></tr></thead>
+      <tbody>
+        <tr><th scope="row"><kbd>Space</kbd></th><td>Start or pause the timer on top</td></tr>
+        <tr><th scope="row"><kbd>N</kbd></th><td>Pick a name with the name picker on top</td></tr>
+        <tr><th scope="row"><kbd>→</kbd> <kbd>Page Down</kbd></th><td>Next screen</td></tr>
+        <tr><th scope="row"><kbd>←</kbd> <kbd>Page Up</kbd></th><td>Previous screen</td></tr>
+        <tr><th scope="row"><kbd>Esc</kbd></th><td>Back out of a widget filling the board, then out of present mode</td></tr>
+        <tr><th scope="row"><kbd>F</kbd></th><td>Fullscreen</td></tr>
+        <tr><th scope="row"><kbd>?</kbd></th><td>This list</td></tr>
+      </tbody>
+    </table>
+    <p class="note">A presentation clicker sends the arrow and Page keys, so it can run the board. Nothing here fires while you are typing in a box.</p>
+  </dialog>
 </main>
 
 <dialog id="remoteDialog" aria-labelledby="remoteTitle">
@@ -1427,7 +1453,8 @@
     document.body.classList.toggle('present', on);
     presentBtn.setAttribute('aria-pressed', String(on));
     presentExit.hidden = !on;
-    if (on) { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); presentExit.focus(); }
+    /* focus is left on the page, not the exit button: a clicker's Space would press it */
+    if (on) { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
     else { setSpot(''); presentBtn.focus(); }
   }
   presentBtn.addEventListener('click', function () { setPresent(!presenting); });
@@ -1443,6 +1470,48 @@
                           : 'input, textarea, select, button:not(.w-grip), canvas, iframe, a, summary, label';
     if (e.target.closest(skip)) return;
     setSpot(spotId === node.getAttribute('data-id') ? '' : node.getAttribute('data-id'));
+  });
+
+  /* ── keyboard and clicker shortcuts (Path 22 P7) ───────────────────── */
+
+  var keysDialog = document.getElementById('keysDialog');
+  var keysBtn = document.getElementById('keysBtn');
+  keysBtn.addEventListener('click', function () { keysDialog.showModal(); });
+  document.getElementById('keysClose').addEventListener('click', function () { keysDialog.close(); });
+  keysDialog.addEventListener('close', function () { if (!presenting) keysBtn.focus(); });
+
+  /* Stage.isTyping is the site's one answer; the fallback is only for a page where stage.js did not load. */
+  function isTyping(n) {
+    if (window.Stage && Stage.isTyping) return Stage.isTyping(n);
+    return !!n && (/^(INPUT|TEXTAREA|SELECT)$/i.test(n.tagName || '') || !!n.isContentEditable);
+  }
+  function gotoScreen(delta) {
+    var i = state.screens.findIndex(function (o) { return o.id === state.current; }) + delta;
+    if (i < 0 || i >= state.screens.length) { showToast(delta < 0 ? 'This is the first screen.' : 'This is the last screen.', false); return; }
+    state.current = state.screens[i].id; saveNow(); renderBoard();
+    showToast('Screen ' + (i + 1) + ' of ' + state.screens.length + ': ' + state.screens[i].name, false);
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.defaultPrevented) return;                         // a focused title bar already took its arrow
+    var t = e.target;
+    var open = document.querySelector('dialog[open]');
+    if (open && open !== keysDialog) return;                // the phone remote's dialog owns the keys
+    var k = Core.readKey(e, {
+      typing: isTyping(t) || isTyping(document.activeElement),
+      control: !!(t && t.closest && t.closest('button, a, summary, [role="button"]'))
+    });
+    if (!k) return;
+    if (open) { if (k.act === 'help') { e.preventDefault(); keysDialog.close(); } return; }
+    e.preventDefault();
+    if (k.act === 'help') keysDialog.showModal();
+    else if (k.act === 'next') gotoScreen(1);
+    else if (k.act === 'prev') gotoScreen(-1);
+    else {
+      var type = k.act === 'timer' ? 'timer' : 'names';
+      var w = topWidget(type), inst = w && instances[w.id];
+      if (!inst || !inst.remote) showToast(k.act === 'timer' ? 'Add a timer to run it with Space.' : 'Add a name picker to pick with N.', false);
+      else inst.remote(k.act === 'timer' ? { cmd: 'timer', action: 'toggle' } : { cmd: 'pick' });
+    }
   });
 
   /* Esc steps back one level: the spotlight first, then present mode. */
