@@ -121,7 +121,7 @@ export function loadBlueprintFromLocalStorage() {
     // otherwise overwrite the only copy of it that exists.
     try {
       const raw = localStorage.getItem(BLUEPRINT_KEY);
-      if (raw) localStorage.setItem(BLUEPRINT_KEY + '_unreadable', raw);
+      if (raw) localStorage.setItem('stviz_blueprint_unreadable', raw); // BLUEPRINT_KEY + '_unreadable', spelled out so check:registry can resolve it
     } catch (e2) { /* no room to quarantine it — nothing more we can do */ }
     return false;
   }
