@@ -247,7 +247,7 @@ eq(back.widgets.length, 1, 'Ctrl+Z goes back to the screen the move was on');
 eq({ x: back.widgets[0].x, y: back.widgets[0].y }, { x: before.x, y: before.y }, 'and puts the widget back');
 void tr;
 const keysRow = await page.evaluate(() => document.getElementById('keysDialog').textContent);
-ok(/Undo the last removal, move or resize/.test(keysRow), 'the shortcut list names Ctrl+Z');
+ok(/Undo the last removal, move, resize, colour or minimize/.test(keysRow), 'the shortcut list names Ctrl+Z');
 
 for (const width of [375, 360]) {
   page = pageB;

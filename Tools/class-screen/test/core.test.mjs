@@ -400,5 +400,40 @@ for (const bad of [null, 'pick', [], { cmd: 5 }, { cmd: 'eval' }, { cmd: '__prot
   eq(C.spinTo(4, 0, () => 0.9999).index, 3, 'a draw just under one picks the last segment, not past it');
 }
 
+// ── P11: snap, minimize, colour, the page-wide switches ──────────────
+{
+  const st = C.SNAP_STEP;
+  const onGrid = (v) => Math.abs(v / st - Math.round(v / st)) < 1e-6;
+  const mv = C.snapRect({ x: 0.113, y: 0.287, w: 0.3, h: 0.2 }, 'move');
+  ok(onGrid(mv.x) && onGrid(mv.y) && mv.w === 0.3 && mv.h === 0.2, 'a snapped move puts the top-left on the grid and keeps the size');
+  const rz = C.snapRect({ x: 0.1, y: 0.1, w: 0.313, h: 0.207 }, 'resize');
+  ok(onGrid(rz.x + rz.w) && onGrid(rz.y + rz.h) && rz.x === 0.1 && rz.y === 0.1, 'a snapped resize puts the far corner on the grid and leaves the near one');
+  const tiny = C.snapRect({ x: 0.5, y: 0.5, w: 0.081, h: 0.081 }, 'resize');
+  ok(tiny.w >= C.MIN_W - 1e-9 && tiny.h >= C.MIN_H - 1e-9, 'a snapped resize never goes under the minimum size');
+  const edge = C.snapRect({ x: 0.99, y: 0.99, w: 0.3, h: 0.3 }, 'move');
+  ok(edge.x + edge.w <= 1 + 1e-9 && edge.y + edge.h <= 1 + 1e-9, 'a snapped move stays on the board');
+  eq(C.snapRect({ x: NaN, y: 'a' }, 'move'), { x: 0, y: 0, w: 0.25, h: 0.25 }, 'garbage snaps to the default rect');
+  eq(C.snapRect({ x: 0.1, y: 0.1, w: 0.3, h: 0.3 }, 'move', 0.1).x, 0.1, 'a step can be passed');
+
+  const bare = C.normalizeWidget({ id: 'p', type: 'text', x: 0.1, y: 0.1, w: 0.3, h: 0.3, z: 1 });
+  ok(!('min' in bare) && !('color' in bare), 'a widget that never used the comforts has neither field');
+  const dressed = C.normalizeWidget({ id: 'q', type: 'text', x: 0.1, y: 0.1, w: 0.3, h: 0.3, z: 1, min: true, color: 'warm' });
+  ok(dressed.min === true && dressed.color === 'warm', 'minimized and colour are kept');
+  const odd = C.normalizeWidget({ id: 'r', type: 'text', min: 'yes', color: 'url(x)' });
+  ok(!('min' in odd) && !('color' in odd), 'a bad flag or colour is dropped, not kept as a string');
+  C.COLORS.forEach((c) => ok(C.normalizeWidget({ type: 'text', color: c }).color === c, `colour ${c} is accepted`));
+
+  // An old board (written before P11) opens exactly as before.
+  const oldBoard = { current: 's1', follow: false, screens: [{ id: 's1', name: 'Old', bg: 'dots', bgImage: '', period: '', widgets: [
+    { id: 'a', type: 'timer', x: 0.1, y: 0.1, w: 0.26, h: 0.34, z: 1, data: { duration: 300, endsAt: 0, remaining: 300, sound: true } }] }] };
+  eq(C.normalizeState(JSON.parse(JSON.stringify(oldBoard))), oldBoard, 'a board saved before P11 opens unchanged, with no new field added');
+  const on = C.normalizeState({ screens: [], snap: true, projector: true });
+  ok(on.snap === true && on.projector === true, 'snap and the projector theme are kept when on');
+  const off = C.normalizeState({ screens: [], snap: 'true', projector: 1 });
+  ok(!('snap' in off) && !('projector' in off), 'a non-boolean switch is dropped');
+  const rt = C.readImport(C.exportScreen(C.normalizeState({ screens: [{ id: 's', name: 'X', widgets: [{ id: 'a', type: 'text', min: true, color: 'blue' }] }] }).screens[0], {}));
+  ok(rt.screen.widgets[0].min === true && rt.screen.widgets[0].color === 'blue', 'minimized and colour survive an export and import');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

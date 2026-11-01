@@ -17,6 +17,7 @@
      ClassScreenCore.readImport(obj)      → { screen, media } | { error }
      ClassScreenCore.readCommand(msg)     → a phone-remote command, or null
      ClassScreenCore.readKey(e, where)    → a keyboard shortcut, or null
+     ClassScreenCore.snapRect(r, mode)    → a rect on the snap grid (P11)
 
    Positions are FRACTIONS of the board (0..1), never pixels, so a screen laid
    out on a laptop lands in the same place on a 1080p projector.
@@ -63,6 +64,13 @@
   };
 
   var MIN_W = 0.08, MIN_H = 0.08;
+
+  /* Layout comforts (Path 22 P11). Snap lands a widget's top-left corner (or,
+     when resizing, its bottom-right corner) on a grid of 1/40 of the board.
+     A widget's colour is one of these names, painted by the page from tokens;
+     '' (no colour) is never stored, nor is a minimized flag that is off. */
+  var SNAP_STEP = 0.025;
+  var COLORS = ['blue', 'slate', 'warm', 'info'];
   var MAX_SCREENS = 30, MAX_WIDGETS = 40, MAX_TEXT = 5000, MAX_NAME = 60, MAX_URL = 500;
   var MAX_TIMER_S = 24 * 3600;
   var MAX_AGENDA = 12, MAX_AGENDA_ITEM = 120;
@@ -188,6 +196,25 @@
       w: w,
       h: h
     };
+  }
+
+  /* A rect moved onto the snap grid. 'move' snaps the top-left corner; 'resize'
+     snaps the bottom-right corner (never below the minimum size). The result is
+     clamped to the board, so a widget that cannot sit on a line stays inside. */
+  function snapTo(v, step) { return Math.round(Math.round(v / step) * step * 1000) / 1000; }
+  function snapRect(r, mode, step) {
+    step = typeof step === 'number' && step > 0 ? step : SNAP_STEP;
+    var x = num(r && r.x, 0, 1, 0), y = num(r && r.y, 0, 1, 0);
+    var w = num(r && r.w, MIN_W, 1, 0.25), h = num(r && r.h, MIN_H, 1, 0.25);
+    if (mode === 'resize') {
+      var right = snapTo(x + w, step), bottom = snapTo(y + h, step);
+      while (right - x < MIN_W - 1e-9) right += step;
+      while (bottom - y < MIN_H - 1e-9) bottom += step;
+      w = right - x; h = bottom - y;
+    } else {
+      x = snapTo(x, step); y = snapTo(y, step);
+    }
+    return clampRect({ x: x, y: y, w: w, h: h });
   }
 
   /* ---- state ------------------------------------------------------------ */
@@ -455,13 +482,17 @@
   function normalizeWidget(w) {
     if (!isObj(w) || TYPES.indexOf(w.type) === -1) return null;
     var r = clampRect(w);
-    return {
+    var out = {
       id: typeof w.id === 'string' && /^[\w-]{1,40}$/.test(w.id) ? w.id : newId('w'),
       type: w.type,
       x: r.x, y: r.y, w: r.w, h: r.h,
       z: Math.round(num(w.z, 1, 10000, 1)),
       data: normalizeData(w.type, w.data)
     };
+    /* Only once used, so a board that never used them is byte-for-byte what it was. */
+    if (w.min === true) out.min = true;
+    if (COLORS.indexOf(w.color) !== -1) out.color = w.color;
+    return out;
   }
 
   function blankScreen(name) {
@@ -506,7 +537,11 @@
     }
     if (!screens.length) screens.push(blankScreen('Screen 1'));
     var current = isObj(raw) && typeof raw.current === 'string' && seen[raw.current] ? raw.current : screens[0].id;
-    return { current: current, follow: isObj(raw) ? bool(raw.follow, false) : false, screens: screens };
+    var out = { current: current, follow: isObj(raw) ? bool(raw.follow, false) : false, screens: screens };
+    /* Page-wide comforts, kept only while on (P11). */
+    if (isObj(raw) && raw.snap === true) out.snap = true;
+    if (isObj(raw) && raw.projector === true) out.projector = true;
+    return out;
   }
 
   /* Where a new widget goes: the first free spot in reading order (top-left
@@ -815,6 +850,9 @@
     formatClock: formatClock,
     parseDuration: parseDuration,
     clampRect: clampRect,
+    snapRect: snapRect,
+    SNAP_STEP: SNAP_STEP,
+    COLORS: COLORS,
     defaultData: defaultData,
     normalizeWidget: normalizeWidget,
     normalizeState: normalizeState,

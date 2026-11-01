@@ -379,6 +379,74 @@
   .w-link .w-link-body { display: flex; flex-wrap: wrap; gap: .3rem .8rem; justify-content: center; padding-top: .25rem; }
   body.present .w-link { display: none; }
 
+  /* ── layout comforts (Path 22 P11) ─────────────────────────────────── */
+  /* A colour is a tint of a token over the card, never a literal, so it has a
+     dark counterpart for free. The tints stay light (12%) so --ink and --muted
+     keep their contrast; the page's suite measures it in both themes. */
+  .w[data-color="blue"]  { background: color-mix(in srgb, var(--accent-2) 12%, var(--card)); }
+  .w[data-color="slate"] { background: color-mix(in srgb, var(--accent) 12%, var(--card)); }
+  .w[data-color="warm"]  { background: color-mix(in srgb, var(--err) 10%, var(--card)); }
+  .w[data-color="info"]  { background: var(--info-bg); }
+  .w[data-color="blue"] .w-bar  { background: color-mix(in srgb, var(--accent-2) 18%, var(--card-2)); }
+  .w[data-color="slate"] .w-bar { background: color-mix(in srgb, var(--accent) 18%, var(--card-2)); }
+  .w[data-color="warm"] .w-bar  { background: color-mix(in srgb, var(--err) 14%, var(--card-2)); }
+  .w[data-color="info"] .w-bar  { background: var(--info-bg); }
+  /* muted grey on a tinted bar falls under 4.5:1 (measured), so a coloured widget's bar reads in full ink */
+  .w[data-color] .w-grip, .w[data-color] .w-hue, .w[data-color] .w-min, .w[data-color] .w-fill, .w[data-color] .w-close { color: var(--ink); }
+  .w-hue, .w-min { border: 0; background: transparent; padding: .1rem .4rem; font-size: .95rem; line-height: 1; color: var(--muted); border-radius: 0; }
+  .w-hue:hover, .w-min:hover { color: var(--ink); background: transparent; }
+  .w-hue i { display: inline-block; width: .8em; height: .8em; border-radius: 50%; border: 2px solid currentColor; vertical-align: -.1em; background: transparent; }
+  .w[data-color="blue"] .w-hue i  { background: var(--accent-2); }
+  .w[data-color="slate"] .w-hue i { background: var(--accent); }
+  .w[data-color="warm"] .w-hue i  { background: var(--err); }
+  .w[data-color="info"] .w-hue i  { background: var(--info-line); }
+  /* A minimized widget is only its title bar, a chip. It keeps running (a timer still ends);
+     present mode hides the chip, so minimizing is also how to take a widget off the projector. */
+  .w.is-min { height: auto !important; width: auto !important; min-width: 7rem; max-width: 60%; }
+  .w.is-min .w-body, .w.is-min .w-resize { display: none; }
+  .w.is-min .w-bar { border-bottom: 0; }
+  .w.is-min.spot { width: 100% !important; height: 100% !important; max-width: none; }
+  .w.is-min.spot .w-body { display: flex; }
+  body.present .w.is-min:not(.spot) { display: none; }
+  /* the snap grid shows while a widget is being dragged */
+  #board.drag-snap::before {
+    content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: .55;
+    background-image: linear-gradient(to right, var(--line) 1px, transparent 1px), linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+    background-size: 2.5% 2.5%;
+  }
+  /* screen thumbnails */
+  #shotsDialog { width: min(52rem, 94vw); }
+  .shots { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: .7rem; }
+  .shot-btn { display: flex; flex-direction: column; gap: .3rem; width: 100%; text-align: left; padding: .35rem; }
+  .shot-btn[aria-current="true"] { border-color: var(--accent); border-width: 3px; padding: calc(.35rem - 2px); }
+  .shot-name { font-size: .85rem; font-weight: 700; overflow-wrap: anywhere; }
+  .shot-meta { font-size: .75rem; font-weight: 400; color: var(--muted); }
+  .shot-board { position: relative; aspect-ratio: 16 / 9; container-type: size; overflow: hidden; border: 1px solid var(--line); border-radius: 4px; background-color: var(--paper); }
+  .shot-w { position: absolute; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--card); color: var(--ink); font-size: 7cqw; line-height: 1.1; padding: 1cqw; overflow: hidden; }
+  .shot-w.is-min { height: 9cqh !important; }
+  .shot-w[data-color="blue"]  { background: color-mix(in srgb, var(--accent-2) 22%, var(--card)); }
+  .shot-w[data-color="slate"] { background: color-mix(in srgb, var(--accent) 22%, var(--card)); }
+  .shot-w[data-color="warm"]  { background: color-mix(in srgb, var(--err) 18%, var(--card)); }
+  .shot-w[data-color="info"]  { background: var(--info-bg); }
+  .shot-board[data-bg="blue"]  { background-color: color-mix(in srgb, var(--accent-2) 16%, var(--paper)); }
+  .shot-board[data-bg="slate"] { background-color: color-mix(in srgb, var(--accent) 16%, var(--paper)); }
+  .shot-board[data-bg="warm"]  { background-color: color-mix(in srgb, var(--err) 10%, var(--paper)); }
+
+  /* ── projector theme (Path 22 P11): bigger type, full-strength lines ──────── */
+  /* Tokens only. Muted text becomes full ink and the soft lines become the strong
+     ones, so nothing on the board is read from a pale grey; the sizes that the page
+     fixes in rem are raised by hand. Set on <body>, never on <html>: a11y.js owns the theme. */
+  body.projector { --muted: var(--ink); --line: var(--line-strong); --line-strong: var(--ink); }
+  body.projector .w { border-width: 3px; }
+  body.projector .w-grip, body.projector .note, body.projector .err-note, body.projector .w-link,
+  body.projector .w-foot label { font-size: 1rem; }
+  body.projector .w-foot button, body.projector .w-foot select, body.projector .w-foot input[type="text"] { font-size: 1rem; }
+  body.projector .w-body button, body.projector .w-body select { font-size: 1.05rem; }
+  body.projector .text-area { font-size: calc(var(--fs, 2) * 1.3rem); }
+  body.projector .agenda-list, body.projector .agenda-head { font-size: clamp(1.2rem, 8cqmin, 2.8rem); }
+  body.projector button:focus-visible, body.projector select:focus-visible, body.projector input:focus-visible,
+  body.projector textarea:focus-visible, body.projector a:focus-visible { outline-width: 5px; }
+
   /* ── toast ──────────────────────────────────────────────────────────── */
   .toast {
     position: fixed; left: 50%; bottom: 4.2rem; transform: translateX(-50%); z-index: 60;
@@ -403,11 +471,14 @@
   <div class="screen-bar">
     <label for="screenSelect">Screen</label>
     <select id="screenSelect"></select>
+    <button type="button" id="shotsBtn" title="See every screen as a small picture and pick one">Screens</button>
     <button type="button" id="newScreenBtn">New</button>
     <label for="templateSelect" class="sr-only">New screen from a starter</label>
     <select id="templateSelect"></select>
     <label for="periodSelect">Period</label>
     <select id="periodSelect"></select>
+    <label class="follow" title="Land widgets on a grid when you move or resize them"><input type="checkbox" id="snapToggle"> Snap to grid</label>
+    <label class="follow" title="Bigger text and stronger lines for a projector at the back of the room"><input type="checkbox" id="projectorToggle"> Projector theme</label>
     <label class="follow" title="Switch to each period's screen when its bell rings (bell times come from Command Center)"><input type="checkbox" id="followBell"> Follow the bell</label>
     <label for="bgSelect">Background</label>
     <select id="bgSelect">
@@ -469,7 +540,7 @@
         <tr><th scope="row"><kbd>→</kbd> <kbd>Page Down</kbd></th><td>Next screen</td></tr>
         <tr><th scope="row"><kbd>←</kbd> <kbd>Page Up</kbd></th><td>Previous screen</td></tr>
         <tr><th scope="row"><kbd>Esc</kbd></th><td>Back out of a widget filling the board, then out of present mode</td></tr>
-        <tr><th scope="row"><kbd>Ctrl</kbd> <kbd>Z</kbd></th><td>Undo the last removal, move or resize</td></tr>
+        <tr><th scope="row"><kbd>Ctrl</kbd> <kbd>Z</kbd></th><td>Undo the last removal, move, resize, colour or minimize</td></tr>
         <tr><th scope="row"><kbd>F</kbd></th><td>Fullscreen</td></tr>
         <tr><th scope="row"><kbd>?</kbd></th><td>This list</td></tr>
       </tbody>
@@ -477,6 +548,14 @@
     <p class="note">A presentation clicker sends the arrow and Page keys, so it can run the board. Nothing here fires while you are typing in a box.</p>
   </dialog>
 </main>
+
+<dialog id="shotsDialog" aria-labelledby="shotsTitle">
+  <div class="rd-head">
+    <h2 id="shotsTitle">Screens</h2>
+    <button type="button" id="shotsClose" aria-label="Close">×</button>
+  </div>
+  <ul class="shots" id="shotsList"></ul>
+</dialog>
 
 <dialog id="remoteDialog" aria-labelledby="remoteTitle">
   <div class="rd-head">
@@ -1844,6 +1923,37 @@
     place(w); save();
   }
 
+  /* ── layout comforts (Path 22 P11): colour, minimize ─────────────── */
+  /* Both live on the widget record (`color`, `min`), present only once used, and both are
+     one undo step like a move. The widget keeps running when it is a chip. */
+  function look(w) {
+    var inst = instances[w.id];
+    if (!inst) return;
+    var n = inst.el, t = TYPES[w.type].title;
+    n.classList.toggle('is-min', !!w.min);
+    if (w.color) n.setAttribute('data-color', w.color); else n.removeAttribute('data-color');
+    var m = n.querySelector('.w-min'), h = n.querySelector('.w-hue');
+    m.textContent = w.min ? '+' : '–';
+    m.setAttribute('aria-label', (w.min ? 'Restore ' : 'Minimize ') + t);
+    h.setAttribute('aria-label', 'Colour of ' + t + ': ' + (w.color || 'none') + '. Next colour');
+    h.title = 'Colour: ' + (w.color || 'none');
+  }
+  function nextColor(c) {
+    var i = Core.COLORS.indexOf(c) + 1;
+    return i < Core.COLORS.length ? Core.COLORS[i] : '';
+  }
+  function setProp(w, field, value) {
+    var from = w[field];
+    if (value) w[field] = value; else delete w[field];
+    look(w);
+    var top = undoStack[undoStack.length - 1], now = Date.now();
+    if (top && top.k === 'prop' && top.id === w.id && top.field === field && now - top.t < 1500) top.t = now;
+    else pushUndo({ k: 'prop', screenId: currentScreen().id, id: w.id, field: field, from: from, t: now });
+    saveNow();
+    var t = TYPES[w.type].title;
+    showToast(field === 'min' ? t + (value ? ' minimized.' : ' restored.') : t + ' colour: ' + (value || 'none') + '.', true);
+  }
+
   /* A timer that runs out can do more than flash itself (Path 22 P8). Each
      link reaches its target the way the phone remote does: through the
      topmost widget of that type on this screen, and quietly if there is none. */
@@ -1926,16 +2036,19 @@
     var grip = el('button', { type: 'button', className: 'w-grip', text: title, 'aria-label': 'Move ' + title, 'aria-describedby': 'gripHelp' });
     var close = el('button', { type: 'button', className: 'w-close', text: '×', 'aria-label': 'Remove ' + title });
     var fill = el('button', { type: 'button', className: 'w-fill', text: '⤢', 'aria-label': 'Fill the board with ' + title, 'aria-pressed': 'false' });
+    var hue = el('button', { type: 'button', className: 'w-hue' }, [el('i', { 'aria-hidden': 'true' })]);
+    var mini = el('button', { type: 'button', className: 'w-min', text: '–' });
     var body = el('div', { className: 'w-body' });
     var resize = el('div', { className: 'w-resize', 'aria-hidden': 'true' });
     /* 'wt-' + type, not 'w-' + type: the frame's own parts are .w-bar,
        .w-body and so on, and P1's text widget collided with one. */
     var node = el('section', { className: 'w wt-' + w.type, 'aria-label': title, 'data-id': w.id, 'data-type': w.type },
-      [el('div', { className: 'w-bar' }, [grip, fill, close]), body, resize]);
+      [el('div', { className: 'w-bar' }, [grip, hue, mini, fill, close]), body, resize]);
 
     instances[w.id] = { el: node };
     board.appendChild(node);
     place(w);
+    look(w);
 
     var api = type.build({ el: node, body: body, data: w.data, id: w.id, save: save, fire: fireLinks }) || {};
     instances[w.id].tick = api.tick;
@@ -1946,6 +2059,8 @@
 
     node.addEventListener('pointerdown', function () { if (!presenting && !spotId) bringToFront(w); }, true);
     close.addEventListener('click', function () { removeWidget(w.id); });
+    hue.addEventListener('click', function () { if (!presenting && !spotId) setProp(w, 'color', nextColor(w.color)); });
+    mini.addEventListener('click', function () { if (!presenting && !spotId) setProp(w, 'min', !w.min); });
     fill.addEventListener('click', function () { setSpot(spotId === w.id ? '' : w.id); });
     dragWith(grip, w, node, 'move');
     dragWith(resize, w, node, 'resize');
@@ -1956,11 +2071,11 @@
       if (!dx && !dy) return;
       e.preventDefault();
       if (presenting || spotId) return;
-      var step = 0.01;
+      var step = state.snap ? Core.SNAP_STEP : 0.01;
       var r = e.shiftKey
         ? { x: w.x, y: w.y, w: w.w + dx * step, h: w.h + dy * step }
         : { x: w.x + dx * step, y: w.y + dy * step, w: w.w, h: w.h };
-      r = Core.clampRect(r);
+      r = state.snap ? Core.snapRect(r, e.shiftKey ? 'resize' : 'move') : Core.clampRect(r);
       var was = { x: w.x, y: w.y, w: w.w, h: w.h };
       w.x = r.x; w.y = r.y; w.w = r.w; w.h = r.h;
       noteGeo(w, was, e.shiftKey ? 'resize' : 'move');
@@ -1978,6 +2093,7 @@
       var moved = false;
       handle.setPointerCapture(e.pointerId);
       node.classList.add('dragging');
+      if (state.snap) board.classList.add('drag-snap');
       function move(ev) {
         var dx = (ev.clientX - start.px) / rect.width;
         var dy = (ev.clientY - start.py) / rect.height;
@@ -1985,7 +2101,7 @@
         var r = mode === 'move'
           ? { x: start.x + dx, y: start.y + dy, w: start.w, h: start.h }
           : { x: start.x, y: start.y, w: Math.min(start.w + dx, 1 - start.x), h: Math.min(start.h + dy, 1 - start.y) };
-        r = Core.clampRect(r);
+        r = state.snap ? Core.snapRect(r, mode) : Core.clampRect(r);
         w.x = r.x; w.y = r.y; w.w = r.w; w.h = r.h;
         place(w);
       }
@@ -1994,6 +2110,7 @@
         handle.removeEventListener('pointerup', up);
         handle.removeEventListener('pointercancel', up);
         node.classList.remove('dragging');
+        board.classList.remove('drag-snap');
         if (moved) { noteGeo(w, { x: start.x, y: start.y, w: start.w, h: start.h }, mode); save(); }
       }
       handle.addEventListener('pointermove', move);
@@ -2112,7 +2229,58 @@
     boardEmpty.hidden = s.widgets.length > 0;
     renderScreenBar();
     renderBackground();
+    syncSwitches();
   }
+
+  /* ── snap and the projector theme (Path 22 P11) ─────────────────────── */
+  var snapToggle = document.getElementById('snapToggle');
+  var projectorToggle = document.getElementById('projectorToggle');
+  function syncSwitches() {
+    snapToggle.checked = !!state.snap;
+    projectorToggle.checked = !!state.projector;
+    document.body.classList.toggle('projector', !!state.projector);
+  }
+  snapToggle.addEventListener('change', function () {
+    if (snapToggle.checked) state.snap = true; else delete state.snap;
+    saveNow();
+  });
+  projectorToggle.addEventListener('change', function () {
+    if (projectorToggle.checked) state.projector = true; else delete state.projector;
+    saveNow(); syncSwitches();
+  });
+
+  /* ── screen thumbnails (Path 22 P11) ────────────────────────────────── */
+  /* A small picture of every screen's layout, drawn from the saved fractions with
+     the same colours and the same backgrounds, and nothing live in it: no timer
+     runs, no picture loads. The button's name is the screen's name and its count. */
+  var shotsDialog = document.getElementById('shotsDialog');
+  var shotsList = document.getElementById('shotsList');
+  var shotsBtn = document.getElementById('shotsBtn');
+  function drawShots() {
+    shotsList.textContent = '';
+    state.screens.forEach(function (sc) {
+      var pic = el('div', { className: 'shot-board', 'aria-hidden': 'true', 'data-bg': sc.bg === 'image' ? 'plain' : sc.bg });
+      sc.widgets.slice().sort(function (a, b) { return a.z - b.z; }).forEach(function (w) {
+        var tile = el('div', { className: 'shot-w' + (w.min ? ' is-min' : ''), text: TYPES[w.type].title });
+        tile.style.left = (w.x * 100) + '%'; tile.style.top = (w.y * 100) + '%';
+        tile.style.width = (w.w * 100) + '%'; tile.style.height = (w.h * 100) + '%';
+        if (w.color) tile.setAttribute('data-color', w.color);
+        pic.appendChild(tile);
+      });
+      var n = sc.widgets.length;
+      var btn = el('button', { type: 'button', className: 'shot-btn', 'data-id': sc.id, 'aria-current': String(sc.id === state.current) },
+        [pic, el('span', { className: 'shot-name', text: sc.name }), el('span', { className: 'shot-meta', text: n + (n === 1 ? ' widget' : ' widgets') })]);
+      btn.addEventListener('click', function () {
+        shotsDialog.close();
+        if (sc.id === state.current) return;
+        state.current = sc.id; saveNow(); renderBoard();
+      });
+      shotsList.appendChild(el('li', null, [btn]));
+    });
+  }
+  shotsBtn.addEventListener('click', function () { drawShots(); shotsDialog.showModal(); });
+  document.getElementById('shotsClose').addEventListener('click', function () { shotsDialog.close(); });
+  shotsDialog.addEventListener('close', function () { if (!presenting) shotsBtn.focus(); });
 
   /* ── another tab saved (Path 22 P10) ────────────────────────────────── */
   /* Two tabs on one board used to be last writer wins, silently. A save from
@@ -2253,6 +2421,12 @@
       var w2 = sc && sc.widgets.find(function (o) { return o.id === e.id; });
       if (!w2) continue;
       if (state.current !== sc.id) { state.current = sc.id; renderBoard(); }
+      if (e.k === 'prop') {
+        if (e.from) w2[e.field] = e.from; else delete w2[e.field];
+        look(w2); saveNow();
+        showToast('Undone: ' + TYPES[w2.type].title + (e.field === 'min' ? ' minimize.' : ' colour.'), false);
+        return true;
+      }
       w2.x = e.from.x; w2.y = e.from.y; w2.w = e.from.w; w2.h = e.from.h;
       place(w2); saveNow();
       showToast('Undone: ' + TYPES[w2.type].title + (e.mode === 'move' ? ' move.' : ' resize.'), false);
