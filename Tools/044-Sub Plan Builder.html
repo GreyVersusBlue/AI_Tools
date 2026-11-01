@@ -16,6 +16,7 @@
 <script src="../_shared/share.js"></script>
 <script src="../_shared/media-db.js"></script>
 <script src="../_shared/seating-read.js"></script>
+<script src="../_shared/list-sentence.js"></script>
 <script src="../_shared/speak.js"></script>
 <script src="packet-builder/sections.js"></script>
 <script src="packet-builder/providers.js"></script>
@@ -256,6 +257,11 @@
       <div>
         <label for="rosterLocation">Rosters / seating charts location</label>
         <input type="text" id="rosterLocation" placeholder="blue substitute folder">
+        <label class="check" style="display:flex; gap:6px; align-items:flex-start; margin-top:6px;">
+          <input type="checkbox" id="binderRefs" style="margin-top:3px;">
+          <span>Name the classes whose seating chart and roster the Sub Binder prints, in Important Notes</span>
+        </label>
+        <p class="field-hint" id="binderRefsNote" style="margin:2px 0 0;"></p>
       </div>
       <div>
         <label for="absenceLocation">Absence slips location</label>
@@ -505,6 +511,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     behaviorVariant: "long",
     behaviorCustom: "",
     referralLines: "4",
+    binderRefs: false,
     phoneNurse: "647-2223",
     phoneCounseling: "647-2222",
     phoneSupport: "647-2256",
@@ -639,6 +646,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     el('behaviorCustom').value = settings.behaviorCustom;
     el('behaviorCustom').style.display = settings.behaviorVariant === 'custom' ? 'block' : 'none';
     el('referralLines').value = settings.referralLines;
+    el('binderRefs').checked = settings.binderRefs === true;
     el('phoneNurse').value = settings.phoneNurse;
     el('phoneCounseling').value = settings.phoneCounseling;
     el('phoneSupport').value = settings.phoneSupport;
@@ -659,6 +667,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   bindField('teacherName', 'teacherName');
   bindField('roomNumber', 'roomNumber');
   bindField('rosterLocation', 'rosterLocation');
+  bindField('binderRefs', 'binderRefs', true);
   bindField('absenceLocation', 'absenceLocation');
   bindField('emergencyLocation', 'emergencyLocation');
   bindField('attendanceText', 'attendanceText');
@@ -1127,8 +1136,10 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     // Seating chart — attached once for the whole absence, repeated on every day's page like Emergency Info and the
     // checklist, so a page pulled out on its own still has it.
     if (seatingChartImage) {
-      sections.push({ id: 'seating', title: 'Seating Chart', items: [], text: {}, image: seatingChartImage,
-        plainText: '  Seating chart: attached — see the generated Word doc (this plain-text copy cannot carry an image).' });
+      // A chart drawn from a saved class says which class it is; an attached photo has no name to give.
+      const named = seatingChartName ? ' (' + seatingChartName + ')' : '';
+      sections.push({ id: 'seating', title: seatingChartName ? 'Seating Chart — ' + seatingChartName : 'Seating Chart', items: [], text: {}, image: seatingChartImage,
+        plainText: '  Seating chart' + named + ': attached — see the generated Word doc (this plain-text copy cannot carry an image).' });
     }
 
     const announcement = (dp.announcement || '').trim();
@@ -1156,6 +1167,12 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     if (field('attendanceText')) notes.push({ k: 'lab', label: 'Attendance: ', value: field('attendanceText') });
     notes.push({ k: 'lab', label: 'Resources:', value: '' });
     if (field('rosterLocation')) notes.push(bullet('Rosters / seating charts: ' + field('rosterLocation')));
+    // Names only, from the classes the Sub Binder (045) reads, so the plan cannot point at a chart it does not print.
+    const held = settings.binderRefs === true ? binderHeld() : null;
+    if (held && (held.seating.length || held.rosters.length)) {
+      const part = (what, names) => names.length ? what + ' for ' + ListSentence.join(names) : '';
+      notes.push(bullet('The Sub Binder prints ' + [part('seating charts', held.seating), part('class rosters', held.rosters)].filter(Boolean).join(', and ') + '.'));
+    }
     if (field('absenceLocation')) notes.push(bullet('Absence slips: ' + field('absenceLocation')));
     if (field('emergencyLocation')) notes.push(bullet('Substitute / emergency folder: ' + field('emergencyLocation')));
     notes.push(bullet('Please review the IEP/504 accommodation grid for extra time, assistance, etc.'));
@@ -1310,6 +1327,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   // longest side so a phone photo doesn't balloon the .docx.
 
   let seatingChartImage = null; // { base64, dataUrl, widthPx, heightPx } | null
+  let seatingChartName = '';    // the saved class a drawn chart came from; '' for an attached image (tab only, like the image)
   const SEATING_CHART_MAX_DIM = 900;
 
   // The site's one downscaler (_shared/media-db.js), asked for a PNG data URL
@@ -1343,6 +1361,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     if (!file) return;
     try {
       seatingChartImage = await readImageFileToPng(file);
+      seatingChartName = '';
       setSeatingChartUI();
     } catch (err) {
       seatingChartImage = null;
@@ -1352,6 +1371,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   });
   el('seatingChartRemoveBtn').addEventListener('click', () => {
     seatingChartImage = null;
+    seatingChartName = '';
     setSeatingChartUI();
   });
 
@@ -1459,6 +1479,33 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     } catch (e) { return []; }
   }
 
+  // The class names the Sub Binder can print a seating chart and a roster for: the Packet Builder's own
+  // providers (the ones 045 and 090 read), so this page names no key of 005 or 006. Titles only; a roster's
+  // students are never read here. A roster that runs over several pages is one class.
+  function binderHeld() {
+    const out = { seating: [], rosters: [] };
+    if (!window.PacketSections) return out;
+    try {
+      const ctx = { read: PacketSections.readerFor(localStorage), todayISO: '', SeatingRead: window.SeatingRead };
+      const names = (id, strip) => {
+        const built = PacketSections.build([id], ctx).sections[0];
+        const seen = new Set();
+        ((built && built.pages) || []).forEach(pg => seen.add(String(pg.title || '').replace(strip, '').trim()));
+        return [...seen].filter(Boolean);
+      };
+      out.seating = window.SeatingRead ? names('seating', /^Seating: /) : [];
+      out.rosters = names('class-rosters', / \(\d+\)$/);
+    } catch (e) { /* nothing saved, or a key that does not parse: the plan just says nothing */ }
+    return out;
+  }
+
+  function renderBinderRefsNote() {
+    const held = binderHeld();
+    const say = (what, names) => names.length ? what + ': ' + names.join(', ') : '';
+    el('binderRefsNote').textContent = [say('Seating charts', held.seating), say('Rosters', held.rosters)].filter(Boolean).join('. ') ||
+      'No seating chart or roster is saved yet, so there is nothing to name.';
+  }
+
   function svgToPng(svg) {
     return new Promise((resolve, reject) => {
       const m = /viewBox="([-\d. ]+)"/.exec(svg);
@@ -1500,6 +1547,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     if (!c) return;
     try {
       seatingChartImage = await svgToPng(c.svg);
+      seatingChartName = c.name;
       setSeatingChartUI();
       el('seatingChartStatus').textContent = 'Drawn from your saved seating chart: ' + c.name + ' (' + seatingChartImage.widthPx + '×' + seatingChartImage.heightPx + 'px) — will be embedded in the Word doc.';
     } catch (err) {
@@ -1507,6 +1555,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     }
   });
   renderSeatingPull();
+  renderBinderRefsNote();
 
   // ---------- DOCX generation ----------
 

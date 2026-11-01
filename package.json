@@ -204,6 +204,7 @@
     "test:school-calendar-weeks": "node Tools/school-calendar/test/smoke-weeks.mjs",
     "test:packet-builder": "node Tools/packet-builder/test/smoke-packet-builder.mjs",
     "test:packet-providers": "node Tools/packet-builder/test/providers.test.mjs",
+    "test:sub-plan-binder-refs": "node Tools/sub-plan-builder/test/smoke-binder-refs.mjs",
     "test:sub-plan-seating": "node Tools/sub-plan-builder/test/smoke-seating-pull.mjs",
     "test:sub-plan-donow": "node Tools/sub-plan-builder/test/smoke-do-now-pull.mjs",
     "test:sub-plan-render": "node Tools/sub-plan-builder/test/smoke-one-renderer.mjs",
