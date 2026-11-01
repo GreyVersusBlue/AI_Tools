@@ -819,6 +819,10 @@
       a template saved before columns carried a kind and units. */
   function normalizeTemplate(obj, name) {
     var rows = parseInt(obj.dataRows, 10);
+    /* A link that leaves a section out (the one 059's "Start a lab report" sends carries only the
+       question, hypothesis, materials and procedure) gets the generic lab's version of it. A section
+       the link carries, even as an empty list, is kept as sent. */
+    var generic = buildFromSubject('generic');
     return Object.assign({
       name: name,
       title: String(obj.title || ''),
@@ -826,7 +830,7 @@
       hypothesisPrompt: String(obj.hypothesisPrompt || ''),
       materials: textList(obj.materials),
       procedure: textList(obj.procedure),
-      columns: (Array.isArray(obj.columns) ? obj.columns : []).map(function (c) {
+      columns: !Array.isArray(obj.columns) ? generic.columns : obj.columns.map(function (c) {
         return {
           id: uid(),
           text: String(c && c.text || ''),
@@ -835,8 +839,8 @@
         };
       }),
       dataRows: (rows >= 1 && rows <= 20) ? rows : 5,
-      observationsPrompt: String(obj.observationsPrompt || ''),
-      conclusion: textList(obj.conclusion)
+      observationsPrompt: typeof obj.observationsPrompt === 'string' ? obj.observationsPrompt : generic.observationsPrompt,
+      conclusion: Array.isArray(obj.conclusion) ? textList(obj.conclusion) : generic.conclusion
     }, obj.split && typeof obj.split === 'object' ? { split: splitOf(obj) } : {});
   }
 

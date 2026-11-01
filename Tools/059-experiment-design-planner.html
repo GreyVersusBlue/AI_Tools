@@ -21,6 +21,11 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<!-- Start a lab report from this plan: handoffs.js declares the handoff, tool-registry.js is where it finds
+     Lab Report Template Builder's page and the parameter that page reads. -->
+<script src="../_shared/tool-registry.js"></script>
+<script src="../_shared/handoffs.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -65,6 +70,7 @@
   .list-row .reorder-btns { display: flex; gap: .15rem; }
   .list-row .reorder-btns button { padding: .15rem .4rem; font-size: .74rem; line-height: 1; }
 
+  .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
   .warn-hint { color: var(--err); font-size: .78rem; margin: -.2rem 0 .6rem; display: none; }
   .warn-hint.shown { display: block; }
 
@@ -85,10 +91,12 @@
       <h1>Scientific Method / Experiment Design Planner</h1>
       <p class="sub">A guided pre-lab worksheet &mdash; plan the experiment before you run it.</p>
     </div>
-    <div>
+    <div class="btnrow">
+      <button type="button" class="secondary" id="labReportBtn">Start a lab report from this plan</button>
       <button class="secondary" id="printBtn">Print planner</button>
     </div>
   </div>
+  <p id="labReportNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card">
     <label for="expTitle">Experiment title</label>
@@ -145,7 +153,7 @@
   var els = {};
   ['expTitle', 'question', 'hypIf', 'hypThen', 'hypBecause', 'varIndependent', 'varDependent', 'varSanityHint',
    'controlledWrap', 'addControlledBtn', 'materialsWrap', 'addMaterialBtn', 'procedureWrap', 'addStepBtn',
-   'printBtn', 'printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'printBtn', 'printArea', 'labReportBtn', 'labReportNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = {
     title: '', question: '', hypIf: '', hypThen: '', hypBecause: '',
@@ -274,6 +282,27 @@
       '<div class="print-section"><h3>4. Materials</h3><ul>' + materials + '</ul></div>' +
       '<div class="print-section"><h3>5. Procedure</h3><ol>' + procedure + '</ol></div>';
     window.print();
+  });
+
+  /* ---------- start a lab report: _shared/handoffs.js ----------
+     Opens Lab Report Template Builder in a new tab with this plan's question, hypothesis, materials and
+     procedure filled in. It is saved there as its own template; nothing here changes and nothing is
+     stored on this side. */
+  var LAB_HANDOFF = window.Handoffs && Handoffs.from('scientific-method-planner').filter(function (h) { return h.to === 'lab-report-template-builder'; })[0];
+  function labReportNote(text, isError) {
+    els.labReportNote.textContent = text || '';
+    els.labReportNote.style.display = text ? '' : 'none';
+    els.labReportNote.classList.toggle('error', !!isError);
+  }
+  function planIsEmpty() {
+    return !state.title.trim() && !state.question.trim() && !state.hypIf.trim() && !state.hypThen.trim() && !state.hypBecause.trim() &&
+      [state.materials, state.procedure].every(function (l) { return l.every(function (x) { return !x.text.trim(); }); });
+  }
+  els.labReportBtn.addEventListener('click', function () {
+    if (!LAB_HANDOFF) { labReportNote('The hand-off is not available on this page.', true); return; }
+    if (planIsEmpty()) { labReportNote('Fill in some of the plan first: a question, a hypothesis, materials or steps.', true); return; }
+    var r = Handoffs.open(LAB_HANDOFF, state);
+    labReportNote(r.message, !r.ok);
   });
 
   /* ---------- boot ---------- */

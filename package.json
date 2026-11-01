@@ -240,6 +240,7 @@
     "test:cognates-worksheets": "node Tools/cognates-false-friends-builder/test/smoke-worksheets.mjs",
     "test:editing-import-logic": "node Tools/daily-editing-warmup-generator/test/import-logic.test.mjs",
     "test:editing-import": "node Tools/daily-editing-warmup-generator/test/smoke-import.mjs",
+    "test:lab-report-handoff": "node Tools/experiment-design-planner/test/smoke-lab-handoff.mjs",
     "test:civics-roles": "node Tools/civics-role-card-generator/test/smoke-assign-roster.mjs",
     "test:scavenger-hunt": "node Tools/qr-scavenger-hunt-builder/test/smoke-staggered-starts.mjs && node Tools/qr-scavenger-hunt-builder/test/smoke-paper-mode.mjs",
     "test:lab-groups": "node Tools/lab-group-role-randomizer/test/smoke-equipment-mode.mjs && node Tools/lab-group-role-randomizer/test/smoke-safety-gate.mjs && node Tools/lab-group-role-randomizer/test/smoke-undo.mjs",

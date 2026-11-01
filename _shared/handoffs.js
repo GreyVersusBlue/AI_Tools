@@ -65,7 +65,7 @@
    Two optional fields: `sheet: false` (no row in the share sheet; the page
    calls Handoffs.open() from a control of its own), and `maxLink` with
    `tooLong(built)`, the longest URL open() will open and the sentence it
-   returns instead (see open(); only 053 -> 030 sets it). With those, an
+   returns instead (see open(); 053 -> 030 and, since rank 90, 059 -> 065 set it). With those, an
    entry may set `file(payload)`, the payload as a file the receiver imports,
    which open() hands back with the refusal and the share sheet offers.
 
@@ -457,6 +457,51 @@
             })
           }, null, 2)
         };
+      }
+    },
+    {
+      from: 'scientific-method-planner',
+      to: 'lab-report-template-builder',
+      label: 'Start a lab report from this plan',
+      note: 'the question, hypothesis, materials and procedure, filled in',
+      /* No sheet row: 059 has no share sheet. Its "Start a lab report" button calls Handoffs.open() itself. */
+      sheet: false,
+      sent: 'Started a lab report in the Lab Report Template Builder in a new tab, with this plan’s question, hypothesis, materials and procedure filled in. It saves there as its own template; editing it does not change this plan.',
+      /* 059's state for this entry is its own plan, { title, question, hypIf, hypThen, hypBecause,
+         varIndependent, varDependent, controlled, materials, procedure } (the lists hold { text }).
+         The result is 065's template shape, which its ?template= importer saves beside what is there,
+         under a free name: the title is the name and the heading, the question is the objective,
+         and the hypothesis fills the Hypothesis prompt as "If …, then …, because …" with ____ for
+         a part not written yet. Materials and procedure go across as they are, blank rows dropped.
+         Left out on purpose: the variables, which 065 has no field for (its data table's columns are
+         the teacher's to set), and every field a plan does not have (columns, observations prompt,
+         conclusion questions, which packet a section prints in): 065 fills those from its generic
+         lab when a link omits them. Nothing about a student is in a plan, so nothing is cut. */
+      transform: function (state) {
+        function lines(list) {
+          return (Array.isArray(list) ? list : []).map(function (x) { return clip(x && x.text, 300); })
+            .filter(Boolean).slice(0, 40).map(function (t) { return { text: t }; });
+        }
+        var title = clip(state && state.title, 200);
+        var blank = '____';
+        var hyp = 'If ' + (clip(state && state.hypIf, 300) || blank) + ', then ' + (clip(state && state.hypThen, 300) || blank) +
+          ', because ' + (clip(state && state.hypBecause, 400) || blank) + '.';
+        return {
+          v: 1,
+          from: 'scientific-method-planner',
+          name: title || 'Lab report from an experiment plan',
+          title: title,
+          objective: clip(state && state.question, 600),
+          hypothesisPrompt: hyp,
+          materials: lines(state && state.materials),
+          procedure: lines(state && state.procedure)
+        };
+      },
+      maxLink: 7500,
+      tooLong: function (built) {
+        return 'This plan makes a link of ' + built.url.length.toLocaleString('en-US') +
+          ' characters, and a link longer than about 7,500 may not open. Nothing was sent. ' +
+          'Shorten the longest materials or procedure steps and try again.';
       }
     }
   ];
