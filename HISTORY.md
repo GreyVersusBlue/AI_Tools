@@ -9,6 +9,19 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-31: 023 name and date lines, rank 131 closed as already built (2026-11-01, no CACHE_VERSION change)
+
+Read the page before the row: `Tools/023-exit-ticket-generator.html` has had "Name:" and "Date:" line checkboxes (`showNameCheck`,
+`showDateCheck`, settings `showName` / `showDate`, both true by default) since before the print kit; the slip builder writes
+"Name: ____" and "Date: ____" for a blank set and the student's name for a class set (about line 2119), and
+`Tools/exit-ticket-generator/test/smoke-print.mjs` asserts the date rule on every slip and the name rule on every blank one.
+The row's other half, "response collection questions", is the student-device response board, which Devon put out of scope on
+2026-10-05 ("nothing is student-facing right now"); nothing built. No code changed, so no version bump. The row is deleted, and
+the section's quick win now says where the feature lives. The three prompt-bank quick wins under it (tags by purpose, pin or
+hide a prompt, a pasted prompt list) are not this row and stay as written in the section.
+
+---
+
 ## AI-31: 021 uneven groups and stations, rank 129 (2026-11-01, v540)
 
 The row's "more or fewer groups than stations" already worked (the engine wraps). What was unmodelled was a station that takes

@@ -832,7 +832,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 120 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
 | 126 | Hints with a time penalty; branching and station images | 018 | ½ | | [018 QR Scavenger Hunt Builder](#018--qr-scavenger-hunt-builder) |
 | 127 | Attempt limits and feedback; a non-QR fallback | 019 | ½ | | [019 Digital Escape Room / Puzzle Lock Builder](#019--digital-escape-room--puzzle-lock-builder) |
-| 131 | Name and date lines on the slips; response collection questions | 023 | ½ | | [023 Exit Ticket / Bell Ringer Generator](#023--exit-ticket--bell-ringer-generator) |
 | 135 | Discussion assessment; role recency across a book | 027 | ½ | | [027 Novel Study / Reading Circles Manager](#027--novel-study--reading-circles-manager) |
 | 136 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
 | 137 | 030 projector view: remember it across visits. The view shipped at v293 (AI-31-030) and is kept for the browser tab only, in `sessionStorage`, because a `localStorage` key `gvb-review-board:projector` needs a row in `_shared/tool-registry.js` (`check:registry` fails without it) and a per-tool worker may not edit that file. The fix is three small edits: add `{ k: 'gvb-review-board:projector' }` to 030's `keys`, change `sessionStorage` to `localStorage` in `getProjector`/`setProjector` (`rgb-store.js`), and in `smoke-projector.mjs` section 2, `openStress`, `turnOnForTab` and section 10 (the key moves from `sessionStorage` to `localStorage`; `openWith` can seed it) | 030 | ¼ | | [030 Quiz / Review Game Board](#030--quiz--review-game-board) |
@@ -11307,8 +11306,10 @@ the bell.
 
 #### Quick Wins
 
-- **Skipped — deferred, Round 4.** **Name and date lines on the slips.** An exit ticket you can't attribute is
-  an exit ticket you can't use; this should be on by default with a toggle.
+- **Done (found built, 2026-11-01) —** **Name and date lines on the slips.** Two checkboxes, both on by default
+  (`showName`, `showDate` in the page's settings); a class set prints the student's name and a date rule on each
+  slip, a blank set a rule for each, held by `exit-ticket-generator/test/smoke-print.mjs`. The response-collection
+  half of the row is the student-device feature below, out of scope.
   *(The new Paper Triage tab reads `np_rosters` for its own picker; the
   handout tab itself is untouched.)*
 - **Skipped — deferred, Round 4.** **Tag prompts by subject and by purpose** (recall, reflection, prediction,
