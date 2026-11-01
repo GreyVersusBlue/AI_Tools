@@ -1392,6 +1392,7 @@
         { k: 'htcm:current' },
         { k: 'htcm:game', rollover: 'ask' },
         { k: 'htcm:list' },
+        { k: 'htcm:themepacks' },   // card theme packs a teacher imported (htcm-theme-packs.js); colours, a frame and fonts, no student data
       ],
       prefixes: [
         { p: 'htcm:', legacy: true },

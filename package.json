@@ -240,6 +240,7 @@
     "test:picture-prompt-image-sets": "node Tools/picture-prompt-generator/test/smoke-image-sets.mjs",
     "test:review-board-image-store": "node Tools/review-game-board/test/smoke-clue-image-store.mjs",
     "test:review-board-art": "node Tools/review-game-board/test/smoke-board-art.mjs",
+    "test:trading-card-theme-packs": "node Tools/historical-trading-card-maker/test/theme-packs.test.mjs && node Tools/historical-trading-card-maker/test/smoke-theme-packs.mjs",
     "test:trading-cards-photo-store": "node Tools/historical-trading-card-maker/test/smoke-photo-store.mjs",
     "test:verb-poster": "node Tools/verb-conjugation-poster-generator/test/smoke-panel-colors.mjs",
     "test:verb-poster-callouts": "node Tools/verb-conjugation-poster-generator/test/smoke-callouts.mjs",

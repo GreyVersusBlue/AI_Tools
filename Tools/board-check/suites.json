@@ -263,6 +263,8 @@
     "Tools/historical-trading-card-maker/test/smoke-card-size.mjs",
     "Tools/historical-trading-card-maker/test/smoke-photo.mjs",
     "Tools/historical-trading-card-maker/test/smoke-photo-store.mjs",
+    "Tools/historical-trading-card-maker/test/theme-packs.test.mjs",
+    "Tools/historical-trading-card-maker/test/smoke-theme-packs.mjs",
     "Tools/lab-report-template-builder/test/smoke-typed-columns.mjs",
     "Tools/lab-report-template-builder/test/smoke-packet-split.mjs",
     "Tools/math-find-the-mistake-generator/test/smoke-bulk-import.mjs",

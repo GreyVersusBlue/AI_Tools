@@ -839,7 +839,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 143 | A second language beyond Spanish (needs a translation a person has checked), including for the new parent letter; the phone/projector trip-day view | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
 | 144 | 044 what is left of references by name: the plan saying *which* section the Sub Binder prints. 045's choice is built and saved (v549); 044 reads no key of 045 and the Sub Binder's included-sections object is its own, so the line would need a packet provider or a registry `reads` entry, a Path 10 call | 044 | ¼ | | [044 Sub Plan Builder](#044--sub-plan-builder) |
 | 149 | Buzz-in from student devices (deferred, student-facing); a timed "bee" mode (turns on 062's open question about whether timing adds anything a teacher wants) | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
-| 150 | A student-facing fill-in mode; review-game theme packs | 064 | ½ | | [064 Historical Figure / Country Trading Card Maker](#064--historical-figure--country-trading-card-maker) |
+| 150 | A student-facing fill-in mode (deferred, student-facing); a built-in flag library (turns on 064's open question about maintaining one) | 064 | ½ | | [064 Historical Figure / Country Trading Card Maker](#064--historical-figure--country-trading-card-maker) |
 | 151 | 080 what is left: snap is built (the Snap to grid box and Align pieces) and the piece families and a board file are done (v546); left is **combining** (ten units become a ten-rod, a +1 and a -1 cancel) and pattern blocks, which cannot rotate and do not sit on the unit grid, both of which wait on the open question of whether snap/cancel is worth its complexity (080's Open Questions, second bullet) | 080 | ½ | | [080 Virtual Manipulatives Board](#080--virtual-manipulatives-board) |
 | 161 | Conference sign-up — run the Worker under workerd (`wrangler dev --local`) in a suite: the bundle, the JSON import, the Durable Object migration, the PIN and CORS paths. Nothing has run on Cloudflare's runtime yet | `conference-signup/` | ½ | | [Conference sign-up](#conference-sign-up--parent-bookings-outside-tools) |
 
@@ -14184,6 +14184,13 @@ No Quick Wins remain open.
   card to return to the teacher (there's no server here), which the deck
   link's "just open it and it's yours" model doesn't solve. Worth scoping
   as its own round rather than folding into deck-sharing.
+- **Theme packs — built 2026-11-01 (AI-31, v552, rank 150).** A "Theme packs" box under the swatches imports a JSON
+  pack of extra card themes (`htcm-theme-packs.js`; colours, a frame and a texture this tool already draws, fonts; ink on
+  paper at 4.5:1 or better, hex colours only, 12 themes and 12 packs at most; a bad file stores nothing and every problem is
+  named). Pack themes join the swatches and work on the cards, the review game and every export; Export and Remove per pack.
+  Stored in `htcm:themepacks` (registry row), on this device only: not in a deck, link or export, so a deck opened without
+  its pack shows Classic. The row said only "review-game theme packs", so this reads it as Path 15 P5's pack idea on 064's
+  cards, which the review game also draws (see HISTORY, v552). `theme-packs.test.mjs`, `smoke-theme-packs.mjs` (port 8668).
 - **Flag/photo library integration** for countries specifically (the
   backlog explicitly covers both historical figures and countries) — a
   small built-in flag-image picker for common countries would remove the
