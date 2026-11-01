@@ -827,7 +827,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 112 | Peer review mode; rubric handoff to the grades tools | 003 | ½ | | [003 Rubric Builder](#003--rubric-builder) |
 | 113 | Bell-schedule awareness (reads 032's `scv_calendar_v1`; needs a registry and cross-tool decision); a reconnecting mirror (`_shared/webrtc-pair.js`, a platform edit). The multi-timer board shipped v279 | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
 | 114 | A constraint solver worth the name; the room, not the grid | 005 | ½ | | [005 Seating Chart Generator](#005--seating-chart-generator) |
-| 117 | Longitudinal reports (a term or year view across archived days and sections; team totals are kept as one running total, with no per-day team history). Team / house points shipped v282 | 008 | ½ | | [008 Behavior & Points Tracker](#008--behavior--points-tracker) |
+| 117 | Per-day team history, so a term view can show house points by week (today a team total is one running total; the term view of student points shipped v515). Needs a new stored shape: Devon's design call | 008 | ½ | | [008 Behavior & Points Tracker](#008--behavior--points-tracker) |
 | 118 | Per-record conflict resolution ("keep the newer of each"; needs per-record timestamps) | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
 | 120 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
 | 125 | Peer feedback slips; gallery-walk reactions | 017 | ½ | | [017 Gallery Walk QR Codes](#017--gallery-walk-qr-codes) |
@@ -10235,6 +10235,18 @@ hold that responsibility.
   cross-tool hand-off that was not started. Not done: team totals per archived day (only
   the running total), a team in the CSV or the student summary, a fullscreen stage view,
   teams that carry across sections.
+- **Done (2026-11-01, v515) — Term & year view.** A Term & year view card: archived days added
+  up over a From/To range (presets: this school year, last 30 days, all recorded days), for
+  this section or every section, grouped by week or month: a period table (days, points, +, −)
+  and a student table (days, points, +, −, days the target was met of days that had one; the
+  target in force on the day, as the Trends rows read it). The same name in two sections is two
+  lines. `Tools/behavior-points-tracker/term.js` (`BPTerm`) is the arithmetic, pure; the page
+  draws it, and a CSV matches the table. Nothing new is stored, so old saves, backups and the
+  registry are untouched. A day filed before `iso` was kept is read from its date string; one that
+  cannot be dated is counted when no range is set and named, and left out of any range. Suites
+  `test:behavior-term-core` and `test:behavior-term` (port 8642). Not done: team points per day
+  (needs a stored shape: row 117), a printed term report, and a stretch longer than a section's 90
+  kept days.
 - **Redeemable points / classroom economy.** Points spent on rewards, with a
   balance rather than a total.
 
