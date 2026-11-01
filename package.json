@@ -286,6 +286,7 @@
     "path7:next": "node Tools/board-check/audit-print.mjs",
     "offline:build": "node Tools/board-check/make-offline-copy.mjs",
     "offline:verify": "node Tools/board-check/verify-offline-copy.mjs",
+    "test:question-sets": "node Tools/current-events-discussion-guide-generator/test/qsets.test.mjs && node Tools/current-events-discussion-guide-generator/test/smoke-question-sets.mjs",
     "test:current-events": "node Tools/current-events-discussion-guide-generator/test/readability.test.mjs && node Tools/current-events-discussion-guide-generator/test/smoke-comparison.mjs && node Tools/current-events-discussion-guide-generator/test/smoke-media-literacy.mjs && node Tools/current-events-discussion-guide-generator/test/smoke-citation.mjs",
     "test:primary-source-images": "node Tools/primary-source-analysis-generator/test/smoke-images.mjs",
     "test:primary-source": "node Tools/primary-source-analysis-generator/test/smoke-corroboration.mjs && node Tools/primary-source-analysis-generator/test/smoke-levels.mjs && node Tools/primary-source-analysis-generator/test/smoke-crop.mjs",

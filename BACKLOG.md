@@ -845,7 +845,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 143 | A second language version; trip-day rosters | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
 | 144 | Seating chart and roster references by name | 044 | ½ | | [044 Sub Plan Builder](#044--sub-plan-builder) |
 | 145 | Time-slice maps; live vectors | 046 | ½ | | [046 Blank Map Generator](#046--blank-map-generator) |
-| 147 | A bank of saved generic question sets beyond the six built-ins | 054 | ½ | | [054 Current Events Discussion Guide Generator](#054--current-events-discussion-guide-generator) |
 | 148 | The reverse direction of the 028 pairing — pull a source out of 028’s library | 056 | ½ | | [056 DBQ / Source Packet Builder](#056--dbq--source-packet-builder) |
 | 149 | Buzz-in from student devices (deferred); map-question tournaments | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
 | 150 | A student-facing fill-in mode; review-game theme packs | 064 | ½ | | [064 Historical Figure / Country Trading Card Maker](#064--historical-figure--country-trading-card-maker) |
@@ -13544,11 +13543,18 @@ from the same content, with no retyping."
 
 #### Major Features
 
-- **A bank of saved "generic" question sets beyond the 6 built-in ones**
-  (e.g. a set skewed toward persuasive-writing follow-up, a set skewed
-  toward historical-context articles) that a teacher can swap between,
-  instead of one fixed list — now two sets exist (general + comparison),
-  both still fixed rather than a real bank a teacher could add to.
+- ~~A bank of saved "generic" question sets beyond the 6 built-in ones~~ — **done 2026-11-01
+  (v518)**. A Question set bar on the Guiding questions card: save the questions a guide asks
+  (the ticked built-ins as plain text, then its own) as a named set; **Use this set** makes the
+  set the guide's own questions and unticks the six (asks first when the guide has questions of its
+  own); **Add to this guide** appends only what is missing; the first entry, "The six built-in
+  questions", swaps back; **Delete set** asks first. Up to 30 sets of 20 questions, names unique
+  ignoring case, saved over by name after a confirm. `CedgSets` (`cedg-qsets.js`) holds the rules;
+  the bank is the new device-wide key `cedg_qsets_v1` (registry row, not student data), in no
+  guide, link or guide file. It is its own bank rather than `QuestionBank`: a discussion question
+  has no answer, unit or standard. Not done: sharing a set by link or file, the comparison
+  questions as a bank, and any content (no starter sets were written; they are Devon's to write).
+  `test:question-sets` (port 8645).
 
 #### Moonshot / North Star
 

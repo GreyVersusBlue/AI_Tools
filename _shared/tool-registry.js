@@ -1408,6 +1408,7 @@
         { k: 'cedg_current_v1' },
         { k: 'cedg_guide_v1', legacy: true },
         { k: 'cedg_guides_v1' },
+        { k: 'cedg_qsets_v1' },
       ],
       prefixes: [
         { p: 'cedg_guide_v1:' },

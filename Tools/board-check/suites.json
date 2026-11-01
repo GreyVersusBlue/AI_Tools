@@ -313,6 +313,8 @@
     "Tools/civics-role-card-generator/test/smoke-sim-roster.mjs",
     "Tools/current-events-discussion-guide-generator/test/readability.test.mjs",
     "Tools/current-events-discussion-guide-generator/test/smoke-citation.mjs",
+    "Tools/current-events-discussion-guide-generator/test/qsets.test.mjs",
+    "Tools/current-events-discussion-guide-generator/test/smoke-question-sets.mjs",
     "Tools/dbq-source-packet-builder/test/smoke-source-library.mjs",
     "Tools/dbq-source-packet-builder/test/smoke-images.mjs",
     "Tools/geography-bee-quiz-generator/test/smoke-regions.mjs",
