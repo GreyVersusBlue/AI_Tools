@@ -838,7 +838,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 140 | 035 what is left: the page's inline script is still ~2,900 lines (settings and layout persistence, the onboarding and presentation glue; the bell and subjects editors went to `sv-settings-editors.js` at v543), and the snapshot manager went to `sv-snapshots.js` at v550, so the next increment is the autosave/storage-headroom block or the recovery manager. Accessibility routing (Path 11 P3) is built; what is left of it is accessibility-aware *evacuation* routing (a wheelchair user's route out: step-free and no elevator), which turns on P3's Devon question about what counts as an exit, so it stays out | 035 | ½ | | [035 School Layout Visualizer](#035--school-layout-visualizer) |
 | 143 | A second language beyond Spanish (needs a translation a person has checked), including for the new parent letter; the phone/projector trip-day view | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
 | 144 | 044 what is left of references by name: the plan saying *which* section the Sub Binder prints. 045's choice is built and saved (v549); 044 reads no key of 045 and the Sub Binder's included-sections object is its own, so the line would need a packet provider or a registry `reads` entry, a Path 10 call | 044 | ¼ | | [044 Sub Plan Builder](#044--sub-plan-builder) |
-| 145 | Time-slice maps; live vectors | 046 | ½ | | [046 Blank Map Generator](#046--blank-map-generator) |
 | 149 | Buzz-in from student devices (deferred); map-question tournaments | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
 | 150 | A student-facing fill-in mode; review-game theme packs | 064 | ½ | | [064 Historical Figure / Country Trading Card Maker](#064--historical-figure--country-trading-card-maker) |
 | 151 | 080 what is left: snap is built (the Snap to grid box and Align pieces) and the piece families and a board file are done (v546); left is **combining** (ten units become a ten-rod, a +1 and a -1 cancel) and pattern blocks, which cannot rotate and do not sit on the unit grid, both of which wait on the open question of whether snap/cancel is worth its complexity (080's Open Questions, second bullet) | 080 | ½ | | [080 Virtual Manipulatives Board](#080--virtual-manipulatives-board) |
@@ -13044,29 +13043,20 @@ where. New quick wins surfaced by future rounds go here.
 
 #### Major Features
 
-- **Partly done —** **Time-slice maps.** One project, several dated states —
-  1783 / 1803 / 1848 — that print as a sequence or animate on screen.
-  *(The data half shipped 2026-08-14: several value columns in the paste box
-  print as a labelled small-multiple series, one map per column, sharing one
-  set of quantile bands and one key so the maps are comparable. What is still
-  open is the harder half — several dated states of the **annotations**, so
-  a border drawn in 1783 can move in 1803. That needs a per-slice
-  labels/lines/regions store, which is a real change to the project model
-  rather than a new panel.)*
-- **Vector base maps — *phase 1 shipped in Round 13*.** Nine built-in
-  base maps (World, six continents, two USA crops) render offline from
-  vendored Natural Earth GeoJSON and, because the renderer owns the
-  projection, **calibrate themselves** — which is what makes the label
-  sets, grid, scale bar and coordinate placement work the moment one
-  loads. They go through the existing raster pipeline, so every feature
-  works on them unchanged. Still open, and the reason this stays on the
-  list: **live vector rendering in the viewer** (the generated map is a
-  raster, so zoom quality has a ceiling). **Per-region hit-testing and
-  click-to-shade shipped 2026-08-14** in `bmg-hittest.js`, which reuses the
-  renderer's own projection so the picking and the picture cannot disagree.
-  **Choropleth shipped 2026-08-13** — Round 13's note that
-  it needed hit-testing first was wrong: hit-testing turns a *click* into a
-  region, and shading from a pasted table never has a click to turn.
+- **Done —** **Time-slice maps.** One project, several dated states: the data half
+  (several value columns in the paste box print as a small-multiple series sharing
+  one set of bands and one key) shipped 2026-08-14, and the annotation half shipped
+  in Path 20 P4 (v433, `bmg-slices.js`, the Time slices card: each slice has its own
+  labels, markers, regions, lines and key, a slider, and a printed or PDF sheet of
+  one panel per slice). What is left of it is rank 60 (the way back from Timeline
+  Builder; the slice sheet in the print preview).
+- **Vector base maps — done.** Nine built-in base maps render offline from vendored
+  Natural Earth GeoJSON and calibrate themselves; **choropleth** (2026-08-13) and
+  **per-region hit-testing and click-to-shade** (2026-08-14, `bmg-hittest.js`)
+  shipped on them. **Live vector rendering in the viewer shipped in Path 20 P3
+  (v426-v432, `bmg-live.js`)**: the base map is drawn from the vectors for the
+  view on screen and in every export, so zoom has no raster ceiling, and a shared
+  map arrives drawn. Nothing about live vectors is open.
 - **Projected quiz mode** — *shipped in Round 10* (reveal-next, counter, ✓/✗
   tally, reshuffle, projector text). What's still missing is persistence of
   which labels a class struggled with across sessions, which is the part
