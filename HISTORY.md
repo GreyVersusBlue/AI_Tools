@@ -9,6 +9,14 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-31: 052 practice worksheets with answer keys, rank 85 (2026-11-01, v510)
+**What shipped.** A Practice worksheets card on 052: Matching (words down the left, lettered shuffled meanings on the right, in groups of ten), Fill in the blank (a word bank and one sentence per entry; a false friend's sentence names the trap), and Trap or true cognate (tick one box per word, write the real meaning of a trap). Four variant letters, A to D, each a different shuffle of the same list; "Print answer key" prints the same model with the answers in. Rows with a blank word or meaning are left out; a list too short for a kind is refused with the number it needs.
+- **`Tools/cognates-false-friends-builder/cffb-worksheets.js` (`CffbWorksheets`).** `model()` is pure; `build()` makes nodes with `createElement` and never sets `innerHTML`, because 052 takes share-link input and `check:inline-sinks` counts every markup sink in the page (the count did not move). The shuffle is seeded from the kind, the variant, the language and the list, so a worksheet and its key made minutes apart agree and Variant A always prints the same sheet; nothing calls `Math.random`.
+- **A false friend's "meaning" is read out of the teacher's note** (`meaningOf`): the first quoted phrase of 'Actually means "pregnant."', else the note whole less the leading words. A note written some other way still works; it just reads longer on the sheet.
+- **Nothing is stored.** No new key, no registry row, no `_shared/` file changed. The reference sheet's print button is untouched.
+- Suites: `test:cognates-worksheets-logic` (pure, 44 checks, 14 mutants caught after one survivor, the case-insensitive variant, got a check) and `test:cognates-worksheets` (page, port 8637, 43 assertions; 5 page mutants all failed it). Next free port **8638**. `test:a11y --only 052` and `path7:next --check --only 052` clean.
+**Calls reversible.** Groups of ten for matching (so a letter never passes J); "variant" means shuffle, not different items. **Not verified:** the sheets on paper, a screen reader reading them.
+
 ## AI-31: rank 80 closed, the evergreen emergency binder was already built (2026-11-01, no code, no CACHE_VERSION change)
 Rank 80 (045, "Evergreen emergency binder, date-independent sections only, with a staleness reminder") asked for what Path 10 P3 shipped in 090 (v442, 69f5d12): the Emergency binder preset (emergency information, sub plan standing details, hall pass procedure, class rosters, none of them date-bound), a "Print emergency binder" button, `?preset=emergency`, and `_shared/binder-stale.js`'s reminder after 180 days or when a watched key changed. Nothing in the row was missing, so the row is deleted and 045's old "Emergency sub plan" bullet now points at 090. 045 was not touched. Not verified here: the binder on paper.
 

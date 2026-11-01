@@ -35,6 +35,7 @@
      the receiver's page and parameter. -->
 <script src="../_shared/tool-registry.js"></script>
 <script src="../_shared/handoffs.js"></script>
+<script src="cognates-false-friends-builder/cffb-worksheets.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -97,6 +98,21 @@
   .print-lang { text-align: center; color: #555; margin: 0 0 1rem; }
   .print-section { margin-bottom: 1.2rem; }
   .print-section h2 { font-size: 1.1rem; border-bottom: 1.5px solid #333; padding-bottom: .2rem; }
+  /* Practice worksheets: built into #printArea, which is paper, so these are literals on purpose. */
+  .ws-row { display: grid; grid-template-columns: 2fr 1fr; gap: .5rem; margin-bottom: .3rem; }
+  @media (max-width: 480px) { .ws-row { grid-template-columns: 1fr; } }
+  .ws-name { margin: 0 0 .8rem; font-size: .95rem; }
+  .ws-dir { margin: 0 0 .8rem; font-size: .92rem; color: #333; }
+  .ws-bank { border: 1.5px solid #333; padding: .5rem .7rem; margin: 0 0 1rem; font-size: 1rem; text-align: center; }
+  .ws-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 2rem; }
+  .ws-list { margin: 0; padding-left: 2rem; }
+  .ws-list li { margin-bottom: .55rem; font-size: .98rem; }
+  .ws-lettered { list-style: none; padding-left: 0; }
+  .ws-sentences li { margin-bottom: .9rem; }
+  table.ws-trap td { vertical-align: top; }
+  table.ws-trap td.ws-tick { text-align: center; font-size: 1.2rem; width: 5.5rem; }
+  table.ws-trap td.ws-write { min-width: 9rem; height: 2.2rem; }
+  .ws-group { break-inside: avoid; }
   .cognate-text { color: var(--ok); }
   .false-friend-text { color: var(--err); }
 
@@ -148,6 +164,26 @@
       <select id="wordListSelect"></select>
       <button type="button" class="secondary" id="wordListFillBtn">Put the words in the box</button>
     </div>
+  </div>
+
+  <div class="card" id="worksheetCard">
+    <h2>Practice worksheets</h2>
+    <p class="hint">Turns the lists below into a worksheet for students, with an answer key. Each variant letter shuffles the same words differently, so neighbours do not share an order. Rows with a blank word or meaning are left out.</p>
+    <div class="ws-row">
+      <div><label for="wsKind">Worksheet</label>
+        <select id="wsKind">
+          <option value="match">Matching &mdash; words to meanings</option>
+          <option value="blank">Fill in the blank &mdash; with a word bank</option>
+          <option value="trap">Trap or true cognate? &mdash; tick one</option>
+        </select></div>
+      <div><label for="wsVariant">Variant</label>
+        <select id="wsVariant"><option>A</option><option>B</option><option>C</option><option>D</option></select></div>
+    </div>
+    <div class="btnrow">
+      <button type="button" id="wsPrintBtn">Print worksheet</button>
+      <button type="button" class="secondary" id="wsKeyBtn">Print answer key</button>
+    </div>
+    <p class="bulk-note" id="wsNote" style="display:none;" aria-live="polite"></p>
   </div>
 
   <div class="card">
@@ -233,7 +269,7 @@
   ['langName', 'templateSelect', 'loadTemplateBtn', 'cognatesWrap', 'addCognateBtn',
    'falseFriendsWrap', 'addFalseFriendBtn', 'printBtn', 'printArea',
    'bulkInput', 'bulkImportBtn', 'bulkNote', 'wordListRow', 'wordListSelect', 'wordListFillBtn',
-   'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'shareBtn', 'shareNote', 'wsKind', 'wsVariant', 'wsPrintBtn', 'wsKeyBtn', 'wsNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { lang: '', cognates: [], falseFriends: [] };
 
@@ -439,6 +475,24 @@
       '<div class="print-section"><h2>False Friends</h2><table class="ref-table"><thead><tr><th>' + escapeHtml(lang) + '</th><th>Looks Like</th><th>Actually Means</th></tr></thead><tbody>' + ffRows + '</tbody></table></div>';
     window.print();
   });
+
+  /* ---------- practice worksheets: cognates-false-friends-builder/cffb-worksheets.js ----------
+     Nodes, never markup. The worksheet and its key are the same model, so they cannot disagree. */
+  function printWorksheet(withKey) {
+    var m = CffbWorksheets.model(state, els.wsKind.value, els.wsVariant.value);
+    if (!m.ok) {
+      els.wsNote.textContent = 'This worksheet needs at least ' + m.minItems + (m.minItems === 1 ? ' entry' : ' entries') +
+        ' with a word and a meaning; the lists have ' + m.have + '.';
+      els.wsNote.className = 'bulk-note error';
+      els.wsNote.style.display = '';
+      return;
+    }
+    els.wsNote.style.display = 'none';
+    els.printArea.replaceChildren(CffbWorksheets.build(document, m, withKey));
+    window.print();
+  }
+  els.wsPrintBtn.addEventListener('click', function () { printWorksheet(false); });
+  els.wsKeyBtn.addEventListener('click', function () { printWorksheet(true); });
 
   /* ---------- share a list: _shared/share.js (Path 6 P3) ----------
      One button opens the shared sheet — copy link, QR code (greyed out with

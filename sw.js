@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v509';
+const CACHE_VERSION = 'v510';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -327,6 +327,7 @@ const PRECACHE_URLS = [
   "Tools/classroom-timer/ct-store.js",
   "Tools/classroom-timer/mirror.html",
   "Tools/052-cognates-false-friends-builder.html",
+  "Tools/cognates-false-friends-builder/cffb-worksheets.js",
   "Tools/088-braille-reading-trainer.html",
   "Tools/089-progress-report-parser.html",
   "_shared/vendor/pdfjs/pdf.min.js",
