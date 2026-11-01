@@ -834,7 +834,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 126 | Hints with a time penalty; branching and station images | 018 | ½ | | [018 QR Scavenger Hunt Builder](#018--qr-scavenger-hunt-builder) |
 | 127 | Attempt limits and feedback; a non-QR fallback | 019 | ½ | | [019 Digital Escape Room / Puzzle Lock Builder](#019--digital-escape-room--puzzle-lock-builder) |
 | 136 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
-| 137 | 030 projector view: remember it across visits. The view shipped at v293 (AI-31-030) and is kept for the browser tab only, in `sessionStorage`, because a `localStorage` key `gvb-review-board:projector` needs a row in `_shared/tool-registry.js` (`check:registry` fails without it) and a per-tool worker may not edit that file. The fix is three small edits: add `{ k: 'gvb-review-board:projector' }` to 030's `keys`, change `sessionStorage` to `localStorage` in `getProjector`/`setProjector` (`rgb-store.js`), and in `smoke-projector.mjs` section 2, `openStress`, `turnOnForTab` and section 10 (the key moves from `sessionStorage` to `localStorage`; `openWith` can seed it) | 030 | ¼ | | [030 Quiz / Review Game Board](#030--quiz--review-game-board) |
 | 138 | The A/B cycle's anchor date shows the other letter when the anchor is a school day after the calendar's first school day (`scv-weeks.js`, `ANCHOR_QUIRK`; fixing it flips every letter of such a saved calendar, so it is a decision, not a quiet fix); cycle labels beyond A and B (needs a field in `scv_calendar_v1`, which 010 reads raw); a "week starts on" setting (none exists; the week print is Monday to Friday). Year-grid badges and the page-per-week print shipped v292 | 032 | ¼ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
 | 139 | "Where is this student right now?"; the published pathfinder | 034 | ½ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
 | 140 | Split the file; accessibility routing | 035 | ½ | | [035 School Layout Visualizer](#035--school-layout-visualizer) |
@@ -11759,10 +11758,9 @@ browser.
 #### Quick Wins
 
 - **Done — 2026-10-07 (AI-31-030, v293). Projector styling.** A "Projector view" button in the board toolbar (and
-  the **P** key) turns on a presentation of the play screen only: off by default, kept for the browser tab under
-  `gvb-review-board:projector` in `sessionStorage` (written only while on; not in a board, an export or any link;
-  **not yet remembered across visits**: that is a `localStorage` key and needs a registry row in `_shared/`, which this
-  row could not edit, so rank 141 is what is left). Type is sized from one
+  the **P** key) turns on a presentation of the play screen only: off by default, remembered across visits under
+  `gvb-review-board:projector` in `localStorage` (written only while on; not in a board, an export or any link; the
+  key has its registry row, v542, rank 137). Type is sized from one
   unit, `--u` (1% of the width or 1.7778% of the height, whichever is smaller): categories 24 / 36 px, point values
   38 / 58, team scores 48 / 73, team names 25 / 38, a clue 46 / 69 (33 / 50 when it is over 120 characters), an
   answer 35 / 53, at 1280x720 / 1920x1080. The teacher's tick boxes, round setups and buttons are not hidden: they sit

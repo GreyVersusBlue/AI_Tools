@@ -466,8 +466,8 @@
 
   /* ---- projector view (the "Projector view" button, key P) ----
      A presentation of the PLAY screen for a classroom projector, off until a
-     teacher turns it on, and kept for the browser tab (ReviewBoardStore
-     .getProjector; sessionStorage until a registry row allows localStorage). Everything is under `body.projector` and `@media screen`,
+     teacher turns it on, and remembered across visits (ReviewBoardStore
+     .getProjector; localStorage, key `gvb-review-board:projector`). Everything is under `body.projector` and `@media screen`,
      so with the view off no rule below matches and a printed sheet is never
      touched. Page-local on purpose: nothing in _shared/ is changed.
 

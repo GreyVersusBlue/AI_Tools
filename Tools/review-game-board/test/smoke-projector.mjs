@@ -84,7 +84,7 @@ if (PRINT || want(1)) {
 const clone = v => JSON.parse(JSON.stringify(v));
 const press = async k => { await page.keyboard.press(k); await settle(page, 120); };
 const click = async sel => { await page.click(sel); await settle(page, 150); };
-const keysOf = () => page.evaluate(() => Object.keys(localStorage).filter(k => k.indexOf('gvb-review-board:') === 0).sort());
+const keysOf = () => page.evaluate(() => Object.keys(localStorage).filter(k => k.indexOf('gvb-review-board:') === 0 && k !== 'gvb-review-board:projector').sort());
 const bodyClass = () => page.evaluate(() => document.body.getAttribute('class'));
 const pressed = () => page.getAttribute('#projectorBtn', 'aria-pressed');
 const withBank = (board, extra) => Object.assign(storageOf(board), { 'gvb-question-bank': JSON.stringify(BANK) }, extra || {});
@@ -97,7 +97,7 @@ const setTheme = async t => {
   await settle(page, 250);
 };
 const PJ_KEY = 'gvb-review-board:projector';
-const turnOnForTab = async () => { await page.evaluate(k => sessionStorage.setItem(k, '1'), PJ_KEY); await page.reload({ waitUntil: 'networkidle' }); await settle(page, 250); };
+const turnOnForTab = async () => { await page.evaluate(k => localStorage.setItem(k, '1'), PJ_KEY); await page.reload({ waitUntil: 'networkidle' }); await settle(page, 250); };
 const openStress = async (board, extra) => {
   await openWith(page, URL_PAGE, withBank(board || STRESS_BOARD, extra || {}));
   await turnOnForTab();
@@ -213,12 +213,12 @@ if (want(2)) {
   await openWith(page, URL_PAGE, withBank(OLD_BOARD));
   const before = await boardStorage(page);
   const KEYS = ['gvb-review-board:current', 'gvb-review-board:data:Rivers', 'gvb-review-board:list'];
-  eq([await pressed(), await bodyClass(), await keysOf(), await page.evaluate(k => sessionStorage.getItem(k), PJ_KEY)], ['false', null, KEYS, null], 'a tab that never turned it on: not pressed, no class on <body>, nothing stored');
+  eq([await pressed(), await bodyClass(), await keysOf(), await page.evaluate(k => localStorage.getItem(k), PJ_KEY)], ['false', null, KEYS, null], 'a browser that never turned it on: not pressed, no class on <body>, nothing stored');
   const exportOff = await downloadText(page, '#exportBoardBtn', { what: 'the board file' });
   await click('#projectorBtn');
   eq([await pressed(), await bodyClass()], ['true', 'projector'], 'the button turns it on: pressed, one class on <body>');
-  eq(await page.evaluate(k => sessionStorage.getItem(k), PJ_KEY), '1', 'and it is kept for the tab, under this tool\'s own key');
-  eq(await boardStorage(page), before, 'and not one byte of localStorage changed (a key there needs a registry row; see rgb-store.js)');
+  eq(await page.evaluate(k => localStorage.getItem(k), PJ_KEY), '1', 'and it is remembered across visits, under this tool\'s own key');
+  eq(await boardStorage(page), JSON.stringify(JSON.parse(before).concat([['gvb-review-board:projector', '1']]).sort()), 'and the board\'s own keys did not change by one byte: the one new key is the view\'s (it has a registry row)');
   eq(await downloadText(page, '#exportBoardBtn', { what: 'the board file' }), exportOff, 'a board file is the same file with it on: the view is not in a board');
   ok(await page.isVisible('#projectorLeaveBtn'), 'a Leave projector view button is in the teacher\'s row');
   await page.reload({ waitUntil: 'networkidle' });
@@ -226,7 +226,7 @@ if (want(2)) {
   eq([await pressed(), await bodyClass()], ['true', 'projector'], 'a reload keeps it on');
   await page.focus('#projectorLeaveBtn');
   await press('Enter');
-  eq([await pressed(), await bodyClass(), await keysOf(), await page.evaluate(k => sessionStorage.getItem(k), PJ_KEY), await page.evaluate(() => document.activeElement.id)], ['false', null, KEYS, null, 'projectorBtn'], 'Leave turns it off, removes the key and the class, and the focus goes back to the button');
+  eq([await pressed(), await bodyClass(), await keysOf(), await page.evaluate(k => localStorage.getItem(k), PJ_KEY), await page.evaluate(() => document.activeElement.id)], ['false', null, KEYS, null, 'projectorBtn'], 'Leave turns it off, removes the key and the class, and the focus goes back to the button');
   eq(await page.locator('#projectorLeaveBtn').count(), 0, 'and the Leave button is gone');
   await page.evaluate(() => document.activeElement.blur());
   await press('p');
@@ -253,11 +253,16 @@ if (want(2)) {
   await openWith(page, URL_PAGE, withBank(OLD_BOARD));
   const never = await page.evaluate(() => [document.documentElement.className, document.body.getAttribute('class'), document.body.getAttribute('style'), document.getElementById('boardCard').outerHTML, document.getElementById('overlay').outerHTML].join('\n'));
   ok(back === never, 'on and then off, the board card, the overlay and the classes are byte for byte what they were');
-  /* per tab: a fresh context knows nothing */
+  /* across visits: a new tab in the same browser profile finds it on (it was sessionStorage before), and a fresh profile knows nothing */
+  await click('#projectorBtn');
+  const tab2 = await page.context().newPage();
+  await tab2.goto(URL_PAGE, { waitUntil: 'networkidle' });
+  eq(await tab2.evaluate(() => document.body.classList.contains('projector')), true, 'a new tab in the same browser opens with the view on: it is remembered across visits');
+  await tab2.close();
   const other = await browser.newContext();
   const p2 = await other.newPage();
   await p2.goto(URL_PAGE, { waitUntil: 'networkidle' });
-  eq(await p2.evaluate(() => document.body.classList.contains('projector')), false, 'another browser profile or tab starts with it off');
+  eq(await p2.evaluate(() => document.body.classList.contains('projector')), false, 'another browser profile starts with it off');
   await other.close();
 }
 
@@ -477,7 +482,7 @@ if (want(10)) {
     await settle(page, 150);
     return JSON.parse(await boardStorage(page));
   };
-  const off = await play(false), on = await play(true);
+  const off = await play(false), on = (await play(true)).filter(r => r[0] !== 'gvb-review-board:projector');
   eq(on, off, 'the same keys and clicks leave the same stored board with the view on and off');
   eq(JSON.parse(on[1][1]).teams.map(t => t.score), [110, 100, -20], 'and that board is the game that was played (Herons right, Otters +10, Finches -10)');
   /* print media: none of the view's rules apply */

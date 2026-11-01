@@ -9,6 +9,10 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-31: 030 projector view remembered across visits, rank 137 (2026-11-01, v542)
+
+`gvb-review-board:projector` moved from `sessionStorage` to `localStorage` (`rgb-store.js` `getProjector`/`setProjector`), with its row in `_shared/tool-registry.js` (030's `keys`; a `_shared` change, `check:registry` green). Still written only while the view is on and removed when it is turned off; not in a board, an export or a link. `smoke-projector.mjs` section 2 now opens a second tab in the same browser and expects the view on, a fresh profile expects it off, the board's own keys are compared with the projector key set aside, and section 10 filters the key before it compares the stored board with the view on and off. **Mutant:** `localStorage` back to `sessionStorage` in the store fails three checks in section 2 (the key is null, the new tab opens off). **Not verified:** a real projector.
+
 ## AI-31: 027 discussion assessment, rank 135 (2026-11-01, v541)
 
 Checked first: the row's second half, role recency across a book, is the role-fairness memory (`groupHistory`, through the grouping

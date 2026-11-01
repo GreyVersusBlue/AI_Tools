@@ -8,13 +8,10 @@
   var DATA_PREFIX = 'gvb-review-board:data:';
   var CURRENT_KEY = 'gvb-review-board:current';
   // The projector view (030's projector styling): a preference, not part of a
-  // board, so it is not in a board, an export or a link. It is kept in
-  // sessionStorage for now, which is the browser tab's own and survives a
-  // reload: remembering it across visits means localStorage, and a
-  // localStorage key needs a row in _shared/tool-registry.js (check:registry),
-  // a shared file the per-tool row that built the view could not edit. The
-  // follow-up is two lines: that registry row and `sessionStorage` -> `localStorage`
-  // below. Written only while the view is on and removed when it is turned off.
+  // board, so it is not in a board, an export or a link. It is remembered across
+  // visits in localStorage (the key has a row in _shared/tool-registry.js, so
+  // a backup carries it). Written only while the view is on and removed when
+  // it is turned off.
   var PROJECTOR_KEY = 'gvb-review-board:projector';
   // The reusable question bank (rgb-bank-store.js) is a separate store, but
   // its one key still lives on this same origin and this same tool. Counting
@@ -154,13 +151,13 @@
   function forgetCapacity() { cachedCapacity = null; }
 
   function getProjector() {
-    try { return sessionStorage.getItem(PROJECTOR_KEY) === '1'; } catch (e) { return false; }
+    try { return localStorage.getItem(PROJECTOR_KEY) === '1'; } catch (e) { return false; }
   }
 
   function setProjector(on) {
     try {
-      if (on) sessionStorage.setItem(PROJECTOR_KEY, '1');
-      else sessionStorage.removeItem(PROJECTOR_KEY);
+      if (on) localStorage.setItem(PROJECTOR_KEY, '1');
+      else localStorage.removeItem(PROJECTOR_KEY);
     } catch (e) { /* a browser that refuses storage still gets the view until the page is closed */ }
   }
 

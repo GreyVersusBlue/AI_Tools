@@ -685,6 +685,7 @@
         { k: 'gvb-review-board:__probe' },
         { k: 'gvb-review-board:current' },
         { k: 'gvb-review-board:list' },
+        { k: 'gvb-review-board:projector' },
       ],
       prefixes: [
         { p: 'gvb-review-board:', legacy: true },
