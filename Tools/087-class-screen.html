@@ -1982,6 +1982,8 @@
         if (!t) return drawChooser();
         var mine = ++token;
         resets = 0;
+        /* Opened from a folder (the offline copy), every file is its own origin: the frame could not keep its work or be checked. */
+        if (location.protocol === 'file:') return drawNote(t, t.title + ' opens inside this widget when Class Screen is used from the website or the installed app. From this copy, open it from the toolkit.');
         /* Offline, a tool the worker has not cached yet would show the browser's error page. */
         if (!navigator.onLine && window.caches && caches.match) {
           caches.match(new URL(t.file, location.href).href).then(function (hit) {

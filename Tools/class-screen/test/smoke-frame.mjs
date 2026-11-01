@@ -217,6 +217,22 @@ await page.evaluate(() => caches.delete('aplp-test'));
 await page.evaluate(() => window.dispatchEvent(new Event('online')));
 await settle(page, 1200);
 
+// ── from a folder (the offline copy) there is no origin to frame ──────
+console.log(' file://');
+{
+  const fp = await browser.newPage();
+  const ferrs = []; fp.on('pageerror', (e) => ferrs.push(String(e)));
+  const fileUrl = 'file://' + path.join(SITE, 'Tools', '087-class-screen.html');
+  await fp.goto(fileUrl);
+  await fp.evaluate(([k, d]) => localStorage.setItem(k, JSON.stringify({ v: 1, data: d })), [KEY, { current: 's', screens: [{ id: 's', name: 'X', widgets: [{ id: 'f', type: 'frame', x: 0.1, y: 0.1, w: 0.5, h: 0.6, z: 1, data: { tool: '024' } }] }] }]);
+  await fp.reload();
+  await fp.waitForTimeout(1200);
+  eq(await fp.locator('iframe').count(), 0, 'opened from a file, the widget shows no frame (each file is its own origin there)');
+  ok(/from the website or the installed app/.test(await fp.locator('.w-body').first().textContent()), 'and says where it does work');
+  eq(ferrs, [], 'without an error');
+  await fp.close();
+}
+
 // ── 360px and no errors ──────────────────────────────────────────────
 await page.setViewportSize({ width: 360, height: 740 });
 await settle(page, 300);
