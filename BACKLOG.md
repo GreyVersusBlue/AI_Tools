@@ -842,7 +842,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 145 | Time-slice maps; live vectors | 046 | ½ | | [046 Blank Map Generator](#046--blank-map-generator) |
 | 149 | Buzz-in from student devices (deferred); map-question tournaments | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
 | 150 | A student-facing fill-in mode; review-game theme packs | 064 | ½ | | [064 Historical Figure / Country Trading Card Maker](#064--historical-figure--country-trading-card-maker) |
-| 151 | Snap-to-grid for base-ten blocks; export and data-driven piece families | 080 | ½ | | [080 Virtual Manipulatives Board](#080--virtual-manipulatives-board) |
+| 151 | 080 what is left: snap is built (the Snap to grid box and Align pieces) and the piece families and a board file are done (v546); left is **combining** (ten units become a ten-rod, a +1 and a -1 cancel) and pattern blocks, which cannot rotate and do not sit on the unit grid, both of which wait on the open question of whether snap/cancel is worth its complexity (080's Open Questions, second bullet) | 080 | ½ | | [080 Virtual Manipulatives Board](#080--virtual-manipulatives-board) |
 | 161 | Conference sign-up — run the Worker under workerd (`wrangler dev --local`) in a suite: the bundle, the JSON import, the Durable Object migration, the PIN and CORS paths. Nothing has run on Cloudflare's runtime yet | `conference-signup/` | ½ | | [Conference sign-up](#conference-sign-up--parent-bookings-outside-tools) |
 
 ## How to work this list
@@ -15100,9 +15100,12 @@ every year the same unit comes around.
 
 #### Quick Wins
 
-- **Snap-to-grid for base-ten blocks** (optional toggle) so demonstrating
-  "these ten units make a ten-rod" lines up visually without careful manual
-  dragging.
+- **Done (earlier, v1xx; confirmed 2026-11-01). Snap-to-grid for base-ten blocks:** the "Snap to grid" box, its
+  grid drawn on the board, and Align pieces (`smoke-snap-grid.mjs`). **Done 2026-11-01 (AI-31, v546, rank 151):**
+  the piece families are one table (`FAMILIES` in the page: the palette and every piece are built from it, a new family
+  is a row and its atlas cells) and a board is a file: **Export board** downloads the board on screen
+  (`{ v, kind: 'vmb-board', name, state }`), **Import board…** adds a file as a new saved board after cutting it down to
+  what the board can make (known piece types, places on the board, at most 300 pieces and 100 markers, 1 MB).
 - **Touch-device testing and tuning** — Pointer Events should work on
   tablets already, but this hasn't been verified on an actual touchscreen,
   and a projector setup often pairs with a touch-enabled front-of-room

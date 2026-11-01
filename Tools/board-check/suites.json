@@ -271,6 +271,7 @@
     "Tools/music-sightreading-generator/test/smoke-glyph-fallback.mjs",
     "Tools/virtual-manipulatives-board/test/smoke-snap-grid.mjs",
     "Tools/virtual-manipulatives-board/test/smoke-rendered-pieces.mjs",
+    "Tools/virtual-manipulatives-board/test/smoke-families-export.mjs",
     "Tools/art-portfolio-label-maker/test/smoke-reference-sheet.mjs",
     "Tools/art-portfolio-label-maker/test/smoke-bulk-photos.mjs",
     "Tools/book-tasting-menu-generator/test/smoke-import.mjs",
