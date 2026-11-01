@@ -11,7 +11,6 @@
 // note; a share link carries no picture; and the card has no serious axe finding. Pictures are
 // invented 8x8 PNGs. Nothing here has been printed on paper. Exits 1 on any failure.
 
-/* global MediaDB -- the shared media store, read inside page.evaluate() */
 import zlib from 'node:zlib';
 import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
 
