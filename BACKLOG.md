@@ -628,7 +628,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 - **The two Windows-only suite failures are fixed (AI-34 part, v213):** `.gitattributes` pins LF
   and 067's glyph probe no longer calls Windows' music font missing. An existing Windows clone
   needs `git rm -rq --cached .` then `git reset -q --hard` once. `HISTORY.md` has it.
-- **Path 22 P1–P8 are done** (P6–P8 at v521–v523, AI-32). His later asks are ranks 155–164 (P9–P14), unranked by him.
+- **Path 22 P1–P10 are done** (P6–P8 at v521–v523, P9–P10 at v524–v532, AI-32). His later asks are ranks 157–160 (P11–P14), unranked by him.
 
 **Start here.** Path 21 is finished (046's relief was its last row, AI-03), so no row needs Blender.
 - Ranks 1 to 4 have shipped (rank 2, per-tool restore, at v298, AI-16; rank 4, the year rollover, at v304; rank 3, the
@@ -658,7 +658,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 |---|---|
 | `CACHE_VERSION` | `v265` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
 | Precache entries | **316** in `PRECACHE_URLS`, **96** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
-| Suites | **229** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| Suites | **498** in `Tools/board-check/suites.json` (`check:tests`, 2026-11-01); `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
@@ -666,7 +666,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Shared-file adoption (of 90) | `sw-register.js` 88 · `a11y.css` 87 · `a11y.js` 87 · `ink-paper.css` 79 · `base.css` 73 · `qr-draw.js` 61 · `share.js` 56 · `state-link.js` 57 · `store.js` 45 · `roster.js` 35 · `print-area.css` 32 · `print-kit.css` 18 · `print-kit.js` 18 · `media-db.js` 17 · `stage.js` 16 · `export.js` 15 · `tool-registry.js` 14 · `qr-scan.js` 10 · `school-day.js` 9 · `handoffs.js` 9 · `sample-data.js` 8 · `webrtc-pair.js` 8 · `grouping.js` 6 · `question-bank.js` 6 · `student-flags.js` 6 · `undo.js` 6 · `word-list.js` 6 · `paste-table.js` 7 (+2 via a module) · `speak.js` 5 · `theme.css` 5 · `chart-svg.js` 4 · `levels.js` 4 · `list-sentence.js` 5 (+3 via a module) · `seating-read.js` 4 · `countdown.js` 3 · `restore-kit.js` 3 · `binder-stale.js` 2 · `bracket.js` 2 · `conjugate-de.js` 2 · `conjugate-es.js` 2 · `conjugate-fr.js` 2 · `conjugate-it.js` 2 · `conjugate-la.js` 2 · `conjugate.js` 2 · `rotation.js` 2 · `ss-glossary.js` 2 · `stations-bank.js` 2 · `stations.js` 2 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `stations-debrief.css` 1 · `stations-debrief.js` 1 · `student-details.js` 1 (+1 via a module) · `geo-project.js` 0 (+2 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
-| Tier 1 rows | **102 ranked rows, ranks to 164** (ranks 152–154 shipped on 2026-11-01 (Path 22 P6–P8) and leave gaps; ranks 19 and 20 shipped on 2026-10-29 and leave gaps, as the earlier deletions did; rank 43 shipped three times on 2026-10-28, Path 16 P1 and then P2, and the ranks after it moved up one each time; the ranks before it keep the gaps earlier deletions left). Path 21 is finished; per-tool rows start at rank **75**; 156–164 are Path 22 P6–P14 |
+| Tier 1 rows | **100 ranked rows, ranks to 164** (ranks 152–156 shipped on 2026-11-01 (Path 22 P6–P10) and leave gaps; ranks 19 and 20 shipped on 2026-10-29 and leave gaps, as the earlier deletions did; rank 43 shipped three times on 2026-10-28, Path 16 P1 and then P2, and the ranks after it moved up one each time; the ranks before it keep the gaps earlier deletions left). Path 21 is finished; per-tool rows start at rank **75**; 157–160 are Path 22 P11–P14 |
 | Art | **130** ledger entries: 046's relief (29,726 B), 030's board backdrop and tiles (5,348 B), 042's ten seals and ribbons (84,170 B), 071's twelve pictures (157,454 B), 080's piece atlas (43,318 B), 87 tool icons, the sprite (58,032 B), 4 shortcut PNGs, the 4 app-mark PNGs (14,457 B), the 4 hero WebPs (64,832 B), the test tile's light/dark pair |
 | Dark mode / fullscreen | 92 of 92 themed pages native dark (`path5:next`; 8 live pages load no `a11y.js`: 035 is the documented exception (`CLAUDE.md`), the rest are standalone on purpose); `stage.js` on 16 pages. Path 5 is finished |
 | CI | Pull requests run `--changed`; a push to `main` runs everything. Since 2026-10-26 the suites run as six parallel shard jobs (`--shard i/6`, ~21 min each by `suite-durations.json`, not yet seen on a CI run), with a `guards` job and one `test` check that is green only if all are. A PR touching `_shared/`, `index.html`, `package.json` or `Tools/board-check/` is site-wide: all 331 suites, ~121 min summed |
@@ -848,8 +848,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 149 | Buzz-in from student devices (deferred); map-question tournaments | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
 | 150 | A student-facing fill-in mode; review-game theme packs | 064 | ½ | | [064 Historical Figure / Country Trading Card Maker](#064--historical-figure--country-trading-card-maker) |
 | 151 | Snap-to-grid for base-ten blocks; export and data-driven piece families | 080 | ½ | | [080 Virtual Manipulatives Board](#080--virtual-manipulatives-board) |
-| 155 | Path 22 P9 — more widgets: agenda checklist, visual (pie) timer, sequence timer (think/pair/share), countdown to the bell, team scoreboard, spinner wheel | 087 | 1 | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
-| 156 | Path 22 P10 — two tabs and memory: warn or reload when another tab saves, keep name-picker no-repeats for the browser session, undo moves and resizes | 087 | ½ | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
 | 157 | Path 22 P11 — layout comforts: snap to grid, minimize to a chip, per-widget colour, screen thumbnails, a large-text projector theme | 087 | ½ | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
 | 158 | Path 22 P12 — another site tool as a widget (same-origin frame, e.g. 024 Number Talks, 080 Manipulatives) | 087 | 1 | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
 | 159 | Path 22 P13 — 004's phase engine (agenda, round robin, random, overtime) onto `_shared/countdown.js` | 004 | ½ | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
@@ -9037,19 +9035,19 @@ ranked against anything else. Moving them up is a re-rank, which is his call.
   `link` is on the timer's data only once one is on. The **agenda tick is built as a hook** (an instance's
   `tickNext`, and `link.agenda` is kept) and its checkbox shows once `TYPES.agenda` exists: P9 adds the widget,
   gives it `tickNext`, and the checkbox appears with no other change.
-- **P9 — more widgets.**
-  - An agenda checklist ("Today we will…", ticked off as the lesson goes).
-  - A visual timer (a shrinking pie, which reads from the back of the room and helps younger
-    students and IEP accommodations).
-  - A sequence timer (Think 1:00 → Pair 2:00 → Share 3:00, each step labelled), which should
-    run on `countdown.js`.
-  - A countdown to the bell, from 010's schedule.
-  - A team points scoreboard (projector-only, so not voting).
-  - A spinner wheel for any list.
-- **P10 — two tabs and memory.** Last writer wins across tabs today (P1's `HISTORY.md` entry).
-  At least warn "this screen is open in another tab", or reload on `storage`. The name picker's
-  "no repeats" resets on reload; keeping it for the browser session only (`sessionStorage`)
-  still saves no student data. Undo covers removals only; moves and resizes should undo too.
+- **P9 — shipped (v524–v529, AI-32).** Six widgets, one commit and one `CACHE_VERSION` each, all through the same
+  registry (dock, saved state, present mode, spotlight, shortcuts; `smoke-more-widgets.mjs` drives every one):
+  the **agenda** (twelve items; its `tickNext` is what a timer's "Tick the next agenda item" calls, so that
+  checkbox now shows on every timer), the **pie timer** (a timer with a wedge; same saved shape), the **sequence
+  timer** (Think / Pair / Share, up to eight steps, on `countdown.js`; the next step starts by itself and "When it
+  ends" fires after the last), the **bell countdown** (reads 010's schedule, saves nothing), the **scoreboard**
+  (up to eight named teams, projector only) and the **spinner wheel** (up to 24 typed entries). Space and the
+  phone remote reach "the timer on top", which now means whichever of timer, pie timer or sequence is highest.
+- **P10 — shipped (v530–v532, AI-32).** A save from another tab raises a bar (load theirs / keep this board;
+  never an automatic reload; held back in present mode). The name picker's no-repeats list is kept for the
+  browser tab in `sessionStorage` as positions plus a fingerprint of the roster, never names. Moves and resizes
+  undo from the toast and `Ctrl+Z`, on one stack with removals (a removal stays undoable for the toast's seven
+  seconds, a move for the visit).
 - **P11 — layout comforts.** Snap to grid or alignment guides, minimize a widget to a chip, a
   colour per widget (tokens only), screen thumbnails in the switcher, and a large-text,
   high-contrast projector theme.
