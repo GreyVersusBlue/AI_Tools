@@ -290,6 +290,13 @@ eq(C.readKey({ key: 'n' }, { control: true }), { act: 'pick' }, 'n works with a 
 eq(C.readKey({ key: 'n', ctrlKey: true }, {}), null, 'Ctrl+N stays the browser\'s');
 eq(C.readKey({ key: 'ArrowRight', altKey: true }, {}), null, 'Alt+Right stays the browser\'s');
 eq(C.readKey({ key: 'n', metaKey: true }, {}), null, 'Cmd+N stays the browser\'s');
+eq(C.readKey({ key: 'z', ctrlKey: true }, {}), { act: 'undo' }, 'Ctrl+Z is undo (Path 22 P10)');
+eq(C.readKey({ key: 'Z', metaKey: true }, {}), { act: 'undo' }, 'Cmd+Z is undo');
+eq(C.readKey({ key: 'z', ctrlKey: true, shiftKey: true }, {}), null, 'Ctrl+Shift+Z (redo) is not ours');
+eq(C.readKey({ key: 'z', ctrlKey: true, repeat: true }, {}), null, 'a held Ctrl+Z does not run away');
+eq(C.readKey({ key: 'z', ctrlKey: true }, { typing: true }), null, 'typing in a box keeps its own undo');
+eq(C.readKey({ key: 'z', ctrlKey: true, altKey: true }, {}), null, 'Ctrl+Alt+Z is not ours');
+eq(C.readKey({ key: 'z' }, {}), null, 'a bare z does nothing');
 eq(C.readKey({ key: ' ', repeat: true }, {}), null, 'a held Space does not flip the timer');
 eq(C.readKey({ key: 'n', repeat: true }, {}), null, 'a held n does not pick again');
 eq(C.readKey({ key: 'ArrowRight', shiftKey: true }, {}), null, 'Shift+Right is a resize, not a screen');

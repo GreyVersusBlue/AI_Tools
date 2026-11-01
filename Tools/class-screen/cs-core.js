@@ -755,7 +755,9 @@
   function readKey(e, where) {
     if (!isObj(e) || typeof e.key !== 'string') return null;
     where = isObj(where) ? where : {};
-    if (where.typing || e.ctrlKey || e.metaKey || e.altKey) return null;
+    if (where.typing || e.altKey) return null;
+    /* Ctrl+Z (Cmd+Z) is undo; every other Ctrl or Cmd chord stays the browser's. */
+    if (e.ctrlKey || e.metaKey) return (e.key === 'z' || e.key === 'Z') && !e.shiftKey && !e.repeat ? { act: 'undo' } : null;
     switch (e.key) {
       case '?': return { act: 'help' };
       case ' ': return e.repeat || where.control || e.shiftKey ? null : { act: 'timer' };

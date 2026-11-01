@@ -469,6 +469,7 @@
         <tr><th scope="row"><kbd>→</kbd> <kbd>Page Down</kbd></th><td>Next screen</td></tr>
         <tr><th scope="row"><kbd>←</kbd> <kbd>Page Up</kbd></th><td>Previous screen</td></tr>
         <tr><th scope="row"><kbd>Esc</kbd></th><td>Back out of a widget filling the board, then out of present mode</td></tr>
+        <tr><th scope="row"><kbd>Ctrl</kbd> <kbd>Z</kbd></th><td>Undo the last removal, move or resize</td></tr>
         <tr><th scope="row"><kbd>F</kbd></th><td>Fullscreen</td></tr>
         <tr><th scope="row"><kbd>?</kbd></th><td>This list</td></tr>
       </tbody>
@@ -1960,7 +1961,9 @@
         ? { x: w.x, y: w.y, w: w.w + dx * step, h: w.h + dy * step }
         : { x: w.x + dx * step, y: w.y + dy * step, w: w.w, h: w.h };
       r = Core.clampRect(r);
+      var was = { x: w.x, y: w.y, w: w.w, h: w.h };
       w.x = r.x; w.y = r.y; w.w = r.w; w.h = r.h;
+      noteGeo(w, was, e.shiftKey ? 'resize' : 'move');
       place(w); save();
     });
   }
@@ -1991,7 +1994,7 @@
         handle.removeEventListener('pointerup', up);
         handle.removeEventListener('pointercancel', up);
         node.classList.remove('dragging');
-        if (moved) save();
+        if (moved) { noteGeo(w, { x: start.x, y: start.y, w: start.w, h: start.h }, mode); save(); }
       }
       handle.addEventListener('pointermove', move);
       handle.addEventListener('pointerup', up);
@@ -2073,6 +2076,7 @@
     if (open) { if (k.act === 'help') { e.preventDefault(); keysDialog.close(); } return; }
     e.preventDefault();
     if (k.act === 'help') keysDialog.showModal();
+    else if (k.act === 'undo') { if (!presenting && !undoLast()) showToast('Nothing to undo.', false); }
     else if (k.act === 'next') gotoScreen(1);
     else if (k.act === 'prev') gotoScreen(-1);
     else {
@@ -2193,6 +2197,7 @@
     if (inst) { if (inst.destroy) try { inst.destroy(); } catch (e) {} inst.el.remove(); delete instances[id]; }
     boardEmpty.hidden = s.widgets.length > 0;
     lastRemoved = { screenId: s.id, widgets: [w] };
+    pushUndo({ k: 'remove', payload: lastRemoved });
     saveNow();
     showToast(TYPES[w.type].title + ' removed.', true);
   }
@@ -2208,19 +2213,54 @@
     toastUndo.hidden = !undoable;
     toast.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toast.hidden = true; lastRemoved = null; collectMedia(); }, 7000);
+    toastTimer = setTimeout(function () {
+      toast.hidden = true; lastRemoved = null;
+      undoStack = undoStack.filter(function (e) { return e.k !== 'remove'; });   // a removal can be undone only while its pictures are still kept
+      collectMedia();
+    }, 7000);
   }
-  toastUndo.addEventListener('click', function () {
-    toast.hidden = true;
-    if (!lastRemoved) return;
-    var s = state.screens.find(function (o) { return o.id === lastRemoved.screenId; });
-    if (s) {
-      lastRemoved.widgets.forEach(function (w) { if (s.widgets.length < Core.MAX_WIDGETS) s.widgets.push(w); });
-      state.current = s.id;
-      saveNow(); renderBoard();
+
+  /* Undo (Path 22 P10): the last twenty things done to the board, newest first.
+     A removal stays undoable for the toast's seven seconds, because the pictures
+     it held are then cleaned up; a move or a resize stays for the visit.
+     Nothing here is saved. A keyboard burst of arrow presses is one move. */
+  var undoStack = [];
+  function pushUndo(e) {
+    if (e.k === 'remove') undoStack = undoStack.filter(function (o) { return o.k !== 'remove'; });   // only the latest removal is kept
+    undoStack.push(e);
+    if (undoStack.length > 20) undoStack.shift();
+  }
+  function noteGeo(w, from, mode) {
+    if (from.x === w.x && from.y === w.y && from.w === w.w && from.h === w.h) return;
+    var top = undoStack[undoStack.length - 1], now = Date.now();
+    if (top && top.k === 'geo' && top.id === w.id && top.mode === mode && now - top.t < 1500) { top.t = now; return; }
+    pushUndo({ k: 'geo', screenId: currentScreen().id, id: w.id, mode: mode, from: from, t: now });
+    showToast(TYPES[w.type].title + (mode === 'move' ? ' moved.' : ' resized.'), true);
+  }
+  function undoLast() {
+    while (undoStack.length) {
+      var e = undoStack.pop();
+      if (e.k === 'remove') {
+        if (lastRemoved !== e.payload) continue;
+        var s = state.screens.find(function (o) { return o.id === e.payload.screenId; });
+        if (!s) continue;
+        e.payload.widgets.forEach(function (w) { if (s.widgets.length < Core.MAX_WIDGETS) s.widgets.push(w); });
+        state.current = s.id; lastRemoved = null;
+        saveNow(); renderBoard();
+        return true;
+      }
+      var sc = state.screens.find(function (o) { return o.id === e.screenId; });
+      var w2 = sc && sc.widgets.find(function (o) { return o.id === e.id; });
+      if (!w2) continue;
+      if (state.current !== sc.id) { state.current = sc.id; renderBoard(); }
+      w2.x = e.from.x; w2.y = e.from.y; w2.w = e.from.w; w2.h = e.from.h;
+      place(w2); saveNow();
+      showToast('Undone: ' + TYPES[w2.type].title + (e.mode === 'move' ? ' move.' : ' resize.'), false);
+      return true;
     }
-    lastRemoved = null;
-  });
+    return false;
+  }
+  toastUndo.addEventListener('click', function () { toast.hidden = true; undoLast(); });
 
   /* ── screens ──────────────────────────────────────────────────────── */
 
@@ -2280,6 +2320,7 @@
     s.widgets = [];
     saveNow(); renderBoard();
     lastRemoved = { screenId: s.id, widgets: removed };
+    pushUndo({ k: 'remove', payload: lastRemoved });
     showToast('Screen cleared.', true);
   });
 
