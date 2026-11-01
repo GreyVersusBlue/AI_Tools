@@ -53,7 +53,7 @@ const more = async (id) => { if (!(await page.locator('#moreMenu').evaluate((d) 
 // ── empty start ──────────────────────────────────────────────────────
 ok(await page.locator('#boardEmpty').isVisible(), 'empty board shows the hint');
 eq((await st()).screens.length, 1, 'one screen to start');
-eq(await page.locator('#dock button[data-add]').count(), 15, 'dock offers fifteen widgets');
+eq(await page.locator('#dock button[data-add]').count(), 16, 'dock offers sixteen widgets');
 
 // ── add every widget ─────────────────────────────────────────────────
 for (const t of ['text', 'timer', 'stopwatch', 'clock', 'youtube', 'traffic', 'names', 'dice']) {

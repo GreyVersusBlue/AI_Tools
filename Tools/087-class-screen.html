@@ -152,6 +152,14 @@
     font: inherit; font-size: calc(var(--fs, 2) * 1rem); line-height: 1.25; padding: .1rem;
   }
 
+  /* pie timer */
+  .big.pie { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; }
+  .pie-svg { width: min(92cqw, 66cqh); height: min(92cqw, 66cqh); flex: none; }
+  .pie-face { fill: var(--card-2); stroke: var(--line-strong); stroke-width: 2; }
+  .pie-wedge { fill: var(--accent); }
+  .pie-wedge.low { fill: var(--err); }
+  .pie .big-text { font-size: min(16cqw, 20cqh); }
+
   /* agenda: a short checklist the room reads from a distance */
   .agenda-wrap { flex: 1; min-height: 0; container-type: size; overflow: auto; }
   .agenda-head { margin: 0 0 .25em; font-weight: 700; color: var(--muted); font-size: clamp(.9rem, 5cqmin, 1.6rem); }
@@ -540,9 +548,30 @@
     }
   };
 
+  /* The pie timer's picture: a wedge that shrinks clockwise as time runs out,
+     red in the last fifth. Painted from tokens, so it reads in dark mode. */
+  function pieWedge(f) {
+    f = Math.max(0, Math.min(1, f));
+    if (f <= 0) return '';
+    if (f >= 0.9999) return 'M50 5a45 45 0 1 1 -0.01 0z';
+    var a = f * 2 * Math.PI, x = 50 + 45 * Math.sin(a), y = 50 - 45 * Math.cos(a);
+    return 'M50 50L50 5A45 45 0 ' + (f > 0.5 ? 1 : 0) + ' 1 ' + x.toFixed(2) + ' ' + y.toFixed(2) + 'Z';
+  }
+
   TYPES.timer = {
     title: 'Timer', icon: ['M12 8v5l3 2', 'M9 2h6', 'M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z'],
-    build: function (ctx) {
+    build: function (ctx) { return buildTimer(ctx, false); }
+  };
+  TYPES.pie = {
+    title: 'Pie timer', icon: ['M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'M12 14V6', 'M12 14l5.5-5.5'],
+    build: function (ctx) { return buildTimer(ctx, true); }
+  };
+
+  /* One timer, two faces: digits (type 'timer') or a shrinking pie with the
+     digits under it (type 'pie'). The saved shape, the links, the phone remote
+     and the shortcuts are the same. */
+  function buildTimer(ctx, pie) {
+    {
       var d = ctx.data;
       var shown = el('span', { className: 'big-text' });
       var status = el('span', { className: 'sr-only', 'aria-live': 'assertive' });
@@ -571,6 +600,11 @@
         var ms = remainingMs();
         shown.textContent = Core.formatClock(ms);
         startBtn.textContent = running() ? 'Pause' : (ms <= 0 ? 'Restart' : 'Start');
+        if (wedge) {
+          var f = c.totalMs > 0 ? ms / c.totalMs : 0;
+          wedge.setAttribute('d', pieWedge(f));
+          wedge.classList.toggle('low', f > 0 && f <= 0.2);
+        }
       }
       function setDuration(sec) {
         Countdown.setTotal(c, sec * 1000); setDone(false); sync(); render();
@@ -609,7 +643,17 @@
       [1, 2, 5, 10].forEach(function (m) {
         presets.appendChild(el('button', { type: 'button', text: m + ' min', onclick: function () { setDuration(m * 60); } }));
       });
-      ctx.body.appendChild(el('div', { className: 'big' }, [shown]));
+      var wedge = null, bigBox = el('div', { className: pie ? 'big pie' : 'big' }, [shown]);
+      if (pie) {
+        var svg = document.createElementNS(SVGNS, 'svg');
+        svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('class', 'pie-svg');
+        var face = document.createElementNS(SVGNS, 'circle');
+        face.setAttribute('cx', '50'); face.setAttribute('cy', '50'); face.setAttribute('r', '45'); face.setAttribute('class', 'pie-face');
+        wedge = document.createElementNS(SVGNS, 'path'); wedge.setAttribute('class', 'pie-wedge');
+        svg.appendChild(face); svg.appendChild(wedge);
+        bigBox.insertBefore(svg, shown);
+      }
+      ctx.body.appendChild(bigBox);
       ctx.body.appendChild(status);
       ctx.body.appendChild(presets);
       ctx.body.appendChild(el('div', { className: 'w-foot' }, [
@@ -665,7 +709,7 @@
         snap: function () { return { text: shown.textContent, running: running(), done: ctx.el.classList.contains('timer-done') }; }
       };
     }
-  };
+  }
 
   function formatElapsed(ms) {
     ms = Math.max(0, ms);
@@ -1968,9 +2012,11 @@
 
   var CMD_TYPE = { timer: 'timer', stopwatch: 'stopwatch', pick: 'names', groups: 'groups', roll: 'dice', light: 'traffic', symbol: 'symbols' };
   var SNAP_TYPES = ['timer', 'stopwatch', 'names', 'groups', 'dice', 'traffic', 'symbols'];
+  /* "The timer" means whichever timer is on top: a digits timer, a pie timer or a sequence. */
+  var FAMILY = { timer: ['timer', 'pie', 'sequence'] };
   function topWidget(type) {
-    var best = null;
-    currentScreen().widgets.forEach(function (w) { if (w.type === type && (!best || w.z > best.z)) best = w; });
+    var best = null, kinds = FAMILY[type] || [type];
+    currentScreen().widgets.forEach(function (w) { if (kinds.indexOf(w.type) !== -1 && (!best || w.z > best.z)) best = w; });
     return best;
   }
   function applyRemote(msg) {

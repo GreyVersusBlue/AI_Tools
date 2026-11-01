@@ -36,7 +36,7 @@
   'use strict';
 
   var TYPES = ['text', 'timer', 'stopwatch', 'clock', 'youtube', 'traffic', 'names', 'dice',
-               'symbols', 'noise', 'draw', 'image', 'qr', 'groups', 'agenda'];
+               'symbols', 'noise', 'draw', 'image', 'qr', 'groups', 'agenda', 'pie'];
 
   /* Default size of a new widget, as a fraction of the board. */
   var DEFAULT_SIZE = {
@@ -54,7 +54,8 @@
     image:     { w: 0.30, h: 0.34 },
     qr:        { w: 0.20, h: 0.36 },
     groups:    { w: 0.40, h: 0.40 },
-    agenda:    { w: 0.30, h: 0.40 }
+    agenda:    { w: 0.30, h: 0.40 },
+    pie:       { w: 0.26, h: 0.46 }
   };
 
   var MIN_W = 0.08, MIN_H = 0.08;
@@ -191,7 +192,7 @@
   function defaultData(type) {
     switch (type) {
       case 'text': return { text: '', size: 2 };
-      case 'timer': return { duration: 300, endsAt: 0, remaining: 300, sound: true };
+      case 'timer': case 'pie': return { duration: 300, endsAt: 0, remaining: 300, sound: true };
       case 'stopwatch': return { startedAt: 0, elapsed: 0 };
       case 'clock': return { h24: false, seconds: false, date: true };
       case 'youtube': return { url: '' };
@@ -236,7 +237,7 @@
     switch (type) {
       case 'text':
         return { text: str(d.text, MAX_TEXT, ''), size: TEXT_SIZES.indexOf(d.size) !== -1 ? d.size : dd.size };
-      case 'timer': {
+      case 'timer': case 'pie': {
         var duration = Math.round(num(d.duration, 1, MAX_TIMER_S, dd.duration));
         var t = {
           duration: duration,

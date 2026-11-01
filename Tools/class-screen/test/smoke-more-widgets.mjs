@@ -127,6 +127,48 @@ await tm.getByRole('button', { name: 'Remove Timer' }).click().catch(() => {});
 
 await modes('agenda', ag.locator('.agenda-list'), agIn, 'agenda');
 
+// ── pie timer ────────────────────────────────────────────────────────
+console.log(' pie timer');
+await add('pie');
+const pie = widget('pie');
+const wedgeD = () => pie.locator('.pie-wedge').getAttribute('d');
+eq(await page.locator('#dock button[data-add="pie"]').count(), 1, 'the dock offers the pie timer');
+ok(await pie.locator('.pie-svg').isVisible(), 'the pie is drawn');
+ok((await wedgeD()).startsWith('M50 5a45'), 'a full timer is a full disc');
+await pie.getByLabel('Set time, minutes or m:ss').fill('10s');
+await pie.getByRole('button', { name: 'Set', exact: true }).click();
+await pie.getByRole('button', { name: 'Start', exact: true }).click();
+await settle(page, 1800);
+await pie.getByRole('button', { name: 'Pause', exact: true }).click();
+ok(/^M50 50L50 5A45 45 0 1 1 /.test(await wedgeD()), 'a timer with most of its time left draws a wedge over half (large-arc flag 1)');
+await pie.getByRole('button', { name: 'Start', exact: true }).click();   // keep it running for the Space check below
+await pie.getByRole('button', { name: 'Pause', exact: true }).click();
+const dPaused = await wedgeD();
+await settle(page, 600);
+eq(await wedgeD(), dPaused, 'a paused pie holds still');
+// the shortcuts reach it: Space is "the timer on top"
+await page.evaluate(() => document.activeElement && document.activeElement.blur());
+await page.keyboard.press(' ');
+eq(await pie.getByRole('button', { name: /^(Pause|Start)$/ }).first().textContent(), 'Pause', 'Space starts the pie timer (the timer on top)');
+await page.keyboard.press(' ');
+eq(await pie.getByRole('button', { name: /^(Pause|Start)$/ }).first().textContent(), 'Start', 'and Space again pauses it');
+ok(Object.keys((await dataOf('pie'))).sort().join() === 'duration,endsAt,remaining,sound', 'a pie timer saves the timer shape and no more');
+// it runs out: red wedge in the last fifth, the done look, the flash link
+await pie.locator('.w-link summary').click();
+await pie.getByLabel('Flash the board').check();
+await pie.getByLabel('Set time, minutes or m:ss').fill('3s');
+await pie.getByRole('button', { name: 'Set', exact: true }).click();
+await pie.getByRole('button', { name: 'Start', exact: true }).click();
+await page.waitForFunction(() => document.querySelector('.wt-pie .pie-wedge').classList.contains('low'), null, { timeout: 4000 }).catch(() => {});
+ok(await pie.locator('.pie-wedge.low').count() === 1, 'the last fifth turns the wedge red');
+ok(/^M50 50L50 5A45 45 0 0 1 /.test(await wedgeD()), 'and a wedge under half uses the small arc (flag 0)');
+await page.waitForFunction(() => document.getElementById('board').classList.contains('flash'), null, { timeout: 5000 }).catch(() => {});
+ok(await page.evaluate(() => document.getElementById('board').classList.contains('flash')), 'a pie timer with the flash link flashes the board at the end');
+ok(await pie.evaluate((n) => n.classList.contains('timer-done')), 'and takes the done look');
+eq(await wedgeD(), '', 'nothing is left of the pie at zero');
+await settle(page, 4400);
+await modes('pie', pie.locator('.pie-svg'), pie.getByLabel('Set time, minutes or m:ss'), 'pie timer');
+
 // an older board (no agenda; a timer with no link) still opens, link-free
 await settle(page, 600);   // let the page's own save land first
 await page.evaluate(([k]) => {
