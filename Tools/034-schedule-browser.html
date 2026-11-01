@@ -1156,6 +1156,30 @@ function brDownloadTeacherSchedule(n) {
   }, 'image/png');
 }
 
+/* ── Where is this class right now? The published file holds classes, never
+   students, so the answer is a class's block, room and teacher: the current
+   block comes from the bell times and the day from the A / B chips (nothing in
+   the file says which letter today is). ── */
+function brGroupNowHTML(sec) {
+  const gr = BR_GROUPROOMS[sec];
+  if (!gr || !BR_BELL) return '';
+  const bHas = Array.isArray(gr.B) && gr.B.some(Boolean);
+  const day = (brGrpDay === 'B' && bHas) ? 'B' : 'A';
+  const idx = brCurrentPeriodIdx(day);
+  const toggle = bHas ? `<div class="daychips"><button class="${day==='A'?'on':''}" onclick="brSetGrpDay('A')">A Day</button><button class="${day==='B'?'on':''}" onclick="brSetGrpDay('B')">B Day</button></div>` : '';
+  let body;
+  if (idx < 0) {
+    body = `<p class="factline">Class ${brEscHtml(sec)} is between blocks, or school is out, right now.</p>`;
+  } else {
+    const room = (day === 'B' ? gr.B : gr.A || [])[idx] || '';
+    const times = (day === 'B' ? BR_BELL.B : BR_BELL.A)[idx] || '';
+    const who = Object.keys(BR_TEACHERS).filter(n => (day === 'B' ? BR_TEACHERS[n].B : BR_TEACHERS[n].A)[idx] === sec);
+    body = `<p class="factline">${brEscHtml(BR_MOD_LABEL)} ${idx+1}${times ? ' · ' + brEscHtml(times) : ''} on ${day} day: <b>${room ? (/\s/.test(room) ? '' : 'Room ') + brEscHtml(room) : 'no room listed'}</b>${who.length ? ' with ' + who.map(n => `<button class="lnk" onclick="brJumpTeacher('${brJsAttr(n)}')">${brEscHtml(n)}</button>`).join(', ') : ''}.</p>`;
+  }
+  return `<h3 class="block-title">Where is class ${brEscHtml(sec)} right now?</h3>
+   <p class="hint">Read from this device's clock and the bell times. Choose the letter day.</p>
+   ${toggle}${body}`;
+}
 function brRenderGroup(sec) {
   if (!BR_SECTIONS[sec]) return;
   const grade=sec.split('-')[0];
@@ -1171,6 +1195,7 @@ function brRenderGroup(sec) {
      <div><h2>Class ${brEscHtml(sec)}</h2><div class="role br-muted-ink">Grade ${brEscHtml(grade)} · ${list.length} teacher${list.length!==1?'s':''}</div></div>
      <div class="idhead-actions">${brShareButtonsHTML('group', sec)}</div>
    </div>
+   ${brGroupNowHTML(sec)}
    <h3 class="block-title">Who teaches class ${brEscHtml(sec)}</h3>
    <p class="hint">Tap a name to open that teacher's full schedule.</p>
    <div class="tscroll"><table class="gtable">

@@ -834,7 +834,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 127 | Attempt limits and feedback; a non-QR fallback | 019 | ½ | | [019 Digital Escape Room / Puzzle Lock Builder](#019--digital-escape-room--puzzle-lock-builder) |
 | 136 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
 | 138 | The A/B cycle's anchor date shows the other letter when the anchor is a school day after the calendar's first school day (`scv-weeks.js`, `ANCHOR_QUIRK`; fixing it flips every letter of such a saved calendar, so it is a decision, not a quiet fix); cycle labels beyond A and B (needs a field in `scv_calendar_v1`, which 010 reads raw); a "week starts on" setting (none exists; the week print is Monday to Friday). Year-grid badges and the page-per-week print shipped v292 | 032 | ¼ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
-| 139 | "Where is this student right now?"; the published pathfinder | 034 | ½ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
+| 139 | 034: "Where is class X right now?" shipped on the By Student Group view (v553). What is left is the published pathfinder: a route from room A to room B on the building map. 034 exposes none of `astar`, `buildMultiFloorGraph` or `computeTravelTimes`, so it needs the publisher (035) to embed a room graph and the browser to carry the search, held by `check:publisher`; and no individual student is ever published, so a lookup by student name stays out | 034 | ½ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
 | 140 | 035 what is left: the page's inline script is still ~2,900 lines (settings and layout persistence, the onboarding and presentation glue; the bell and subjects editors went to `sv-settings-editors.js` at v543), and the snapshot manager went to `sv-snapshots.js` at v550, so the next increment is the autosave/storage-headroom block or the recovery manager. Accessibility routing (Path 11 P3) is built; what is left of it is accessibility-aware *evacuation* routing (a wheelchair user's route out: step-free and no elevator), which turns on P3's Devon question about what counts as an exit, so it stays out | 035 | ½ | | [035 School Layout Visualizer](#035--school-layout-visualizer) |
 | 143 | A second language beyond Spanish (needs a translation a person has checked), including for the new parent letter; the phone/projector trip-day view | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
 | 144 | 044 what is left of references by name: the plan saying *which* section the Sub Binder prints. 045's choice is built and saved (v549); 044 reads no key of 045 and the Sub Binder's included-sections object is its own, so the line would need a packet provider or a registry `reads` entry, a Path 10 call | 044 | ¼ | | [044 Sub Plan Builder](#044--sub-plan-builder) |
@@ -12063,10 +12063,9 @@ work, and don't promote one without Devon saying so.
 
 #### Quick Wins
 
-- **Where is this student right now?** By-group view plus the current period
-  answers it; the office asks this several times a day. *(Partly enabled —
-  Free Right Now answers "who", not "where's this specific group right now";
-  still open.)*
+- **Where is this class right now?** *(Shipped v553 on the By Student Group view:
+  the current block from the bell times, the room and the teacher; the published
+  file holds classes, never students, so there is no lookup by a student's name.)*
 - **Add to phone home screen / offline** — the site has a service worker, so
   a teacher's own schedule should be reliably available with no signal in a
   hallway.

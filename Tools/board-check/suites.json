@@ -126,6 +126,7 @@
     "Tools/schedule-browser/test/smoke-substitute-view.mjs",
     "Tools/schedule-browser/test/smoke-mode-tabs.mjs",
     "Tools/schedule-browser/test/smoke-dark-theme.mjs",
+    "Tools/schedule-browser/test/smoke-group-now.mjs",
     "Tools/bracket-tournament-generator/test/smoke-standings.mjs",
     "Tools/bracket-tournament-generator/test/smoke-pools-swiss.mjs",
     "Tools/bracket-tournament-generator/test/smoke-share.mjs",
