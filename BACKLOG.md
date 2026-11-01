@@ -628,7 +628,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 - **The two Windows-only suite failures are fixed (AI-34 part, v213):** `.gitattributes` pins LF
   and 067's glyph probe no longer calls Windows' music font missing. An existing Windows clone
   needs `git rm -rq --cached .` then `git reset -q --hard` once. `HISTORY.md` has it.
-- **Path 22 P1–P10 are done** (P6–P8 at v521–v523, P9–P10 at v524–v532, AI-32). His later asks are ranks 157–160 (P11–P14), unranked by him.
+- **Path 22 P1–P12 are done** (P6–P8 at v521–v523, P9–P10 at v524–v532, P11–P12 at v533–v535, AI-32). His later asks left are ranks 159–160 (P13–P14), unranked by him; both change `_shared/` or a second tool and run alone.
 
 **Start here.** Path 21 is finished (046's relief was its last row, AI-03), so no row needs Blender.
 - Ranks 1 to 4 have shipped (rank 2, per-tool restore, at v298, AI-16; rank 4, the year rollover, at v304; rank 3, the
@@ -666,7 +666,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Shared-file adoption (of 90) | `sw-register.js` 88 · `a11y.css` 87 · `a11y.js` 87 · `ink-paper.css` 79 · `base.css` 73 · `qr-draw.js` 61 · `share.js` 56 · `state-link.js` 57 · `store.js` 45 · `roster.js` 35 · `print-area.css` 32 · `print-kit.css` 18 · `print-kit.js` 18 · `media-db.js` 17 · `stage.js` 16 · `export.js` 15 · `tool-registry.js` 14 · `qr-scan.js` 10 · `school-day.js` 9 · `handoffs.js` 9 · `sample-data.js` 8 · `webrtc-pair.js` 8 · `grouping.js` 6 · `question-bank.js` 6 · `student-flags.js` 6 · `undo.js` 6 · `word-list.js` 6 · `paste-table.js` 7 (+2 via a module) · `speak.js` 5 · `theme.css` 5 · `chart-svg.js` 4 · `levels.js` 4 · `list-sentence.js` 5 (+3 via a module) · `seating-read.js` 4 · `countdown.js` 3 · `restore-kit.js` 3 · `binder-stale.js` 2 · `bracket.js` 2 · `conjugate-de.js` 2 · `conjugate-es.js` 2 · `conjugate-fr.js` 2 · `conjugate-it.js` 2 · `conjugate-la.js` 2 · `conjugate.js` 2 · `rotation.js` 2 · `ss-glossary.js` 2 · `stations-bank.js` 2 · `stations.js` 2 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `stations-debrief.css` 1 · `stations-debrief.js` 1 · `student-details.js` 1 (+1 via a module) · `geo-project.js` 0 (+2 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
-| Tier 1 rows | **100 ranked rows, ranks to 164** (ranks 152–156 shipped on 2026-11-01 (Path 22 P6–P10) and leave gaps; ranks 19 and 20 shipped on 2026-10-29 and leave gaps, as the earlier deletions did; rank 43 shipped three times on 2026-10-28, Path 16 P1 and then P2, and the ranks after it moved up one each time; the ranks before it keep the gaps earlier deletions left). Path 21 is finished; per-tool rows start at rank **75**; 157–160 are Path 22 P11–P14 |
+| Tier 1 rows | **98 ranked rows, ranks to 164** (ranks 152–158 shipped on 2026-11-01 (Path 22 P6–P12) and leave gaps; ranks 19 and 20 shipped on 2026-10-29 and leave gaps, as the earlier deletions did; rank 43 shipped three times on 2026-10-28, Path 16 P1 and then P2, and the ranks after it moved up one each time; the ranks before it keep the gaps earlier deletions left). Path 21 is finished; per-tool rows start at rank **75**; 159–160 are Path 22 P13–P14 |
 | Art | **130** ledger entries: 046's relief (29,726 B), 030's board backdrop and tiles (5,348 B), 042's ten seals and ribbons (84,170 B), 071's twelve pictures (157,454 B), 080's piece atlas (43,318 B), 87 tool icons, the sprite (58,032 B), 4 shortcut PNGs, the 4 app-mark PNGs (14,457 B), the 4 hero WebPs (64,832 B), the test tile's light/dark pair |
 | Dark mode / fullscreen | 92 of 92 themed pages native dark (`path5:next`; 8 live pages load no `a11y.js`: 035 is the documented exception (`CLAUDE.md`), the rest are standalone on purpose); `stage.js` on 16 pages. Path 5 is finished |
 | CI | Pull requests run `--changed`; a push to `main` runs everything. Since 2026-10-26 the suites run as six parallel shard jobs (`--shard i/6`, ~21 min each by `suite-durations.json`, not yet seen on a CI run), with a `guards` job and one `test` check that is green only if all are. A PR touching `_shared/`, `index.html`, `package.json` or `Tools/board-check/` is site-wide: all 331 suites, ~121 min summed |
@@ -848,8 +848,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 149 | Buzz-in from student devices (deferred); map-question tournaments | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
 | 150 | A student-facing fill-in mode; review-game theme packs | 064 | ½ | | [064 Historical Figure / Country Trading Card Maker](#064--historical-figure--country-trading-card-maker) |
 | 151 | Snap-to-grid for base-ten blocks; export and data-driven piece families | 080 | ½ | | [080 Virtual Manipulatives Board](#080--virtual-manipulatives-board) |
-| 157 | Path 22 P11 — layout comforts: snap to grid, minimize to a chip, per-widget colour, screen thumbnails, a large-text projector theme | 087 | ½ | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
-| 158 | Path 22 P12 — another site tool as a widget (same-origin frame, e.g. 024 Number Talks, 080 Manipulatives) | 087 | 1 | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
 | 159 | Path 22 P13 — 004's phase engine (agenda, round robin, random, overtime) onto `_shared/countdown.js` | 004 | ½ | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
 | 160 | Path 22 P14 — one remote wrapper: `cc-remote.js` and `cs-remote.js` onto a single `_shared/` file | `_shared/` | ¼ | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
 | 161 | Conference sign-up — run the Worker under workerd (`wrangler dev --local`) in a suite: the bundle, the JSON import, the Durable Object migration, the PIN and CORS paths. Nothing has run on Cloudflare's runtime yet | `conference-signup/` | ½ | | [Conference sign-up](#conference-sign-up--parent-bookings-outside-tools) |
@@ -8915,7 +8913,7 @@ reviewed nor diffed.
     carrier:** a negative algebra tile needs a visible "−" or a pattern, not just red, and
     the fraction bars carry their label. The renders must pass the colour-blind simulation
     the Blender script can do on its own output (grey-convert and check that the families
-    stay distinct). **Cap: ≤ 250 KB** for both atlases. Existing rank 157 (snap-to-grid,
+    stay distinct). **Cap: ≤ 250 KB** for both atlases. Existing rank 151 (snap-to-grid,
     data-driven piece families) is the natural next step; do not fold it in.
   - **071 Picture-prompt starter set. SHIPPED in #313, v208**: twelve scenes (a café, a library, a party,
     a bedroom and a farm joined the six named below), on until the teacher has pictures of their own.
@@ -9048,12 +9046,20 @@ ranked against anything else. Moving them up is a re-rank, which is his call.
   browser tab in `sessionStorage` as positions plus a fingerprint of the roster, never names. Moves and resizes
   undo from the toast and `Ctrl+Z`, on one stack with removals (a removal stays undoable for the toast's seven
   seconds, a move for the visit).
-- **P11 — layout comforts.** Snap to grid or alignment guides, minimize a widget to a chip, a
-  colour per widget (tokens only), screen thumbnails in the switcher, and a large-text,
-  high-contrast projector theme.
-- **P12 — another site tool as a widget.** A same-origin frame of another tool (024 Number
-  Talks, 080 Manipulatives), precached so it works offline. It needs a design for sizing, and
-  a list of which tools behave inside a frame.
+- **P11 — shipped (v533, AI-32).** Snap to a 1/40 grid (a header switch, `snap` on the board only while on; the grid
+  shows during a drag, arrows step one grid line), minimize to a chip (`min` on the widget: its title bar only, still
+  running, hidden in present mode), a colour per widget (`color`: blue, slate, warm or info, a tint of a token; the
+  title bar reads in full ink on a tint), screen thumbnails (a Screens button opens a picture of every layout), and the
+  projector theme (`projector` on the board: type raised, muted text and lines at full strength, a 5 px focus ring; a
+  class on `<body>`, never `data-theme`). Each new field is present only once used; a pre-P11 board opens unchanged.
+  Alignment guides were not built (grid only).
+- **P12 — shipped (v534–v535, AI-32).** A "Site tool" widget frames 024 Number Talks or 080 Virtual Manipulatives, from a fixed
+  list in `cs-core.js` (`FRAME_TOOLS`); the widget saves the tool's id, never an address, and a second frame of one tool
+  on a screen is refused. Sandboxed (scripts, same-origin, modals, downloads: no top navigation, popups or forms), a
+  frame that leaves its page is sent back, and offline with the tool not cached it shows a note. A frame is sized like
+  any widget. **Which tools behave in a frame:** no tool page sets a CSP or frame rule or looks at its parent
+  (`smoke-frame.mjs` holds that), but only 024 and 080 were driven; every other tool is untested in a frame. Keys
+  pressed with focus inside a frame belong to the tool (Esc and a clicker do not reach the board until focus is back on it).
 - **P13 — 004 onto `countdown.js`.** Move 004's phase engine off `phase.endAt` and
   `remainingAtPause` onto a `Countdown` state, keeping 004's display and its mirror and remote
   suites green. P5 left this for its own PR on purpose.
