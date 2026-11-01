@@ -169,6 +169,66 @@ eq(await wedgeD(), '', 'nothing is left of the pie at zero');
 await settle(page, 4400);
 await modes('pie', pie.locator('.pie-svg'), pie.getByLabel('Set time, minutes or m:ss'), 'pie timer');
 
+// ── sequence timer ───────────────────────────────────────────────────
+console.log(' sequence timer');
+await add('sequence');
+const sq = widget('sequence');
+const stepNow = () => sq.locator('.seq-name').textContent();
+const startSq = () => sq.getByRole('button', { name: /^(Start|Pause|Restart)$/ });
+eq(await page.locator('#dock button[data-add="sequence"]').count(), 1, 'the dock offers the sequence timer');
+eq(await sq.locator('.seq-chips li').allTextContents(), ['Think 1:00', 'Pair 2:00', 'Share 3:00'], 'a new sequence is think / pair / share');
+eq(await stepNow(), 'Think', 'it starts on the first step');
+await sq.locator('summary', { hasText: 'Edit steps' }).click();
+const sqEdit = sq.getByLabel('Steps, like Think 1:00, Pair 2:00, Share 3:00');
+await sqEdit.fill('Think, Pair 2s');
+await sq.getByRole('button', { name: 'Set', exact: true }).click();
+ok(await sq.locator('.err-note').isVisible(), 'a step with no time is refused out loud');
+ok((await sq.locator('.err-note').textContent()).includes('Step 1'), 'naming the step');
+eq((await dataOf('sequence')).steps.length, 3, 'and the steps are unchanged');
+await sqEdit.fill('Think 2s, Pair 2s, Share 2s');
+await sq.getByRole('button', { name: 'Set', exact: true }).click();
+eq((await dataOf('sequence')).steps, [{ label: 'Think', sec: 2 }, { label: 'Pair', sec: 2 }, { label: 'Share', sec: 2 }], 'new steps are saved');
+// the shortcut and the link
+await sq.locator('summary', { hasText: 'When it ends' }).click();
+await sq.getByLabel('Flash the board').check();
+await sq.getByLabel('Tick the next agenda item').check();
+const agBefore = (await dataOf('agenda')).items.filter((i) => i.done).length;
+await page.evaluate(() => { document.activeElement && document.activeElement.blur(); document.getElementById('board').classList.remove('flash'); });
+await page.keyboard.press(' ');
+eq(await startSq().textContent(), 'Pause', 'Space runs the sequence (the timer on top)');
+await settle(page, 2600);
+eq(await stepNow(), 'Pair', 'when a step ends the next one starts by itself');
+eq(await sq.locator('.seq-chips li.now').textContent(), 'Pair 0:02', 'and its chip is the current one');
+eq(await sq.locator('.seq-chips li[aria-current="step"]').count(), 1, 'marked for a screen reader');
+ok(!(await page.evaluate(() => document.getElementById('board').classList.contains('flash'))), 'nothing fires between steps');
+await settle(page, 2600);
+eq(await stepNow(), 'Share', 'and on to the third');
+await page.waitForFunction(() => document.querySelector('.wt-sequence').classList.contains('timer-done'), null, { timeout: 5000 }).catch(() => {});
+ok(await sq.evaluate((n) => n.classList.contains('timer-done')), 'after the last step it takes the done look');
+eq(await startSq().textContent(), 'Restart', 'and offers Restart');
+ok(await page.evaluate(() => document.getElementById('board').classList.contains('flash')), 'the board flashes once, at the very end');
+eq((await dataOf('agenda')).items.filter((i) => i.done).length, agBefore + 1, 'and the next agenda item is ticked');
+await startSq().click();
+eq(await stepNow(), 'Think', 'Restart goes back to the first step and runs');
+await sq.getByRole('button', { name: 'Skip to the next step' }).click();
+eq(await stepNow(), 'Pair', 'Skip moves on one step');
+await sq.getByRole('button', { name: 'Reset', exact: true }).click();
+eq(await stepNow(), 'Think', 'Reset returns to step one');
+eq(await startSq().textContent(), 'Start', 'paused');
+// a position survives a reload
+await sqEdit.fill('Think 30s, Pair 30s, Share 30s');
+await sq.getByRole('button', { name: 'Set', exact: true }).click();
+await startSq().click();
+await sq.getByRole('button', { name: 'Skip to the next step' }).click();
+await settle(page, 400);
+await page.reload();
+await settle(page, 500);
+eq(await widget('sequence').locator('.seq-name').textContent(), 'Pair', 'a reload keeps the step');
+eq(await widget('sequence').getByRole('button', { name: /^(Start|Pause|Restart)$/ }).textContent(), 'Pause', 'and it is still running');
+await widget('sequence').getByRole('button', { name: 'Pause', exact: true }).click();
+await widget('sequence').locator('summary', { hasText: 'Edit steps' }).click();
+await modes('sequence', widget('sequence').locator('.big.seq'), widget('sequence').getByLabel('Steps, like Think 1:00, Pair 2:00, Share 3:00'), 'sequence');
+
 // an older board (no agenda; a timer with no link) still opens, link-free
 await settle(page, 600);   // let the page's own save land first
 await page.evaluate(([k]) => {

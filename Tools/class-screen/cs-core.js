@@ -36,7 +36,7 @@
   'use strict';
 
   var TYPES = ['text', 'timer', 'stopwatch', 'clock', 'youtube', 'traffic', 'names', 'dice',
-               'symbols', 'noise', 'draw', 'image', 'qr', 'groups', 'agenda', 'pie'];
+               'symbols', 'noise', 'draw', 'image', 'qr', 'groups', 'agenda', 'pie', 'sequence'];
 
   /* Default size of a new widget, as a fraction of the board. */
   var DEFAULT_SIZE = {
@@ -55,13 +55,15 @@
     qr:        { w: 0.20, h: 0.36 },
     groups:    { w: 0.40, h: 0.40 },
     agenda:    { w: 0.30, h: 0.40 },
-    pie:       { w: 0.26, h: 0.46 }
+    pie:       { w: 0.26, h: 0.46 },
+    sequence:  { w: 0.34, h: 0.42 }
   };
 
   var MIN_W = 0.08, MIN_H = 0.08;
   var MAX_SCREENS = 30, MAX_WIDGETS = 40, MAX_TEXT = 5000, MAX_NAME = 60, MAX_URL = 500;
   var MAX_TIMER_S = 24 * 3600;
   var MAX_AGENDA = 12, MAX_AGENDA_ITEM = 120;
+  var MAX_STEPS = 8, MAX_STEP_LABEL = 30;
   var TEXT_SIZES = [1, 1.5, 2, 3, 4, 6];
   var LIGHTS = ['red', 'yellow', 'green'];
 
@@ -206,6 +208,7 @@
       case 'qr': return { text: '' };
       case 'groups': return { roster: '', by: 'size', n: 4 };
       case 'agenda': return { items: [] };
+      case 'sequence': return { steps: DEFAULT_STEPS.map(function (x) { return { label: x.label, sec: x.sec }; }), i: 0, endsAt: 0, remaining: DEFAULT_STEPS[0].sec };
     }
     return {};
   }
@@ -218,6 +221,40 @@
     if (!isObj(l)) return null;
     var out = { flash: bool(l.flash, false), light: LIGHTS.indexOf(l.light) !== -1 ? l.light : '', agenda: bool(l.agenda, false) };
     return out.flash || out.light || out.agenda ? out : null;
+  }
+
+  /* A sequence timer: steps run one after another, each { label, sec }. Typed
+     as "Think 1:00, Pair 2:00, Share 3:00": the last word of each part is its
+     length (the same forms the timer takes), the rest is its name. Parts split
+     on commas, semicolons, new lines and arrows. */
+  var DEFAULT_STEPS = [{ label: 'Think', sec: 60 }, { label: 'Pair', sec: 120 }, { label: 'Share', sec: 180 }];
+  function parseSequence(text) {
+    if (typeof text !== 'string') return { steps: [], error: 'Try Think 1:00, Pair 2:00, Share 3:00.' };
+    var parts = text.split(/[,;\n]|->|→/).map(function (x) { return x.trim(); }).filter(Boolean);
+    var steps = [], error = '';
+    if (!parts.length) error = 'Try Think 1:00, Pair 2:00, Share 3:00.';
+    parts.forEach(function (part, i) {
+      if (error) return;
+      var m = /^(.*\S)\s+(\S+)$/.exec(part);
+      var sec = m ? global.Countdown.parse(m[2]) : null;
+      if (!m || sec === null) { error = 'Step ' + (i + 1) + ' needs a name and a time, like Pair 2:00.'; return; }
+      if (steps.length >= MAX_STEPS) { error = 'A sequence holds at most ' + MAX_STEPS + ' steps.'; return; }
+      steps.push({ label: m[1].slice(0, MAX_STEP_LABEL), sec: sec });
+    });
+    return error ? { steps: [], error: error } : { steps: steps, error: '' };
+  }
+  function formatSequence(steps) {
+    return (steps || []).map(function (x) { return x.label + ' ' + global.Countdown.format(x.sec * 1000); }).join(', ');
+  }
+  function normalizeSteps(list) {
+    var out = [];
+    (Array.isArray(list) ? list : []).forEach(function (x) {
+      if (out.length >= MAX_STEPS || !isObj(x)) return;
+      var label = str(x.label, MAX_STEP_LABEL, '').trim();
+      var sec = typeof x.sec === 'number' && x.sec >= 0.5 ? Math.round(num(x.sec, 1, MAX_TIMER_S, 0)) : 0;
+      if (label && sec > 0) out.push({ label: label, sec: sec });
+    });
+    return out.length ? out : DEFAULT_STEPS.map(function (x) { return { label: x.label, sec: x.sec }; });
   }
 
   /* An agenda: up to MAX_AGENDA lines, each { t, done }. A blank line is dropped. */
@@ -294,6 +331,14 @@
         };
       case 'agenda':
         return { items: normalizeAgenda(d.items) };
+      case 'sequence': {
+        var steps = normalizeSteps(d.steps);
+        var at = Math.min(steps.length - 1, Math.max(0, Math.round(num(d.i, 0, MAX_STEPS, 0))));
+        var q = { steps: steps, i: at, endsAt: num(d.endsAt, 0, 8.64e15, 0), remaining: num(d.remaining, 0, MAX_TIMER_S, steps[at].sec) };
+        var ql = normalizeLink(d.link);
+        if (ql) q.link = ql;
+        return q;
+      }
     }
     return dd;
   }
@@ -681,6 +726,9 @@
     MAX_WIDGETS: MAX_WIDGETS,
     MAX_AGENDA: MAX_AGENDA,
     MAX_AGENDA_ITEM: MAX_AGENDA_ITEM,
+    MAX_STEPS: MAX_STEPS,
+    parseSequence: parseSequence,
+    formatSequence: formatSequence,
     parseYouTube: parseYouTube,
     embedUrl: embedUrl,
     formatClock: formatClock,

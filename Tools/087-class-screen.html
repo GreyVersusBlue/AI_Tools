@@ -152,6 +152,16 @@
     font: inherit; font-size: calc(var(--fs, 2) * 1rem); line-height: 1.25; padding: .1rem;
   }
 
+  /* sequence timer */
+  .big.seq { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; }
+  .seq-name { font-weight: 700; font-size: min(11cqw, 22cqh); line-height: 1.1; text-align: center; overflow-wrap: anywhere; }
+  .seq .big-text { font-size: min(20cqw, 44cqh); }
+  .seq-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .25rem; justify-content: center; font-size: .78rem; }
+  .seq-chips li { border: 1px solid var(--line-strong); border-radius: 999px; padding: .1rem .55rem; color: var(--muted); background: var(--card); }
+  .seq-chips li.now { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+  .seq-chips li.past { text-decoration: line-through; }
+  .seq-edit { width: 16em; max-width: 100%; }
+
   /* pie timer */
   .big.pie { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; }
   .pie-svg { width: min(92cqw, 66cqh); height: min(92cqw, 66cqh); flex: none; }
@@ -567,6 +577,36 @@
     build: function (ctx) { return buildTimer(ctx, true); }
   };
 
+  /* "When it ends" (Path 22 P8), shared by every timer-like widget: flash the
+     board, set the traffic light, tick the next agenda item. Kept on the
+     widget's data as `link`, only once one is on. */
+  function mountLinks(ctx) {
+    var flashCb = el('input', { type: 'checkbox' });
+    var lightSel = el('select', { 'aria-label': 'Set the traffic light when time is up' });
+    [['', 'Leave the light'], ['red', 'Light: red'], ['yellow', 'Light: yellow'], ['green', 'Light: green']].forEach(function (o) {
+      lightSel.appendChild(el('option', { value: o[0], text: o[1] }));
+    });
+    var agendaCb = TYPES.agenda ? el('input', { type: 'checkbox' }) : null;
+    var linkSummary = el('summary');
+    var d = ctx.data;
+    var link = d.link || { flash: false, light: '', agenda: false };
+    flashCb.checked = link.flash; lightSel.value = link.light; if (agendaCb) agendaCb.checked = link.agenda;
+    function readLinks() {
+      var l = { flash: flashCb.checked, light: lightSel.value, agenda: agendaCb ? agendaCb.checked : link.agenda };
+      if (l.flash || l.light || l.agenda) d.link = l; else delete d.link;
+      link = l;
+      var on = [l.flash ? 'flash' : '', l.light ? 'light' : '', l.agenda ? 'agenda' : ''].filter(Boolean);
+      linkSummary.textContent = on.length ? 'When it ends: ' + on.join(', ') : 'When it ends';
+    }
+    [flashCb, lightSel, agendaCb].forEach(function (n) { if (n) n.addEventListener('change', function () { readLinks(); ctx.save(); }); });
+    readLinks();
+    ctx.body.appendChild(el('details', { className: 'w-link' }, [linkSummary, el('div', { className: 'w-link-body' }, [
+      el('label', null, [flashCb, 'Flash the board']),
+      lightSel,
+      agendaCb ? el('label', null, [agendaCb, 'Tick the next agenda item']) : null
+    ])]));
+  }
+
   /* One timer, two faces: digits (type 'timer') or a shrinking pie with the
      digits under it (type 'pie'). The saved shape, the links, the phone remote
      and the shortcuts are the same. */
@@ -666,32 +706,7 @@
       ]));
       ctx.body.appendChild(err);
 
-      /* What else happens when it runs out (Path 22 P8). The agenda choice
-         appears only on a page that has an agenda widget; its flag is kept in
-         the data either way. */
-      var flashCb = el('input', { type: 'checkbox' });
-      var lightSel = el('select', { 'aria-label': 'Set the traffic light when time is up' });
-      [['', 'Leave the light'], ['red', 'Light: red'], ['yellow', 'Light: yellow'], ['green', 'Light: green']].forEach(function (o) {
-        lightSel.appendChild(el('option', { value: o[0], text: o[1] }));
-      });
-      var agendaCb = TYPES.agenda ? el('input', { type: 'checkbox' }) : null;
-      var linkSummary = el('summary');
-      var link = d.link || { flash: false, light: '', agenda: false };
-      flashCb.checked = link.flash; lightSel.value = link.light; if (agendaCb) agendaCb.checked = link.agenda;
-      function readLinks() {
-        var l = { flash: flashCb.checked, light: lightSel.value, agenda: agendaCb ? agendaCb.checked : link.agenda };
-        if (l.flash || l.light || l.agenda) d.link = l; else delete d.link;
-        link = l;
-        var on = [l.flash ? 'flash' : '', l.light ? 'light' : '', l.agenda ? 'agenda' : ''].filter(Boolean);
-        linkSummary.textContent = on.length ? 'When it ends: ' + on.join(', ') : 'When it ends';
-      }
-      [flashCb, lightSel, agendaCb].forEach(function (n) { if (n) n.addEventListener('change', function () { readLinks(); ctx.save(); }); });
-      readLinks();
-      ctx.body.appendChild(el('details', { className: 'w-link' }, [linkSummary, el('div', { className: 'w-link-body' }, [
-        el('label', null, [flashCb, 'Flash the board']),
-        lightSel,
-        agendaCb ? el('label', null, [agendaCb, 'Tick the next agenda item']) : null
-      ])]));
+      mountLinks(ctx);
 
       if (restored.expired) finish(false);   // ran out while the page was closed: no late alarm
       else if (Countdown.isDone(c)) setDone(true);
@@ -710,6 +725,100 @@
       };
     }
   }
+
+  /* A sequence timer: Think 1:00 -> Pair 2:00 -> Share 3:00. The current step
+     runs on a _shared/countdown.js state like the timer's; when it ends the
+     next step starts by itself, and "When it ends" fires after the last. */
+  TYPES.sequence = {
+    title: 'Sequence timer', icon: ['M4 6h4v4H4z', 'M10 12h4v4h-4z', 'M16 18h4v-4', 'M8 8h3', 'M14 14h3'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var stepName = el('span', { className: 'seq-name', 'aria-live': 'polite' });
+      var shown = el('span', { className: 'big-text' });
+      var chips = el('ol', { className: 'seq-chips', 'aria-label': 'Steps' });
+      var startBtn = el('button', { type: 'button', className: 'primary' });
+      var err = el('p', { className: 'err-note', hidden: true });
+      var editId = ctx.id + '-steps';
+      var edit = el('input', { type: 'text', id: editId, className: 'seq-edit' });
+      var restored = Countdown.restore({ totalMs: d.steps[d.i].sec * 1000, endAt: d.endsAt, leftMs: d.remaining * 1000 }, Date.now());
+      var c = restored.c;
+      function running() { return Countdown.isRunning(c); }
+      function sync() { d.endsAt = c.endAt; d.remaining = c.leftMs / 1000; ctx.save(); }
+      function setDone(on) { ctx.el.classList.toggle('timer-done', on); }
+      function render() {
+        var ms = Countdown.left(c, Date.now());
+        shown.textContent = Core.formatClock(ms);
+        stepName.textContent = d.steps[d.i].label;
+        var done = Countdown.isDone(c) && d.i === d.steps.length - 1;
+        startBtn.textContent = running() ? 'Pause' : (done ? 'Restart' : 'Start');
+      }
+      function drawChips() {
+        chips.textContent = '';
+        d.steps.forEach(function (x, i) {
+          var li = el('li', { className: i === d.i ? 'now' : (i < d.i ? 'past' : ''), text: x.label + ' ' + Core.formatClock(x.sec * 1000) });
+          if (i === d.i) li.setAttribute('aria-current', 'step');
+          chips.appendChild(li);
+        });
+        edit.value = Core.formatSequence(d.steps);
+      }
+      function goTo(i, run) {
+        d.i = i; Countdown.setTotal(c, d.steps[i].sec * 1000);
+        if (run) Countdown.start(c, Date.now());
+        setDone(false); sync(); drawChips(); render();
+      }
+      function finish(announce) {
+        sync(); render(); setDone(true);
+        if (announce) ctx.fire(d.link);
+      }
+      startBtn.addEventListener('click', function () {
+        if (!running() && Countdown.isDone(c) && d.i === d.steps.length - 1) { goTo(0, true); return; }
+        Countdown.toggle(c, Date.now());
+        setDone(false); sync(); render();
+      });
+      function skip() { if (d.i < d.steps.length - 1) goTo(d.i + 1, running()); }
+      function applySteps() {
+        var r = Core.parseSequence(edit.value);
+        err.hidden = !r.error;
+        if (r.error) { err.textContent = r.error; return; }
+        d.steps = r.steps; goTo(0, false);
+      }
+      edit.addEventListener('keydown', function (e) { if (e.key === 'Enter') applySteps(); });
+      ctx.body.appendChild(el('div', { className: 'big seq' }, [stepName, shown]));
+      ctx.body.appendChild(chips);
+      ctx.body.appendChild(el('div', { className: 'w-foot' }, [
+        startBtn,
+        el('button', { type: 'button', text: 'Skip', 'aria-label': 'Skip to the next step', onclick: skip }),
+        el('button', { type: 'button', text: 'Reset', onclick: function () { goTo(0, false); } })
+      ]));
+      ctx.body.appendChild(el('details', { className: 'w-link' }, [
+        el('summary', { text: 'Edit steps' }),
+        el('div', { className: 'w-link-body' }, [
+          el('label', { for: editId, className: 'sr-only', text: 'Steps, like Think 1:00, Pair 2:00, Share 3:00' }), edit,
+          el('button', { type: 'button', text: 'Set', onclick: applySteps })
+        ])
+      ]));
+      ctx.body.appendChild(err);
+      mountLinks(ctx);
+      drawChips();
+      if (restored.expired) finish(false);   // ran out while the page was closed: no late alarm
+      else if (Countdown.isDone(c) && d.i === d.steps.length - 1) setDone(true);
+      render();
+      return {
+        tick: function () {
+          if (Countdown.expire(c, Date.now())) {
+            if (d.i < d.steps.length - 1) goTo(d.i + 1, true);
+            else finish(true);
+          } else if (running()) render();
+        },
+        remote: function (cmd) {
+          if (cmd.action === 'toggle') startBtn.click();
+          else if (cmd.action === 'reset') goTo(0, false);
+          else if (cmd.action === 'add') { Countdown.add(c, 60000, Date.now()); sync(); render(); }
+        },
+        snap: function () { return { text: shown.textContent, running: running(), done: ctx.el.classList.contains('timer-done') }; }
+      };
+    }
+  };
 
   function formatElapsed(ms) {
     ms = Math.max(0, ms);

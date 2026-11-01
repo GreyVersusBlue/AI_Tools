@@ -91,7 +91,7 @@ for (const t of C.TYPES) {
   if (firstOverlap === -1 && all.some((q) => hit(r, q))) firstOverlap = all.length;
   all.push(r);
 }
-ok(firstOverlap === -1 || firstOverlap >= 9, `one of each of the sixteen: at least nine place before any overlap (first overlap at ${firstOverlap})`);
+ok(firstOverlap === -1 || firstOverlap >= 9, `one of each of the seventeen: at least nine place before any overlap (first overlap at ${firstOverlap})`);
 const full = Array.from({ length: 20 }, () => C.placeNew('youtube', []));
 ok(full.every((r) => r.x >= 0 && r.y >= 0 && r.x + r.w <= 1 && r.y + r.h <= 1), 'placement on a crowded board stays on the board');
 
@@ -181,7 +181,7 @@ eq(C.mediaIds({ screens: [
   { bgImage: 'bg1', widgets: [{ type: 'image', data: { mediaId: 'img1' } }, { type: 'text', data: {} }] },
   { bgImage: '', widgets: [{ type: 'image', data: { mediaId: 'img1' } }, { type: 'image', data: { mediaId: '' } }] }
 ] }), ['bg1', 'img1'], 'media ids: backgrounds and images, each once');
-eq(C.TYPES.length, 16, 'sixteen widget types');
+eq(C.TYPES.length, 17, 'seventeen widget types');
 C.TYPES.forEach((t) => ok(C.DEFAULT_SIZE[t], `a default size for ${t}`));
 
 // ── P3: periods, starters, files ─────────────────────────────────────
@@ -318,6 +318,22 @@ for (const bad of [null, 'pick', [], { cmd: 5 }, { cmd: 'eval' }, { cmd: '__prot
   eq(C.defaultData('pie'), C.defaultData('timer'), 'a new pie timer starts as a 5:00 timer');
   eq(pw({ duration: 90, remaining: 30, endsAt: 0, sound: false, link: { flash: true } }), { duration: 90, endsAt: 0, remaining: 30, sound: false, link: { flash: true, light: '', agenda: false } }, 'a pie timer keeps the timer shape, link included');
   eq(pw({ duration: -5 }).duration, 1, 'its duration is clamped like a timer\'s');
+}
+
+// ── sequence timer (Path 22 P9) ──────────────────────────────────────
+{
+  eq(C.parseSequence('Think 1:00, Pair 2:00, Share 3:00'), { steps: [{ label: 'Think', sec: 60 }, { label: 'Pair', sec: 120 }, { label: 'Share', sec: 180 }], error: '' }, 'the classic think/pair/share parses');
+  eq(C.parseSequence('Quick write 90s\nTalk it over 2 -> Report back 1:30').steps, [{ label: 'Quick write', sec: 90 }, { label: 'Talk it over', sec: 120 }, { label: 'Report back', sec: 90 }], 'names may hold spaces; commas, new lines and arrows all split');
+  ok(C.parseSequence('Think').error.includes('Step 1'), 'a part with no time is refused, naming the step');
+  ok(C.parseSequence('Think 1:00, Pair soon').error.includes('Step 2'), 'a bad time is refused, naming the step');
+  ok(C.parseSequence('').steps.length === 0 && C.parseSequence('').error !== '', 'an empty box is refused');
+  ok(C.parseSequence(Array.from({ length: 9 }, (_, i) => 'S' + i + ' 1:00').join(', ')).error.includes('at most'), 'nine steps is too many');
+  eq(C.formatSequence([{ label: 'Think', sec: 60 }, { label: 'Pair', sec: 125 }]), 'Think 1:00, Pair 2:05', 'steps print back in the form they are typed');
+  const sq = (data) => C.normalizeWidget({ type: 'sequence', x: 0, y: 0, w: 0.34, h: 0.42, data }).data;
+  eq(sq({}).steps.map((x) => x.label), ['Think', 'Pair', 'Share'], 'a new sequence is think / pair / share');
+  eq(sq({ steps: [{ label: 'A', sec: 30 }, { label: '', sec: 5 }, { label: 'B', sec: 0 }, 7], i: 9 }), { steps: [{ label: 'A', sec: 30 }], i: 0, endsAt: 0, remaining: 30 }, 'bad steps are dropped and the position is clamped');
+  eq(sq({ steps: [{ label: 'A', sec: 30 }, { label: 'B', sec: 40 }], i: 1, remaining: 12, link: { flash: true } }).i, 1, 'a position inside the list is kept');
+  ok('link' in sq({ link: { flash: true } }) && !('link' in sq({})), 'a sequence has a link only once one is on');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);
