@@ -231,6 +231,7 @@
     "test:layout-bell-from-calendar": "node Tools/schedule-visualizer/test/smoke-bell-from-calendar.mjs",
     "test:layout-settings-editors": "node Tools/schedule-visualizer/test/smoke-settings-editors.mjs",
     "test:layout-snapshots": "node Tools/schedule-visualizer/test/smoke-snapshots.mjs",
+    "test:layout-storage": "node Tools/schedule-visualizer/test/smoke-storage-headroom.mjs",
     "test:image-to-pdf": "node Tools/image-to-pdf/test/smoke.mjs && node Tools/image-to-pdf/test/smoke-enhance.mjs && node Tools/image-to-pdf/test/smoke-portfolio.mjs",
     "test:manipulatives": "node Tools/virtual-manipulatives-board/test/smoke-boards.mjs && node Tools/virtual-manipulatives-board/test/smoke-snap-grid.mjs && node Tools/virtual-manipulatives-board/test/smoke-rendered-pieces.mjs",
     "test:manipulatives-families": "node Tools/virtual-manipulatives-board/test/smoke-families-export.mjs",
