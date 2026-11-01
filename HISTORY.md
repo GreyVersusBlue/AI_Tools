@@ -9,6 +9,19 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-31: 017 the link under the code and a comment area, rank 125 (2026-11-01, v539)
+
+Checking first: of the row's quick wins, 017 already had the peer feedback slips (stars, rubric, open prompt), the walking
+order and route cards, the reaction tally with a confirmed reset, confirm on Delete gallery, and the packets. What was missing
+was the card itself: the QR card had no typed link and no place to write. Two opt-in checkboxes, `showLink` and `commentArea`,
+saved on the gallery record (same storage key, no registry change); both off leaves the printed sheet byte-for-byte what it was
+(`smoke-print.mjs`, 3,970 checks, unchanged). The typed link drops `https://` and a trailing slash and is left off past 70
+characters, where the code is the only way in. Found, not fixed: `showNumber` is read from its checkbox at print time and never
+written to the gallery, so it does not survive a reload. Suite `test:gallery-card-options` (port 8656; five mutants each fail it).
+Student-device feedback and OCR of slips stay out (deferred, student-facing). Not checked on paper.
+
+---
+
 ## AI-31: 038 chart sheet, Path 16 P5 step 5, rank 44 (2026-11-01, v538)
 
 Up to six snapshots of the chart printed 1, 2, 4 or 6 to a page through the print kit, with Preview. The sheet is

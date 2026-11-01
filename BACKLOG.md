@@ -830,7 +830,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 117 | Per-day team history, so a term view can show house points by week (today a team total is one running total; the term view of student points shipped v515). Needs a new stored shape: Devon's design call | 008 | ½ | | [008 Behavior & Points Tracker](#008--behavior--points-tracker) |
 | 118 | Per-record conflict resolution ("keep the newer of each"; needs per-record timestamps) | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
 | 120 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
-| 125 | Peer feedback slips; gallery-walk reactions | 017 | ½ | | [017 Gallery Walk QR Codes](#017--gallery-walk-qr-codes) |
 | 126 | Hints with a time penalty; branching and station images | 018 | ½ | | [018 QR Scavenger Hunt Builder](#018--qr-scavenger-hunt-builder) |
 | 127 | Attempt limits and feedback; a non-QR fallback | 019 | ½ | | [019 Digital Escape Room / Puzzle Lock Builder](#019--digital-escape-room--puzzle-lock-builder) |
 | 129 | Uneven groups and stations; a shared rotation engine | 021 | ½ | | [021 Tournament Bracket & Station Rotation (PE)](#021--tournament-bracket--station-rotation-pe) |
@@ -10899,6 +10898,14 @@ library changes — `lib/jsqr.js` and `lib/qrcode.js` untouched):
   bare codes — the card is the thing that gets taped next to the work.
 - **Short-link display** under each code so a student without a camera can
   type it.
+  *(Done 2026-11-01, v539, AI-31, with the card's comment area: two options on the QR card, saved
+  on the gallery (`showLink`, `commentArea`, both off for a gallery that predates them). "Print the
+  link under each code" prints the link without its scheme or a trailing slash, for links of 70
+  characters or fewer; a longer one has only its code. "Leave a blank comment area" adds a
+  heading and three ruled lines, sized with `min-height`, never clipped. The rest of this section's
+  quick wins were already built: slips in three styles, the walking order and route cards, and
+  confirm on Reset reactions, Reset timer and Delete gallery. Suite `test:gallery-card-options`,
+  port 8656, five mutants caught. Not on paper.)*
 - **Undo / confirm on "Reset all reaction counts"** and on Delete gallery (P11).
 
 #### Major Features

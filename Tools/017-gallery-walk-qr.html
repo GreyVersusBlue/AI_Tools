@@ -289,6 +289,11 @@
        grows, and the kit keeps it whole. */
   }
 
+  .print-qr-grid .p-card .p-link { align-self: stretch; text-align: center; font-size: .78rem; margin: 6px 0 0; color: #000; overflow-wrap: anywhere; }
+  .print-qr-grid .p-card .p-comment { align-self: stretch; margin-top: 10px; text-align: left; }
+  .print-qr-grid .p-card .p-comment-head { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: #555; }
+  .print-qr-grid .p-card .p-comment-line { height: 0; min-height: 0; border-bottom: 1px solid #777; margin-top: 18px; }
+
   .ref-sheet h2 { font-size: 1.1rem; margin-bottom: 12px; }
   .ref-sheet table { width: 100%; border-collapse: collapse; font-size: .85rem; }
   .ref-sheet th, .ref-sheet td { border: 1px solid #999; padding: 6px 8px; text-align: left; vertical-align: top; }
@@ -408,6 +413,14 @@
         <div class="option-row">
           <input type="checkbox" id="showNumber" checked>
           <label class="option-label" for="showNumber">Show entry number above the name</label>
+        </div>
+        <div class="option-row">
+          <input type="checkbox" id="showLink">
+          <label class="option-label" for="showLink">Print the link under each code, for anyone without a camera (links of 70 characters or fewer; a longer one has only its code)</label>
+        </div>
+        <div class="option-row">
+          <input type="checkbox" id="commentArea">
+          <label class="option-label" for="commentArea">Leave a blank comment area on each card, so the card can be taped up beside the work</label>
         </div>
         <div class="option-row">
           <input type="checkbox" id="enableReactions">
@@ -617,7 +630,7 @@
    'entriesBody', 'addRowBtn', 'toggleImportBtn', 'importBox', 'importText', 'importBtn',
    'importCsvBtn', 'importCsvInput',
    'rosterHubSelect', 'rosterHubLoadBtn',
-   'cardsPerPage', 'ecLevel', 'showNumber', 'enableReactions', 'reactionsResetRow', 'resetReactionsBtn',
+   'cardsPerPage', 'ecLevel', 'showNumber', 'showLink', 'commentArea', 'enableReactions', 'reactionsResetRow', 'resetReactionsBtn',
    'printCodesBtn', 'printRefBtn', 'copyLinksBtn', 'dupWarning', 'scanWarning',
    'cards-preview', 'refPreview', 'printQrArea', 'printQrGrid', 'printRefArea', 'printRefBody',
    'refSheetTitle', 'previewNote', 'msg',
@@ -682,7 +695,7 @@
 
   function newSet(name) {
     state = {
-      name: name, entries: [{ name: '', value: '' }], cardsPerPage: '4', ecLevel: 'Q', showNumber: true, reactionsEnabled: false,
+      name: name, entries: [{ name: '', value: '' }], cardsPerPage: '4', ecLevel: 'Q', showNumber: true, showLink: false, commentArea: false, reactionsEnabled: false,
       feedbackEnabled: false, feedbackStyle: 'stars', feedbackPrompt: '', feedbackCopies: 6, feedbackPerPage: '4',
       timer: { minutes: 3, seconds: 0, rotations: 1, soundEnabled: true, count: 0, running: false, paused: false, endAt: null, remainingMs: null },
       walkGroups: [], routeCardsPerPage: '4'
@@ -699,6 +712,8 @@
     var loaded = store.sets[name];
     if (!loaded) return;
     if (!Array.isArray(loaded.entries)) loaded.entries = [];
+    if (typeof loaded.showLink !== 'boolean') loaded.showLink = false;
+    if (typeof loaded.commentArea !== 'boolean') loaded.commentArea = false;
     if (typeof loaded.reactionsEnabled !== 'boolean') loaded.reactionsEnabled = false;
     if (typeof loaded.feedbackEnabled !== 'boolean') loaded.feedbackEnabled = false;
     if (typeof loaded.feedbackStyle !== 'string') loaded.feedbackStyle = 'stars';
@@ -730,6 +745,8 @@
     els.cardsPerPage.value = state.cardsPerPage || '4';
     els.ecLevel.value = state.ecLevel || 'Q';
     els.showNumber.checked = state.showNumber !== false;
+    els.showLink.checked = !!state.showLink;
+    els.commentArea.checked = !!state.commentArea;
     els.enableReactions.checked = !!state.reactionsEnabled;
     els.reactionsResetRow.style.display = state.reactionsEnabled ? '' : 'none';
     els.enableFeedbackSlips.checked = !!state.feedbackEnabled;
@@ -1452,6 +1469,13 @@
   // build failure counts too: no code at all definitely won't scan. render()
   // passes no `verify`: it only keeps the sheet current, and the preview has
   // already said which codes are in doubt.
+  // What a person types when the code will not scan: the link without its scheme and a trailing slash, or ''
+  // when that is more than 70 characters (a link nobody could copy by hand; the code is the way in).
+  function typeableLink(content) {
+    var t = String(content).replace(/^https?:\/\//i, '').replace(/\/$/, '');
+    return t.length <= 70 ? t : '';
+  }
+
   function buildPrintCodes(verify) {
     var ecLevel = els.ecLevel.value;
     var showNum = els.showNumber.checked;
@@ -1462,6 +1486,13 @@
       card.appendChild(pEl('div', 'p-name', e.name));
       if (!contentIsLink(e.content)) card.appendChild(pEl('div', 'p-instructions', e.content));
       var canvas = card.appendChild(document.createElement('canvas'));
+      var typed = els.showLink.checked && contentIsLink(e.content) ? typeableLink(e.content) : '';
+      if (typed) card.appendChild(pEl('div', 'p-link', typed));
+      if (els.commentArea.checked) {
+        var cm = card.appendChild(pEl('div', 'p-comment'));
+        cm.appendChild(pEl('div', 'p-comment-head', 'Comments'));
+        for (var l = 0; l < 3; l++) cm.appendChild(pEl('div', 'p-comment-line', ''));
+      }
       try {
         drawQR(canvas, buildQR(e.content, ecLevel), 600);
         if (verify && verifyQRCanvas(canvas, e.content) === false) unverified.push(e.name);
@@ -1584,6 +1615,10 @@
 
   [els.cardsPerPage, els.ecLevel, els.showNumber].forEach(function (el) {
     el.addEventListener('change', function () { save(); scheduleRender(); });
+  });
+  // The two card options are kept on the gallery, so a gallery reopens with the cards it printed.
+  [['showLink', 'showLink'], ['commentArea', 'commentArea']].forEach(function (p) {
+    els[p[0]].addEventListener('change', function () { state[p[1]] = els[p[0]].checked; save(); scheduleRender(); });
   });
 
   // ── Rotation timer — same endAt/remainingMs pattern as Classroom Timer /

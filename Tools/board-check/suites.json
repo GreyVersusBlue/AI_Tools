@@ -424,6 +424,7 @@
     "Tools/historical-trading-card-maker/test/smoke-print.mjs",
     "Tools/qr-scavenger-hunt-builder/test/smoke-print.mjs",
     "Tools/gallery-walk-qr/test/smoke-print.mjs",
+    "Tools/gallery-walk-qr/test/smoke-card-options.mjs",
     "Tools/qr-code-generator/test/smoke-print.mjs",
     "Tools/qr-code-generator/test/smoke-bulk-core.mjs",
     "Tools/qr-code-generator/test/smoke-bulk.mjs",

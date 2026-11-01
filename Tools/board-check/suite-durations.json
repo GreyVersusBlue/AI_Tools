@@ -368,6 +368,7 @@
     "Tools/historical-trading-card-maker/test/smoke-print.mjs": 33,
     "Tools/qr-scavenger-hunt-builder/test/smoke-print.mjs": 113,
     "Tools/gallery-walk-qr/test/smoke-print.mjs": 98,
+    "Tools/gallery-walk-qr/test/smoke-card-options.mjs": 20,
     "Tools/qr-code-generator/test/smoke-print.mjs": 65,
     "Tools/qr-code-generator/test/smoke-bulk-core.mjs": 2,
     "Tools/qr-code-generator/test/smoke-bulk.mjs": 9,

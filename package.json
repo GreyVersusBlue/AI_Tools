@@ -415,6 +415,7 @@
     "test:trading-card-print": "node Tools/historical-trading-card-maker/test/smoke-print.mjs",
     "test:scavenger-hunt-print": "node Tools/qr-scavenger-hunt-builder/test/smoke-print.mjs",
     "test:gallery-walk-print": "node Tools/gallery-walk-qr/test/smoke-print.mjs",
+    "test:gallery-card-options": "node Tools/gallery-walk-qr/test/smoke-card-options.mjs",
     "test:qr-code-print": "node Tools/qr-code-generator/test/smoke-print.mjs",
     "test:qr-bulk-core": "node Tools/qr-code-generator/test/smoke-bulk-core.mjs",
     "test:qr-bulk": "node Tools/qr-code-generator/test/smoke-bulk.mjs",
