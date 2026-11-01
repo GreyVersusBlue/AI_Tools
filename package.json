@@ -292,6 +292,7 @@
     "test:dbq": "node Tools/dbq-source-packet-builder/test/smoke-share.mjs && node Tools/dbq-source-packet-builder/test/smoke-essay-levels.mjs && node Tools/dbq-source-packet-builder/test/smoke-source-library.mjs",
     "test:civics-case-files": "node Tools/civics-role-card-generator/test/smoke-case-file-packets.mjs",
     "test:civics-kit": "node Tools/civics-role-card-generator/test/smoke-simulation-kit.mjs",
+    "test:civics-sim-roster": "node Tools/civics-role-card-generator/test/smoke-sim-roster.mjs",
     "test:civics-file": "node Tools/civics-role-card-generator/test/smoke-file-transfer.mjs",
     "test:timeline": "node Tools/timeline-builder/test/label-packing.test.mjs && node Tools/timeline-builder/test/smoke-map-print.mjs && node Tools/timeline-builder/test/smoke-story-worksheet.mjs",
     "test:timeline-share": "node Tools/timeline-builder/test/smoke-share.mjs",

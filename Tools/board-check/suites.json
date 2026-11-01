@@ -310,6 +310,7 @@
     "Tools/blank-map-generator/test/smoke-hittest.mjs",
     "Tools/timeline-builder/test/label-packing.test.mjs",
     "Tools/civics-role-card-generator/test/smoke-file-transfer.mjs",
+    "Tools/civics-role-card-generator/test/smoke-sim-roster.mjs",
     "Tools/current-events-discussion-guide-generator/test/readability.test.mjs",
     "Tools/current-events-discussion-guide-generator/test/smoke-citation.mjs",
     "Tools/dbq-source-packet-builder/test/smoke-source-library.mjs",

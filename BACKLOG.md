@@ -845,7 +845,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 143 | A second language version; trip-day rosters | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
 | 144 | Seating chart and roster references by name | 044 | ½ | | [044 Sub Plan Builder](#044--sub-plan-builder) |
 | 145 | Time-slice maps; live vectors | 046 | ½ | | [046 Blank Map Generator](#046--blank-map-generator) |
-| 146 | A per-simulation roster memory | 050 | ½ | | [050 Government/Civics Simulation Role Card Generator](#050--governmentcivics-simulation-role-card-generator) |
 | 147 | A bank of saved generic question sets beyond the six built-ins | 054 | ½ | | [054 Current Events Discussion Guide Generator](#054--current-events-discussion-guide-generator) |
 | 148 | The reverse direction of the 028 pairing — pull a source out of 028’s library | 056 | ½ | | [056 DBQ / Source Packet Builder](#056--dbq--source-packet-builder) |
 | 149 | Buzz-in from student devices (deferred); map-question tournaments | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
@@ -13293,8 +13292,12 @@ response slip gives the activity a measurable outcome.
   rather than handed off to Rubric Builder (034). Whether the two should
   share a rubric format is still an open cross-tool question; the kit's grid
   is deliberately simpler than 034's.
-- **A per-simulation roster memory**, so a debate and a mock trial each
-  remember which class list they were built for (see the Open Question).
+- ~~A per-simulation roster memory~~ — **done 2026-11-01 (v517)**. Each simulation keeps the
+  *name* of the class list it was last assigned from (an optional `roster` on its saved document,
+  written only by an assignment); reopening it points the picker there and says so, and assigns
+  nothing until the button is pressed. A simulation with no memory starts with no list chosen. A
+  list that is no longer saved is named, not guessed. Clear names keeps the memory. The name is in
+  no shared file or link and an opened file brings none. `test:civics-sim-roster` (port 8644).
 
 #### Moonshot / North Star
 
@@ -13314,13 +13317,10 @@ saved roster — shipped 2026-08-12, Round 3 — and case-file content earned
 its own distinct field rather than folding into talking points — shipped
 2026-08-14.)*
 
-- Named saves landed 2026-08-14 and this question is still open, because the
-  round shipped the simple answer rather than deciding it: the roster
-  assignment is a one-at-a-time action, and each saved simulation keeps
-  whichever names were assigned when it was last open. Should switching
-  simulations instead re-run the assignment against a class list remembered
-  per simulation (so a debate and a mock trial each reopen for their own
-  period), or is remembering the names good enough?
+- ~~Named saves landed 2026-08-14 and this question is still open~~ — **decided 2026-11-01
+  (AI-31, v517)**: switching simulations does not re-run an assignment on its own; each simulation
+  remembers the class list's name and the picker returns to it, and the teacher presses Assign.
+  Reversible: the memory is one optional field.
 - The kit's rubric grid is deliberately simpler than Rubric Builder's (034).
   Should they converge on one format, or is a scoring slip a genuinely
   different object from a graded rubric? The assignment file ruled 034
