@@ -152,6 +152,18 @@
     font: inherit; font-size: calc(var(--fs, 2) * 1rem); line-height: 1.25; padding: .1rem;
   }
 
+  /* team scoreboard */
+  .score-wrap { flex: 1; min-height: 0; container-type: size; overflow: auto; }
+  .score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: .4rem; padding: .1rem; }
+  .score-card { border: 1px solid var(--line-strong); border-radius: 8px; padding: .3rem .4rem; display: flex; flex-direction: column; align-items: center; gap: .2rem; background: var(--card-2); }
+  .score-card.lead { border-color: var(--accent); border-width: 3px; }
+  .score-name { width: 100%; text-align: center; font-weight: 700; font-size: clamp(.85rem, 5cqmin, 1.6rem); }
+  .score-card input.score-name { border: 0; background: transparent; padding: .1rem; }
+  .score-num { font-family: Consolas, "Courier New", monospace; font-weight: 700; font-size: clamp(1.6rem, 14cqmin, 5rem); line-height: 1; font-variant-numeric: tabular-nums; }
+  .score-btns { display: flex; gap: .3rem; }
+  .score-btns button { font-size: clamp(1rem, 5cqmin, 1.8rem); min-width: 2.2em; }
+  body.present .score-btns.edit, body.present .score-foot { display: none; }
+
   /* bell countdown */
   .big.bell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; }
   .bell-label { font-weight: 700; font-size: min(7cqw, 16cqh); line-height: 1.1; text-align: center; overflow-wrap: anywhere; }
@@ -860,6 +872,77 @@
         destroy: function () { window.removeEventListener('storage', onStorage); },
         snap: function () { return { label: label.textContent, text: shown.textContent }; }
       };
+    }
+  };
+
+  /* A team scoreboard, for the projector. Teams are names the teacher types;
+     the highest score gets a heavier border (and the word, for a screen reader),
+     not colour alone. */
+  TYPES.score = {
+    title: 'Scoreboard', icon: ['M4 20V10', 'M10 20V4', 'M16 20v-8', 'M22 20H2'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var grid = el('div', { className: 'score-grid', role: 'list', 'aria-label': 'Team scores' });
+      var status = el('span', { className: 'sr-only', 'aria-live': 'polite' });
+      var cards = [];                      // one { t, num, card, lead, minus, plus, rm } per team
+      function bump(t, by) {
+        t.score = Math.max(-Core.MAX_SCORE, Math.min(Core.MAX_SCORE, t.score + by));
+        ctx.save(); refresh(); status.textContent = t.name + ' ' + t.score;
+      }
+      /* A score changes in place, so the button just pressed keeps the focus. */
+      function refresh() {
+        var best = d.teams.reduce(function (m, t) { return Math.max(m, t.score); }, -Infinity);
+        var leaders = d.teams.filter(function (t) { return t.score === best; }).length;
+        cards.forEach(function (c) {
+          var lead = c.t.score === best && leaders === 1 && d.teams.length > 1;
+          c.num.textContent = String(c.t.score);
+          c.card.classList.toggle('lead', lead);
+          c.note.hidden = !lead;
+          c.minus.setAttribute('aria-label', 'Take one point from ' + c.t.name);
+          c.plus.setAttribute('aria-label', 'Give one point to ' + c.t.name);
+          c.rm.setAttribute('aria-label', 'Remove ' + c.t.name);
+        });
+      }
+      function render() {
+        grid.textContent = ''; cards = [];
+        d.teams.forEach(function (t, i) {
+          var nameIn = el('input', { type: 'text', id: ctx.id + '-n' + i, className: 'score-name', maxlength: String(Core.MAX_TEAM_NAME), 'aria-label': 'Team name' });
+          nameIn.value = t.name;
+          nameIn.addEventListener('change', function () { t.name = nameIn.value.trim() || 'Team ' + (i + 1); nameIn.value = t.name; ctx.save(); refresh(); });
+          var minus = el('button', { type: 'button', text: '−' });
+          var plus = el('button', { type: 'button', className: 'primary', text: '+' });
+          minus.addEventListener('click', function () { bump(t, -1); });
+          plus.addEventListener('click', function () { bump(t, 1); });
+          var rm = el('button', { type: 'button', text: '×' });
+          rm.addEventListener('click', function () { d.teams.splice(i, 1); ctx.save(); render(); });
+          var num = el('span', { className: 'score-num' });
+          var note = el('span', { className: 'note', text: 'Leading', hidden: true });
+          var card = el('div', { className: 'score-card', role: 'listitem' }, [
+            nameIn, num, note,
+            el('div', { className: 'score-btns' }, [minus, plus]),
+            el('div', { className: 'score-btns edit' }, [rm])
+          ]);
+          grid.appendChild(card);
+          cards.push({ t: t, num: num, card: card, note: note, minus: minus, plus: plus, rm: rm });
+        });
+        addBtn.disabled = d.teams.length >= Core.MAX_TEAMS;
+        grid.hidden = !d.teams.length;
+        empty.hidden = d.teams.length > 0;
+        refresh();
+      }
+      var addBtn = el('button', { type: 'button', text: 'Add team', onclick: function () {
+        if (d.teams.length >= Core.MAX_TEAMS) return;
+        d.teams.push({ name: 'Team ' + (d.teams.length + 1), score: 0 }); ctx.save(); render();
+      } });
+      var empty = el('p', { className: 'note', text: 'No teams yet. Add one.', hidden: true });
+      ctx.body.appendChild(el('div', { className: 'score-wrap' }, [grid, empty]));
+      ctx.body.appendChild(status);
+      ctx.body.appendChild(el('div', { className: 'w-foot score-foot' }, [
+        addBtn,
+        el('button', { type: 'button', text: 'Zero scores', onclick: function () { d.teams.forEach(function (t) { t.score = 0; }); ctx.save(); refresh(); } })
+      ]));
+      render();
+      return { snap: function () { return { teams: d.teams.length }; } };
     }
   };
 

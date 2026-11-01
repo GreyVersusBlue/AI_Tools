@@ -36,7 +36,7 @@
   'use strict';
 
   var TYPES = ['text', 'timer', 'stopwatch', 'clock', 'youtube', 'traffic', 'names', 'dice',
-               'symbols', 'noise', 'draw', 'image', 'qr', 'groups', 'agenda', 'pie', 'sequence', 'bell'];
+               'symbols', 'noise', 'draw', 'image', 'qr', 'groups', 'agenda', 'pie', 'sequence', 'bell', 'score'];
 
   /* Default size of a new widget, as a fraction of the board. */
   var DEFAULT_SIZE = {
@@ -57,7 +57,8 @@
     agenda:    { w: 0.30, h: 0.40 },
     pie:       { w: 0.26, h: 0.46 },
     sequence:  { w: 0.34, h: 0.42 },
-    bell:      { w: 0.30, h: 0.26 }
+    bell:      { w: 0.30, h: 0.26 },
+    score:     { w: 0.40, h: 0.40 }
   };
 
   var MIN_W = 0.08, MIN_H = 0.08;
@@ -65,6 +66,7 @@
   var MAX_TIMER_S = 24 * 3600;
   var MAX_AGENDA = 12, MAX_AGENDA_ITEM = 120;
   var MAX_STEPS = 8, MAX_STEP_LABEL = 30;
+  var MAX_TEAMS = 8, MAX_TEAM_NAME = 30, MAX_SCORE = 9999;
   var TEXT_SIZES = [1, 1.5, 2, 3, 4, 6];
   var LIGHTS = ['red', 'yellow', 'green'];
 
@@ -209,6 +211,7 @@
       case 'qr': return { text: '' };
       case 'groups': return { roster: '', by: 'size', n: 4 };
       case 'agenda': return { items: [] };
+      case 'score': return { teams: [1, 2, 3, 4].map(function (n) { return { name: 'Team ' + n, score: 0 }; }) };
       case 'sequence': return { steps: DEFAULT_STEPS.map(function (x) { return { label: x.label, sec: x.sec }; }), i: 0, endsAt: 0, remaining: DEFAULT_STEPS[0].sec };
     }
     return {};
@@ -256,6 +259,21 @@
       if (label && sec > 0) out.push({ label: label, sec: sec });
     });
     return out.length ? out : DEFAULT_STEPS.map(function (x) { return { label: x.label, sec: x.sec }; });
+  }
+
+  /* A team scoreboard: up to MAX_TEAMS teams, each { name, score }. A team is a
+     name the teacher types ("Team 1", "Table 3"), never a student; scores are
+     whole numbers in either direction. Nothing here is student-facing: it is
+     for the projector only. An empty list is a real state (all removed). */
+  function normalizeTeams(list, fallback) {
+    if (!Array.isArray(list)) return fallback;
+    var out = [];
+    list.forEach(function (t) {
+      if (out.length >= MAX_TEAMS || !isObj(t)) return;
+      var name = str(t.name, MAX_TEAM_NAME, '').trim() || 'Team ' + (out.length + 1);
+      out.push({ name: name, score: Math.round(num(t.score, -MAX_SCORE, MAX_SCORE, 0)) });
+    });
+    return out;
   }
 
   /* An agenda: up to MAX_AGENDA lines, each { t, done }. A blank line is dropped. */
@@ -332,6 +350,8 @@
         };
       case 'agenda':
         return { items: normalizeAgenda(d.items) };
+      case 'score':
+        return { teams: normalizeTeams(d.teams, dd.teams) };
       case 'sequence': {
         var steps = normalizeSteps(d.steps);
         var at = Math.min(steps.length - 1, Math.max(0, Math.round(num(d.i, 0, MAX_STEPS, 0))));
@@ -741,6 +761,9 @@
     MAX_AGENDA: MAX_AGENDA,
     MAX_AGENDA_ITEM: MAX_AGENDA_ITEM,
     MAX_STEPS: MAX_STEPS,
+    MAX_TEAMS: MAX_TEAMS,
+    MAX_TEAM_NAME: MAX_TEAM_NAME,
+    MAX_SCORE: MAX_SCORE,
     parseSequence: parseSequence,
     formatSequence: formatSequence,
     parseYouTube: parseYouTube,

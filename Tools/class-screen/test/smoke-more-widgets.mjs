@@ -272,6 +272,48 @@ eq(page.__errs, [], 'the bell page has no page or console errors');
 await bp.close();
 page = mainPage;
 
+// ── team scoreboard ──────────────────────────────────────────────────
+console.log(' scoreboard');
+await add('score');
+const sb = widget('score');
+const scores = async () => (await dataOf('score')).teams.map((t) => t.score);
+eq(await page.locator('#dock button[data-add="score"]').count(), 1, 'the dock offers the scoreboard');
+eq((await dataOf('score')).teams.map((t) => t.name), ['Team 1', 'Team 2', 'Team 3', 'Team 4'], 'a new board has four teams');
+eq(await sb.locator('.score-card.lead').count(), 0, 'with all teams level, nobody leads');
+const plus1 = sb.getByRole('button', { name: 'Give one point to Team 1' });
+for (let i = 0; i < 3; i++) await plus1.click();
+eq(await scores(), [3, 0, 0, 0], 'the plus button gives a point, saved');
+eq(await sb.locator('.score-card').first().locator('.score-num').textContent(), '3', 'and the number shows it');
+ok(await page.evaluate(() => document.activeElement && document.activeElement.getAttribute('aria-label') === 'Give one point to Team 1'), 'the button keeps focus, so a keyboard can press it again');
+eq(await sb.locator('.score-card.lead').count(), 1, 'the single leader gets the heavier border');
+eq(await sb.locator('.score-card.lead .note').textContent(), 'Leading', 'and the word for anyone who cannot see the border');
+await sb.getByRole('button', { name: 'Take one point from Team 3' }).click();
+eq(await scores(), [3, 0, -1, 0], 'minus can go below zero');
+await sb.getByLabel('Team name').nth(1).fill('Table B');
+await sb.getByLabel('Team name').nth(1).press('Tab');
+eq((await dataOf('score')).teams[1].name, 'Table B', 'a team can be renamed');
+eq(await sb.getByRole('button', { name: 'Give one point to Table B' }).count(), 1, 'and its buttons are named after it');
+await sb.getByLabel('Team name').nth(1).fill('');
+await sb.getByLabel('Team name').nth(1).press('Tab');
+eq((await dataOf('score')).teams[1].name, 'Team 2', 'a blank name goes back to Team 2');
+await sb.getByRole('button', { name: 'Zero scores' }).click();
+eq(await scores(), [0, 0, 0, 0], 'Zero scores resets them all');
+for (let i = 0; i < 4; i++) await sb.getByRole('button', { name: 'Add team' }).click();
+eq((await dataOf('score')).teams.length, 8, 'a board stops at eight teams');
+ok(await sb.getByRole('button', { name: 'Add team' }).isDisabled(), 'and Add team is disabled then');
+for (let i = 0; i < 8; i++) await sb.locator('.score-btns.edit button').first().click();
+eq((await dataOf('score')).teams, [], 'every team can be removed');
+ok(await sb.getByText('No teams yet. Add one.').isVisible(), 'and says so');
+await sb.getByRole('button', { name: 'Add team' }).click();
+await sb.getByRole('button', { name: 'Give one point to Team 1' }).click();
+await modes('score', sb.locator('.score-grid'), sb.getByLabel('Team name').first(), 'scoreboard');
+await sb.getByRole('button', { name: 'Give one point to Team 1' }).click();
+ok(await sb.locator('.score-btns.edit').first().isVisible(), 'the remove buttons are back after present mode');
+await page.click('#presentBtn');
+ok(!(await sb.locator('.score-btns.edit').first().isVisible()), 'present mode hides the remove buttons');
+ok(await sb.getByRole('button', { name: 'Give one point to Team 1' }).isVisible(), 'but keeps the plus and minus');
+await page.click('#presentExit');
+
 // an older board (no agenda; a timer with no link) still opens, link-free
 await settle(page, 600);   // let the page's own save land first
 await page.evaluate(([k]) => {
