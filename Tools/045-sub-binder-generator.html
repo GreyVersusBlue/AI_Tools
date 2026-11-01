@@ -710,6 +710,14 @@
     return { available: true, status: status };
   }
 
+  /* The id of the section to show: the one in the select now, else the one saved, if 005 still has it. */
+  function chosenSeating(current) {
+    var ids = seatingState.sections.map(function (x) { return x.id; });
+    if (current && ids.indexOf(current) >= 0) return current;
+    var saved = includePrefs.seatingSection;
+    return typeof saved === 'string' && ids.indexOf(saved) >= 0 ? saved : '';
+  }
+
   function renderSeatingCard() {
     if (!seatingState || !seatingState.sections.length) {
       seatingSelect.style.display = 'none';
@@ -718,13 +726,19 @@
       return;
     }
     var multi = seatingState.sections.length > 1;
+    var prior = seatingSelect.value;
     seatingSelect.style.display = multi ? '' : 'none';
     combineRow.style.display = multi ? 'flex' : 'none';
     seatingSelect.innerHTML = seatingState.sections.map(function (s) {
       return '<option value="' + escapeHtml(s.id) + '">' + escapeHtml(s.name) + '</option>';
     }).join('');
-    seatingSelect.value = seatingState.active || seatingState.sections[0].id;
+    /* The section the teacher picked stays picked: through a re-render of the card, a reload (it is saved beside
+       the ticked sections) and into the printed page. Before, every re-render, the select's own change included,
+       put it back to the chart 005 had open. */
+    var picked = chosenSeating(prior);
+    seatingSelect.value = picked || seatingState.active || seatingState.sections[0].id;
     if (!seatingSelect.value) seatingSelect.selectedIndex = 0;
+    combineSections.checked = !!includePrefs.seatingAll;
 
     var section = seatingState.sections.find(function (s) { return s.id === seatingSelect.value; }) || seatingState.sections[0];
     seatingBody.innerHTML = tableHtmlFor(section);
@@ -734,7 +748,15 @@
       seatingBody.innerHTML += '<p class="hint" style="color:var(--err);margin-top:.6rem;">No seating chart saved for period' + (missing.length > 1 ? 's ' : ' ') + escapeHtml(missing.join(', ')) + '.</p>';
     }
   }
-  seatingSelect.addEventListener('change', renderSeatingCard);
+  seatingSelect.addEventListener('change', function () {
+    includePrefs.seatingSection = seatingSelect.value;
+    saveIncludePrefs();
+    renderSeatingCard();
+  });
+  combineSections.addEventListener('change', function () {
+    includePrefs.seatingAll = combineSections.checked;
+    saveIncludePrefs();
+  });
 
   /* ==================== Hall pass procedure (Hall Pass Log) ==================== */
   function loadHallPassStore() { return PS.load('hall-pass-log', packetCtx); }
@@ -1007,7 +1029,7 @@
     validate: isPlausibleBinder,
     onError: function (message) { setShareNote(message, true); },
     onState: function (decoded) {
-      var hadSaved = !!(lessonInput.value || '').trim() || Object.keys(includePrefs).length > 0;
+      var hadSaved = !!(lessonInput.value || '').trim() || SECTION_ORDER.some(function (key) { return key in includePrefs; });
       if (hadSaved && !confirm('Replace the ticked sections and the note saved here with the shared binder\u2019s?')) {
         setShareNote('Kept the sections and note already on this device. The shared binder was not loaded.');
         return false;
@@ -1016,6 +1038,9 @@
       SECTION_ORDER.forEach(function (key) {
         if (decoded.included && typeof decoded.included[key] === 'boolean') next[key] = decoded.included[key];
       });
+      /* Which seating chart a binder prints is this device's (005's section ids are its own), so a shared binder keeps it. */
+      if (includePrefs.seatingSection) next.seatingSection = includePrefs.seatingSection;
+      if (includePrefs.seatingAll) next.seatingAll = includePrefs.seatingAll;
       includePrefs = next;
       saveIncludePrefs();
       if (typeof decoded.lesson === 'string') {

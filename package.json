@@ -174,6 +174,7 @@
     "test:rubric": "node Tools/rubric-builder/test/smoke-peer-form.mjs && node Tools/rubric-builder/test/smoke-gdv-handoff.mjs && node Tools/rubric-builder/test/smoke-share.mjs",
     "test:sub-binder": "node Tools/sub-binder-generator/test/smoke-feedback-page.mjs",
     "test:sub-binder-providers": "node Tools/sub-binder-generator/test/smoke-binder-providers.mjs",
+    "test:sub-binder-seating": "node Tools/sub-binder-generator/test/smoke-seating-choice.mjs",
     "test:sub-binder-share": "node Tools/sub-binder-generator/test/smoke-binder-share.mjs",
     "test:graph-paper": "node Tools/graph-paper-generator/test/smoke-calibration.mjs && node Tools/graph-paper-generator/test/smoke-worksheet-mode.mjs",
     "test:graph-paper-grid-core": "node Tools/graph-paper-generator/test/smoke-grid-types-core.mjs",

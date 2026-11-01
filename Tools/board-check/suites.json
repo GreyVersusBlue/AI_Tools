@@ -528,6 +528,7 @@
     "Tools/packet-builder/test/binder-stale.test.mjs",
     "Tools/packet-builder/test/smoke-binder-stale.mjs",
     "Tools/sub-binder-generator/test/smoke-binder-providers.mjs",
+    "Tools/sub-binder-generator/test/smoke-seating-choice.mjs",
     "Tools/sub-binder-generator/test/smoke-binder-share.mjs"
   ],
   "expectedFailures": []
