@@ -827,7 +827,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 112 | Peer review mode; rubric handoff to the grades tools | 003 | ½ | | [003 Rubric Builder](#003--rubric-builder) |
 | 113 | Bell-schedule awareness (reads 032's `scv_calendar_v1`; needs a registry and cross-tool decision); a reconnecting mirror (`_shared/webrtc-pair.js`, a platform edit). The multi-timer board shipped v279 | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
 | 114 | A constraint solver worth the name; the room, not the grid | 005 | ½ | | [005 Seating Chart Generator](#005--seating-chart-generator) |
-| 116 | `prefers-reduced-motion` respect; equity across weeks and periods | 007 | ½ | | [007 Name Picker](#007--name-picker) |
 | 117 | Longitudinal reports (a term or year view across archived days and sections; team totals are kept as one running total, with no per-day team history). Team / house points shipped v282 | 008 | ½ | | [008 Behavior & Points Tracker](#008--behavior--points-tracker) |
 | 118 | Per-record conflict resolution ("keep the newer of each"; needs per-record timestamps) | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
 | 119 | Reuse the real timer; period-aware auto-advance | 010 | ½ | | [010 Command Center](#010--command-center) |
@@ -10129,9 +10128,10 @@ quiet backbone that makes the other 45 tools feel like one product instead of
 
 #### Quick Wins
 
-- **`prefers-reduced-motion` respect.** Confetti, fireworks, lightning, and
-  chaos particles should all fall back to a static celebration. There are
-  students for whom this matters medically, not just aesthetically.
+- **Done —** **`prefers-reduced-motion` respect.** Confetti, fireworks, lightning, and
+  chaos particles fall back to a still celebration (`motionOff()`, `staticCelebrate()`, the Calm
+  mode checkbox and the `@media (prefers-reduced-motion: reduce)` block); `smoke-lightning.mjs`
+  holds the lightning to none under it.
 - **Weighted fairness mode, on by default as an option.** "Never pick the
   same student twice until everyone has gone" already exists in spirit via
   Remove & Roll, but a persistent low-weight bias toward least-picked students
@@ -10154,7 +10154,7 @@ quiet backbone that makes the other 45 tools feel like one product instead of
 
 #### Major Features
 
-- **Cold-call equity dashboard.** The stats already collected are one step
+- **Done (v456-v457, Equity dashboard) —** **Cold-call equity dashboard.** The stats already collected are one step
   away from something genuinely useful: who has been called on this week, who
   hasn't been called on in three weeks, distribution by seat position (pair
   with Seating Chart Generator), and a printable summary. Teachers are
