@@ -94,6 +94,64 @@ await page.click('#presentExit');
 ok(await banner().isVisible(), 'and it is still there when present mode ends');
 await page.click('#tabLoad');
 
+// ── the name picker remembers who it has called, for the tab ─────────
+console.log(' no repeats for the browser session');
+await pageA.evaluate(() => {
+  localStorage.setItem('np_rosters', JSON.stringify({ 'Test Group': ['Pupil 1', 'Pupil 2', 'Pupil 3'], 'Other Group': ['Pupil 7', 'Pupil 8'] }));
+});
+await pageA.reload();
+await settle(pageA, 400);
+await add('names');
+const np = widget('names');
+await np.getByLabel('Class roster').selectOption('Test Group');
+await settle(pageA, 300);
+const noteNow = () => np.locator('.note').textContent();
+const pickOnce = async () => { await np.getByRole('button', { name: 'Pick', exact: true }).click(); return np.locator('.big-name').textContent(); };
+const usedRaw = () => pageA.evaluate(() => sessionStorage.getItem('cls-screen:used'));
+eq(await noteNow(), '3 of 3 left', 'a fresh picker has everyone left');
+const first = await pickOnce(), second = await pickOnce();
+ok(first !== second, 'two picks in a row are two different names');
+eq(await noteNow(), '1 of 3 left', 'one left');
+const raw = await usedRaw();
+ok(raw && !/Pupil/.test(raw), 'what is kept for the tab holds positions, no name');
+eq(Object.values(JSON.parse(raw))[0].at.length, 2, 'two positions');
+ok(!/Pupil/.test(await pageA.evaluate(([k]) => localStorage.getItem(k), [KEY])), 'and the saved board holds no name either');
+await pageA.reload();
+await settle(pageA, 400);
+eq(await noteNow(), '1 of 3 left', 'a reload keeps the count');
+const third = await pickOnce();
+ok(![first, second].includes(third), 'and the next pick is the one not yet called');
+eq(await noteNow(), '0 of 3 left', 'none left');
+await pageA.reload();
+await settle(pageA, 400);
+eq(await noteNow(), '0 of 3 left', 'still none after another reload');
+const fourth = await pickOnce();
+ok(['Pupil 1', 'Pupil 2', 'Pupil 3'].includes(fourth), 'the next pick starts a new round');
+eq(await noteNow(), '2 of 3 left', 'with the count to match');
+await np.getByLabel('No repeats').uncheck();
+eq(await usedRaw(), null, 'turning no-repeats off forgets the list');
+await np.getByLabel('No repeats').check();
+await pickOnce();
+await np.getByLabel('Class roster').selectOption('Other Group');
+eq(await noteNow(), '2 of 2 left', 'another roster starts clean');
+eq(await usedRaw(), null, 'and the kept list is gone');
+await np.getByLabel('Class roster').selectOption('Test Group');
+await pickOnce();
+// the list belongs to the tab
+const pageC = await pageA.context().newPage();
+await pageC.goto(URL_PAGE);
+await settle(pageC, 400);
+eq(await pageC.locator('#board .w[data-type="names"] .note').textContent(), '3 of 3 left', 'a second tab on the same board has its own list (sessionStorage is per tab)');
+await pageC.close();
+// a roster that changed since starts afresh
+await pageA.evaluate(() => localStorage.setItem('np_rosters', JSON.stringify({ 'Test Group': ['Pupil 1', 'Pupil 2', 'Pupil 9'], 'Other Group': ['Pupil 7', 'Pupil 8'] })));
+await pageA.reload();
+await settle(pageA, 400);
+eq(await noteNow(), '3 of 3 left', 'a roster edited since the list was kept starts the list again');
+await pickOnce();
+await np.getByRole('button', { name: 'Remove Name picker' }).click();
+eq(await usedRaw(), null, 'removing the picker forgets its list');
+
 for (const width of [375, 360]) {
   page = pageB;
   await pageA.setViewportSize({ width, height: 740 });

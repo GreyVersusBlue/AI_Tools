@@ -1219,11 +1219,44 @@
     }
   };
 
+  /* The name picker's "no repeats" list outlives a reload but not the tab
+     (Path 22 P10). It is kept in sessionStorage as positions in the roster plus
+     a fingerprint of the roster it was made for, never as names, so nothing a
+     student is called is written anywhere; a roster that changed since (a name
+     added, removed or renamed) starts the list afresh. sessionStorage is not
+     scanned by check-registry on purpose: it dies with the tab. */
+  var USED_KEY = 'cls-screen:used';
+  function fingerprint(list) {
+    var h = 5381, t = list.join('\n');
+    for (var i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0;
+    return list.length + ':' + h.toString(36);
+  }
+  function readUsedAll() {
+    try { var o = JSON.parse(sessionStorage.getItem(USED_KEY) || '{}'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; } catch (e) { return {}; }
+  }
+  function writeUsedAll(o) {
+    try { if (Object.keys(o).length) sessionStorage.setItem(USED_KEY, JSON.stringify(o)); else sessionStorage.removeItem(USED_KEY); } catch (e) {}
+  }
+  function loadUsed(id, roster, names) {
+    var e = readUsedAll()[id];
+    if (!e || e.roster !== roster || e.fp !== fingerprint(names) || !Array.isArray(e.at)) return [];
+    return e.at.filter(function (i) { return typeof i === 'number' && i >= 0 && i < names.length && i === Math.floor(i); }).map(function (i) { return names[i]; });
+  }
+  function saveUsed(id, roster, names, used) {
+    var all = readUsedAll();
+    var at = used.map(function (n) { return names.indexOf(n); }).filter(function (i) { return i !== -1; });
+    if (at.length) all[id] = { roster: roster, fp: fingerprint(names), at: at }; else delete all[id];
+    writeUsedAll(all);
+  }
+  function forgetUsed(id) { var all = readUsedAll(); delete all[id]; writeUsedAll(all); }
+
   TYPES.names = {
     title: 'Name picker', icon: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M4 21a8 8 0 0 1 16 0'],
     build: function (ctx) {
       var d = ctx.data;
-      var used = [];                     // this session only: picks are never saved
+      var used = [];                     // names picked so far; kept for the browser tab (positions only), never in the board
+      var restoredUsed = false;
+      function keepUsed() { saveUsed(ctx.id, d.roster, names(), used); }
       var shown = el('span', { className: 'big-name', 'aria-live': 'polite' });
       var note = el('p', { className: 'note' });
       var selId = ctx.id + '-roster';
@@ -1248,6 +1281,9 @@
         sel.textContent = '';
         list.forEach(function (n) { sel.appendChild(el('option', { value: n, text: n })); });
         if (list.indexOf(d.roster) === -1) { d.roster = list[0] || ''; used = []; }
+        if (!restoredUsed) { restoredUsed = true; used = loadUsed(ctx.id, d.roster, names()); }
+        used = used.filter(function (n) { return names().indexOf(n) !== -1; });
+        keepUsed();
         sel.value = d.roster;
         emptyBox.hidden = list.length > 0;
         shown.parentNode.hidden = !list.length;
@@ -1259,8 +1295,8 @@
         note.textContent = !all.length ? '' : noRepeat.checked ? (all.length - used.length) + ' of ' + all.length + ' left' : all.length + ' names';
         note.hidden = !all.length;
       }
-      sel.addEventListener('change', function () { d.roster = sel.value; used = []; shown.textContent = ''; ctx.save(); updateNote(); });
-      noRepeat.addEventListener('change', function () { used = []; updateNote(); });
+      sel.addEventListener('change', function () { d.roster = sel.value; used = []; keepUsed(); shown.textContent = ''; ctx.save(); updateNote(); });
+      noRepeat.addEventListener('change', function () { used = []; keepUsed(); updateNote(); });
       pickBtn.addEventListener('click', function () {
         var all = names();
         if (!all.length) return;
@@ -1268,6 +1304,7 @@
         if (!pool.length) { used = []; pool = all; }
         var name = pool[Math.floor(Math.random() * pool.length)];
         if (noRepeat.checked) used.push(name);
+        keepUsed();
         shown.textContent = name;
         updateNote();
       });
@@ -2151,6 +2188,7 @@
     var i = s.widgets.findIndex(function (o) { return o.id === id; });
     if (i === -1) return;
     var w = s.widgets.splice(i, 1)[0];
+    forgetUsed(id);
     var inst = instances[id];
     if (inst) { if (inst.destroy) try { inst.destroy(); } catch (e) {} inst.el.remove(); delete instances[id]; }
     boardEmpty.hidden = s.widgets.length > 0;
