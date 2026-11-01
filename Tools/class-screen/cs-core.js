@@ -36,7 +36,7 @@
   'use strict';
 
   var TYPES = ['text', 'timer', 'stopwatch', 'clock', 'youtube', 'traffic', 'names', 'dice',
-               'symbols', 'noise', 'draw', 'image', 'qr', 'groups'];
+               'symbols', 'noise', 'draw', 'image', 'qr', 'groups', 'agenda'];
 
   /* Default size of a new widget, as a fraction of the board. */
   var DEFAULT_SIZE = {
@@ -53,12 +53,14 @@
     draw:      { w: 0.40, h: 0.45 },
     image:     { w: 0.30, h: 0.34 },
     qr:        { w: 0.20, h: 0.36 },
-    groups:    { w: 0.40, h: 0.40 }
+    groups:    { w: 0.40, h: 0.40 },
+    agenda:    { w: 0.30, h: 0.40 }
   };
 
   var MIN_W = 0.08, MIN_H = 0.08;
   var MAX_SCREENS = 30, MAX_WIDGETS = 40, MAX_TEXT = 5000, MAX_NAME = 60, MAX_URL = 500;
   var MAX_TIMER_S = 24 * 3600;
+  var MAX_AGENDA = 12, MAX_AGENDA_ITEM = 120;
   var TEXT_SIZES = [1, 1.5, 2, 3, 4, 6];
   var LIGHTS = ['red', 'yellow', 'green'];
 
@@ -202,6 +204,7 @@
       case 'image': return { mediaId: '', alt: '', fit: 'contain' };
       case 'qr': return { text: '' };
       case 'groups': return { roster: '', by: 'size', n: 4 };
+      case 'agenda': return { items: [] };
     }
     return {};
   }
@@ -214,6 +217,17 @@
     if (!isObj(l)) return null;
     var out = { flash: bool(l.flash, false), light: LIGHTS.indexOf(l.light) !== -1 ? l.light : '', agenda: bool(l.agenda, false) };
     return out.flash || out.light || out.agenda ? out : null;
+  }
+
+  /* An agenda: up to MAX_AGENDA lines, each { t, done }. A blank line is dropped. */
+  function normalizeAgenda(list) {
+    var out = [];
+    (Array.isArray(list) ? list : []).forEach(function (it) {
+      if (out.length >= MAX_AGENDA || !isObj(it)) return;
+      var t = str(it.t, MAX_AGENDA_ITEM, '').trim();
+      if (t) out.push({ t: t, done: bool(it.done, false) });
+    });
+    return out;
   }
 
   function normalizeData(type, d) {
@@ -277,6 +291,8 @@
           by: d.by === 'count' ? 'count' : 'size',
           n: Math.round(num(d.n, 2, 12, dd.n))
         };
+      case 'agenda':
+        return { items: normalizeAgenda(d.items) };
     }
     return dd;
   }
@@ -662,6 +678,8 @@
     MIN_H: MIN_H,
     MAX_SCREENS: MAX_SCREENS,
     MAX_WIDGETS: MAX_WIDGETS,
+    MAX_AGENDA: MAX_AGENDA,
+    MAX_AGENDA_ITEM: MAX_AGENDA_ITEM,
     parseYouTube: parseYouTube,
     embedUrl: embedUrl,
     formatClock: formatClock,

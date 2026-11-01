@@ -6,8 +6,8 @@
 // agenda item when it runs out, chosen in its foot ("When it ends"). A timer
 // with no link does nothing extra; a timer that ran out while the page was
 // closed does not fire late; reduced motion gets a still ring, not a blink.
-// There is no agenda widget yet (Path 22 P9), so its checkbox is absent and
-// the flag is only kept. Nothing here uses a real name.
+// The agenda widget (Path 22 P9) gives the third choice its target; smoke-more-widgets.mjs
+// drives the tick itself. Nothing here uses a real name.
 //
 // Exits 1 on any failure.
 
@@ -66,7 +66,7 @@ eq(await summary.textContent(), 'When it ends', 'the foot offers "When it ends"'
 await summary.click();
 ok(await t.getByLabel('Set the traffic light when time is up').isVisible(), 'its choices open');
 ok(await t.getByLabel('Flash the board').isVisible(), 'with a flash choice');
-eq(await t.getByText('Tick the next agenda item').count(), 0, 'and no agenda choice while there is no agenda widget (P9)');
+eq(await t.getByText('Tick the next agenda item').count(), 1, 'and an agenda choice, now the agenda widget exists (P9)');
 const v = await a11yScan(page);
 eq(v.map((x) => x.id + ' ' + x.nodes.join('|')), [], 'axe: no serious violations with the choices open');
 
@@ -156,7 +156,7 @@ await settle(page, 600);
 await page.click('#presentBtn');
 ok(!(await page.locator('.w-link').first().isVisible()), 'present mode hides the link choices');
 await page.click('#presentExit');
-eq((await timerData()).link, { flash: false, light: '', agenda: true }, 'an agenda link survives a reload on a page with no agenda widget');
+eq((await timerData()).link, { flash: false, light: '', agenda: true }, 'an agenda link survives a reload');
 
 // ── width ────────────────────────────────────────────────────────────
 for (const width of [375, 360]) {

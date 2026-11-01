@@ -91,7 +91,7 @@ for (const t of C.TYPES) {
   if (firstOverlap === -1 && all.some((q) => hit(r, q))) firstOverlap = all.length;
   all.push(r);
 }
-ok(firstOverlap === -1 || firstOverlap >= 9, `one of each of the fourteen: at least nine place before any overlap (first overlap at ${firstOverlap})`);
+ok(firstOverlap === -1 || firstOverlap >= 9, `one of each of the fifteen: at least nine place before any overlap (first overlap at ${firstOverlap})`);
 const full = Array.from({ length: 20 }, () => C.placeNew('youtube', []));
 ok(full.every((r) => r.x >= 0 && r.y >= 0 && r.x + r.w <= 1 && r.y + r.h <= 1), 'placement on a crowded board stays on the board');
 
@@ -181,7 +181,7 @@ eq(C.mediaIds({ screens: [
   { bgImage: 'bg1', widgets: [{ type: 'image', data: { mediaId: 'img1' } }, { type: 'text', data: {} }] },
   { bgImage: '', widgets: [{ type: 'image', data: { mediaId: 'img1' } }, { type: 'image', data: { mediaId: '' } }] }
 ] }), ['bg1', 'img1'], 'media ids: backgrounds and images, each once');
-eq(C.TYPES.length, 14, 'fourteen widget types');
+eq(C.TYPES.length, 15, 'fifteen widget types');
 C.TYPES.forEach((t) => ok(C.DEFAULT_SIZE[t], `a default size for ${t}`));
 
 // ── P3: periods, starters, files ─────────────────────────────────────
@@ -301,6 +301,16 @@ eq(C.readCommand({ cmd: 'symbol', mode: 'ask3' }), { cmd: 'symbol', mode: 'ask3'
 eq(C.readCommand({ cmd: 'stopwatch', action: 'add' }), null, 'stopwatch has no add');
 for (const c of ['pick', 'groups', 'roll', 'hello']) eq(C.readCommand({ cmd: c }), { cmd: c }, c);
 for (const bad of [null, 'pick', [], { cmd: 5 }, { cmd: 'eval' }, { cmd: '__proto__' }]) eq(C.readCommand(bad), null, 'refused: ' + JSON.stringify(bad));
+
+// ── agenda (Path 22 P9) ──────────────────────────────────────────────
+{
+  const ag = (items) => C.normalizeWidget({ type: 'agenda', x: 0, y: 0, w: 0.3, h: 0.4, data: { items } }).data.items;
+  eq(C.defaultData('agenda'), { items: [] }, 'a new agenda is empty');
+  eq(ag([{ t: ' Warm-up ', done: true }, { t: '', done: false }, { t: 'Notes' }, 'junk', null]), [{ t: 'Warm-up', done: true }, { t: 'Notes', done: false }], 'agenda items are trimmed, blanks and junk dropped');
+  eq(ag(Array.from({ length: 30 }, (_, i) => ({ t: 'Item ' + i }))).length, C.MAX_AGENDA, 'an agenda holds at most MAX_AGENDA lines');
+  eq(ag([{ t: 'x'.repeat(500) }])[0].t.length, C.MAX_AGENDA_ITEM, 'a long line is cut');
+  eq(ag('nope'), [], 'a non-list reads as empty');
+}
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

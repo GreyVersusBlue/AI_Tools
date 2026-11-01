@@ -152,6 +152,18 @@
     font: inherit; font-size: calc(var(--fs, 2) * 1rem); line-height: 1.25; padding: .1rem;
   }
 
+  /* agenda: a short checklist the room reads from a distance */
+  .agenda-wrap { flex: 1; min-height: 0; container-type: size; overflow: auto; }
+  .agenda-head { margin: 0 0 .25em; font-weight: 700; color: var(--muted); font-size: clamp(.9rem, 5cqmin, 1.6rem); }
+  .agenda-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .15em; font-size: clamp(1rem, 7cqmin, 2.4rem); }
+  .agenda-list li { display: flex; align-items: center; gap: .4em; border-left: .12em solid transparent; padding: .1em .3em; line-height: 1.2; }
+  .agenda-list li.now { border-left-color: var(--accent); background: var(--card-2); font-weight: 700; }
+  .agenda-list li.done .agenda-text { text-decoration: line-through; color: var(--muted); }
+  .agenda-list input[type="checkbox"] { width: .9em; height: .9em; flex: none; }
+  .agenda-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .agenda-list .agenda-x { font-size: .5em; padding: .1em .45em; }
+  body.present .agenda-x, body.present .agenda-foot { display: none; }
+
   /* timer */
   .w.timer-done { animation: done-flash 1s steps(2, jump-none) 6; border-color: var(--err); }
   .w.timer-done .big-text { color: var(--err); }
@@ -1418,6 +1430,60 @@
       if (ai && ai.tickNext) ai.tickNext();
     }
   }
+
+  TYPES.agenda = {
+    title: 'Agenda', icon: ['M9 6h11', 'M9 12h11', 'M9 18h11', 'M4 6l1 1 2-2', 'M4 12l1 1 2-2', 'M4 18l1 1 2-2'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var list = el('ul', { className: 'agenda-list', 'aria-label': 'Agenda items' });
+      var status = el('span', { className: 'sr-only', 'aria-live': 'polite' });
+      var addId = ctx.id + '-add';
+      var add = el('input', { type: 'text', id: addId, placeholder: 'Add an item…', maxlength: String(Core.MAX_AGENDA_ITEM) });
+      var addBtn = el('button', { type: 'button', text: 'Add' });
+      function render() {
+        list.textContent = '';
+        var firstOpen = d.items.findIndex(function (it) { return !it.done; });
+        d.items.forEach(function (it, i) {
+          var id = ctx.id + '-i' + i;
+          var cb = el('input', { type: 'checkbox', id: id });
+          cb.checked = it.done;
+          cb.addEventListener('change', function () { it.done = cb.checked; ctx.save(); render(); });
+          var x = el('button', { type: 'button', className: 'agenda-x', text: '×', 'aria-label': 'Remove ' + it.t });
+          x.addEventListener('click', function () { d.items.splice(i, 1); ctx.save(); render(); });
+          list.appendChild(el('li', { className: (it.done ? 'done' : '') + (i === firstOpen ? ' now' : '') }, [
+            cb, el('label', { for: id, className: 'agenda-text', text: it.t }), x
+          ]));
+        });
+        addBtn.disabled = d.items.length >= Core.MAX_AGENDA;
+        add.disabled = addBtn.disabled;
+      }
+      function addItem() {
+        var t = add.value.trim();
+        if (!t || d.items.length >= Core.MAX_AGENDA) return;
+        d.items.push({ t: t.slice(0, Core.MAX_AGENDA_ITEM), done: false });
+        add.value = ''; ctx.save(); render();
+      }
+      addBtn.addEventListener('click', addItem);
+      add.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addItem(); } });
+      /* A timer's "Tick the next agenda item" calls this: the first item not yet done. */
+      function tickNext() {
+        var it = d.items.find(function (o) { return !o.done; });
+        if (!it) return false;
+        it.done = true; ctx.save(); render();
+        status.textContent = 'Done: ' + it.t;
+        return true;
+      }
+      ctx.body.appendChild(el('div', { className: 'agenda-wrap' }, [el('p', { className: 'agenda-head', text: 'Today we will…' }), list]));
+      ctx.body.appendChild(status);
+      ctx.body.appendChild(el('div', { className: 'w-foot agenda-foot' }, [
+        el('label', { for: addId, className: 'sr-only', text: 'New agenda item' }), add, addBtn,
+        el('button', { type: 'button', text: 'Tick next', onclick: tickNext }),
+        el('button', { type: 'button', text: 'Clear ticks', onclick: function () { d.items.forEach(function (o) { o.done = false; }); ctx.save(); render(); } })
+      ]));
+      render();
+      return { tickNext: tickNext, snap: function () { return { items: d.items.length, done: d.items.filter(function (o) { return o.done; }).length }; } };
+    }
+  };
 
   function mountWidget(w) {
     var type = TYPES[w.type];
