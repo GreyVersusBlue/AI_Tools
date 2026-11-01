@@ -36,7 +36,7 @@
   'use strict';
 
   var TYPES = ['text', 'timer', 'stopwatch', 'clock', 'youtube', 'traffic', 'names', 'dice',
-               'symbols', 'noise', 'draw', 'image', 'qr', 'groups', 'agenda', 'pie', 'sequence', 'bell', 'score'];
+               'symbols', 'noise', 'draw', 'image', 'qr', 'groups', 'agenda', 'pie', 'sequence', 'bell', 'score', 'wheel'];
 
   /* Default size of a new widget, as a fraction of the board. */
   var DEFAULT_SIZE = {
@@ -58,7 +58,8 @@
     pie:       { w: 0.26, h: 0.46 },
     sequence:  { w: 0.34, h: 0.42 },
     bell:      { w: 0.30, h: 0.26 },
-    score:     { w: 0.40, h: 0.40 }
+    score:     { w: 0.40, h: 0.40 },
+    wheel:     { w: 0.34, h: 0.50 }
   };
 
   var MIN_W = 0.08, MIN_H = 0.08;
@@ -66,6 +67,7 @@
   var MAX_TIMER_S = 24 * 3600;
   var MAX_AGENDA = 12, MAX_AGENDA_ITEM = 120;
   var MAX_STEPS = 8, MAX_STEP_LABEL = 30;
+  var MAX_WHEEL = 24, MAX_WHEEL_ITEM = 40;
   var MAX_TEAMS = 8, MAX_TEAM_NAME = 30, MAX_SCORE = 9999;
   var TEXT_SIZES = [1, 1.5, 2, 3, 4, 6];
   var LIGHTS = ['red', 'yellow', 'green'];
@@ -211,6 +213,7 @@
       case 'qr': return { text: '' };
       case 'groups': return { roster: '', by: 'size', n: 4 };
       case 'agenda': return { items: [] };
+      case 'wheel': return { items: ['Choice 1', 'Choice 2', 'Choice 3', 'Choice 4'] };
       case 'score': return { teams: [1, 2, 3, 4].map(function (n) { return { name: 'Team ' + n, score: 0 }; }) };
       case 'sequence': return { steps: DEFAULT_STEPS.map(function (x) { return { label: x.label, sec: x.sec }; }), i: 0, endsAt: 0, remaining: DEFAULT_STEPS[0].sec };
     }
@@ -259,6 +262,39 @@
       if (label && sec > 0) out.push({ label: label, sec: sec });
     });
     return out.length ? out : DEFAULT_STEPS.map(function (x) { return { label: x.label, sec: x.sec }; });
+  }
+
+  /* A spinner wheel: up to MAX_WHEEL typed entries, one per segment. */
+  function normalizeWheelItems(list, fallback) {
+    if (!Array.isArray(list)) return fallback;
+    var out = [];
+    list.forEach(function (x) {
+      if (out.length >= MAX_WHEEL) return;
+      var t = str(x, MAX_WHEEL_ITEM, '').trim();
+      if (t) out.push(t);
+    });
+    return out;
+  }
+
+  /* Where a spin lands. The wheel turns clockwise under a pointer at the top;
+     segment i spans [i, i+1) * 360/n degrees measured clockwise from the top.
+     `cur` is the wheel's accumulated rotation in degrees, `rng` returns [0, 1).
+     The result always turns the wheel forward by at least `turns` full
+     turns and stops inside the chosen segment (never on an edge). The caller
+     keeps `angle` as the new rotation. */
+  function spinTo(n, cur, rng, turns) {
+    n = Math.max(1, Math.floor(n));
+    var index = Math.min(n - 1, Math.floor(rng() * n));
+    var seg = 360 / n, within = (0.1 + 0.8 * rng()) * seg;      // 10%..90% of the segment
+    var want = (360 - (index * seg + within)) % 360;            // rotation (mod 360) that puts the stop under the pointer
+    var have = ((cur % 360) + 360) % 360;
+    var angle = cur + (turns || 5) * 360 + ((want - have) % 360 + 360) % 360;
+    return { index: index, angle: angle };
+  }
+  /* The segment under the pointer at a rotation: spinTo's inverse. */
+  function wheelAt(n, angle) {
+    var a = ((-angle % 360) + 360) % 360;
+    return Math.min(n - 1, Math.floor(a / (360 / n)));
   }
 
   /* A team scoreboard: up to MAX_TEAMS teams, each { name, score }. A team is a
@@ -350,6 +386,8 @@
         };
       case 'agenda':
         return { items: normalizeAgenda(d.items) };
+      case 'wheel':
+        return { items: normalizeWheelItems(d.items, dd.items) };
       case 'score':
         return { teams: normalizeTeams(d.teams, dd.teams) };
       case 'sequence': {
@@ -761,6 +799,10 @@
     MAX_AGENDA: MAX_AGENDA,
     MAX_AGENDA_ITEM: MAX_AGENDA_ITEM,
     MAX_STEPS: MAX_STEPS,
+    MAX_WHEEL: MAX_WHEEL,
+    MAX_WHEEL_ITEM: MAX_WHEEL_ITEM,
+    spinTo: spinTo,
+    wheelAt: wheelAt,
     MAX_TEAMS: MAX_TEAMS,
     MAX_TEAM_NAME: MAX_TEAM_NAME,
     MAX_SCORE: MAX_SCORE,

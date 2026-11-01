@@ -91,7 +91,7 @@ for (const t of C.TYPES) {
   if (firstOverlap === -1 && all.some((q) => hit(r, q))) firstOverlap = all.length;
   all.push(r);
 }
-ok(firstOverlap === -1 || firstOverlap >= 9, `one of each of the nineteen: at least nine place before any overlap (first overlap at ${firstOverlap})`);
+ok(firstOverlap === -1 || firstOverlap >= 9, `one of each of the twenty: at least nine place before any overlap (first overlap at ${firstOverlap})`);
 const full = Array.from({ length: 20 }, () => C.placeNew('youtube', []));
 ok(full.every((r) => r.x >= 0 && r.y >= 0 && r.x + r.w <= 1 && r.y + r.h <= 1), 'placement on a crowded board stays on the board');
 
@@ -181,7 +181,7 @@ eq(C.mediaIds({ screens: [
   { bgImage: 'bg1', widgets: [{ type: 'image', data: { mediaId: 'img1' } }, { type: 'text', data: {} }] },
   { bgImage: '', widgets: [{ type: 'image', data: { mediaId: 'img1' } }, { type: 'image', data: { mediaId: '' } }] }
 ] }), ['bg1', 'img1'], 'media ids: backgrounds and images, each once');
-eq(C.TYPES.length, 19, 'nineteen widget types');
+eq(C.TYPES.length, 20, 'twenty widget types');
 C.TYPES.forEach((t) => ok(C.DEFAULT_SIZE[t], `a default size for ${t}`));
 
 // ── P3: periods, starters, files ─────────────────────────────────────
@@ -361,6 +361,36 @@ for (const bad of [null, 'pick', [], { cmd: 5 }, { cmd: 'eval' }, { cmd: '__prot
   eq(sc({ teams: Array.from({ length: 20 }, (_, i) => ({ name: 'T' + i })) }).length, C.MAX_TEAMS, 'at most eight teams');
   eq(sc({ teams: [] }), [], 'no teams is a state a teacher can leave it in');
   eq(sc({ teams: 'x' }).length, 4, 'a non-list falls back to the starting four');
+}
+
+// ── spinner wheel (Path 22 P9) ───────────────────────────────────────
+{
+  const wh = (data) => C.normalizeWidget({ type: 'wheel', x: 0, y: 0, w: 0.34, h: 0.5, data }).data.items;
+  eq(wh({}).length, 4, 'a new wheel has four choices');
+  eq(wh({ items: [' A ', '', 'B', 5, null] }), ['A', 'B'], 'entries are trimmed and blanks dropped');
+  eq(wh({ items: Array.from({ length: 40 }, (_, i) => 'x' + i) }).length, C.MAX_WHEEL, 'at most 24 segments');
+  eq(wh({ items: [] }), [], 'an empty list is allowed (the wheel then says so)');
+  eq(wh({ items: 'nope' }).length, 4, 'a non-list falls back to the starting four');
+  // spinTo: always forward, always inside the chosen segment, for every n and many draws
+  let bad = 0, back = 0, edge = 0, seed = 12345;
+  const rng = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x80000000; };
+  for (let n = 1; n <= C.MAX_WHEEL; n++) {
+    let cur = 0;
+    for (let k = 0; k < 200; k++) {
+      const r = C.spinTo(n, cur, rng, 5);
+      if (C.wheelAt(n, r.angle) !== r.index) bad++;
+      if (r.angle < cur + 5 * 360) back++;
+      const seg = 360 / n, frac = ((((-r.angle) % 360) + 360) % 360) / seg - r.index;
+      if (frac < 0.09 || frac > 0.91) edge++;
+      cur = r.angle;
+    }
+  }
+  eq([bad, back, edge], [0, 0, 0], 'across 24 wheel sizes x 200 spins: the stop is always in the chosen segment, off its edges, and at least five turns on');
+  const pick = new Set();
+  for (let k = 0; k < 400; k++) pick.add(C.spinTo(6, 0, rng).index);
+  eq(pick.size, 6, 'every one of six segments gets picked in 400 spins');
+  eq(C.spinTo(1, 0, () => 0.5).index, 0, 'a one-segment wheel picks it');
+  eq(C.spinTo(4, 0, () => 0.9999).index, 3, 'a draw just under one picks the last segment, not past it');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

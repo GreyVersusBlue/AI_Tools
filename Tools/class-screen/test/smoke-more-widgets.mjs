@@ -12,6 +12,7 @@
 // Exits 1 on any failure.
 
 /* global __classScreen -- the page's read-only test hook */
+/* global ClassScreenCore -- the page's pure core, read inside page.evaluate() */
 import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
 
 const PORT = 8650;
@@ -313,6 +314,55 @@ await page.click('#presentBtn');
 ok(!(await sb.locator('.score-btns.edit').first().isVisible()), 'present mode hides the remove buttons');
 ok(await sb.getByRole('button', { name: 'Give one point to Team 1' }).isVisible(), 'but keeps the plus and minus');
 await page.click('#presentExit');
+
+// ── spinner wheel ────────────────────────────────────────────────────
+console.log(' spinner wheel');
+await add('wheel');
+const wl = widget('wheel');
+const wlAngle = () => wl.locator('.wheel-rot').evaluate((n) => parseFloat(/rotate\((-?[\d.]+)deg\)/.exec(n.style.transform)[1]));
+eq(await page.locator('#dock button[data-add="wheel"]').count(), 1, 'the dock offers the wheel');
+eq(await wl.locator('.wheel-seg').count(), 4, 'a new wheel has four segments');
+eq(await wl.locator('.wheel-lab').allTextContents(), ['Choice 1', 'Choice 2', 'Choice 3', 'Choice 4'], 'with their labels');
+await page.evaluate(() => { Math.random = () => 0.5; });
+await wl.getByRole('button', { name: 'Spin', exact: true }).click();
+eq(await wl.locator('.wheel-result').textContent(), '', 'the answer is not shown while the wheel turns');
+ok(await wl.getByRole('button', { name: 'Spin', exact: true }).isDisabled(), 'and Spin waits for the stop');
+const a1 = await wlAngle();
+ok(a1 >= 5 * 360, `it turns at least five times (${a1} degrees)`);
+await page.waitForFunction(() => document.querySelector('.wheel-result').textContent !== '', null, { timeout: 6000 }).catch(() => {});
+eq(await wl.locator('.wheel-result').textContent(), 'Choice 3', 'after the turn it names the segment the draw chose');
+eq(await page.evaluate((a) => ClassScreenCore.wheelAt(4, a), a1), 2, 'and that segment is the one under the pointer');
+ok(await wl.getByRole('button', { name: 'Spin', exact: true }).isEnabled(), 'Spin is ready again');
+await wl.getByRole('button', { name: 'Spin', exact: true }).click();
+await page.waitForFunction(() => !document.querySelector('.wheel-box').closest('.w').querySelector('button.primary').disabled, null, { timeout: 6000 }).catch(() => {});
+const a2 = await wlAngle();
+ok(a2 >= a1 + 5 * 360, 'a second spin goes on forward from where the first stopped');
+eq(await page.evaluate((a) => ClassScreenCore.wheelAt(4, a), a2), 2, 'and lands on the same segment for the same draw');
+// reduced motion: no turn, the answer at once
+await page.emulateMedia({ reducedMotion: 'reduce' });
+eq(await wl.locator('.wheel-rot').evaluate((n) => getComputedStyle(n).transitionDuration), '0s', 'reduced motion removes the turning');
+await page.evaluate(() => { Math.random = () => 0.1; });
+await wl.getByRole('button', { name: 'Spin', exact: true }).click();
+eq(await wl.locator('.wheel-result').textContent(), 'Choice 1', 'and the answer is there at once');
+eq(await page.evaluate((a) => ClassScreenCore.wheelAt(4, a), await wlAngle()), 0, 'on the right segment');
+await page.emulateMedia({ reducedMotion: 'no-preference' });
+// editing
+await wl.locator('summary', { hasText: 'Edit the wheel' }).click();
+const wlText = wl.getByLabel('Wheel entries, one per line');
+await wlText.fill('Red\nBlue\n\n  Green  ');
+await wl.getByRole('button', { name: 'Set', exact: true }).click();
+eq((await dataOf('wheel')).items, ['Red', 'Blue', 'Green'], 'entries are saved without blanks');
+eq(await wl.locator('.wheel-seg').count(), 3, 'and the wheel is redrawn');
+await wlText.fill('Only one');
+await wl.getByRole('button', { name: 'Set', exact: true }).click();
+ok(await wl.getByRole('button', { name: 'Spin', exact: true }).isDisabled(), 'one entry cannot spin');
+ok((await wl.locator('.note').textContent()).includes('at least two'), 'and says why');
+await wlText.fill(Array.from({ length: 30 }, (_, i) => 'Entry ' + i).join('\n'));
+await wl.getByRole('button', { name: 'Set', exact: true }).click();
+eq((await dataOf('wheel')).items.length, 24, 'a wheel stops at 24 entries');
+await wlText.fill('Red\nBlue\nGreen');
+await wl.getByRole('button', { name: 'Set', exact: true }).click();
+await modes('wheel', wl.locator('.wheel-svg'), wlText, 'wheel');
 
 // an older board (no agenda; a timer with no link) still opens, link-free
 await settle(page, 600);   // let the page's own save land first

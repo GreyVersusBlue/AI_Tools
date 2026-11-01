@@ -152,6 +152,21 @@
     font: inherit; font-size: calc(var(--fs, 2) * 1rem); line-height: 1.25; padding: .1rem;
   }
 
+  /* spinner wheel */
+  .wheel-stage { flex: 1; min-height: 0; container-type: size; display: grid; place-items: center; overflow: hidden; position: relative; }
+  .wheel-box { position: relative; width: min(92cqw, 72cqh); height: min(92cqw, 72cqh); }
+  .wheel-svg { width: 100%; height: 100%; display: block; }
+  .wheel-rot { transform-origin: 50% 50%; transform-box: view-box; transition: transform 4s cubic-bezier(.12, .6, .1, 1); }
+  .wheel-seg.a { fill: var(--card-2); }
+  .wheel-seg.b { fill: var(--info-bg); }
+  .wheel-seg { stroke: var(--line-strong); stroke-width: .6; }
+  .wheel-lab { fill: var(--ink); font-weight: 700; dominant-baseline: middle; text-anchor: end; }
+  .wheel-pointer { fill: var(--err); stroke: var(--paper); stroke-width: 1; }
+  .wheel-result { font-weight: 700; text-align: center; min-height: 1.3em; font-size: clamp(1rem, 9cqw, 2.2rem); overflow-wrap: anywhere; margin: 0; }
+  @media (prefers-reduced-motion: reduce) { .wheel-rot { transition: none; } }
+  body.present .wheel-edit { display: none; }
+  .wheel-text { width: 14em; max-width: 100%; font: inherit; font-size: .85rem; color: var(--ink); background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px; padding: .3rem .45rem; }
+
   /* team scoreboard */
   .score-wrap { flex: 1; min-height: 0; container-type: size; overflow: auto; }
   .score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: .4rem; padding: .1rem; }
@@ -943,6 +958,95 @@
       ]));
       render();
       return { snap: function () { return { teams: d.teams.length }; } };
+    }
+  };
+
+  /* A spinner wheel for any list typed one entry per line. The pick is made
+     when the button is pressed (not saved); the picture then turns to it. Under
+     reduced motion it jumps straight there. */
+  TYPES.wheel = {
+    title: 'Spinner wheel', icon: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 2v10l7 7', 'M12 12L5 19'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var svg = document.createElementNS(SVGNS, 'svg');
+      svg.setAttribute('viewBox', '-105 -105 210 210'); svg.setAttribute('class', 'wheel-svg'); svg.setAttribute('aria-hidden', 'true');
+      var rot = document.createElementNS(SVGNS, 'g'); rot.setAttribute('class', 'wheel-rot');
+      var ptr = document.createElementNS(SVGNS, 'path'); ptr.setAttribute('class', 'wheel-pointer'); ptr.setAttribute('d', 'M-8 -104L8 -104L0 -84Z');
+      svg.appendChild(rot); svg.appendChild(ptr);
+      var result = el('p', { className: 'wheel-result', 'aria-live': 'polite' });
+      var spinBtn = el('button', { type: 'button', className: 'primary', text: 'Spin' });
+      var editId = ctx.id + '-items';
+      var edit = el('textarea', { id: editId, rows: '4', className: 'wheel-text', spellcheck: 'false' });
+      var angle = 0, spinning = false, settleTimer = 0;
+      function reduced() { return !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); }
+      function polar(r, deg) { var a = deg * Math.PI / 180; return [r * Math.sin(a), -r * Math.cos(a)]; }
+      function draw() {
+        rot.textContent = '';
+        var n = d.items.length;
+        if (!n) { return; }
+        var seg = 360 / n, fs = Math.max(5, Math.min(13, 150 / n + 3));
+        d.items.forEach(function (t, i) {
+          var p = document.createElementNS(SVGNS, 'path');
+          if (n === 1) p.setAttribute('d', 'M0 -100A100 100 0 1 1 -0.01 -100Z');
+          else {
+            var a = polar(100, i * seg), b = polar(100, (i + 1) * seg);
+            p.setAttribute('d', 'M0 0L' + a[0].toFixed(2) + ' ' + a[1].toFixed(2) + 'A100 100 0 ' + (seg > 180 ? 1 : 0) + ' 1 ' + b[0].toFixed(2) + ' ' + b[1].toFixed(2) + 'Z');
+          }
+          p.setAttribute('class', 'wheel-seg ' + (i % 2 ? 'b' : 'a'));
+          rot.appendChild(p);
+          var tx = document.createElementNS(SVGNS, 'text');
+          var mid = (i + 0.5) * seg, at = polar(92, mid);
+          tx.setAttribute('class', 'wheel-lab');
+          tx.setAttribute('transform', 'translate(' + at[0].toFixed(2) + ' ' + at[1].toFixed(2) + ') rotate(' + (mid - 90).toFixed(2) + ')');
+          tx.setAttribute('font-size', fs.toFixed(1));
+          tx.textContent = t.length > 16 ? t.slice(0, 15) + '…' : t;
+          rot.appendChild(tx);
+        });
+        edit.value = d.items.join('\n');
+        rot.style.transform = 'rotate(' + angle + 'deg)';
+      }
+      function arrive(index) {
+        spinning = false; spinBtn.disabled = false;
+        result.textContent = d.items[index];
+      }
+      function spin() {
+        if (spinning || d.items.length < 2) return;
+        var r = Core.spinTo(d.items.length, angle, Math.random, 5);
+        result.textContent = '';
+        angle = r.angle;
+        if (reduced()) { rot.style.transform = 'rotate(' + angle + 'deg)'; arrive(r.index); return; }
+        spinning = true; spinBtn.disabled = true;
+        rot.style.transform = 'rotate(' + angle + 'deg)';
+        clearTimeout(settleTimer);
+        settleTimer = setTimeout(function () { arrive(r.index); }, 4100);
+      }
+      spinBtn.addEventListener('click', spin);
+      function apply() {
+        var lines = edit.value.split('\n').map(function (x) { return x.trim().slice(0, Core.MAX_WHEEL_ITEM); }).filter(Boolean).slice(0, Core.MAX_WHEEL);
+        d.items = lines; ctx.save(); result.textContent = ''; angle = 0; spinning = false; clearTimeout(settleTimer); spinBtn.disabled = false;
+        draw(); gate();
+      }
+      function gate() {
+        spinBtn.disabled = spinning || d.items.length < 2;
+        note.textContent = d.items.length < 2 ? 'Add at least two entries to spin.' : '';
+      }
+      var note = el('p', { className: 'note' });
+      ctx.body.appendChild(el('div', { className: 'wheel-stage' }, [el('div', { className: 'wheel-box' }, [svg])]));
+      ctx.body.appendChild(result);
+      ctx.body.appendChild(note);
+      ctx.body.appendChild(el('div', { className: 'w-foot' }, [spinBtn]));
+      ctx.body.appendChild(el('details', { className: 'w-link wheel-edit' }, [
+        el('summary', { text: 'Edit the wheel' }),
+        el('div', { className: 'w-link-body' }, [
+          el('label', { for: editId, className: 'sr-only', text: 'Wheel entries, one per line' }), edit,
+          el('button', { type: 'button', text: 'Set', onclick: apply })
+        ])
+      ]));
+      draw(); gate();
+      return {
+        destroy: function () { clearTimeout(settleTimer); },
+        snap: function () { return { items: d.items.length, result: result.textContent }; }
+      };
     }
   };
 
