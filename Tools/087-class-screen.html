@@ -337,6 +337,14 @@
   .rd-status.bad { color: var(--err); }
   .rd-status.good { color: var(--accent-2); }
 
+  /* another tab saved (Path 22 P10) */
+  .tab-banner {
+    display: flex; align-items: center; gap: .5rem 1rem; flex-wrap: wrap; flex: none;
+    padding: .4rem 1rem; background: var(--info-bg); border-bottom: 1px solid var(--info-line); color: var(--ink); font-size: .88rem;
+  }
+  .tab-banner span { font-weight: 600; }
+  body.present .tab-banner { display: none; }
+
   /* ── present mode and spotlight (Path 22 P6) ───────────────────────── */
   /* Present locks the layout for the projector: no title bars (so nothing to drag
      or close), no resize corners, no header and no dock. Spotlight lifts one
@@ -432,6 +440,12 @@
     <button type="button" id="fsBtn" class="primary">Fullscreen</button>
   </div>
 </header>
+
+<div class="tab-banner" id="tabBanner" role="status" hidden>
+  <span>This board was changed in another tab.</span>
+  <button type="button" id="tabLoad">Load their changes</button>
+  <button type="button" id="tabKeep">Keep what is here</button>
+</div>
 
 <main id="stage">
   <div id="board" aria-label="Board">
@@ -2058,6 +2072,28 @@
     renderScreenBar();
     renderBackground();
   }
+
+  /* ── another tab saved (Path 22 P10) ────────────────────────────────── */
+  /* Two tabs on one board used to be last writer wins, silently. A save from
+     another tab now raises a bar here: load what they saved, or keep this tab's
+     board (its next save then replaces theirs, as before). Nothing is reloaded
+     on its own, so a running timer or a drawing in progress is never swept away.
+     The bar waits behind present mode and shows when that ends. */
+  var tabBanner = document.getElementById('tabBanner');
+  window.addEventListener('storage', function (e) {
+    if (e.key !== KEY || e.storageArea !== window.localStorage || e.newValue === null) return;
+    tabBanner.hidden = false;
+  });
+  document.getElementById('tabLoad').addEventListener('click', function () {
+    clearTimeout(saveTimer); saveTimer = 0;            // drop this tab's unsaved edit: they chose theirs
+    state = Core.normalizeState(window.Store ? Store.get(KEY, { version: 1, default: null }) : null);
+    tabBanner.hidden = true;
+    renderBoard(); collectMedia();
+    showToast('Loaded the changes from the other tab.', false);
+  });
+  document.getElementById('tabKeep').addEventListener('click', function () {
+    tabBanner.hidden = true; saveNow();
+  });
 
   /* ── backgrounds ──────────────────────────────────────────────────── */
 
