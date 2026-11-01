@@ -830,7 +830,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 117 | Longitudinal reports (a term or year view across archived days and sections; team totals are kept as one running total, with no per-day team history). Team / house points shipped v282 | 008 | ½ | | [008 Behavior & Points Tracker](#008--behavior--points-tracker) |
 | 118 | Per-record conflict resolution ("keep the newer of each"; needs per-record timestamps) | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
 | 120 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
-| 122 | Date-received per student; contract-gate reporting | 013 | ½ | | [013 Lab Safety Contract Tracker](#013--lab-safety-contract-tracker) |
 | 125 | Peer feedback slips; gallery-walk reactions | 017 | ½ | | [017 Gallery Walk QR Codes](#017--gallery-walk-qr-codes) |
 | 126 | Hints with a time penalty; branching and station images | 018 | ½ | | [018 QR Scavenger Hunt Builder](#018--qr-scavenger-hunt-builder) |
 | 127 | Attempt limits and feedback; a non-QR fallback | 019 | ½ | | [019 Digital Escape Room / Puzzle Lock Builder](#019--digital-escape-room--puzzle-lock-builder) |
@@ -10505,8 +10504,11 @@ lesson is about — with an answer key, true to scale, on one sheet.
 - **Merge with the permission-slip collection tracker** (P7).
   `043-field-trip-permission-slip.html` has its own `renderCollectionTracker`;
   this is the same feature in two places.
-- **Gate other tools on it** (P7). Lab Group & Role Randomizer should be able
-  to ask "is this student cleared for lab?" and flag or exclude accordingly.
+- **Done —** **Gate other tools on it** (P7). Lab Group & Role Randomizer reads
+  `lsct_sections_v1` read-only (its "Check names against a signed safety contract" box) and
+  flags students with no signed contract; 013 keeps a date received per student per document
+  (the Date received column and a date field that backdates), the "still missing" count against
+  the lab day, and the missing list and contact sheet.
 - **Parent contact list for the stragglers** — print the missing list with a
   place to record call/email attempts, which is what the follow-up actually
   requires.
