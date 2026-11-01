@@ -270,6 +270,22 @@
   .rd-status.bad { color: var(--err); }
   .rd-status.good { color: var(--accent-2); }
 
+  /* ── present mode and spotlight (Path 22 P6) ───────────────────────── */
+  /* Present locks the layout for the projector: no title bars (so nothing to drag
+     or close), no resize corners, no header and no dock. Spotlight lifts one
+     widget over the rest to fill the board. Both live in the page only: a
+     reload comes back to the editor, and neither is saved. */
+  body.present .app-header, body.present .dock, body.present .w-bar, body.present .w-resize { display: none; }
+  .present-exit {
+    position: absolute; top: .5rem; right: .5rem; z-index: 10000; font-size: .8rem; padding: .3rem .6rem;
+    background: var(--card); color: var(--ink); border: 1px solid var(--line-strong); box-shadow: 0 2px 8px rgba(0, 0, 0, .18);
+  }
+  #board.has-spot .w:not(.spot) { visibility: hidden; }
+  .w.spot { left: 0 !important; top: 0 !important; width: 100% !important; height: 100% !important; z-index: 5000 !important; border-radius: 0; }
+  .w.spot .w-resize { display: none; }
+  .w-fill { border: 0; background: transparent; padding: .1rem .4rem; font-size: .95rem; line-height: 1; color: var(--muted); border-radius: 0; }
+  .w-fill:hover, .w-fill[aria-pressed="true"] { color: var(--ink); background: transparent; }
+
   /* ── toast ──────────────────────────────────────────────────────────── */
   .toast {
     position: fixed; left: 50%; bottom: 4.2rem; transform: translateX(-50%); z-index: 60;
@@ -326,12 +342,14 @@
     <input type="file" id="importFile" accept=".json,application/json" hidden>
     <span class="live-badge" id="remoteLive" hidden><span class="dot" aria-hidden="true"></span>Phone connected</span>
     <button type="button" id="remoteBtn">Phone remote</button>
+    <button type="button" id="presentBtn" aria-pressed="false" title="Lock the layout for the projector and hide the controls (Esc to come back)">Present</button>
     <button type="button" id="fsBtn" class="primary">Fullscreen</button>
   </div>
 </header>
 
 <main id="stage">
   <div id="board" aria-label="Board">
+    <button type="button" class="present-exit" id="presentExit" hidden>Exit present mode (Esc)</button>
     <p class="board-empty" id="boardEmpty">Add a widget from the bar below. Drag it by its title, resize it from the corner, and it stays where you put it.</p>
   </div>
   <nav class="dock" id="dock" aria-label="Add a widget">
@@ -1312,12 +1330,13 @@
     var title = type.title;
     var grip = el('button', { type: 'button', className: 'w-grip', text: title, 'aria-label': 'Move ' + title, 'aria-describedby': 'gripHelp' });
     var close = el('button', { type: 'button', className: 'w-close', text: '×', 'aria-label': 'Remove ' + title });
+    var fill = el('button', { type: 'button', className: 'w-fill', text: '⤢', 'aria-label': 'Fill the board with ' + title, 'aria-pressed': 'false' });
     var body = el('div', { className: 'w-body' });
     var resize = el('div', { className: 'w-resize', 'aria-hidden': 'true' });
     /* 'wt-' + type, not 'w-' + type: the frame's own parts are .w-bar,
        .w-body and so on, and P1's text widget collided with one. */
     var node = el('section', { className: 'w wt-' + w.type, 'aria-label': title, 'data-id': w.id, 'data-type': w.type },
-      [el('div', { className: 'w-bar' }, [grip, close]), body, resize]);
+      [el('div', { className: 'w-bar' }, [grip, fill, close]), body, resize]);
 
     instances[w.id] = { el: node };
     board.appendChild(node);
@@ -1329,8 +1348,9 @@
     instances[w.id].remote = api.remote;
     instances[w.id].snap = api.snap;
 
-    node.addEventListener('pointerdown', function () { bringToFront(w); }, true);
+    node.addEventListener('pointerdown', function () { if (!presenting && !spotId) bringToFront(w); }, true);
     close.addEventListener('click', function () { removeWidget(w.id); });
+    fill.addEventListener('click', function () { setSpot(spotId === w.id ? '' : w.id); });
     dragWith(grip, w, node, 'move');
     dragWith(resize, w, node, 'resize');
 
@@ -1339,6 +1359,7 @@
       var dy = { ArrowUp: -1, ArrowDown: 1 }[e.key] || 0;
       if (!dx && !dy) return;
       e.preventDefault();
+      if (presenting || spotId) return;
       var step = 0.01;
       var r = e.shiftKey
         ? { x: w.x, y: w.y, w: w.w + dx * step, h: w.h + dy * step }
@@ -1353,6 +1374,7 @@
     handle.addEventListener('pointerdown', function (e) {
       if (e.button !== 0) return;
       e.preventDefault();
+      if (presenting || spotId) return;
       var rect = board.getBoundingClientRect();
       var start = { px: e.clientX, py: e.clientY, x: w.x, y: w.y, w: w.w, h: w.h };
       var moved = false;
@@ -1382,6 +1404,55 @@
     });
   }
 
+  /* ── present mode and spotlight (Path 22 P6) ──────────────────────── */
+
+  var presenting = false, spotId = '';
+  var presentBtn = document.getElementById('presentBtn');
+  var presentExit = document.getElementById('presentExit');
+
+  function setSpot(id) {
+    if (id && !instances[id]) id = '';
+    spotId = id;
+    Object.keys(instances).forEach(function (k) {
+      var on = k === id, n = instances[k].el;
+      n.classList.toggle('spot', on);
+      var f = n.querySelector('.w-fill');
+      if (f) f.setAttribute('aria-pressed', String(on));
+    });
+    board.classList.toggle('has-spot', !!id);
+    if (id) { var f2 = instances[id].el.querySelector('.w-fill'); if (f2 && !presenting) f2.focus(); }
+  }
+  function setPresent(on) {
+    presenting = on;
+    document.body.classList.toggle('present', on);
+    presentBtn.setAttribute('aria-pressed', String(on));
+    presentExit.hidden = !on;
+    if (on) { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); presentExit.focus(); }
+    else { setSpot(''); presentBtn.focus(); }
+  }
+  presentBtn.addEventListener('click', function () { setPresent(!presenting); });
+  presentExit.addEventListener('click', function () { setPresent(false); });
+
+  /* A double-click fills the board with the widget under it. Controls and the
+     drawing pad keep their own double-clicks; a text box gives its up only
+     while presenting, where there is no editing to protect. */
+  board.addEventListener('dblclick', function (e) {
+    var node = e.target.closest ? e.target.closest('.w') : null;
+    if (!node) return;
+    var skip = presenting ? 'input, select, button:not(.w-grip), canvas, iframe, a, summary, label'
+                          : 'input, textarea, select, button:not(.w-grip), canvas, iframe, a, summary, label';
+    if (e.target.closest(skip)) return;
+    setSpot(spotId === node.getAttribute('data-id') ? '' : node.getAttribute('data-id'));
+  });
+
+  /* Esc steps back one level: the spotlight first, then present mode. */
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || e.defaultPrevented) return;
+    if (document.querySelector('dialog[open]')) return;
+    if (spotId) { setSpot(''); e.preventDefault(); }
+    else if (presenting) { setPresent(false); e.preventDefault(); }
+  });
+
   function unmountAll() {
     Object.keys(instances).forEach(function (id) {
       var inst = instances[id];
@@ -1389,6 +1460,7 @@
       inst.el.remove();
     });
     instances = {};
+    spotId = ''; board.classList.remove('has-spot');
   }
 
   function renderBoard() {
