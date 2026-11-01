@@ -204,6 +204,14 @@
   .tent-list .t-role.member { color: var(--muted); }
   .tent-list .t-role-desc { text-align: right; font-size: .72rem; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--muted); }
 
+  .lock-ctl { display: inline-flex; align-items: center; gap: .3rem; font-size: .76rem; font-weight: 600; color: var(--ink); margin: 0 0 .35rem; cursor: pointer; }
+  .lock-ctl input { width: auto; margin: 0; }
+  .lock-ctl.member-lock { margin: 0 0 0 .5rem; font-weight: 500; }
+  .group-card.is-locked { border-color: var(--accent); }
+  .lock-hint { margin: 0 0 .6rem; }
+  /* the hints sit on --desk, where --muted is under 4.5:1 */
+  .results-wrap .absent-hint, .results-wrap .lock-hint { color: var(--ink); }
+
   @media print {
     body { background: #fff; padding: 0; }
     .app-header, .toolbar, .layout > .editor, footer.note, #msg, #warnArea { display: none !important; }
@@ -223,6 +231,7 @@
     .group-card li.absent-row { display: none !important; }
     .absent-check input[type="checkbox"] { display: none !important; }
     .absent-hint { display: none !important; }
+    .lock-ctl, .lock-hint { display: none !important; }
 
     .tent-card { border: none; break-after: page; break-inside: avoid; display: flex; flex-direction: column; justify-content: space-between; min-height: 9in; margin: 0; }
     .tent-card:last-child { break-after: auto; }
@@ -432,7 +441,7 @@
   //   stations: [{name, equipment}, ...], mode: 'count'|'size', splitValue,
   //   history: { studentName: [roleName,...] (most recent last) }, written from
   //   groupHistory, the engine's role memory (setRoleMemory(), v342),
-  //   lastGroups: [{ station: {name, equipment}|null, members: [{name, role}] }, ...],
+  //   lastGroups: [{ station: {name, equipment}|null, members: [{name, role, keep?}], locked? }, ...],
   //   checkoutLog: [{ outAt: iso|null, inAt: iso|null }, ...] parallel to lastGroups,
   //   absent: [studentName, ...] — marked absent on the *current* shuffle only;
   //   reset to [] on every reshuffle (a new shuffle is a new day's attendance),
@@ -959,7 +968,7 @@
   // than this page's own did (Tools/grouping/test/parity.test.mjs measures it
   // over 14,000 classes). Members are keyed by position, so two students of
   // one name stay two; a pair names the first of them, as groupIndexOf() does.
-  function makeGroups(names) {
+  function makeGroups(names, count) {
     var members = names.map(function (n, i) { return { key: String(i), name: n }; });
     var first = {};
     names.forEach(function (n, i) { if (!Object.prototype.hasOwnProperty.call(first, n)) first[n] = String(i); });
@@ -968,7 +977,7 @@
       if (Array.isArray(pair) && Object.prototype.hasOwnProperty.call(first, pair[0]) &&
           Object.prototype.hasOwnProperty.call(first, pair[1])) apart.push([first[pair[0]], first[pair[1]]]);
     });
-    var opts = { count: groupCountFor(names.length) };
+    var opts = { count: count || groupCountFor(names.length) };
     // A shuffle that ends with a keep-apart pair together deals again, up to ten times, and keeps the best (v350).
     if (apart.length) { opts.apart = apart; opts.search = { restarts: 10 }; }
     return Grouping.formGroups(members, opts).groups.map(function (g) {
@@ -1045,7 +1054,7 @@
   /** Hands out this group's roles from the memory and records them, before
       the next group is handed out, as the page always did. Returns
       { name: role|null } (null is "Team Member", which is not remembered). */
-  function handOutRoles(members, roles) {
+  function handOutRoles(members, roles, pinned) {
     var H = Grouping.history;
     var names = members.filter(function (n, i) { return members.indexOf(n) === i; });
     var keyOf = {};
@@ -1053,9 +1062,22 @@
     ided.members.forEach(function (m) { keyOf['#' + m.name] = m.key; });
     var keys = members.map(function (name) { return keyOf['#' + name]; });
     var assignment = {};
-    Grouping.rotateRoles([keys], roles, ided.history, { method: 'best' }).byGroup[0].forEach(function (x, i) {
-      assignment[members[i]] = x.role;
-    });
+    if (pinned && members.some(function (n) { return pinned[n]; })) {
+      /* A kept role (Keep role) is handed out first, as it was; the rest of the
+         group draws from the roles that are left, by the same memory. */
+      var openRoles = roles.filter(function (r) { return members.every(function (n) { return pinned[n] !== r; }); });
+      var freeIdx = [];
+      members.forEach(function (n, i) { if (pinned[n]) assignment[n] = pinned[n]; else freeIdx.push(i); });
+      if (freeIdx.length) {
+        Grouping.rotateRoles([freeIdx.map(function (i) { return keys[i]; })], openRoles, ided.history, { method: 'best' }).byGroup[0].forEach(function (x, j) {
+          assignment[members[freeIdx[j]]] = x.role;
+        });
+      }
+    } else {
+      Grouping.rotateRoles([keys], roles, ided.history, { method: 'best' }).byGroup[0].forEach(function (x, i) {
+        assignment[members[i]] = x.role;
+      });
+    }
     // One entry per member in group order, so a name that is in the group
     // twice is pushed twice, as the old recordHistory() pushed it.
     var h = H.record(ided.history, [], { pairs: false, roles: [members.map(function (name, i) {
@@ -1104,17 +1126,65 @@
   // Assigns a station to each group. Shuffles the station order and cycles
   // through it so every station gets used as evenly as possible; if there
   // are fewer stations than groups, some groups necessarily share one.
-  function assignStationsToGroups(groupCount) {
+  // `taken` (names of stations a kept group is holding) are left to those
+  // groups while there are enough others for the groups being dealt; with
+  // none taken this is the draw it always was.
+  function assignStationsToGroups(groupCount, taken) {
     var stations = (state.stations || []).filter(function (s) { return (s.name || '').trim(); });
     if (!stations.length) return { assignments: groupCount ? new Array(groupCount).fill(null) : [], shortage: false };
-    var order = shuffle(stations);
+    var free = taken && taken.length ? stations.filter(function (s) { return taken.indexOf(s.name) === -1; }) : stations;
+    var order = shuffle(free.length >= groupCount ? free : stations);
     var assignments = [];
     for (var i = 0; i < groupCount; i++) assignments.push(order[i % order.length]);
-    return { assignments: assignments, shortage: stations.length < groupCount };
+    return { assignments: assignments, shortage: order.length < groupCount };
   }
 
   function deepClone(obj) {
     return obj === undefined ? obj : JSON.parse(JSON.stringify(obj));
+  }
+
+  /* What the last shuffle's Keep boxes ask the next one to hold still. A kept
+     group stays only if every member is still eligible today (on the roster, not
+     absent in Class Roster Hub, not left out by the safety gate); otherwise its
+     lock is dropped, said so, and its students are dealt like everyone else. A
+     kept role stays only if its student is eligible and the role is still listed.
+     Nothing is stored by this: the boxes live on state.lastGroups. */
+  function heldFromLastShuffle(names, roleNames) {
+    var out = { kept: [], pins: {}, notes: [] };
+    var left = names.slice();
+    var droppedGroups = [], droppedRoles = [];
+    (state.lastGroups || []).forEach(function (g, i) {
+      if (!g || !Array.isArray(g.members)) return;
+      if (g.locked) {
+        var inLeft = left.slice(), ok = g.members.length > 0;
+        g.members.forEach(function (m) {
+          var at = inLeft.indexOf(m.name);
+          if (at === -1) ok = false; else inLeft.splice(at, 1);
+        });
+        if (ok) {
+          left = inLeft;
+          out.kept.push({ kept: true, index: i, group: {
+            station: g.station || null, locked: true,
+            members: g.members.map(function (m) { return { name: m.name, role: m.role }; })
+          } });
+          return;
+        }
+        droppedGroups.push('Group ' + (i + 1));
+      }
+      g.members.forEach(function (m) {
+        if (!m || !m.keep || !m.role) return;
+        if (roleNames.indexOf(m.role) === -1 || names.indexOf(m.name) === -1) droppedRoles.push(m.name);
+        else out.pins[m.name] = m.role;
+      });
+    });
+    if (droppedGroups.length) {
+      out.notes.push('Could not keep ' + droppedGroups.join(', ') + ': someone in ' + (droppedGroups.length === 1 ? 'it is' : 'them are') +
+        ' not on the roster or not eligible today. ' + (droppedGroups.length === 1 ? 'Its' : 'Their') + ' students were regrouped.');
+    }
+    if (droppedRoles.length) {
+      out.notes.push('Could not keep the role of ' + droppedRoles.join(', ') + ': the student is not eligible today or the role is no longer listed.');
+    }
+    return out;
   }
 
   function shuffleAll() {
@@ -1160,19 +1230,56 @@
 
     undoStack.push({ lastGroups: state.lastGroups, groupHistory: state.groupHistory, checkoutLog: state.checkoutLog, absent: state.absent, lastExcludedForSafety: state.lastExcludedForSafety });
 
-    var groups = makeGroups(names);
-    var violations = findApartViolations(groups);
-    var stationInfo = assignStationsToGroups(groups.length);
-    var result = groups.map(function (members, i) {
-      var assignment = handOutRoles(members, roleNames);
+    var held = heldFromLastShuffle(names, roleNames);
+    var pool = names.slice();
+    held.kept.forEach(function (k) {
+      k.group.members.forEach(function (m) { var at = pool.indexOf(m.name); if (at !== -1) pool.splice(at, 1); });
+    });
+    var total = groupCountFor(names.length);
+    var dealt = pool.length ? Math.max(1, Math.min(total - held.kept.length, pool.length)) : 0;
+    var groups = dealt ? makeGroups(pool, dealt) : [];
+    var violations = findApartViolations(groups.concat(held.kept.map(function (k) {
+      return k.group.members.map(function (m) { return m.name; });
+    })));
+    var stationInfo = assignStationsToGroups(groups.length, held.kept.map(function (k) { return k.group.station && k.group.station.name; }).filter(Boolean));
+    var roleConflicts = [];
+    var dealtResult = groups.map(function (members, i) {
+      var groupPins = {}, usedRoles = {};
+      members.forEach(function (name) {
+        var role = held.pins[name];
+        if (!role || groupPins[name]) return;
+        if (usedRoles[role]) { roleConflicts.push(name); return; }
+        usedRoles[role] = true; groupPins[name] = role;
+      });
+      var assignment = handOutRoles(members, roleNames, groupPins);
       return {
         station: stationInfo.assignments[i] || null,
-        members: members.map(function (name) { return { name: name, role: assignment[name] }; })
+        members: members.map(function (name) {
+          var m = { name: name, role: assignment[name] };
+          if (groupPins[name]) m.keep = true;
+          return m;
+        })
       };
     });
+    /* A kept group goes back to the number it had when that is free, then to the
+       first open place, so "Group 3" stays on the same table. */
+    var result = new Array(held.kept.length + dealtResult.length).fill(null);
+    var oldIndexAt = [];
+    var later = [];
+    held.kept.forEach(function (k) {
+      if (k.index < result.length && !result[k.index]) { result[k.index] = k; oldIndexAt[k.index] = k.index; } else later.push(k);
+    });
+    later.forEach(function (k) { var at = result.indexOf(null); result[at] = k; oldIndexAt[at] = k.index; });
+    var di = 0;
+    for (var ri = 0; ri < result.length; ri++) { if (!result[ri]) result[ri] = dealtResult[di++]; }
+    var oldLog = state.checkoutLog || [];
+    var newLog = result.map(function (g, i) {
+      return g.kept && oldLog[oldIndexAt[i]] ? oldLog[oldIndexAt[i]] : { outAt: null, inAt: null };
+    });
+    result = result.map(function (g) { return g.kept ? g.group : g; });
 
     state.lastGroups = result;
-    state.checkoutLog = result.map(function () { return { outAt: null, inAt: null }; });
+    state.checkoutLog = newLog;
     state.absent = []; // a new shuffle is a new day's attendance — old absences don't carry over
     state.lastExcludedForSafety = excludedNames;
     saveCurrent();
@@ -1183,6 +1290,15 @@
         ' pair' + (violations.length === 1 ? '' : 's') + ' apart with this group count: ' +
         violations.map(function (p) { return escapeHtml(p[0]) + ' &amp; ' + escapeHtml(p[1]); }).join(', ') +
         '. Try more groups, or fewer keep-apart constraints.');
+    }
+    if (held.kept.length) {
+      warnings.push('🛈 Kept ' + held.kept.length + ' group' + (held.kept.length === 1 ? '' : 's') + ' as ' + (held.kept.length === 1 ? 'it was' : 'they were') +
+        ' (members, roles and station) and regrouped ' + pool.length + ' other student' + (pool.length === 1 ? '' : 's') + '.');
+    }
+    held.notes.forEach(function (n) { warnings.push('🛈 ' + escapeHtml(n)); });
+    if (roleConflicts.length) {
+      warnings.push('🛈 Two kept roles landed in one group, so ' + roleConflicts.map(escapeHtml).join(', ') + (roleConflicts.length === 1 ? ' was' : ' were') +
+        ' dealt a role as usual.');
     }
     if (stationInfo.shortage) {
       warnings.push('⚠ Fewer stations than groups — some groups are sharing a station and its equipment.');
@@ -1324,11 +1440,14 @@
     var safetyStatus = currentSafetyStatus();
     els.resultsArea.innerHTML =
       '<p class="hint absent-hint">Check a name if that student is absent today &mdash; their role transfers to a present groupmate automatically.</p>' +
+      '<p class="hint lock-hint">Tick <strong>Keep this group</strong> to hold a group (its students, roles and station) while Shuffle regroups everyone else, or <strong>Keep role</strong> to hold one student&rsquo;s role in whatever group they land in.</p>' +
       '<div class="groups-grid">' + result.map(function (group, i) {
       var effMembers = computeEffectiveMembers(group);
-      return '<div class="group-card"><h3>Group ' + (i + 1) + '</h3>' +
+      return '<div class="group-card' + (group.locked ? ' is-locked' : '') + '"><h3>Group ' + (i + 1) + '</h3>' +
+        '<label class="lock-ctl"><input type="checkbox" data-lock-group="' + i + '"' + (group.locked ? ' checked' : '') +
+          ' aria-label="Keep Group ' + (i + 1) + ' next shuffle"> Keep this group</label>' +
         stationLineHtml(group.station) +
-        '<ul>' + effMembers.map(function (m) {
+        '<ul>' + effMembers.map(function (m, k) {
           var roleText = m.absent ? 'Absent' : (m.effectiveRole || MEMBER_LABEL);
           var cls = m.absent ? 'role absent' : (m.effectiveRole ? 'role' : 'role member');
           var badge = (!m.absent && isNameUnsigned(m.name, safetyStatus))
@@ -1336,7 +1455,11 @@
           return '<li class="' + (m.absent ? 'absent-row' : '') + '">' +
             '<label class="absent-check"' + (m.fromHub ? ' title="Marked absent today in Class Roster Hub"' : '') + '><input type="checkbox" data-absent-name="' + escapeHtml(m.name) + '"' + (m.absent ? ' checked' : '') + (m.fromHub ? ' disabled' : '') + '>' +
             '<span class="name">' + escapeHtml(m.name) + '</span>' + badge + '</label>' +
-            '<span class="' + cls + '">' + escapeHtml(m.fromHub ? 'Absent (Roster Hub)' : roleText) + '</span></li>';
+            '<span class="' + cls + '">' + escapeHtml(m.fromHub ? 'Absent (Roster Hub)' : roleText) + '</span>' +
+            ((!group.locked && !m.absent && m.role)
+              ? '<label class="lock-ctl member-lock"><input type="checkbox" data-lock-role="' + i + ':' + k + '"' + (group.members[k].keep ? ' checked' : '') +
+                ' aria-label="Keep ' + escapeHtml(m.name) + ' as ' + escapeHtml(m.role) + ' next shuffle"> Keep role</label>' : '') +
+            '</li>';
         }).join('') + '</ul>' +
         checkoutRowHtml(i, group.station) +
         '</div>';
@@ -1357,6 +1480,25 @@
   });
 
   els.resultsArea.addEventListener('change', function (e) {
+    var lg = e.target.closest('[data-lock-group]');
+    var lr = e.target.closest('[data-lock-role]');
+    if (lg || lr) {
+      var g;
+      if (lg) {
+        g = (state.lastGroups || [])[parseInt(lg.dataset.lockGroup, 10)];
+        if (!g) return;
+        if (lg.checked) g.locked = true; else delete g.locked;
+      } else {
+        var at = lr.dataset.lockRole.split(':');
+        g = (state.lastGroups || [])[parseInt(at[0], 10)];
+        var mem = g && g.members[parseInt(at[1], 10)];
+        if (!mem) return;
+        if (lr.checked) mem.keep = true; else delete mem.keep;
+      }
+      saveCurrent();
+      renderResults(state.lastGroups);
+      return;
+    }
     var cb = e.target.closest('[data-absent-name]');
     if (!cb) return;
     if (!state.absent) state.absent = [];
@@ -1657,7 +1799,9 @@
     if (!Array.isArray(lastGroups)) return null;
     return lastGroups.map(function (g) {
       if (Array.isArray(g)) return { station: null, members: g };
-      return { station: (g && g.station) || null, members: (g && Array.isArray(g.members)) ? g.members : [] };
+      var out = { station: (g && g.station) || null, members: (g && Array.isArray(g.members)) ? g.members : [] };
+      if (g && g.locked === true) out.locked = true; // Keep this group: only present once ticked
+      return out;
     });
   }
 

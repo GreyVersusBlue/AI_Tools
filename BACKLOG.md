@@ -834,7 +834,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 126 | Hints with a time penalty; branching and station images | 018 | ½ | | [018 QR Scavenger Hunt Builder](#018--qr-scavenger-hunt-builder) |
 | 127 | Attempt limits and feedback; a non-QR fallback | 019 | ½ | | [019 Digital Escape Room / Puzzle Lock Builder](#019--digital-escape-room--puzzle-lock-builder) |
 | 129 | Uneven groups and stations; a shared rotation engine | 021 | ½ | | [021 Tournament Bracket & Station Rotation (PE)](#021--tournament-bracket--station-rotation-pe) |
-| 130 | Lock a group or a role and reshuffle the rest | 022 | ½ | | [022 Lab Group & Role Randomizer](#022--lab-group--role-randomizer) |
 | 131 | Name and date lines on the slips; response collection questions | 023 | ½ | | [023 Exit Ticket / Bell Ringer Generator](#023--exit-ticket--bell-ringer-generator) |
 | 132 | Draw on a strategy card; a shared stage | 024 | ½ | | [024 Number Talks / Mental Math Routine Board](#024--number-talks--mental-math-routine-board) |
 | 135 | Discussion assessment; role recency across a book | 027 | ½ | | [027 Novel Study / Reading Circles Manager](#027--novel-study--reading-circles-manager) |
@@ -11220,7 +11219,12 @@ because the gym wifi does not work.
 
 #### Quick Wins
 
-- **Skipped — deferred, Round 4.** **Lock a group or a role and reshuffle the rest.**
+- **Done (v514) —** **Lock a group or a role and reshuffle the rest.** A *Keep this group* box on each
+  group card holds its students, roles, station and checkout row at the same number while Shuffle
+  regroups everyone else; a *Keep role* box on a student holds that role in whatever group they land
+  in. Stored as optional `locked` / `keep` fields on `lastGroups`; a lock whose student is no longer
+  eligible is dropped and said. Not done: keeping a group's *members* but redealing its roles, and
+  locks in 002's pair memory (002 has its own locked groups).
 - **Group size that matches the equipment.** "I have 7 microscopes" is the
   real constraint, not "make groups of 4".
 - **Names on the tent in a size readable from the front of the room.**
