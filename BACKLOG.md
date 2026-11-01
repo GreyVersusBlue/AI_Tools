@@ -826,12 +826,8 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 110 | Correlate hall-pass trips with the schedule; a student-initiated request flow | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
 | 111 | Project-team mode: longer-lived named teams, a shared task list, a printable team contract (roles and the year-long pair memory shipped, v277; this part waits on the questions in 002's section) | 002 | ½ | | [002 Group / Team Generator](#002--group--team-generator) |
 | 113 | Bell-schedule awareness (reads 032's `scv_calendar_v1`; needs a registry and cross-tool decision); a reconnecting mirror (`_shared/webrtc-pair.js`, a platform edit). The multi-timer board shipped v279 | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
-| 114 | A constraint solver worth the name; the room, not the grid | 005 | ½ | | [005 Seating Chart Generator](#005--seating-chart-generator) |
 | 117 | Per-day team history, so a term view can show house points by week (today a team total is one running total; the term view of student points shipped v515). Needs a new stored shape: Devon's design call | 008 | ½ | | [008 Behavior & Points Tracker](#008--behavior--points-tracker) |
 | 118 | Per-record conflict resolution ("keep the newer of each"; needs per-record timestamps) | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
-| 120 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
-| 126 | Hints with a time penalty; branching and station images | 018 | ½ | | [018 QR Scavenger Hunt Builder](#018--qr-scavenger-hunt-builder) |
-| 127 | Attempt limits and feedback; a non-QR fallback | 019 | ½ | | [019 Digital Escape Room / Puzzle Lock Builder](#019--digital-escape-room--puzzle-lock-builder) |
 | 136 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
 | 138 | The A/B cycle's anchor date shows the other letter when the anchor is a school day after the calendar's first school day (`scv-weeks.js`, `ANCHOR_QUIRK`; fixing it flips every letter of such a saved calendar, so it is a decision, not a quiet fix); cycle labels beyond A and B (needs a field in `scv_calendar_v1`, which 010 reads raw); a "week starts on" setting (none exists; the week print is Monday to Friday). Year-grid badges and the page-per-week print shipped v292 | 032 | ¼ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
 | 139 | 034: "Where is class X right now?" shipped on the By Student Group view (v553). What is left is the published pathfinder: a route from room A to room B on the building map. 034 exposes none of `astar`, `buildMultiFloorGraph` or `computeTravelTimes`, so it needs the publisher (035) to embed a room graph and the browser to carry the search, held by `check:publisher`; and no individual student is ever published, so a lookup by student name stays out | 034 | ½ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
@@ -10039,7 +10035,7 @@ link and have the whole period paced for them.
 
 #### Major Features
 
-- **Constraint solver worth the name.** Today's Keep Apart / Put Together is
+- **Done (AI-22, v358-v364) — Constraint solver worth the name.** (Rules, preferences, a scored Auto-assign and a Why? panel are built; the text below is the original request.) Today's Keep Apart / Put Together is
   pairwise. The real request is richer: front-of-room accommodations, "must be
   near the door", "needs a partner who can read the board", vision/hearing
   seating, height ordering, and a scored auto-assign that satisfies as many
@@ -10963,7 +10959,7 @@ reclassified here.
 
 #### Quick Wins
 
-- **Hints with a time penalty** — the standard mechanic that keeps a stuck
+- **Done (hint penalties are built) — Hints with a time penalty** — the standard mechanic that keeps a stuck
   team moving.
 - **Location hint per station** ("outside the library") printed on the answer
   key, so the teacher can find their own stations again.
@@ -11019,12 +11015,12 @@ printed debrief for every team at the end.
 
 #### Quick Wins
 
-- **Attempt limits and feedback.** "Not quite — check your spelling" versus
+- **Done (attempt limit and the near-miss message are built) — Attempt limits and feedback.** "Not quite — check your spelling" versus
   "wrong" changes the experience considerably; so does a lockout after N
   wrong answers.
 - **Answer matching that forgives.** Case, whitespace, and punctuation
   tolerance, plus optional numeric-answer matching with a tolerance.
-- **Non-QR fallback.** A printed short code students type into `lock.html` on
+- **Held (student-facing, Devon 2026-10-05; the shape is in Path 18 P2) — Non-QR fallback.** A printed short code students type into `lock.html` on
   a shared device — QR requires every student to have a camera, which is not
   a safe assumption.
 - **Station numbering that survives reordering**, so a reprint doesn't
