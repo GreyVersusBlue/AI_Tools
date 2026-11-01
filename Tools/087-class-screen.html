@@ -91,6 +91,8 @@
   .dock {
     display: flex; gap: .4rem; flex-wrap: wrap; justify-content: center; align-items: center;
     padding: .45rem .6rem; background: var(--card); border-top: 1px solid var(--line);
+    /* a11y.js's launcher is fixed 16px from the corner and 46px wide; keep the buttons clear of it */
+    padding-right: 4.5rem;
   }
   .dock .dock-label { font-size: .8rem; color: var(--muted); font-weight: 600; margin-right: .2rem; }
   .dock button { display: inline-flex; align-items: center; gap: .35rem; }
