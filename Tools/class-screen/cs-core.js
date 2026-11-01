@@ -18,6 +18,7 @@
      ClassScreenCore.readCommand(msg)     → a phone-remote command, or null
      ClassScreenCore.readKey(e, where)    → a keyboard shortcut, or null
      ClassScreenCore.snapRect(r, mode)    → a rect on the snap grid (P11)
+     ClassScreenCore.frameTool(id)        → { id, title, file } of a framable site tool, or null (P12)
 
    Positions are FRACTIONS of the board (0..1), never pixels, so a screen laid
    out on a laptop lands in the same place on a 1080p projector.
@@ -37,7 +38,7 @@
   'use strict';
 
   var TYPES = ['text', 'timer', 'stopwatch', 'clock', 'youtube', 'traffic', 'names', 'dice',
-               'symbols', 'noise', 'draw', 'image', 'qr', 'groups', 'agenda', 'pie', 'sequence', 'bell', 'score', 'wheel'];
+               'symbols', 'noise', 'draw', 'image', 'qr', 'groups', 'agenda', 'pie', 'sequence', 'bell', 'score', 'wheel', 'frame'];
 
   /* Default size of a new widget, as a fraction of the board. */
   var DEFAULT_SIZE = {
@@ -60,7 +61,8 @@
     sequence:  { w: 0.34, h: 0.42 },
     bell:      { w: 0.30, h: 0.26 },
     score:     { w: 0.40, h: 0.40 },
-    wheel:     { w: 0.34, h: 0.50 }
+    wheel:     { w: 0.34, h: 0.50 },
+    frame:     { w: 0.50, h: 0.70 }
   };
 
   var MIN_W = 0.08, MIN_H = 0.08;
@@ -75,6 +77,18 @@
   var MAX_TIMER_S = 24 * 3600;
   var MAX_AGENDA = 12, MAX_AGENDA_ITEM = 120;
   var MAX_STEPS = 8, MAX_STEP_LABEL = 30;
+  /* Another site tool shown in a frame (Path 22 P12). The list is fixed and the
+     frame's address is built only from a row of it: the saved widget holds an
+     `id`, never a URL, so nothing a teacher, a file or an older build writes can
+     point the frame anywhere else. Each file is relative to Tools/, same origin. */
+  var FRAME_TOOLS = [
+    { id: '024', title: 'Number Talks', file: '024-number-talks-board.html' },
+    { id: '080', title: 'Virtual Manipulatives', file: '080-virtual-manipulatives-board.html' }
+  ];
+  function frameTool(id) {
+    for (var i = 0; i < FRAME_TOOLS.length; i++) if (FRAME_TOOLS[i].id === id) return { id: id, title: FRAME_TOOLS[i].title, file: FRAME_TOOLS[i].file };
+    return null;
+  }
   var MAX_WHEEL = 24, MAX_WHEEL_ITEM = 40;
   var MAX_TEAMS = 8, MAX_TEAM_NAME = 30, MAX_SCORE = 9999;
   var TEXT_SIZES = [1, 1.5, 2, 3, 4, 6];
@@ -240,6 +254,7 @@
       case 'qr': return { text: '' };
       case 'groups': return { roster: '', by: 'size', n: 4 };
       case 'agenda': return { items: [] };
+      case 'frame': return { tool: '' };
       case 'wheel': return { items: ['Choice 1', 'Choice 2', 'Choice 3', 'Choice 4'] };
       case 'score': return { teams: [1, 2, 3, 4].map(function (n) { return { name: 'Team ' + n, score: 0 }; }) };
       case 'sequence': return { steps: DEFAULT_STEPS.map(function (x) { return { label: x.label, sec: x.sec }; }), i: 0, endsAt: 0, remaining: DEFAULT_STEPS[0].sec };
@@ -413,6 +428,8 @@
         };
       case 'agenda':
         return { items: normalizeAgenda(d.items) };
+      case 'frame':
+        return { tool: typeof d.tool === 'string' && frameTool(d.tool) ? d.tool : '' };
       case 'wheel':
         return { items: normalizeWheelItems(d.items, dd.items) };
       case 'score':
@@ -511,6 +528,13 @@
       if (seen[n.id]) n.id = newId('w');
       seen[n.id] = true;
       widgets.push(n);
+    });
+    /* One frame per site tool on a screen: two live copies of one tool would write
+       the same saved keys over each other, so a second one is asked to choose again. */
+    var framed = {};
+    widgets.forEach(function (w) {
+      if (w.type !== 'frame' || !w.data.tool) return;
+      if (framed[w.data.tool]) w.data.tool = ''; else framed[w.data.tool] = true;
     });
     return {
       id: typeof s.id === 'string' && /^[\w-]{1,40}$/.test(s.id) ? s.id : newId('s'),
@@ -838,6 +862,8 @@
     MAX_STEPS: MAX_STEPS,
     MAX_WHEEL: MAX_WHEEL,
     MAX_WHEEL_ITEM: MAX_WHEEL_ITEM,
+    FRAME_TOOLS: FRAME_TOOLS.map(function (t) { return frameTool(t.id); }),
+    frameTool: frameTool,
     spinTo: spinTo,
     wheelAt: wheelAt,
     MAX_TEAMS: MAX_TEAMS,

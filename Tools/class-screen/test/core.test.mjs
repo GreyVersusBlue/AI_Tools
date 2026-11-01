@@ -91,7 +91,7 @@ for (const t of C.TYPES) {
   if (firstOverlap === -1 && all.some((q) => hit(r, q))) firstOverlap = all.length;
   all.push(r);
 }
-ok(firstOverlap === -1 || firstOverlap >= 9, `one of each of the twenty: at least nine place before any overlap (first overlap at ${firstOverlap})`);
+ok(firstOverlap === -1 || firstOverlap >= 9, `one of each of the twenty-one: at least nine place before any overlap (first overlap at ${firstOverlap})`);
 const full = Array.from({ length: 20 }, () => C.placeNew('youtube', []));
 ok(full.every((r) => r.x >= 0 && r.y >= 0 && r.x + r.w <= 1 && r.y + r.h <= 1), 'placement on a crowded board stays on the board');
 
@@ -181,7 +181,7 @@ eq(C.mediaIds({ screens: [
   { bgImage: 'bg1', widgets: [{ type: 'image', data: { mediaId: 'img1' } }, { type: 'text', data: {} }] },
   { bgImage: '', widgets: [{ type: 'image', data: { mediaId: 'img1' } }, { type: 'image', data: { mediaId: '' } }] }
 ] }), ['bg1', 'img1'], 'media ids: backgrounds and images, each once');
-eq(C.TYPES.length, 20, 'twenty widget types');
+eq(C.TYPES.length, 21, 'twenty-one widget types');
 C.TYPES.forEach((t) => ok(C.DEFAULT_SIZE[t], `a default size for ${t}`));
 
 // ── P3: periods, starters, files ─────────────────────────────────────
@@ -433,6 +433,25 @@ for (const bad of [null, 'pick', [], { cmd: 5 }, { cmd: 'eval' }, { cmd: '__prot
   ok(!('snap' in off) && !('projector' in off), 'a non-boolean switch is dropped');
   const rt = C.readImport(C.exportScreen(C.normalizeState({ screens: [{ id: 's', name: 'X', widgets: [{ id: 'a', type: 'text', min: true, color: 'blue' }] }] }).screens[0], {}));
   ok(rt.screen.widgets[0].min === true && rt.screen.widgets[0].color === 'blue', 'minimized and colour survive an export and import');
+}
+
+// ── P12: another site tool in a frame ────────────────────────────────
+{
+  eq(C.FRAME_TOOLS.map((t) => t.id), ['024', '080'], 'two tools can be framed');
+  C.FRAME_TOOLS.forEach((t) => ok(/^\d{3}-[\w-]+\.html$/.test(t.file) && !/[/:\\]/.test(t.file), `${t.id}'s file is a bare file name in Tools/ (${t.file})`));
+  eq(C.frameTool('024').file, '024-number-talks-board.html', 'a known id gives its file');
+  eq(C.frameTool('https://evil.example/'), null, 'a URL is not an id');
+  eq(C.frameTool('001'), null, 'a tool that is not on the list gives null');
+  eq(C.frameTool('__proto__'), null, 'and so does a name from Object.prototype');
+  eq(C.defaultData('frame'), { tool: '' }, 'a new frame has no tool chosen');
+  const bad = ['https://evil.example', '//evil.example', 'javascript:alert(1)', '../index.html', '001', 5, null, {}, ['024']];
+  bad.forEach((v) => eq(C.normalizeWidget({ type: 'frame', data: { tool: v } }).data, { tool: '' }, `a saved tool of ${JSON.stringify(v)} becomes "choose one"`));
+  eq(C.normalizeWidget({ type: 'frame', data: { tool: '080', src: 'https://evil.example', url: 'x' } }).data, { tool: '080' }, 'a good id is kept and nothing else is');
+  const two = C.normalizeState({ screens: [{ id: 's', widgets: [
+    { id: 'a', type: 'frame', data: { tool: '024' } }, { id: 'b', type: 'frame', data: { tool: '024' } }, { id: 'c', type: 'frame', data: { tool: '080' } }] }] });
+  eq(two.screens[0].widgets.map((w) => w.data.tool), ['024', '', '080'], 'two frames of one tool on a screen: the second must choose again');
+  const dup = C.readImport(C.exportScreen(two.screens[0], {}));
+  eq(dup.screen.widgets.map((w) => w.data.tool), ['024', '', '080'], 'and an imported file is held to the same list');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

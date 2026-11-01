@@ -110,6 +110,7 @@
     "test:class-screen-more": "node Tools/class-screen/test/smoke-more-widgets.mjs",
     "test:class-screen-tabs": "node Tools/class-screen/test/smoke-tabs-undo.mjs",
     "test:class-screen-comforts": "node Tools/class-screen/test/smoke-comforts.mjs",
+    "test:class-screen-frame": "node Tools/class-screen/test/smoke-frame.mjs",
     "test:command-center": "node Tools/command-center/test/smoke-seating-panel.mjs && node Tools/command-center/test/smoke-remote-commands.mjs",
     "test:gallery-walk": "node Tools/gallery-walk-qr/test/smoke-projector.mjs && node Tools/gallery-walk-qr/test/smoke-scan-verify.mjs",
     "test:accommodations": "node Tools/testing-accommodations-card-generator/test/smoke-filter.mjs",

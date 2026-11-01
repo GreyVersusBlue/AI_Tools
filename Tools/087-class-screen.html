@@ -246,6 +246,11 @@
   .yt-form { display: flex; flex-direction: column; gap: .4rem; justify-content: center; flex: 1; }
   .yt-form label { font-size: .85rem; font-weight: 600; }
   .yt-form input { width: 100%; }
+  .site-frame { flex: 1; min-height: 0; width: 100%; border: 0; border-radius: 6px; background: var(--card); }
+  .frame-pick { flex: 1; display: flex; flex-direction: column; gap: .5rem; justify-content: center; align-items: center; text-align: center; }
+  .frame-lead { margin: 0; font-weight: 700; }
+  .frame-choices { display: flex; flex-direction: column; gap: .4rem; align-items: stretch; }
+  body.present .frame-foot { display: none; }
   .yt-offline { flex: 1; display: grid; place-items: center; text-align: center; color: var(--muted); font-size: .9rem; padding: .5rem; }
 
   /* work symbols */
@@ -1900,6 +1905,105 @@
     }
   };
 
+  /* ── another site tool in a frame (Path 22 P12) ────────────────────── */
+  /* The teacher picks from a short fixed list (cs-core's FRAME_TOOLS); the widget
+     saves the tool's id, and the frame's address is built from the list's row,
+     never from anything typed or loaded. It is a same-origin page, so it is
+     precached like any tool and works offline, and it keeps its own saved work
+     under its own keys exactly as it does in a tab. Nothing is passed in or read
+     out, apart from one look at where the frame has gone: if it is anywhere but
+     its own page (its "back to the toolkit" link, say) it is sent back. The frame
+     is sandboxed with no top navigation, no popups and no forms. Keys pressed
+     while the frame has focus belong to the tool and do not reach the board. */
+  TYPES.frame = {
+    title: 'Site tool', icon: ['M3 5h18v14H3z', 'M3 9.5h18', 'M6.5 7.2h.01', 'M9.5 7.2h.01'],
+    build: function (ctx) {
+      var d = ctx.data, frameEl = null, token = 0, resets = 0, noted = false;
+      /* A tool on show is left alone when the connection flips (it would lose what is on its screen); a note is tried again. */
+      function onNet() { if (noted) draw(); }
+      function onBlur() { if (frameEl && document.activeElement === frameEl) ctx.raise(); }
+      window.addEventListener('blur', onBlur);
+      window.addEventListener('online', onNet);
+      window.addEventListener('offline', onNet);
+
+      function usedElsewhere(id) {
+        return currentScreen().widgets.some(function (o) { return o.type === 'frame' && o.id !== ctx.id && o.data.tool === id; });
+      }
+      function foot(t) {
+        return el('div', { className: 'w-foot frame-foot' }, [
+          el('button', { type: 'button', text: 'Reload', 'aria-label': 'Reload ' + t.title, onclick: function () { if (frameEl) { resets = 0; frameEl.src = t.file; } } }),
+          el('button', { type: 'button', text: 'Change tool', onclick: function () { drawChooser(); } })
+        ]);
+      }
+      function drawChooser() {
+        token++; frameEl = null; noted = false;
+        ctx.body.textContent = '';
+        var list = el('div', { className: 'frame-choices' });
+        Core.FRAME_TOOLS.forEach(function (t) {
+          var used = usedElsewhere(t.id);
+          list.appendChild(el('button', {
+            type: 'button', className: d.tool === t.id ? 'primary' : '', 'data-tool': t.id, disabled: used,
+            text: t.id + ' ' + t.title + (used ? ' (already on this screen)' : ''),
+            onclick: function () { d.tool = t.id; ctx.save(); draw(); }
+          }));
+        });
+        ctx.body.appendChild(el('div', { className: 'frame-pick' }, [
+          el('p', { className: 'frame-lead', text: 'Show a tool from this site here' }), list,
+          el('p', { className: 'note', text: 'It opens inside this widget and keeps its own work as it does on its own page. It works offline once the site has been visited.' })
+        ]));
+      }
+      function drawNote(t, text) {
+        token++; frameEl = null; noted = true;
+        ctx.body.textContent = '';
+        ctx.body.appendChild(el('div', { className: 'yt-offline' }, [el('p', { text: text })]));
+        ctx.body.appendChild(foot(t));
+      }
+      function show(t) {
+        noted = false;
+        ctx.body.textContent = '';
+        var f = el('iframe', {
+          className: 'site-frame', src: t.file, title: t.title + ', a tool from this site',
+          sandbox: 'allow-scripts allow-same-origin allow-modals allow-downloads',
+          allow: 'fullscreen', referrerpolicy: 'no-referrer'
+        });
+        f.addEventListener('load', function () {
+          var here = false;
+          try { here = f.contentWindow.location.origin === location.origin && decodeURIComponent(f.contentWindow.location.pathname).split('/').pop() === t.file; } catch (e) { here = false; }
+          if (here) return;
+          if (resets++ < 3) f.src = t.file;
+          else drawNote(t, t.title + ' could not be shown here. Open it from the toolkit instead.');
+        });
+        frameEl = f;
+        ctx.body.appendChild(f);
+        ctx.body.appendChild(foot(t));
+      }
+      function draw() {
+        var t = Core.frameTool(d.tool);
+        if (!t) return drawChooser();
+        var mine = ++token;
+        resets = 0;
+        /* Offline, a tool the worker has not cached yet would show the browser's error page. */
+        if (!navigator.onLine && window.caches && caches.match) {
+          caches.match(new URL(t.file, location.href).href).then(function (hit) {
+            if (mine !== token) return;
+            if (hit) show(t); else drawNote(t, t.title + ' is not saved for offline use yet. Open it once while you are online.');
+          }, function () { if (mine === token) show(t); });
+          return;
+        }
+        show(t);
+      }
+      draw();
+      return {
+        destroy: function () {
+          token++; frameEl = null;
+          window.removeEventListener('blur', onBlur);
+          window.removeEventListener('online', onNet);
+          window.removeEventListener('offline', onNet);
+        }
+      };
+    }
+  };
+
   /* ── widget frame: drag, resize, keyboard, stacking ───────────────── */
 
   function place(w) {
@@ -2050,7 +2154,8 @@
     place(w);
     look(w);
 
-    var api = type.build({ el: node, body: body, data: w.data, id: w.id, save: save, fire: fireLinks }) || {};
+    var api = type.build({ el: node, body: body, data: w.data, id: w.id, save: save, fire: fireLinks,
+      raise: function () { if (!presenting && !spotId) bringToFront(w); } }) || {};
     instances[w.id].tick = api.tick;
     instances[w.id].destroy = api.destroy;
     instances[w.id].remote = api.remote;
