@@ -15,6 +15,11 @@
 // message shape itself (a `type` field) is agreed by the callers in
 // 004-Classroom Timer.html and mirror.html, not by this module.
 //
+// The channel plumbing (events to handler lists, JSON in and out, send only
+// while open) is _shared/remote-channel.js since Path 22 P14, the one copy this
+// file, 010's cc-remote.js and 087's cs-remote.js share; this file keeps the
+// data-channel label and the export names. Pages load it after webrtc-pair.js.
+//
 // Covers both roles so the QR-drawing code and the small message shape the
 // two sides agree on live in exactly one place:
 //   - HOST, used by 004-Classroom Timer.html itself — creates the offer, scans
@@ -42,54 +47,10 @@ export function drawQR(canvas, text) {
 
 /** Host side. Resolves once the offer is ready; `offerPayload` is what to draw as a QR. */
 export function startHost() {
-  const handlers = { open: [], close: [], message: [] };
-  let channel = null;
-  const api = {
-    offerPayload: null,
-    onOpen(fn) { handlers.open.push(fn); },
-    onClose(fn) { handlers.close.push(fn); },
-    onMessage(fn) { handlers.message.push(fn); },
-    applyAnswer(answerPayload, pc) { return window.WebRTCPair.applyAnswer(pc, answerPayload); },
-    send(data) { if (channel && channel.readyState === 'open') channel.send(JSON.stringify(data)); },
-  };
-  return window.WebRTCPair.createOffer('timer').then((result) => {
-    channel = result.channel;
-    api.pc = result.pc;
-    api.offerPayload = result.offerPayload;
-    channel.addEventListener('open', () => handlers.open.forEach((fn) => fn()));
-    channel.addEventListener('close', () => handlers.close.forEach((fn) => fn()));
-    channel.addEventListener('message', (e) => {
-      let data;
-      try { data = JSON.parse(e.data); } catch (err) { return; }
-      handlers.message.forEach((fn) => fn(data));
-    });
-    return api;
-  });
+  return window.RemoteChannel.host('timer');
 }
 
 /** Join side. Resolves once the answer is ready; `answerPayload` is what to draw as a QR back. */
 export function startJoin(offerPayload) {
-  const handlers = { open: [], close: [], message: [] };
-  let channel = null;
-  const api = {
-    answerPayload: null,
-    onOpen(fn) { handlers.open.push(fn); },
-    onClose(fn) { handlers.close.push(fn); },
-    onMessage(fn) { handlers.message.push(fn); },
-    send(data) { if (channel && channel.readyState === 'open') channel.send(JSON.stringify(data)); },
-  };
-  return window.WebRTCPair.createAnswer(offerPayload, (ch) => {
-    channel = ch;
-    channel.addEventListener('open', () => handlers.open.forEach((fn) => fn()));
-    channel.addEventListener('close', () => handlers.close.forEach((fn) => fn()));
-    channel.addEventListener('message', (e) => {
-      let data;
-      try { data = JSON.parse(e.data); } catch (err) { return; }
-      handlers.message.forEach((fn) => fn(data));
-    });
-  }).then((result) => {
-    api.pc = result.pc;
-    api.answerPayload = result.answerPayload;
-    return api;
-  });
+  return window.RemoteChannel.join(offerPayload);
 }

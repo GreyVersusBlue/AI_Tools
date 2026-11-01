@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v536';
+const CACHE_VERSION = 'v537';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -213,6 +213,7 @@ const SHELL_URLS = [
   "_shared/theme.css",
   "_shared/tool-registry.js",
   "_shared/webrtc-pair.js",
+  "_shared/remote-channel.js",
   "_shared/vendor/jsqr/jsqr.js",
   "_shared/vendor/qrcode/qrcode.js",
   "_shared/vendor/jszip/jszip.min.js",
@@ -637,6 +638,7 @@ const PRECACHE_URLS = [
   "_shared/theme.css",
   "_shared/tool-registry.js",
   "_shared/webrtc-pair.js",
+  "_shared/remote-channel.js",
   "_shared/vendor/jspdf/jspdf.umd.min.js",
   "_shared/vendor/jspdf/jspdf.plugin.autotable.min.js",
   "_shared/vendor/xlsx/xlsx.full.min.js",
