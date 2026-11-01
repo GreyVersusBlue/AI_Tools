@@ -829,7 +829,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 114 | A constraint solver worth the name; the room, not the grid | 005 | ½ | | [005 Seating Chart Generator](#005--seating-chart-generator) |
 | 117 | Longitudinal reports (a term or year view across archived days and sections; team totals are kept as one running total, with no per-day team history). Team / house points shipped v282 | 008 | ½ | | [008 Behavior & Points Tracker](#008--behavior--points-tracker) |
 | 118 | Per-record conflict resolution ("keep the newer of each"; needs per-record timestamps) | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
-| 119 | Reuse the real timer; period-aware auto-advance | 010 | ½ | | [010 Command Center](#010--command-center) |
 | 120 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
 | 122 | Date-received per student; contract-gate reporting | 013 | ½ | | [013 Lab Safety Contract Tracker](#013--lab-safety-contract-tracker) |
 | 125 | Peer feedback slips; gallery-walk reactions | 017 | ½ | | [017 Gallery Walk QR Codes](#017--gallery-walk-qr-codes) |
@@ -10326,9 +10325,12 @@ before it does it — all with nothing ever leaving the machine.
 
 #### Quick Wins
 
-- **Reuse the real timer.** This page reimplements a simplified timer
-  (`startTimer`, `tick`, `playAlert`) that duplicates `004-Classroom Timer.html`.
-  Extract the timer into `_shared/` or embed the real one (P7).
+- **Done (Path 22 P5, v191) —** **Reuse the real timer.** The clock is `_shared/countdown.js`
+  (`Countdown`), the one 004's board and 087 run on; `startTimer`/`tick` are the page's view of it
+  and the end time is stored, so a refresh picks the countdown back up. The bell advances the
+  period too: `onPeriodChange()` follows the bell schedule (or 032's calendar) to the next
+  period's schedule panel, seating panel and mapped roster (`autoPeriodRoster`, off if the
+  teacher chose a roster by hand).
 
 #### Major Features
 
