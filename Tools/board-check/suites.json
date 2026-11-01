@@ -317,6 +317,8 @@
     "Tools/current-events-discussion-guide-generator/test/smoke-question-sets.mjs",
     "Tools/dbq-source-packet-builder/test/smoke-source-library.mjs",
     "Tools/dbq-source-packet-builder/test/smoke-images.mjs",
+    "Tools/dbq-source-packet-builder/test/psa-pull.test.mjs",
+    "Tools/dbq-source-packet-builder/test/smoke-psa-pull.mjs",
     "Tools/geography-bee-quiz-generator/test/smoke-regions.mjs",
     "Tools/primary-source-analysis-generator/test/smoke-crop.mjs",
     "Tools/primary-source-analysis-generator/test/smoke-images.mjs",

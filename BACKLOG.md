@@ -845,7 +845,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 143 | A second language version; trip-day rosters | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
 | 144 | Seating chart and roster references by name | 044 | ½ | | [044 Sub Plan Builder](#044--sub-plan-builder) |
 | 145 | Time-slice maps; live vectors | 046 | ½ | | [046 Blank Map Generator](#046--blank-map-generator) |
-| 148 | The reverse direction of the 028 pairing — pull a source out of 028’s library | 056 | ½ | | [056 DBQ / Source Packet Builder](#056--dbq--source-packet-builder) |
 | 149 | Buzz-in from student devices (deferred); map-question tournaments | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
 | 150 | A student-facing fill-in mode; review-game theme packs | 064 | ½ | | [064 Historical Figure / Country Trading Card Maker](#064--historical-figure--country-trading-card-maker) |
 | 151 | Snap-to-grid for base-ten blocks; export and data-driven piece families | 080 | ½ | | [080 Virtual Manipulatives Board](#080--virtual-manipulatives-board) |
@@ -13651,18 +13650,27 @@ sentences on loop.
 
 *`Tools/056-dbq-source-packet-builder.html`.*
 
-- **Carried over from a closed item.** The 028 pairing shipped in one direction only (a text source becomes a SOAPSTone worksheet in 028). **The other direction — pulling a source *out* of 028's library into a packet — is still open.**
+- **The 028 pairing is now both ways.** A text source becomes a SOAPSTone worksheet in 028 (SS demo
+  round 2); a source saved in 028's library can be added to a packet (**done 2026-11-01, v519**, below).
 
 #### Major Features
 
 - ~~**Direct integration with Primary Source Analysis Worksheet
   Generator**~~ — **done, SS demo round 2 (`vn8trq`)**: a text source
   becomes a full SOAPSTone worksheet in 028 in one click, via 028's own
-  share-link format. The remaining half of the pairing is the other
-  direction (pull a source *out* of 028's library into a packet).
-No Major Features remain open. The clearest remaining work is the reverse
-direction of the 028 pairing — see "Where the next round should pick up"
-under the 2026-08-14 entry.
+  share-link format. The other direction, pulling a source *out* of
+  028's library into a packet, shipped 2026-11-01 (v519).
+- ~~**Pull a source out of 028's library into a packet**~~ — **done 2026-11-01 (v519)**. The
+  Source library card lists what is saved in Primary Source Analysis (`gvb-primary-source:library`,
+  read-only) with a search over titles, tags, citations and descriptions; **Add to packet** copies
+  an entry in as a new source (a text entry as text with its citation built "author, origin, date";
+  a picture as an image source). The picture's bytes are copied from 028's `psa` namespace of the
+  media store into this tool's `dbq` one, so the original stays and the two tools never share a
+  record; a picture that is not on this device arrives as an empty text source and says so. A
+  picture's description and an entry's tags are not carried (a packet source has no field for
+  them). `DbqPsaPull` (`dbq-psa-pull.js`) is the pure reader; the list is built from DOM nodes
+  because the text came from another tool's storage. `test:dbq-psa-pull` (port 8646).
+  No Major Features remain open.
 
 #### Moonshot / North Star
 

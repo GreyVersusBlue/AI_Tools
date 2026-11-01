@@ -149,6 +149,7 @@
     "test:schedule-directions": "node Tools/schedule-visualizer/test/directions.test.mjs",
     "test:schedule-visualizer-step-free-ui": "node Tools/schedule-visualizer/test/smoke-step-free.mjs",
     "test:schedule-publish": "node Tools/schedule-visualizer/test/smoke-publish-baseline.mjs",
+    "test:dbq-psa-pull": "node Tools/dbq-source-packet-builder/test/psa-pull.test.mjs && node Tools/dbq-source-packet-builder/test/smoke-psa-pull.mjs",
     "test:dbq-images": "node Tools/dbq-source-packet-builder/test/smoke-images.mjs",
     "test:lab-safety": "node Tools/lab-safety-contract-tracker/test/smoke-contact-sheet.mjs",
     "test:ssr": "node Tools/ssr-log-tracker/test/smoke-genres.mjs",

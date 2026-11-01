@@ -1365,6 +1365,7 @@
       ],
       reads: [
         'dbq_packet_v1',
+        'gvb-primary-source:library',    // 028's source library, read-only (the "From the Primary Source Analysis library" list)
       ],
     },
     {
