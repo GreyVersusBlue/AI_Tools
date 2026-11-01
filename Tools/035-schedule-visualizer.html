@@ -95,6 +95,9 @@
     import * as SVStorage from './schedule-visualizer/sv-storage.js';
     window.SVStorage = SVStorage;
     Object.assign(window, SVStorage);
+    import * as SVAutosave from './schedule-visualizer/sv-autosave.js';
+    window.SVAutosave = SVAutosave;
+    Object.assign(window, SVAutosave);
     import * as SVAccess from './schedule-visualizer/sv-access.js';
     window.SVAccess = SVAccess;
     import * as SVSafety from './schedule-visualizer/sv-safety.js';
@@ -3087,8 +3090,6 @@ function rebuildRoomRegistry() {
 /* ==============================================
    LOCALSTORAGE — Blueprint Persistence
 =============================================== */
-let _autosaveTimer = null;
-let _lastBlueprintSaveTime = null;
 
 /** A floor's trace image with its bytes in it, or null if they are not here. */
 function portableTraceImage(t) {
@@ -3174,7 +3175,7 @@ function saveBlueprintToLocalStorage() {
   try {
     const payload = serializeBlueprint();
     localStorage.setItem(BLUEPRINT_KEY, JSON.stringify(payload));
-    _lastBlueprintSaveTime = new Date();
+    setLastBlueprintSaveTime(new Date());
     updateSaveIndicator();
     rebuildRoomRegistry();
     checkStorageHeadroom();
@@ -3190,45 +3191,6 @@ function saveBlueprintToLocalStorage() {
         'Your last change could NOT be saved — this browser’s storage for this site is full. ' +
         'Export a backup right now (Blueprint → Export) before you lose more work, then use Backup & Restore ' +
         'or a different browser profile to make room.');
-    }
-  }
-}
-
-/**
- * Debounce wrapper — saves within 800ms of the last change.
- */
-function scheduleBlueprintAutosave() {
-  // Same funnel every change already goes through, so the recovery ring's idea
-  // of "something changed" can't drift from the autosave's. Reached via window
-  // because RecoveryManager is a `const` declared much further down this file —
-  // a bare reference here would be a temporal-dead-zone throw, not undefined.
-  if (window.RecoveryManager) window.RecoveryManager.markDirty();
-  const indicator = document.getElementById('bp-autosave-indicator');
-  if (indicator) { indicator.className = 'bp-autosave-indicator saving'; }
-  const textEl = document.getElementById('bp-autosave-text');
-  if (textEl) textEl.textContent = 'Saving…';
-
-  clearTimeout(_autosaveTimer);
-  _autosaveTimer = setTimeout(() => {
-    saveBlueprintToLocalStorage();
-  }, 800);
-}
-
-/**
- * Update the auto-save indicator and status bar badge.
- */
-function updateSaveIndicator() {
-  const indicator = document.getElementById('bp-autosave-indicator');
-  const textEl    = document.getElementById('bp-autosave-text');
-  const sbarSaved = document.getElementById('sbar-saved');
-
-  if (_lastBlueprintSaveTime) {
-    const timeStr = _lastBlueprintSaveTime.toLocaleTimeString();
-    if (indicator) { indicator.className = 'bp-autosave-indicator saved'; }
-    if (textEl) textEl.textContent = `Saved ${timeStr}`;
-    if (sbarSaved) {
-      sbarSaved.style.display = '';
-      sbarSaved.title = `Blueprint auto-saved at ${timeStr}`;
     }
   }
 }
@@ -3256,7 +3218,7 @@ function loadBlueprintFromLocalStorage() {
       // Don't overwrite schoolName if settings were also loaded; settings win
     }
 
-    _lastBlueprintSaveTime = data.savedAt ? new Date(data.savedAt) : new Date();
+    setLastBlueprintSaveTime(data.savedAt ? new Date(data.savedAt) : new Date());
     updateSaveIndicator();
     _blueprintLoadStatus = 'restored';
     return true;
@@ -3367,7 +3329,7 @@ document.getElementById('btn-clear-saved-blueprint').addEventListener('click', (
 
   if (window.RecoveryManager) RecoveryManager.capture('before clearing saved blueprint', true);
   localStorage.removeItem(BLUEPRINT_KEY);
-  _lastBlueprintSaveTime = null;
+  setLastBlueprintSaveTime(null);
   updateSaveIndicator();
 
   const indicator = document.getElementById('bp-autosave-indicator');
