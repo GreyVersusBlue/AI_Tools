@@ -134,6 +134,25 @@ const pdf = pdfPageCount(await page.pdf({ preferCSSPageSize: true, printBackgrou
 eq(pdf, pages, `the preview's count (${pages}) is Chromium's PDF page count`);
 ok(pages >= 3, 'five cards at two to a page run to three pages or more');
 
+// ---- the three older card settings survive a reload --------------------------------
+// (the change listener once saved the gallery without copying the control into it: all three came back as defaults)
+{
+  const pg = await open(setOf({}));
+  await pg.selectOption('#cardsPerPage', '2');
+  await pg.selectOption('#ecLevel', 'H');
+  await pg.uncheck('#showNumber');
+  await settle(pg, 400);
+  const stored = await pg.evaluate(() => { const g = JSON.parse(localStorage.getItem('gallery-walk-qr-sets')).sets['Test walk']; return [g.cardsPerPage, g.ecLevel, g.showNumber]; });
+  eq(stored, ['2', 'H', false], 'codes per page, error correction and the entry number are saved on the gallery');
+  await pg.reload({ waitUntil: 'load' }); await settle(pg, 500);
+  eq(await pg.evaluate(() => [document.getElementById('cardsPerPage').value, document.getElementById('ecLevel').value, document.getElementById('showNumber').checked]), ['2', 'H', false], 'and a reload keeps all three');
+  ok((await cards(pg)).every(x => !x.order.includes('p-num')), 'the cards after the reload have no entry number');
+  await pg.check('#showNumber'); await settle(pg, 400);
+  await pg.reload({ waitUntil: 'load' }); await settle(pg, 500);
+  eq(await pg.evaluate(() => document.getElementById('showNumber').checked), true, 'ticking it again is kept too');
+  await pg.close();
+}
+
 // ---- an older save, a phone, axe -------------------------------------------------
 const old = setOf({}); delete old.showLink; delete old.commentArea;
 const p2 = await open(old);

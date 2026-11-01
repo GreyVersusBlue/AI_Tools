@@ -1613,8 +1613,10 @@
     document.body.removeChild(ta);
   }
 
-  [els.cardsPerPage, els.ecLevel, els.showNumber].forEach(function (el) {
-    el.addEventListener('change', function () { save(); scheduleRender(); });
+  // Codes per page, error correction and the entry number are kept on the gallery too. The listener used to call
+  // save() without copying the control into `state`, so all three went back to their defaults on a reload.
+  [['cardsPerPage', 'cardsPerPage', 'value'], ['ecLevel', 'ecLevel', 'value'], ['showNumber', 'showNumber', 'checked']].forEach(function (p) {
+    els[p[0]].addEventListener('change', function () { state[p[1]] = els[p[0]][p[2]]; save(); scheduleRender(); });
   });
   // The two card options are kept on the gallery, so a gallery reopens with the cards it printed.
   [['showLink', 'showLink'], ['commentArea', 'commentArea']].forEach(function (p) {

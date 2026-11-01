@@ -15100,7 +15100,7 @@ every year the same unit comes around.
 
 #### Quick Wins
 
-- **Done (earlier, v1xx; confirmed 2026-11-01). Snap-to-grid for base-ten blocks:** the "Snap to grid" box, its
+- **Done (before this round; confirmed 2026-11-01). Snap-to-grid for base-ten blocks:** the "Snap to grid" box, its
   grid drawn on the board, and Align pieces (`smoke-snap-grid.mjs`). **Done 2026-11-01 (AI-31, v546, rank 151):**
   the piece families are one table (`FAMILIES` in the page: the palette and every piece are built from it, a new family
   is a row and its atlas cells) and a board is a file: **Export board** downloads the board on screen
