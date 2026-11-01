@@ -339,6 +339,7 @@ const TOOLS = [
       { preview: 'previewMissingListBtn', print: 'printMissingListBtn', what: ' missing list', label: 'Preview missing list' },
       { preview: 'previewReminderSlipsBtn', print: 'printReminderSlipsBtn', what: ' reminder slips', label: 'Preview reminder slips' },
       { preview: 'previewChaperoneBtn', print: 'printChaperoneBtn', what: ' chaperone groups', label: 'Preview chaperone groups' },
+      { preview: 'previewHeadcountBtn', print: 'printHeadcountBtn', what: ' headcount checklist', label: 'Preview headcount checklist' },
     ],
     store: s => s.state ? [
       ['gvb-field-trip:list', JSON.stringify(['Museum Trip'])],

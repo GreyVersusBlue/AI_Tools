@@ -220,6 +220,17 @@
   .chaperone-group { margin-bottom: 1rem; border: 1px solid #000; border-radius: 4px; padding: .6rem .8rem; }
   .chaperone-group h3 { font-size: 1rem; margin: 0 0 .3rem; }
   .chaperone-group .phone { font-size: .82rem; color: #333; margin-bottom: .4rem; }
+  .headcount-print { background: #fff; width: 8.5in; max-width: 100%; margin: 0 auto; padding: .5in; color: #000; font-family: Georgia, "Times New Roman", serif; }
+  .hc-group + .hc-group { break-before: page; }
+  .hc-group h2 { font-size: 1.25rem; margin: 0 0 .2rem; text-align: center; }
+  .hc-group .hc-who { font-size: .9rem; text-align: center; margin: 0 0 .7rem; }
+  .hc-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  .hc-table th, .hc-table td { border: 1px solid #000; padding: .3rem .4rem; text-align: left; }
+  .hc-table th.hc-box, .hc-table td.hc-box { width: 4.6rem; text-align: center; }
+  .hc-table td.hc-box::before { content: ""; display: inline-block; width: .9rem; height: .9rem; border: 1.5px solid #000; vertical-align: middle; }
+  .hc-table td.hc-slip { width: 3.4rem; text-align: center; }
+  .hc-table td.hc-out { font-weight: 700; }
+  .hc-table tr.hc-count td { font-weight: 700; height: 1.8rem; }
   .chaperone-group ul { margin: 0; padding-left: 1.2rem; font-size: .9rem; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
@@ -427,6 +438,10 @@
         <div id="chaperoneAssignWrap"></div>
         <button type="button" class="secondary full" id="previewChaperoneBtn">Preview chaperone groups</button>
         <button type="button" class="secondary full" id="printChaperoneBtn">Print chaperone groups</button>
+        <p class="hint" style="margin-top:.7rem;">The headcount checklist is the same groups, one page each, with a box
+          to tick for leaving school, arriving, and the trip home, and a column showing whose slip is still out.</p>
+        <button type="button" class="secondary full" id="previewHeadcountBtn">Preview headcount checklist</button>
+        <button type="button" class="secondary full" id="printHeadcountBtn">Print headcount checklist</button>
       </div>
     </div>
 
@@ -514,7 +529,7 @@
     'printBtn', 'previewBtn', 'previewArea', 'previewNote', 'deadlineLine', 'collectionWrap',
     'printMissingListBtn', 'printReminderSlipsBtn', 'previewMissingListBtn', 'previewReminderSlipsBtn',
     'scanSlipBtn', 'scanStatus', 'scanCamOverlay', 'scanCamVideo', 'scanCamStatus', 'scanCamClose', 'scanCamCancel',
-    'chaperoneRows', 'addChaperoneBtn', 'chaperoneAssignWrap', 'printChaperoneBtn', 'previewChaperoneBtn',
+    'chaperoneRows', 'addChaperoneBtn', 'chaperoneAssignWrap', 'printChaperoneBtn', 'previewChaperoneBtn', 'printHeadcountBtn', 'previewHeadcountBtn',
     'secondLang', 'langLayout', 'langOptions', 'untranslatedHint',
     'purposeAlt', 'whatToBringAlt', 'emergencyInstructionsAlt'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -1378,7 +1393,10 @@
     save();
   });
 
-  function chaperonePrintHtml() {
+  /* The chaperones' groups, as both trip-day sheets draw them: one group per
+     named chaperone, in the order they were added, and everyone with no
+     chaperone (or one who has since been removed) in `unassigned`. */
+  function chaperoneGroups() {
     var names = batchNamesList();
     var groups = {};
     state.chaperones.forEach(function (c) {
@@ -1391,6 +1409,11 @@
       if (assigned && groups[assigned]) groups[assigned].students.push(n);
       else unassigned.push(n);
     });
+    return { groups: groups, unassigned: unassigned };
+  }
+
+  function chaperonePrintHtml() {
+    var cg = chaperoneGroups(), groups = cg.groups, unassigned = cg.unassigned;
     var groupsHtml = Object.keys(groups).map(function (chapName) {
       var g = groups[chapName];
       return '<div class="chaperone-group">' +
@@ -1419,6 +1442,41 @@
       { mode: 'one', name: state.name, sheet: 'page', header: !!(head.title || head.class || head.date), footer: false });
   }
 
+  /* The headcount checklist: the chaperone groups again, one page each, a row
+     per student with a box for leaving school, arriving and coming back, a
+     "Slip" column from the collection tracker (a student whose slip is still
+     out is in bold), and a line to write the count on. A chaperone with
+     nobody assigned has no page. */
+  function headcountPrintHtml() {
+    var cg = chaperoneGroups();
+    var title = (escapeHtml(state.name) || 'Field Trip') + ' &mdash; Headcount';
+    function page(heading, phone, students) {
+      var rows = students.map(function (n) {
+        var back = collectedRecord(n).returned;
+        return '<tr><td>' + escapeHtml(n) + '</td>' +
+          '<td class="hc-slip' + (back ? '' : ' hc-out') + '">' + (back ? 'Yes' : 'No') + '</td>' +
+          '<td class="hc-box"></td><td class="hc-box"></td><td class="hc-box"></td></tr>';
+      }).join('');
+      return '<section class="hc-group"><h2>' + title + '</h2>' +
+        '<p class="hc-who"><strong>' + escapeHtml(heading) + '</strong>' + (phone ? ' &middot; ' + escapeHtml(phone) : '') +
+        ' &middot; ' + students.length + (students.length === 1 ? ' student' : ' students') + '</p>' +
+        '<table class="hc-table"><thead><tr><th>Student</th><th class="hc-slip">Slip</th>' +
+        '<th class="hc-box">Left school</th><th class="hc-box">Arrived</th><th class="hc-box">Back</th></tr></thead>' +
+        '<tbody>' + rows + '<tr class="hc-count"><td>Count</td><td></td><td></td><td></td><td></td></tr></tbody></table></section>';
+    }
+    var pages = Object.keys(cg.groups).filter(function (k) { return cg.groups[k].students.length; })
+      .map(function (k) { return page(k, cg.groups[k].phone, cg.groups[k].students); });
+    if (cg.unassigned.length) pages.push(page('No chaperone yet', '', cg.unassigned));
+    return '<div class="headcount-print paper-sheet">' +
+      (pages.join('') || '<p>No students yet: add the class list, then assign each student to a chaperone.</p>') + '</div>';
+  }
+
+  function buildHeadcountPrintArea() {
+    var head = PrintKit.setHeader({ title: state.destination, class: state.schoolTeacher, date: tripDateText() });
+    PrintKit.renderSet(printArea, function () { return nodeFrom(headcountPrintHtml()); },
+      { mode: 'one', name: state.name, sheet: 'page', header: !!(head.title || head.class || head.date), footer: false });
+  }
+
   /* A button builds its sheet and prints it. Ctrl+P presses no button, so
      `beforeprint` builds the permission slips then: it used to print whichever
      sheet a button or a preview had built last, and an empty page on a visit
@@ -1435,6 +1493,11 @@
 
   els.printChaperoneBtn.addEventListener('click', function () {
     buildChaperonePrintArea();
+    printBuilt();
+  });
+
+  els.printHeadcountBtn.addEventListener('click', function () {
+    buildHeadcountPrintArea();
     printBuilt();
   });
 
@@ -1461,6 +1524,7 @@
     });
   }
   wirePreview(els.previewChaperoneBtn, buildChaperonePrintArea, els.printChaperoneBtn);
+  wirePreview(els.previewHeadcountBtn, buildHeadcountPrintArea, els.printHeadcountBtn);
   wirePreview(els.previewMissingListBtn, buildMissingListPrintArea, els.printMissingListBtn);
   wirePreview(els.previewReminderSlipsBtn, buildReminderPrintArea, els.printReminderSlipsBtn);
   wirePreview(els.previewBtn, function () { buildPrintArea(); }, els.printBtn);

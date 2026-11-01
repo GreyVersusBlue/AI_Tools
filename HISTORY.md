@@ -9,6 +9,10 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-31: 043 trip-day headcount checklist, rank 143 (2026-11-01, v548)
+
+Checked first: the chaperone-grouped roster, the missing list and a Spanish second language were already built, so "trip-day rosters" meant the headcount sheet the section lists as unbuilt. **Built:** `headcountPrintHtml()`, a fifth kit sheet with its own Preview and Print buttons, from `chaperoneGroups()` (the grouping the chaperone sheet used, now one function; its output is unchanged, `smoke-print.mjs` passes with the `renderSet` count 6 to 7). No new storage key. A hostile name, destination, chaperone and phone are text (tested). **Not built:** a second language beyond Spanish (needs a translation a person has checked), the phone view. Mutants: reading the slip as always returned, and dropping the unassigned page, both fail `smoke-headcount.mjs`. `audit-print --only 043`, a11y and the preview-adopters check (1602) are green; 360 px has no horizontal scroll. Not checked on paper.
+
 ## AI-31: 003 peer review mode and the grades hand-off, rank 112 closed (2026-11-01, no code, no version bump)
 
 Checked first, as the row asked. The peer review mode was built in `b0d2e86` (the "Peer feedback form (no points)" print format, `smoke-peer-form.mjs`, in `npm run test:rubric`); 003's section still called it skipped. The hand-off to 037 is `rb-gdv-handoff.js` (2026-08-13). What remained was 036, which has no store to write into, and giving it one is Devon's persistence question (rank 43's row), so it is not built. Row 112 deleted (ranks not renumbered); 003's section corrected.

@@ -836,7 +836,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 138 | The A/B cycle's anchor date shows the other letter when the anchor is a school day after the calendar's first school day (`scv-weeks.js`, `ANCHOR_QUIRK`; fixing it flips every letter of such a saved calendar, so it is a decision, not a quiet fix); cycle labels beyond A and B (needs a field in `scv_calendar_v1`, which 010 reads raw); a "week starts on" setting (none exists; the week print is Monday to Friday). Year-grid badges and the page-per-week print shipped v292 | 032 | ¼ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
 | 139 | "Where is this student right now?"; the published pathfinder | 034 | ½ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
 | 140 | 035 what is left: the page's inline script is still ~2,900 lines (settings and layout persistence, snapshots, the onboarding and presentation glue; the bell and subjects editors went to `sv-settings-editors.js` at v543), so the next increment is the snapshot manager (`saveSnapshot` … `initSnapshotManager`) or the autosave/storage-headroom block. Accessibility routing (Path 11 P3) is built; what is left of it is accessibility-aware *evacuation* routing (a wheelchair user's route out: step-free and no elevator), which turns on P3's Devon question about what counts as an exit, so it stays out | 035 | ½ | | [035 School Layout Visualizer](#035--school-layout-visualizer) |
-| 143 | A second language version; trip-day rosters | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
+| 143 | A second language beyond Spanish (needs a translation a person has checked); the rest of the trip packet (parent letter, emergency sheet, name tags, day schedule) | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
 | 144 | 044 what is left of references by name: the plan names the classes the Sub Binder prints and the class a drawn chart came from (v545); what remains is 045 choosing the section the plan names (its seating select and its "print every section's chart" box) and the plan saying which one, which is a change to 045 and so waits for the Path 10 worker | 044 | ¼ | | [044 Sub Plan Builder](#044--sub-plan-builder) |
 | 145 | Time-slice maps; live vectors | 046 | ½ | | [046 Blank Map Generator](#046--blank-map-generator) |
 | 149 | Buzz-in from student devices (deferred); map-question tournaments | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
@@ -12827,6 +12827,10 @@ enough that the result doesn't look like a form.
   the several pieces this item describes. The parent letter, emergency
   sheet, headcount checklist, name tags, and day schedule are still
   unbuilt.)*
+- **Partly done — 2026-11-01 (AI-31, v548, rank 143). Trip-day headcount checklist.** "Print headcount checklist" (with a
+  Preview): one page per chaperone with students, one for anyone with none, a row per student with three tick boxes (left
+  school, arrived, back), a Slip column from the collection tracker and a count line; no new data stored
+  (`smoke-headcount.mjs`, port 8663; not printed on paper). Left: the phone/projector view.
 - **Skipped — deferred.** **Trip-day mode.** A projector/phone view: the headcount, the groups, the
   schedule, the "who's on the bus" checklist, and emergency numbers — usable
   while standing in a parking lot.

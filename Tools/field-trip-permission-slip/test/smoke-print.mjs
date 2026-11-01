@@ -177,7 +177,7 @@ ok(/<div id="printArea" class="pk-paper"><\/div>/.test(src), '#printArea carries
 ok(!/#printArea\s*\{\s*background/.test(src) && !/#printArea[^{}]*\{[^{}]*color:\s*#000/.test(src), 'the white paper and the black header and footer come from .pk-paper, not from rules in the page');
 ok(/margin:\s*'0\.4in'/.test(src), 'hands its old 0.4 in page margin to PrintKit.setPage()');
 ok(!/getElementById\('printArea'\)\.innerHTML/.test(src), 'no print button writes #printArea.innerHTML itself');
-eq((src.match(/PrintKit\.renderSet\(/g) || []).length, 6, 'six renderSet() calls: three slip modes, the list, the reminders, the chaperone sheet');
+eq((src.match(/PrintKit\.renderSet\(/g) || []).length, 7, 'seven renderSet() calls: three slip modes, the list, the reminders, the chaperone sheet, the headcount checklist');
 
 const server = await serve(PORT);
 const browser = await launch();
