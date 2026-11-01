@@ -9,6 +9,18 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-31: 038 chart sheet, Path 16 P5 step 5, rank 44 (2026-11-01, v538)
+
+Up to six snapshots of the chart printed 1, 2, 4 or 6 to a page through the print kit, with Preview. The sheet is
+`#chartSheet` on `<body>` shown under `body.printing-sheet` (032's wall calendar is the precedent, not `print-area.css`,
+because 038 has its own worksheet print block). Snapshots live in memory only, so no registry row and nothing in the share link.
+Each is parsed as XML and imported, never assigned to `innerHTML`. Suite `test:chart-sheet` (port 8655) holds the cards per page,
+unique ids, the page restored after print and the preview count against Chromium's PDF; five mutants (ids, the cap of 6, the marker
+class, the per-page count, the Ctrl+P hide rule) each fail it. Step 6 (065/073 handoffs) is still blocked: neither receiver takes a
+figure, so the row stays at ½ with only that left. Not checked on paper.
+
+---
+
 ## AI-32: Path 22 P13 and P14, the last two rows (ranks 159 and 160, 2026-11-01, v536–v537)
 **What was left.** P1–P12 had shipped. P13 (004's phase engine onto `_shared/countdown.js`) and P14 (one remote wrapper) were Devon's last two later asks; both are refactors of tools a teacher runs live, so the work was "change nothing a teacher can see". One commit and one `CACHE_VERSION` each, plus a commit that wrote the pin before P13.
 **P13 (v536).** Written first, passing on the old code: `Tools/classroom-timer/test/smoke-engine.mjs` (port 8654, 152 checks), on Playwright's fake clock (`page.clock.pauseAt` and `runFor`, and `setFixedTime` for the instant just past zero). Sound is counted by a stand-in `AudioContext` that counts `createGain().connect(destination)` (one per `Sounds.play`); the flash by wrapping `DOMTokenList.add` for `flash` on the time and `active` on `#zeroFlashOverlay`. Nothing is judged by ear. It pins start, pause, resume, reset; the saved `ct_running_v1` fields; round robin with and without loop; agenda advance, the phone's "Next" running and paused, the last segment with overtime off and on; overtime, paused and resumed; random; a refresh running, paused, in overtime, past the end, in an agenda and in a round robin; and a pause 50 ms past zero. Then `Tools/classroom-timer/ct-engine.js` (`begin`, `holdFull`, `remaining`, `held`, `isZero`, `pause`, `resume`, `over`) moved the sums onto `Countdown` states, and ct-app.js calls it in the fourteen places it used to add and subtract. The suite passed with no edit. `engine.test.mjs` (pure Node, 2,872 cases) compares each function with the old formulas frozen in its header.

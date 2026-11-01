@@ -112,6 +112,7 @@
     "Tools/data-chart-builder/test/chart-category-notes.test.mjs",
     "Tools/data-chart-builder/test/smoke-annotations.mjs",
     "Tools/data-chart-builder/test/smoke-science.mjs",
+    "Tools/data-chart-builder/test/smoke-chart-sheet.mjs",
     "Tools/group-team-generator/test/smoke-share.mjs",
     "Tools/group-team-generator/test/smoke-pairing-history.mjs",
     "Tools/group-team-generator/test/smoke-year-memory-core.mjs",

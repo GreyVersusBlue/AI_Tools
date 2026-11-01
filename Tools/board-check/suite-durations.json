@@ -95,6 +95,7 @@
     "Tools/data-chart-builder/test/chart-scatter-series.test.mjs": 1,
     "Tools/data-chart-builder/test/chart-scatter-notes.test.mjs": 1,
     "Tools/data-chart-builder/test/smoke-science.mjs": 15,
+    "Tools/data-chart-builder/test/smoke-chart-sheet.mjs": 20,
     "Tools/group-team-generator/test/smoke-share.mjs": 8,
     "Tools/group-team-generator/test/smoke-pairing-history.mjs": 31,
     "Tools/group-team-generator/test/smoke-seat-near.mjs": 40,

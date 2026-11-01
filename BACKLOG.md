@@ -805,7 +805,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 37 | Path 14 P5 — what is left: `_shared/undo.js` for 003 (no undo today, so a new feature); and "a point in 008" / "a pass in 001" from live mode, which needs Devon to pick a route (a `Handoffs` entry plus a receiver in each tool, or 005 writing their storage as 003 writes 037's); neither tool takes anything in today (live mode, absent today, 018 and 043 decided out: v377) | 005 | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 42 | Path 15 P5 — the phone remote, the one piece of P5 left (Team Draft's teams to 002 and 020 and the theme packs are built, v459-v460); it needs `_shared/remote.js`, which waits on Path 8 P1, so nothing to build until that lands | 007 | ½ | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
 | 43 | Path 16 P4, what is left — 036's triage lists to 085/068 (neither accepts a share link yet: a `Share.receive` + registry `share` row on each, then a `_shared/handoffs.js` entry), and Devon's persistence question | 036, 068, 085 | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
-| 44 | Path 16 P5, what is left — 038's chart sheet (several charts to a printed page through the print kit with Preview); the 065/073 handoffs have no route to use (listed in the bullet) | 038, 065, 073 | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
+| 44 | Path 16 P5, what is left — only step 6: the 065/073 handoffs, which have no route to use until those tools take a figure (listed in the bullet); step 5, the chart sheet, shipped v538 | 065, 073 | ½ | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
 | 45 | Path 17 P1 — thumbnail-grid reordering, crop/straighten, real-photo validation of the retry presets | 011 | 1 | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 46 | Path 17 P2 — scanner mode: quadrilateral detection, perspective warp, adaptive threshold. **Designed, not built (AI-25, 2026-10-06): the design is under the P2 bullet; P1 is not built and the design says what P2 needs from it** | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 47 | Path 17 P3 — PDF in: vendor `pdf.js`, merge/insert/extract/rotate existing PDFs | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
@@ -7115,10 +7115,15 @@ grades by policy — keep that.
   the page side of all four, including old links opening unchanged. The default scatter stays byte-identical
   (`test:chart-svg-draw-parity`, 553 drawings); the data preview became keyboard-scrollable (axe found it with a longer table).
   Share state gained `trendModel`, `xLog`, `yLog`, `scatterYs`, `notes`, each written only when used.
-  **Left.** *Step 5, many charts on a printed page,* not started: 038 prints with its own `@media print` block keyed on
-  `body.printing` and `#print-area` (not `print-area.css`), so the sheet means either moving that block onto the kit or following
-  032's precedent (a sheet area that is a direct child of `<body>`, `setPage()` while it is picked, `preview({ area })`), plus an
-  entry in `smoke-preview-adopters.mjs` and a `print-audit` pass; the design above (up to 6 snapshots, 1/2/4/6 to a page) stands.
+  **Step 5, many charts on a printed page (AI-31, 2026-11-01, v538): whole.** A "5 · Chart sheet" card: Add this chart (up to 6
+  snapshots, each only the SVG string and its title, in memory, no storage key and not in the share link), a list with Remove,
+  Charts per page 1 (landscape), 2, 4 or 6, Preview pages, Print sheet, Clear. The sheet is `#chartSheet`, a direct child of
+  `<body>` with `pk-paper`, drawn by `PrintKit.renderCards` with a grid of its own, shown only under `body.printing-sheet` (set for
+  the preview and for the print, taken off by the preview's `onClose` and `afterprint`, with the `@page` rule `setPage()` wrote);
+  each snapshot is parsed with `DOMParser` and imported (no markup sink; the inline-sink baseline stays 13) and its ids are made
+  unique. It follows 032's precedent and is held by its own suite, `test:chart-sheet` (port 8655, 58 checks, 5 mutants caught),
+  which holds the preview's count to Chromium's PDF for 1, 2, 4 and 6 to a page. Not in `smoke-preview-adopters.mjs`, whose
+  table feeds a saved state and this sheet is not saved. Not checked on paper.
   *Step 6, handoffs to 065 and 073, not built and cannot be from this side:* 073's `milestones` link takes a schedule and 065's
   `template` link takes a report template; neither takes a chart or a data table, so `_shared/handoffs.js` has no route to add. A
   route would need a receiving field first (065: a "data table / figure" block in its template; 073: a figure on a project), which
