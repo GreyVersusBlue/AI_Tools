@@ -1134,6 +1134,20 @@
       took(r, 'archived years', size(v.years), arr(v.years).map(function (y) { return y && y.label; }));
       return took(r, 'archived class rosters', size(v.rosters));
     } },
+    /* 014's speaking record: { className: { criteria, marks: [{ students, ... }] } }. The rubric a
+       teacher wrote is setup and stays; every mark names students and goes. */
+    { key: 'gvb-roleplay:speaking', tool: '014', kind: 'roster', reduce: function (v) {
+      if (!isObj(v)) return UNREADABLE;
+      var r = result({}), n = 0, sample = [];
+      Object.keys(v).forEach(function (k) {
+        var rec = isObj(v[k]) ? v[k] : {};
+        n += size(rec.marks);
+        arr(rec.marks).forEach(function (m) { if (m && Array.isArray(m.students)) sample = sample.concat(m.students); });
+        r.value[k] = { criteria: arr(rec.criteria), marks: [] };
+      });
+      took(r, 'speaking marks', n, sample);
+      return keeps(r, 'class rubrics', Object.keys(v).length);
+    } },
     { key: 'gvb-roleplay:roster', tool: '014', kind: 'roster', reduce: function (v) {
       if (!isObj(v)) return UNREADABLE;
       var r = result({}), n = 0, sample = [];

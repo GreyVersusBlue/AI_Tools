@@ -5,7 +5,8 @@
      this file is handed to students as a single standalone file (opened via file://
      or from GitHub Pages), so NOTHING here may reference ../_shared/*, the service
      worker, or any CDN. All CSS/JS/data/favicon are inline. Do not "fix" this by
-     linking _shared. The game itself requires internet (live Wikipedia API). -->
+     linking _shared. The Wikipedia source requires internet (live Wikipedia API); the
+     offline articles (the CORPUS table, written for this tool) play with no network. -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="manifest" href="../manifest.json">
@@ -82,6 +83,8 @@ input, select, textarea { font: inherit; }
   border: 2px solid var(--green);
 }
 .btn-ghost:hover { background: rgba(11,107,58,.08); }
+.race-actions .btn-ghost { color: #fff; border-color: #fff; } /* the race bar is dark green */
+.race-actions .btn-ghost:hover { background: rgba(255,255,255,.14); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 
 /* ---- start screen ---- */
@@ -122,7 +125,7 @@ input, select, textarea { font: inherit; }
 }
 .start-card label { display: block; font-weight: 700; margin: 14px 0 6px; }
 .start-card .help { color: var(--muted); font-size: .85rem; margin: 2px 0 0; }
-#seedInput, #difficultySelect {
+#seedInput, #difficultySelect, #sourceSelect {
   width: 100%;
   padding: 12px 14px;
   border: 2px solid var(--line);
@@ -130,7 +133,7 @@ input, select, textarea { font: inherit; }
   background: #fff;
   font-size: 1.15rem;
 }
-#seedInput:focus, #difficultySelect:focus { outline: 3px solid var(--gold); border-color: var(--gold-dark); }
+#seedInput:focus, #difficultySelect:focus, #sourceSelect:focus { outline: 3px solid var(--gold); border-color: var(--gold-dark); }
 #startBtn {
   width: 100%;
   margin-top: 20px;
@@ -147,6 +150,11 @@ input, select, textarea { font: inherit; }
   background: var(--danger); color: #fff; text-align: center;
   padding: 10px 16px; font-weight: 700;
 }
+.banner-offline button {
+  margin-left: 8px; padding: 6px 12px; border: 2px solid #fff; border-radius: 8px;
+  background: #fff; color: var(--danger); font: inherit; font-weight: 800; cursor: pointer;
+}
+.banner-offline button:focus-visible { outline: 3px solid var(--gold-bright); outline-offset: 2px; }
 
 /* ---- race screen ---- */
 #screenRace { display: flex; flex-direction: column; min-height: 100vh; }
@@ -293,7 +301,7 @@ input, select, textarea { font: inherit; }
   flex: 1 1 130px; background: var(--green); color: #fff;
   border-radius: 12px; padding: 10px 14px; text-align: center;
 }
-.stat .lbl { display: block; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: #b8d8c3; }
+.stat .lbl { display: block; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: #e3f3e9; }
 .stat .val { font-size: 1.9rem; font-weight: 800; color: var(--gold-bright); font-variant-numeric: tabular-nums; }
 .path-chain { margin: 10px 0; padding: 0; list-style: none; }
 .path-chain li { padding: 3px 0 3px 26px; position: relative; }
@@ -353,11 +361,17 @@ input, select, textarea { font: inherit; }
     <div class="sub">East Middle Bulldogs &middot; Social Studies</div>
   </div>
   <div class="checker" aria-hidden="true"></div>
-  <div id="offlineBanner" class="banner-offline" role="alert" hidden>&#9888; Wiki Race needs the internet — you appear to be offline.</div>
+  <div id="offlineBanner" class="banner-offline" role="alert" hidden><span>&#9888; You appear to be offline, and Wikipedia races need the internet.</span> <button id="offlineUseCorpus" type="button">Play with the offline articles instead</button></div>
   <div class="start-card">
     <label for="seedInput">Seed phrase (from your teacher)</label>
     <input id="seedInput" type="text" autocomplete="off" autocapitalize="none" placeholder="e.g. bulldogs1">
     <p class="help">Everyone who types the same seed gets the exact same race.</p>
+    <label for="sourceSelect">Articles from</label>
+    <select id="sourceSelect">
+      <option value="wiki" selected>Wikipedia — real articles, needs the internet</option>
+      <option value="corpus">Offline articles — works with no internet</option>
+    </select>
+    <p class="help" id="sourceHelp">Everyone in the race must pick the same source as well as the same seed, because the two sources give different races.</p>
     <label for="difficultySelect">Difficulty</label>
     <select id="difficultySelect">
       <option value="easy">Easy — start and target are related topics</option>
@@ -416,7 +430,7 @@ input, select, textarea { font: inherit; }
     <h3>Your path</h3>
     <ol class="path-chain" id="resPath"></ol>
     <h3>Finish code <span style="font-weight:400;font-size:.8rem;color:var(--muted)">(give this to your teacher)</span></h3>
-    <textarea id="finishCode" readonly rows="3" style="width:100%;border:2px solid var(--line);border-radius:10px;padding:8px;font-family:monospace"></textarea>
+    <textarea id="finishCode" aria-label="Your finish code" readonly rows="3" style="width:100%;border:2px solid var(--line);border-radius:10px;padding:8px;font-family:monospace"></textarea>
     <div style="display:flex;gap:10px;margin-top:10px">
       <button id="copyCodeBtn" class="btn" type="button">Copy code</button>
       <button id="againBtn" class="btn btn-gold" type="button">Race again</button>
@@ -705,6 +719,171 @@ function categoryOf(title) {
 }
 
 /* =====================================================================
+   offline corpus — a second source of articles that needs no network.
+   AUTHORED FOR THIS TOOL: every article below was written for Wiki Race.
+   None of it is copied or paraphrased from Wikipedia or any other site,
+   so it carries no Wikipedia licence. Plain, school-level prose; a link
+   is written [[Title]] or [[Title|text shown]] and always names another
+   article in this table. Each article is [category, text]; paragraphs are
+   separated by a blank line.
+   A corpus race has its own seed space (the draw key ends in "\ncorpus"),
+   so the same seed phrase means a different race here than on Wikipedia,
+   and its finish code says src:"corpus". computeMatchup() above is
+   untouched: Tools/wiki-race/test/golden-matchups.json holds it.
+   The graph is held by Tools/wiki-race/test/corpus-graph.test.mjs: every
+   link resolves, no dead end, every article reaches every other, and no
+   drawable matchup is a single click or further than CORPUS_MAX_CLICKS.
+   ===================================================================== */
+var CORPUS = {
+  "Atom": ["Science", "Everything you can touch is built from atoms. An atom is far too small to see, even with a good [[Microscope|microscope]]. At its center is a tiny nucleus made of protons and neutrons, and much lighter electrons move around the outside.\n\nThere are only a little more than one hundred kinds of atoms, called elements, and they are all listed in the [[Periodic table|periodic table]]. When atoms join together in different ways they make water, air, metal and every living thing. Moving electrons are what carry [[Electricity|electricity]] through a wire, and atoms can store and release [[Energy|energy]]."],
+  "Gravity": ["Science", "Gravity is a pull that every object has on every other object. Big, heavy things pull much harder than small ones, so the planet under your feet pulls you toward its center. That is why a dropped ball falls and why you stay on the ground instead of floating away.\n\nThe Moon has gravity too, and its pull tugs on the oceans to make the tides rise and fall along the shore of the [[Pacific Ocean]]. Gravity also keeps the planets moving around the Sun, which people study with a [[Telescope|telescope]]. Even a [[Seed|seed]] feels it: a young root grows downward, and the stem grows up. Gravity is a force that changes how [[Energy|energy]] shows up as motion."],
+  "Light": ["Science", "Light is a form of [[Energy|energy]] that lets us see. It travels in straight lines at about 300,000 kilometers every second, faster than anything else we know. When light is blocked by an object, a shadow forms behind it.\n\nSunlight looks white, but a glass prism can split it into a rainbow of [[Color|color]]. Plants need light to make food by [[Photosynthesis|photosynthesis]]. Lenses bend light, and that is how a [[Telescope|telescope]] or a [[Microscope|microscope]] can make things easier to see, and how a camera records a picture for [[Photography|photography]]. Unlike [[Sound|sound]], light can travel through empty space."],
+  "Electricity": ["Science", "Electricity is the movement of electric charge. In a wire, tiny electrons from each [[Atom|atom]] move along in a steady flow. A closed loop that lets the charge move is called a circuit, and a switch can open or close it.\n\nMetals such as copper let charge flow easily, so they are called conductors. Rubber and plastic stop it, so they are called insulators. A battery stores [[Energy|energy]] and pushes charge around a circuit, while lightning is a giant spark that forms inside storm clouds. Electricity can make [[Light|light]] and [[Heat|heat]], and it is closely linked to [[Magnetism|magnetism]]."],
+  "Magnetism": ["Science", "A magnet is an object that pulls on iron and a few other metals. Every magnet has two ends called poles, a north pole and a south pole. Opposite poles pull toward each other, while two of the same pole push apart.\n\nThe Earth itself behaves like a very large magnet, which is why the needle of a [[Compass|compass]] points north. A moving magnet can make [[Electricity|electricity]] flow, and a flow of electricity can make a magnet, so the two ideas are always connected. Iron, nickel and cobalt are the common magnetic metals, and each one is an element in the [[Periodic table|periodic table]]."],
+  "Energy": ["Science", "Energy is the ability to make something change or move. It comes in many forms, including [[Heat|heat]], [[Light|light]], [[Sound|sound]], motion, [[Electricity|electricity]] and the chemical energy stored in food and fuel.\n\nEnergy is not used up. It only changes from one form to another. A plant takes in sunlight and stores some of it as food during [[Photosynthesis|photosynthesis]]. An animal that eats the plant gets that energy, and it keeps moving along a [[Food chain|food chain]]. Everything you do, from running to thinking, runs on energy."],
+  "Sound": ["Science", "Sound is made by vibrations. When a guitar string or a drum skin shakes, it pushes the air around it, and the push travels outward as a wave until it reaches your ear. Sound needs something to travel through, such as air, water or a solid, so it cannot cross empty space.\n\nA fast vibration makes a high pitch and a slow one makes a low pitch. A big vibration sounds loud and a small one sounds quiet. People shape sound into [[Music|music]], and many animals use it too. A [[Bird|bird]] sings to mark its home, and a [[Whale|whale]] can call to another whale far away through the water. Like [[Light|light]], sound travels as a wave."],
+  "Heat": ["Science", "Heat is [[Energy|energy]] that moves from something warm to something cooler. When you hold a cold glass, heat flows from your hand into the glass, so your hand feels cold. A thermometer measures temperature.\n\nThe [[Atom|atom]]s in a hot object jiggle faster than those in a cold one. Heat can travel by touching, by moving currents in air or water, and by rays, like the warmth you feel from the Sun. Hot rock under the ground feeds a [[Volcano|volcano]], and a potter uses a hot oven called a kiln to harden [[Pottery|pottery]]. The Sun warms the land near the [[Equator|equator]] the most, which shapes [[Climate|climate]]."],
+  "Telescope": ["Science", "A telescope makes faraway objects look bigger and brighter. It collects [[Light|light]] with a lens or a curved mirror and then focuses it so the eye can see more detail.\n\nThe first telescopes were made in the Netherlands in the early 1600s. Soon after, the Italian scientist Galileo pointed one at the sky and saw craters on the Moon and four moons circling Jupiter. This was during the time of the [[Renaissance]], when many people were eager to test old ideas. Astronomers still use telescopes to study how [[Gravity|gravity]] holds stars and planets together. Sailors once checked the stars against a [[Map|map]] to find their way. A [[Microscope|microscope]] uses lenses in a similar way, for very small things."],
+  "Microscope": ["Science", "A microscope uses lenses to make tiny things look much larger. It lets you see details that your eyes alone could never find, such as the cells that make up a leaf.\n\nIn the 1600s a Dutch cloth merchant named Antonie van Leeuwenhoek built simple microscopes and became one of the first people to see tiny living things in pond water. A microscope that uses [[Light|light]] cannot show a single [[Atom|atom]], because atoms are even smaller. Scientists use it to study the cells of a [[Plant|plant]], and the tiny creatures that live in [[Soil|soil]]. It works on the same idea as a [[Telescope|telescope]], but for the very small instead of the very far."],
+  "Periodic table": ["Science", "The periodic table is a chart that lists all of the known elements. Each element is one kind of [[Atom|atom]]. The elements are placed in order of their atomic number, which is the number of protons in the nucleus, and so the chart is also a kind of [[Number|number]] line.\n\nA Russian chemist named Dmitri Mendeleev published an early version in 1869. He left gaps for elements that had not been found yet, and later people discovered them. Elements in the same column act in similar ways. Many metals on the chart carry [[Electricity|electricity]] well, and iron, nickel and cobalt show [[Magnetism|magnetism]]."],
+  "Ancient Egypt": ["History", "Ancient Egypt grew up along the [[Nile River]] in northeast Africa more than 5,000 years ago. The river flooded every year and left rich black mud on the fields, so farmers could grow plenty of food even though the [[Sahara Desert]] lay on both sides.\n\nEgypt was ruled by kings called pharaohs. Builders raised huge stone pyramids as tombs for them, using clever measuring that we now call [[Geometry|geometry]]. Scribes wrote in picture signs called hieroglyphs, and artists covered walls with [[Painting|painting]]. Later, in 30 BCE, Egypt became part of the [[Roman Empire]]. Its neighbors to the northeast, in [[Mesopotamia]], built a different early civilization."],
+  "Ancient Greece": ["History", "Ancient Greece was not one country. It was a group of city-states, such as Athens and Sparta, that shared a language and many customs. The Greeks lived on the mainland and on islands around the Aegean Sea.\n\nAthens began a form of democracy, in which citizens voted on laws. The Greeks held the first Olympic Games in honor of their gods. They wrote plays for the [[Theatre|theatre]], told stories in [[Poetry|poetry]], carved lifelike figures in [[Sculpture|sculpture]], and built temples with tall columns in a style of [[Architecture|architecture]] people still copy. Greek thinkers such as Euclid made big steps in [[Geometry|geometry]]. Later the [[Roman Empire]] took over Greece and borrowed many of its ideas."],
+  "Roman Empire": ["History", "Rome began as a small city in Italy and grew until it ruled lands all around the Mediterranean Sea. Augustus became the first emperor in 27 BCE. The Romans spoke Latin, and many words in English and in Spanish and French come from it.\n\nThey built straight roads, bridges, and aqueducts that carried water to towns. They used concrete and made arches and domes famous in [[Architecture|architecture]]. They learned from [[Ancient Greece]], and their rule also reached [[Ancient Egypt]]. They wrote numbers with Roman numerals, a simple system of [[Number|number]] signs. Goods such as silk traveled to Rome along the [[Silk Road]]. Roman artists made portraits in [[Sculpture|sculpture]]. The western half of the empire ended in 476 CE."],
+  "Printing press": ["History", "Before the printing press, every book was copied by hand, which took months. Around 1450 a German goldsmith named Johannes Gutenberg built a press that used movable metal letters. The letters could be set in rows, inked, and pressed onto paper again and again.\n\nBooks became cheaper and many more people learned to read. News and new ideas spread quickly in the time of the [[Renaissance]]. Paper itself and early printing with carved blocks came from China, and reached Europe along the [[Silk Road]]. Printers made maps, books of [[Poetry|poetry]], and later newspapers, and hundreds of years afterward, steam power and the [[Industrial Revolution]] made printing even faster. Printers could now copy a [[Map|map]] by the hundreds."],
+  "Silk Road": ["History", "The Silk Road was not a single road. It was a network of trade routes that joined China with lands around the Mediterranean Sea. Traders traveled in groups called caravans and carried silk, spices, tea, paper and metal goods.\n\nFew merchants went the whole way. Goods passed from one trader to the next, and so did ideas, religions, and inventions. The routes ran through deserts and high mountain passes, north of the [[Himalayas]], and camels carried loads across dry land like the [[Sahara Desert]] in Africa. Roman buyers wanted Chinese silk, and the [[Roman Empire]] grew rich from the trade. China built the [[Great Wall of China]] partly to protect its borders. Paper and printing came west along the route. Traders used a [[Map|map]] to plan a route."],
+  "Industrial Revolution": ["History", "The Industrial Revolution began in Britain in the 1700s and spread to many other countries. Before it, most goods were made by hand at home or in small shops. Afterward, machines in factories made them much faster.\n\nThe steam engine was a key invention. It burned coal to make [[Heat|heat]], turned water to steam, and used that [[Energy|energy]] to power machines, trains and ships. Towns grew into big cities as families moved to find factory work. Working conditions were often hard, and children worked long hours. Burning so much coal also changed the air and affected the [[Climate|climate]] over time. Later inventions brought [[Electricity|electricity]] to homes."],
+  "Renaissance": ["History", "Renaissance means \"rebirth.\" It was a time from about the 1300s to the 1600s when people in Europe, starting in Italy, grew very interested in art, learning and new ideas. Many looked back with admiration at [[Ancient Greece]] and the [[Roman Empire]].\n\nArtists such as Leonardo da Vinci and Michelangelo made famous works of [[Painting|painting]] and [[Sculpture|sculpture]]. Builders designed beautiful domes and arches in the field of [[Architecture|architecture]]. The [[Printing press|printing press]] helped scientific ideas travel across Europe."],
+  "Great Wall of China": ["History", "The Great Wall of China is a long line of walls, towers and forts built across northern China. It was not built all at once. Different rulers added to it over more than two thousand years, and most of the stone and brick wall that people visit today was built about 500 years ago.\n\nThe wall was meant to slow raiders and to help guards watch the border. Early sections were made of packed earth, a kind of [[Soil|soil]], and later ones of stone and brick. It stands as a famous piece of [[Architecture|architecture]]. Traders on the [[Silk Road]] passed by its western end. People often say it can be seen from space with the naked eye, but this is a myth. On a [[Map|map]] it looks like a long, winding line."],
+  "Vikings": ["History", "The Vikings were seafaring people from Scandinavia, in what is now Norway, Sweden and Denmark. From about 800 to 1050 CE, they sailed in narrow wooden longships to trade, to farm new lands and, sometimes, to raid coastal towns.\n\nTheir ships were built from planks of oak and other [[Tree|tree]] trunks, and were light enough to sail up rivers. Vikings settled in Iceland and Greenland, and around the year 1000 Leif Erikson sailed to the coast of North America. The cold northern [[Climate|climate]] made farming hard, which is one reason they looked overseas. Their stories, called sagas, were a kind of [[Poetry|poetry]] passed down aloud before they were written down. They arrived in Europe after the western [[Roman Empire]] had ended."],
+  "Mesopotamia": ["History", "Mesopotamia means \"the land between rivers.\" It was the region between the Tigris and Euphrates rivers, in what is now Iraq. Some of the first cities in the world, such as Ur and Babylon, were built there around 5,000 years ago.\n\nFarmers dug canals to bring river water to dry [[Soil|soil]]. People pressed wedge-shaped marks into wet clay tablets, a style of writing called cuneiform, and baked the clay like [[Pottery|pottery]]. Mesopotamian scholars counted in groups of sixty, which is why we still have sixty minutes in an hour. They worked with [[Number|number]] systems and made one of the oldest known [[Map|map]] drawings. Their neighbor to the southwest was [[Ancient Egypt]]."],
+  "Maya": ["History", "The Maya were a people of southern Mexico and Central America. They built cities with stone temples, plazas and tall pyramids, and many of their descendants live in the same region today. Their civilization was at its height from about 250 to 900 CE.\n\nMaya scribes wrote in picture-like symbols called glyphs and kept a careful calendar based on the movements of the Sun, Moon and planets. They were among the first to use a symbol for [[Zero|zero]] in their [[Number|number]] system. Farmers grew corn, a kind of [[Plant|plant]], along with beans and squash. Stonecutters carved the temple walls with [[Sculpture|sculpture]], and their stepped temples are famous works of [[Architecture|architecture]]."],
+  "Nile River": ["Geography", "The Nile is a very long river in Africa, among the longest in the world. It flows northward through several countries and empties into the Mediterranean Sea. Most of the people of Egypt live close to its banks.\n\nLong ago the Nile flooded each year and spread a layer of fertile mud, called silt, over the land. That rich [[Soil|soil]] let farmers grow crops right beside the [[Sahara Desert]]. It is the reason [[Ancient Egypt]] could exist at all. Many kinds of [[Bird|bird]] stop along the river as they migrate. On a [[Map|map]], the river looks like a thin green thread running through dry land, and the dry [[Climate|climate]] on both sides makes it even more important."],
+  "Amazon rainforest": ["Geography", "The Amazon rainforest covers a huge area of South America, mostly in Brazil. It is the largest rainforest in the world. The mighty Amazon River winds through it, and the forest lies close to the [[Equator|equator]].\n\nThe [[Climate|climate]] there is warm and wet all year. An enormous number of kinds of living things share the forest, from jaguars and monkeys to colorful frogs and insects, such as the bright blue morpho [[Butterfly|butterfly]]. Its tall [[Tree|tree]] trunks and leaves take in carbon dioxide and give off oxygen through [[Photosynthesis|photosynthesis]]. Every layer of the forest forms a link in a huge [[Food chain|food chain]]. Many [[Plant|plant]] species grow only there."],
+  "Sahara Desert": ["Geography", "The Sahara is the largest hot desert in the world. It stretches across northern Africa and is roughly as big as the entire United States. Only parts of it are covered with sand dunes. Much of the rest is bare rock and gravel.\n\nDays in the Sahara are extremely hot, and nights can turn cold, because the dry air holds little [[Heat|heat]]. Rain is rare, so few plants grow, but people have long crossed it with camels and stopped at oases where underground water reaches the surface. The [[Nile River]] crosses its eastern part, which allowed [[Ancient Egypt]] to grow. Strong winds blow loose sand and dust across the land, and the dry [[Climate|climate]] makes the [[Soil|soil]] thin. It is clearly marked on any [[Map|map]] of Africa."],
+  "Himalayas": ["Geography", "The Himalayas are the highest mountains on Earth. They stretch across several countries in Asia, including India, Nepal, Bhutan and China. Mount Everest, the tallest peak above sea level at about 8,849 meters, is one of them.\n\nThe range began to form about 50 million years ago, when two giant pieces of Earth's crust, the Indian plate and the Asian plate, crashed together. They are still pushing, so the mountains keep rising a little each year and [[Earthquake|earthquake]]s are common. The mountains change the [[Climate|climate]] of the lands around them by blocking clouds and winds. Traders on the [[Silk Road]] took routes to the north to avoid the highest peaks. Climbers use a [[Map|map]] and a [[Compass|compass]] to find their way."],
+  "Pacific Ocean": ["Geography", "The Pacific is the largest and deepest ocean. It covers more of Earth than all of the land put together, and it stretches from Asia and Australia to the Americas. Its deepest spot, the Mariana Trench, is about 11,000 meters down.\n\nAround its edge runs a belt of active volcanoes and earthquake zones, called the Ring of Fire. Every [[Volcano|volcano]] there and every [[Earthquake|earthquake]] is part of the same moving crust. The ocean is home to the [[Whale|whale]] and the [[Coral reef|coral reef]]. The [[Equator|equator]] crosses the middle of it. The ocean has a strong effect on [[Climate|climate]], because water holds a lot of [[Heat|heat]]. A [[Map|map]] of the ocean shows thousands of islands scattered across it."],
+  "Equator": ["Geography", "The equator is an imaginary line around the middle of the Earth, halfway between the North Pole and the South Pole. It is marked as zero degrees latitude on a [[Map|map]]. The line divides the world into the Northern Hemisphere and the Southern Hemisphere.\n\nBecause the equator is a [[Circle|circle]] around the planet, it is the longest line of latitude, about 40,000 kilometers. Places close to it get strong sunshine all year, so they have a warm [[Climate|climate]], and the day is about twelve hours long throughout the year. The [[Amazon rainforest]] lies near it, and the [[Pacific Ocean]] crosses it. The [[Heat|heat]] from the Sun is strongest here."],
+  "Map": ["Geography", "A map is a drawing that shows a place from above. It can show countries, roads, rivers or even the rooms of a school. A map leaves out most details so that the important ones are easy to read.\n\nMost maps have a title, a key that explains symbols, a scale that tells how far the drawing is from real distances, and a compass rose that shows directions. Mapmakers use lines of latitude and longitude, including the [[Equator|equator]], to name any spot with a pair of [[Number|number]]s. A [[Compass|compass]] helps you hold a map the right way round. Flat maps must stretch the round Earth a little, and [[Geometry|geometry]] is used to do it. The [[Pacific Ocean]] fills a large part of a world map."],
+  "Compass": ["Geography", "A compass is a tool that shows direction. Inside is a thin magnetized needle that can spin freely. Because the Earth acts like a giant magnet, the needle turns until one end points toward the north.\n\nThe first compasses were invented in China, and sailors and travelers came to use them to find their way when they could not see land or stars. Hikers still use a compass together with a [[Map|map]]. The idea depends on [[Magnetism|magnetism]]. The face of the compass is a [[Circle|circle]] marked with 360 degrees, and the four main directions are north, south, east and west. Long before compasses were common, travelers such as the [[Vikings]] steered by the Sun and the stars, and the first compasses probably spread to others along trade routes such as the [[Silk Road]]."],
+  "Volcano": ["Geography", "A volcano is an opening in the Earth's crust where hot melted rock, ash and gas can escape. Under the ground, the melted rock is called magma. Once it reaches the surface it is called lava.\n\nSome volcanoes erupt with a gentle flow of lava and others explode with great force. Many are found around the [[Pacific Ocean]], and they usually form where pieces of the Earth's crust meet, which also causes [[Earthquake|earthquake]]s. The inside of the Earth is very hot, and [[Heat|heat]] melts the rock. Volcanic ash is rich in minerals and makes very fertile [[Soil|soil]] over time. A large eruption can fill the air with ash and change the [[Climate|climate]] for a year or two by blocking sunlight."],
+  "Earthquake": ["Geography", "An earthquake is a shaking of the ground. The outer layer of the Earth is broken into huge pieces called plates, which move very slowly. When they snag and then suddenly slip, the [[Energy|energy]] that was stored up is released as waves that shake the ground.\n\nMost earthquakes happen near the edges of plates, such as around the [[Pacific Ocean]] and in the [[Himalayas]]. An instrument called a seismograph records the shaking. The waves move like [[Sound|sound]] waves, but through rock. Engineers use careful [[Architecture|architecture]] to build houses and bridges that bend instead of breaking. A [[Volcano|volcano]] often forms along the same cracks."],
+  "Climate": ["Geography", "Weather is what the sky is doing today, while climate is the usual weather of a place over many years. A desert and a forest can have the same weather on one day but very different climates.\n\nClimate depends on how far a place is from the [[Equator|equator]], how high it is, and how near it is to the sea. Hot and rainy places such as the [[Amazon rainforest]] have a tropical climate, and dry places like the [[Sahara Desert]] have a desert climate. Scientists use [[Statistics|statistics]] to find the average temperature and rainfall for a place. The Sun's [[Heat|heat]] drives the climate, and each kind of [[Plant|plant]] grows best in its own climate."],
+  "Number": ["Mathematics", "A number tells how many, how much, or in what order. We write numbers with symbols called digits, and the place of each digit shows its value. In the number 352, the 3 means three hundreds, the 5 means five tens and the 2 means two ones.\n\nOur system uses ten digits, probably because people have ten fingers. Other cultures have used different systems, such as Roman numerals in the [[Roman Empire]] and the base-sixty counting of [[Mesopotamia]]. The digit [[Zero|zero]] was a great idea because it holds a place. Numbers can be whole or cut into pieces like a [[Fraction|fraction]]. [[Algebra]] uses letters to stand for numbers, and [[Statistics|statistics]] uses them to describe groups of facts."],
+  "Zero": ["Mathematics", "Zero is the number that means none. It also works as a placeholder. In the number 305, the zero shows that there are no tens, and without it the number would look like 35.\n\nSeveral early cultures used a mark for an empty place, including the people of [[Mesopotamia]] and the [[Maya]]. Mathematicians in India wrote rules for adding, subtracting and multiplying with zero as a number in its own right, in the 600s CE. Zero is now part of every [[Number|number]] we write. It was an important step toward [[Algebra|algebra]]. An event with a [[Probability|probability]] of zero cannot happen, and a [[Fraction|fraction]] with zero on top is equal to zero."],
+  "Fraction": ["Mathematics", "A fraction names a part of a whole. It is written with two numbers, one above the other. The bottom number, the denominator, tells how many equal parts the whole is cut into. The top number, the numerator, tells how many of those parts you have.\n\nIf a pizza is cut into eight equal slices and you eat three, you ate three eighths. Fractions are a kind of [[Number|number]] that lives between whole numbers. In [[Music|music]], whole notes, half notes and quarter notes use fractions to show how long to hold a sound. A [[Circle|circle]] can be cut into equal parts to show a fraction. The value of [[Pi|pi]] can be written as a fraction that is close but not exact. A [[Probability|probability]] is often written as a fraction too."],
+  "Geometry": ["Mathematics", "Geometry is the part of mathematics that studies shapes, sizes, angles, and how things are placed in space. Its name comes from Greek words meaning \"earth measure.\"\n\nPeople in [[Ancient Egypt]] used early geometry to mark out fields again after the Nile flooded. Greek thinkers such as Euclid wrote it down as a system of careful proofs, in a book called the Elements. Geometry tells us about every [[Triangle|triangle]] and every [[Circle|circle]], and about [[Symmetry|symmetry]]. It guides the design of buildings in [[Architecture|architecture]]. Mapmakers use it to draw a [[Map|map]]. The subject was developed further by thinkers in [[Ancient Greece]]."],
+  "Triangle": ["Mathematics", "A triangle is a shape with three straight sides and three corners. Whatever its shape, the three angles inside any flat triangle add up to 180 degrees. Triangles are named by their sides, such as equilateral, isosceles and scalene, or by their angles, such as right, acute and obtuse.\n\nA triangle is the strongest simple shape, because it cannot be squashed out of shape without bending a side, and builders use it in bridges and roof frames in [[Architecture|architecture]]. The faces of the great pyramids of [[Ancient Egypt]] are triangles. In a right triangle, the squares of the two shorter sides add up to the square of the longest side, an idea in [[Algebra|algebra]] named for Pythagoras. The triangle is a basic part of [[Geometry|geometry]], and a triangle with two matching sides has a neat kind of [[Symmetry|symmetry]]."],
+  "Circle": ["Mathematics", "A circle is a round shape in which every point on the edge is the same distance from the center. That distance is called the radius. The diameter is a line across the circle through the center, and it is twice as long as the radius. The distance around the edge is called the circumference.\n\nThe ratio of the circumference to the diameter is always the same number, called [[Pi|pi]]. A circle is a part of [[Geometry|geometry]] with perfect [[Symmetry|symmetry]], since it looks the same after any turn. The [[Equator|equator]] is a circle around the Earth. A full turn is 360 degrees, which is the way the dial of a [[Compass|compass]] is marked. A potter spins clay on a wheel to make round [[Pottery|pottery]]."],
+  "Pi": ["Mathematics", "Pi is the number you get when you divide the distance around any [[Circle|circle]] by the distance across it. It is a little more than three, about 3.14159. Pi is written with the Greek letter π.\n\nPi is not a [[Fraction|fraction]] of two whole numbers. Its digits go on forever and never repeat in a pattern, although 22 over 7 is a handy estimate. Computers have found trillions of digits. People celebrate Pi Day on March 14, because the date is written 3/14. Pi is used in [[Geometry|geometry]] to find the area and circumference of circles, and it appears in many formulas in [[Algebra|algebra]]. It is a [[Number|number]] that goes on without end."],
+  "Algebra": ["Mathematics", "Algebra is a way of solving problems by using letters or symbols to stand for numbers we do not know yet. If x + 3 = 10, algebra helps us find that x must be 7. A sentence like that is called an equation.\n\nThe word comes from the Arabic title of a book by the scholar al-Khwarizmi, who lived in Baghdad about the year 820. The book showed how to solve equations step by step. Algebra works with every kind of [[Number|number]], including [[Zero|zero]]. It helps with [[Geometry|geometry]], for example to find a missing side of a [[Triangle|triangle]], and it is used to work out formulas in [[Probability|probability]] and [[Statistics|statistics]]. Scientists use it to describe [[Gravity|gravity]] and [[Energy|energy]]."],
+  "Probability": ["Mathematics", "Probability tells how likely it is that something will happen. It is a number from 0 to 1, or from 0 percent to 100 percent. An event that cannot happen has a probability of 0, and an event that is certain has a probability of 1.\n\nWhen all outcomes are equally likely, you find probability by dividing the outcomes you want by all the possible outcomes. A fair coin has a probability of one half of landing heads, written as the [[Fraction|fraction]] 1/2, and a die has a one in six chance of showing any given [[Number|number]]. Weather forecasts give a chance of rain, which matters for [[Climate|climate]]. [[Statistics]] and [[Algebra|algebra]] both use probability."],
+  "Statistics": ["Mathematics", "Statistics is the science of collecting, organizing and understanding data. A statistician may count how many students walk or ride the bus, then show the answer in a chart or graph.\n\nThree common ways to describe the center of a set of [[Number|number]]s are the mean, which is the average, the median, which is the middle value, and the mode, which is the most common value. The range tells how spread out the values are. Weather scientists use statistics to describe the [[Climate|climate]] of a place. Wildlife scientists count each kind of [[Bird|bird]] to learn whether it is becoming rarer. Statistics is closely related to [[Probability|probability]] and uses [[Fraction|fraction]]s and percentages all the time."],
+  "Symmetry": ["Mathematics", "Something has symmetry when it looks the same after you flip it, turn it, or slide it. If you can fold a shape in half so the two sides match exactly, the fold line is called a line of symmetry. A square has four such lines and a [[Circle|circle]] has endless ones.\n\nShapes can also have rotational symmetry, which means they look the same after being turned part of the way around. Symmetry is part of [[Geometry|geometry]], and an equilateral [[Triangle|triangle]] has three lines. A [[Butterfly|butterfly]] is nearly symmetrical, since its left wing mirrors its right. Builders use it in [[Architecture|architecture]] to make a balanced front, and potters shape [[Pottery|pottery]] with a matching left and right side."],
+  "Painting": ["Arts", "Painting is the art of putting color on a surface such as paper, canvas, wood or a wall. Artists use brushes, sponges, fingers, or even spray cans. Common paints include watercolor, oil and acrylic.\n\nPeople have painted for a very long time. Some cave paintings of animals are tens of thousands of years old. Artists in [[Ancient Egypt]] covered tomb walls with painted scenes. During the [[Renaissance]], painters such as Leonardo da Vinci studied [[Light|light]] and shadow to make people and places look real. A painter chooses and mixes [[Color|color]] with care. Painting changed after the invention of [[Photography|photography]], because a camera could now copy a scene exactly. Some artists make [[Sculpture|sculpture]] or [[Pottery|pottery]] as well."],
+  "Sculpture": ["Arts", "A sculpture is a three-dimensional work of art, one you can look at from every side. Sculptors may carve it from stone or wood, build it up from clay, cast it in metal, or join found objects together.\n\nSculptors in [[Ancient Greece]] carved figures of athletes and gods in white marble and made them look strong and alive. Later, artists of the [[Renaissance]] such as Michelangelo studied those works. The [[Roman Empire]] filled its cities with statues of its rulers. Clay can be fired in a kiln and made into [[Pottery|pottery]]. A sculptor often plans with a drawing, a skill shared with [[Painting|painting]], and large works need good [[Architecture|architecture]] to hold them up."],
+  "Music": ["Arts", "Music is sound that has been organized in time. Its main parts are rhythm, which is the pattern of beats, melody, which is a tune, and harmony, which is what happens when notes sound together. Music can be sung or played on instruments.\n\nEvery culture has its own music. A drum or a [[Piano|piano]] makes [[Sound|sound]] by shaking air, and different instruments make different tones. Rhythm is counted with the help of the [[Fraction|fraction]]s that name whole, half and quarter notes. Music often goes with [[Dance|dance]], [[Poetry|poetry]] and [[Theatre|theatre]]. Many animals also make musical sounds, such as a [[Bird|bird]] in the morning, and the long songs of a humpback [[Whale|whale]]."],
+  "Piano": ["Arts", "A piano is a keyboard instrument. When a player presses a key, a small felt-covered hammer strikes a metal string inside the case, and the string vibrates to make a note. A standard piano has 88 keys, some white and some black.\n\nThe piano was invented in Italy around the year 1700 by Bartolomeo Cristofori. Its first name was the gravicembalo col piano e forte, which means a keyboard that can play both soft and loud, and that is where the short name comes from. Players can make notes quieter or louder by pressing harder or softer. Parts of the case are often made from wood from a [[Tree|tree]]. A piano makes [[Sound|sound]] for solo songs and groups alike. Its [[Music|music]] often goes with [[Dance|dance]] lessons."],
+  "Poetry": ["Arts", "Poetry is writing that uses the sound and rhythm of words to share feelings and pictures. Poems are often written in lines and stanzas. They may rhyme, but they do not have to. Poets use comparisons, called similes and metaphors, to help readers imagine something new.\n\nSome forms are famous. A haiku has three short lines and comes from Japan. Long ago in [[Ancient Greece]], poems were sung or spoken aloud at gatherings and plays in the [[Theatre|theatre]]. Many old stories of the [[Vikings]] were told in verse. After the [[Printing press|printing press]] arrived, poems could reach many more readers. Poems and songs are close cousins, and a poem is often set to [[Music|music]]. A poet may write about a [[Bird|bird]] or another part of nature."],
+  "Theatre": ["Arts", "Theatre is an art in which actors perform a story live for an audience. A play begins with a script, which gives the words for the actors, and a director helps the cast and crew bring it to the stage. Costumes, scenery, lighting and sound make the story feel real.\n\nThe theatre we know goes back to [[Ancient Greece]], where plays were performed in outdoor stone theaters during festivals. Many of those plays were written as [[Poetry|poetry]]. Today a show may use [[Music|music]] and [[Dance|dance]] as well. Stage lighting uses [[Light|light]] and color to set the mood, and the shape of the building matters because [[Sound|sound]] must carry to every seat. Designing a theater is a challenge for [[Architecture|architecture]]."],
+  "Dance": ["Arts", "Dance is the art of moving the body in a planned or free way, often to rhythm and usually with [[Music|music]]. People dance to celebrate, to tell a story, to pray or just for fun.\n\nEvery culture has its own dances. Ballet, tap, hip-hop, square dancing and folk dancing are all different styles. Dancers learn steps, counts and patterns, and many dances use [[Symmetry|symmetry]], with dancers in matching pairs or in a [[Circle|circle]]. Dance is often part of a play in the [[Theatre|theatre]]. Animals dance too. A honey [[Bee|bee]] does a waggle dance to tell its hive-mates where to find flowers, and a male [[Bird|bird]] may dance to attract a mate."],
+  "Photography": ["Arts", "Photography is the art of making pictures with [[Light|light]]. A camera lets light in through a small opening, and a lens focuses it on film or on an electronic sensor that records the scene.\n\nThe first lasting photographs were made in the early 1800s, and they needed a very long time to take. In the 1800s the process became quicker, and the [[Industrial Revolution]] helped make cameras and film in large numbers. Today most pictures are made by sensors that turn light into [[Electricity|electricity]] and then into a digital file. Photographers think about [[Color|color]] and about what to put in the frame, as a painter does in [[Painting|painting]]. A camera uses a lens, as a [[Telescope|telescope]] does, and the right lens can take a close picture of a [[Butterfly|butterfly]]."],
+  "Architecture": ["Arts", "Architecture is the art and science of designing buildings and the spaces around them. An architect has to think about strength, how the building will be used, and how it will look. Houses, schools, bridges and temples are all products of architecture.\n\nDifferent times and places have their own styles. The builders of [[Ancient Greece]] used tall columns, and those of the [[Roman Empire]] spread the use of the arch and dome. Every plan is based on [[Geometry|geometry]]. In places where [[Earthquake|earthquake]]s are common, architects design buildings that sway without falling. Wood from a [[Tree|tree]] has been a building material for thousands of years. Many buildings are decorated with [[Sculpture|sculpture]]."],
+  "Pottery": ["Arts", "Pottery is the craft of making objects from clay and hardening them with fire. Cups, bowls, vases and tiles can all be pottery. The clay is dug from the [[Soil|soil]], mixed with water, and shaped by hand or on a spinning wheel.\n\nOnce shaped, the clay is left to dry and is then baked in a kiln. The strong [[Heat|heat]] changes the clay so that it stays hard and will not turn back to mud. A glaze can be brushed on for color and to make the surface waterproof. People have made pottery for thousands of years, and broken pieces help scientists learn about places like [[Mesopotamia]]. The wheel spins a lump of clay into a [[Circle|circle]]. A potter might decorate a jar with [[Painting|painting]], and a potter's work is close to [[Sculpture|sculpture]]."],
+  "Color": ["Arts", "Color is what we see when [[Light|light]] of different wavelengths reaches our eyes. White light is a mix of all the colors of the rainbow, from red through orange, yellow, green and blue to violet.\n\nArtists mix pigments to make colors. In the traditional paint wheel, red, yellow and blue are called primary colors, because they are used to mix many others. Light itself works differently, and the primaries of light are red, green and blue. A [[Painting|painting]] depends on color to show feeling. A flower's bright petals help attract a [[Bee|bee]], and the wings of a [[Butterfly|butterfly]] or the feathers of a [[Bird|bird]] can be full of color. Leaves look green because of a chemical used in [[Photosynthesis|photosynthesis]]."],
+  "Photosynthesis": ["Nature", "Photosynthesis is how green plants make their own food. A [[Plant|plant]] takes in sunlight through its leaves, water through its roots, and carbon dioxide from the air. It uses the [[Energy|energy]] of the [[Light|light]] to turn them into sugar, and it gives off oxygen.\n\nA green chemical called chlorophyll in the leaves captures the light and gives plants their color. Algae and some bacteria do photosynthesis too, including the tiny algae that live inside a [[Coral reef|coral reef]]. Almost every [[Food chain|food chain]] begins with photosynthesis, and the oxygen is the air that animals breathe. A [[Tree|tree]] is a giant factory for this process."],
+  "Plant": ["Nature", "Plants are living things that stay in one place and make their own food by [[Photosynthesis|photosynthesis]]. Most have roots to hold them in the [[Soil|soil]] and take in water, stems to carry it upward, and leaves to catch sunlight.\n\nSome plants grow flowers and make a [[Seed|seed]] to start new plants. A [[Bee|bee]] visiting a flower to drink nectar carries pollen from one flower to another, which helps seeds to form. Other plants, such as ferns and mosses, reproduce with tiny spores. Plants are at the base of every land [[Food chain|food chain]]. A [[Tree|tree]] is a tall plant with a woody trunk. A [[Microscope|microscope]] shows that a leaf is made of many tiny cells."],
+  "Seed": ["Nature", "A seed is a tiny package that holds a baby [[Plant|plant]] and some stored food, wrapped in a protective coat. Inside a bean seed you can find the little plant, the embryo, and two halves that hold food for it.\n\nWhen a seed gets water and the right warmth, it germinates. The root pushes down into the [[Soil|soil]] and the shoot pushes up, helped by the pull of [[Gravity|gravity]]. Seeds travel in many ways. Some float on the wind, some ride on animal fur, and some are eaten and dropped by a [[Bird|bird]]. Flowers must be pollinated, often by a [[Bee|bee]], before they can make seeds. A tall [[Tree|tree]] starts out as a small seed."],
+  "Bee": ["Nature", "Bees are flying insects that feed on nectar and pollen from flowers. As they travel from flower to flower, they carry pollen with them. This pollination helps many [[Plant|plant]]s make fruit and [[Seed|seed]]s, including a lot of the foods people eat.\n\nHoney bees live in large family groups called colonies, with one queen, many female workers and some males. A worker that finds good flowers does a waggle [[Dance|dance]] to show the others the direction and distance. The wax cells of the honeycomb are six-sided, a shape that follows the rules of [[Geometry|geometry]]. A [[Butterfly|butterfly]] is a flower visitor too. Bees are also food for many other animals in a [[Food chain|food chain]]."],
+  "Butterfly": ["Nature", "A butterfly is an insect with four large wings covered in tiny overlapping scales. The scales make the bright [[Color|color]] patterns. Most butterflies drink nectar through a long curled tube called a proboscis, and so, like a [[Bee|bee]], they help to pollinate a flowering [[Plant|plant]].\n\nA butterfly changes shape in four stages called metamorphosis. It starts as an egg, hatches as a caterpillar that eats leaves, becomes a chrysalis, and finally comes out as an adult. Monarch butterflies migrate thousands of kilometers each year. The two sides of a butterfly show [[Symmetry|symmetry]]. Some live in the [[Amazon rainforest]]. A [[Bird|bird]] may eat a butterfly, so both are part of a [[Food chain|food chain]]."],
+  "Whale": ["Nature", "Whales are large mammals that live in the sea. They breathe air through lungs, so they must come to the surface, they are warm-blooded, and mothers feed their babies milk. Some whales have teeth, and others, such as the humpback, filter small animals from the water through plates called baleen.\n\nThe blue whale is the largest animal known to have ever lived. Whales make clicks, whistles and long songs, because [[Sound|sound]] travels very well through water, and humpback songs are a kind of [[Music|music]]. They live in every ocean, including the [[Pacific Ocean]]. Many eat tiny shrimp-like animals called krill, which makes them part of an ocean [[Food chain|food chain]]. Whales are not fish, and dolphins are small toothed whales."],
+  "Coral reef": ["Nature", "A coral reef is an underwater structure built by many tiny animals called coral polyps. Each polyp makes a hard cup of limestone around its soft body, and over thousands of years these cups pile up into a reef.\n\nReefs form in warm, shallow, clear seas where sunlight can reach the bottom. Tiny algae live inside the coral and make food by [[Photosynthesis|photosynthesis]], so the coral needs [[Light|light]]. Reefs are home to a huge number of fish, turtles and other sea life, which makes each reef a busy [[Food chain|food chain]]. The Great Barrier Reef, off the coast of Australia, is the largest. Many reefs lie in the tropical [[Pacific Ocean]]. If the water gets too warm from changes in [[Climate|climate]], corals can lose their color and may die."],
+  "Food chain": ["Nature", "A food chain shows who eats whom in nature. It starts with a producer, usually a green [[Plant|plant]] that makes food by [[Photosynthesis|photosynthesis]], and then moves to a consumer that eats the plant, then a consumer that eats that animal.\n\nFor example, grass is eaten by a grasshopper, the grasshopper by a frog, and the frog by a [[Bird|bird]] of prey. When living things die, decomposers such as fungi and bacteria break them down and return nutrients to the [[Soil|soil]]. [[Energy]] passes along the chain, but at every step much of it is lost as [[Heat|heat]], so there are fewer animals at the top. A [[Whale|whale]] that eats krill is part of an ocean food chain."],
+  "Bird": ["Nature", "Birds are animals with feathers, wings and beaks. All birds lay eggs, and most can fly, though some, such as penguins and ostriches, cannot. Their bones are light, and their feathers help them fly and keep warm.\n\nBeak shapes match the food a bird eats: a hummingbird has a long thin beak for nectar, and a hawk has a hooked one for tearing meat. Many birds sing, using [[Sound|sound]] to mark territory or to find a mate. Some spread [[Seed|seed]]s, and many migrate long distances when the [[Climate|climate]] changes with the seasons. Birds make nests in a [[Tree|tree]] or on the ground. Each bird is part of a [[Food chain|food chain]]."],
+  "Tree": ["Nature", "A tree is a tall [[Plant|plant]] with a woody trunk and branches. Its roots hold it in the [[Soil|soil]] and take in water, and its leaves make food by [[Photosynthesis|photosynthesis]]. Some trees, such as pines, keep needles all year, and others, like maples, drop their leaves in the fall.\n\nIn places that have a cold season, a tree adds one new ring to its trunk each year, so counting the rings of a cut trunk tells its age. Forests of trees, such as the [[Amazon rainforest]], help to shape the [[Climate|climate]]. A hollow trunk or branch may become the home of a [[Bird|bird]]. Wood is used in building, furniture and tools. Every tree started as a [[Seed|seed]]."],
+  "Soil": ["Nature", "Soil is the loose top layer of the Earth in which plants grow. It is a mix of tiny pieces of broken rock, the remains of dead plants and animals called humus, water and air. It is also home to worms, insects, fungi and bacteria too small to see without a [[Microscope|microscope]].\n\nIt can take hundreds of years to make a centimeter of soil. A [[Plant|plant]] roots in soil and gets water and minerals from it. Rotting leaves return nutrients to the ground through the [[Food chain|food chain]]. Some soil is sandy, some is clay and some is rich and dark, and a good gardener checks which kind they have before sowing a [[Seed|seed]]. Silt left by the [[Nile River]] made good farming land, and a [[Tree|tree]] sends its roots down into it."]
+};
+var CORPUS_MAX_CLICKS = 6;
+var CORPUS_FAR = [
+  ['Arts', 'Science'], ['Mathematics', 'History'], ['Nature', 'Mathematics'],
+  ['Geography', 'Arts'], ['History', 'Science'], ['Nature', 'History']
+];
+var CORPUS_LINK = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
+var CORPUS_CATS = [];
+var CORPUS_POOLS = {};
+Object.keys(CORPUS).forEach(function (t) {
+  var c = CORPUS[t][0];
+  if (!CORPUS_POOLS[c]) { CORPUS_POOLS[c] = []; CORPUS_CATS.push(c); }
+  CORPUS_POOLS[c].push(t);
+});
+var corpusLinkCache = {};
+function corpusLinks(title) {
+  if (corpusLinkCache[title]) return corpusLinkCache[title];
+  var out = [], re = new RegExp(CORPUS_LINK.source, 'g'), m;
+  var text = CORPUS[title] ? CORPUS[title][1] : '';
+  while ((m = re.exec(text))) { if (m[1] !== title && out.indexOf(m[1]) === -1) out.push(m[1]); }
+  corpusLinkCache[title] = out;
+  return out;
+}
+/* a race must take at least two clicks: the target is never on the start page */
+function corpusTargets(start, pool) {
+  var direct = corpusLinks(start);
+  return pool.filter(function (t) { return t !== start && direct.indexOf(t) === -1; });
+}
+function computeCorpusMatchup(seed, difficulty) {
+  var rng = mulberry32(xmur3(normSeed(seed) + '\n' + difficulty + '\ncorpus')());
+  var draw = function (n) { return Math.floor(rng() * n); };
+  var start, target, pool, fromCat, toCat;
+  if (difficulty === 'easy') {
+    fromCat = CORPUS_CATS[draw(CORPUS_CATS.length)];
+    pool = CORPUS_POOLS[fromCat];
+    start = pool[draw(pool.length)];
+    target = (function (r) { return r[draw(r.length)]; })(corpusTargets(start, pool));
+  } else if (difficulty === 'hard') {
+    var pair = CORPUS_FAR[draw(CORPUS_FAR.length)];
+    var flip = draw(2);
+    fromCat = flip === 0 ? pair[0] : pair[1];
+    toCat = flip === 0 ? pair[1] : pair[0];
+    start = CORPUS_POOLS[fromCat][draw(CORPUS_POOLS[fromCat].length)];
+    target = (function (r) { return r[draw(r.length)]; })(corpusTargets(start, CORPUS_POOLS[toCat]));
+  } else { /* medium */
+    var all = Object.keys(CORPUS);
+    start = all[draw(all.length)];
+    target = (function (r) { return r[draw(r.length)]; })(corpusTargets(start, all));
+  }
+  return { start: start, target: target };
+}
+/* every (start, target) pair computeCorpusMatchup can return, per difficulty */
+function corpusPairs(difficulty) {
+  var out = [];
+  var add = function (starts, targetPool) {
+    starts.forEach(function (s) {
+      corpusTargets(s, targetPool).forEach(function (t) { out.push([s, t]); });
+    });
+  };
+  if (difficulty === 'easy') CORPUS_CATS.forEach(function (c) { add(CORPUS_POOLS[c], CORPUS_POOLS[c]); });
+  else if (difficulty === 'hard') {
+    CORPUS_FAR.forEach(function (p) {
+      add(CORPUS_POOLS[p[0]], CORPUS_POOLS[p[1]]);
+      add(CORPUS_POOLS[p[1]], CORPUS_POOLS[p[0]]);
+    });
+  } else add(Object.keys(CORPUS), Object.keys(CORPUS));
+  return out;
+}
+function corpusCategoryOf(title) { return CORPUS[title] ? CORPUS[title][0] : null; }
+/* '' when every step of a corpus path is a real article reached by a real link */
+function corpusPathProblem(path) {
+  for (var i = 0; i < path.length; i++) {
+    if (!CORPUS[path[i]]) return '“' + path[i] + '” is not one of the offline articles.';
+    if (i && corpusLinks(path[i - 1]).indexOf(path[i]) === -1) return '“' + path[i - 1] + '” does not link to “' + path[i] + '”.';
+  }
+  return '';
+}
+function corpusPlain(title) { /* the article's first paragraph as plain text, for Peek and Hint */
+  var first = (CORPUS[title] ? CORPUS[title][1] : '').split('\n\n')[0];
+  return first.replace(new RegExp(CORPUS_LINK.source, 'g'), function (m, t, shown) { return shown || t; });
+}
+
+/* =====================================================================
    Wikipedia API layer — action API with origin=* (CORS works even from
    file:// where our origin is "null").
    ===================================================================== */
@@ -841,11 +1020,44 @@ function sanitizeArticle(html) {
   return doc;
 }
 
+/* An offline article as a DOM the game controls: text nodes and nav links only,
+   built with createElement/createTextNode, so nothing in CORPUS is ever parsed as HTML. */
+function corpusDoc(title) {
+  var art = CORPUS[title];
+  if (!art) throw new Error('That article isn’t one of the offline articles: ' + title);
+  var doc = document.implementation.createHTMLDocument('');
+  art[1].split('\n\n').forEach(function (par) {
+    var p = doc.createElement('p'), re = new RegExp(CORPUS_LINK.source, 'g'), pos = 0, m;
+    while ((m = re.exec(par))) {
+      if (m.index > pos) p.appendChild(doc.createTextNode(par.slice(pos, m.index)));
+      var a = doc.createElement('a');
+      a.setAttribute('data-wr', 'nav');
+      a.setAttribute('data-title', m[1]);
+      a.setAttribute('tabindex', '0');
+      a.setAttribute('role', 'link');
+      a.textContent = m[2] || m[1];
+      p.appendChild(a);
+      pos = re.lastIndex;
+    }
+    if (pos < par.length) p.appendChild(doc.createTextNode(par.slice(pos)));
+    doc.body.appendChild(p);
+  });
+  return doc;
+}
+
+/* The article for the source the race is using: { title, doc }. */
+function getArticle(title) {
+  if (state.source === 'corpus') {
+    return Promise.resolve().then(function () { return { title: title, doc: corpusDoc(title) }; });
+  }
+  return fetchArticle(title).then(function (art) { return { title: art.title, doc: sanitizeArticle(art.html) }; });
+}
+
 /* =====================================================================
    game state & navigation
    ===================================================================== */
 var state = {
-  seed: '', difficulty: 'medium',
+  seed: '', difficulty: 'medium', source: 'wiki', /* 'wiki' | 'corpus' */
   startTitle: '', targetTitle: '', targetCanonical: '',
   current: '', path: [], clicks: 0, hints: 0,
   t0: null, elapsedMs: 0,
@@ -856,7 +1068,7 @@ var $ = function (id) { return document.getElementById(id); };
 var els = {
   screens: { start: $('screenStart'), race: $('screenRace'), results: $('screenResults'), verify: $('screenVerify') },
   seedInput: $('seedInput'), difficultySelect: $('difficultySelect'),
-  startBtn: $('startBtn'), startError: $('startError'), offlineBanner: $('offlineBanner'),
+  sourceSelect: $('sourceSelect'), startBtn: $('startBtn'), startError: $('startError'), offlineBanner: $('offlineBanner'),
   timerVal: $('timerVal'), clicksVal: $('clicksVal'),
   startLabel: $('startLabel'), targetLabel: $('targetLabel'),
   pathStrip: $('pathStrip'), articleTitle: $('articleTitle'), articleHost: $('articleHost'),
@@ -947,7 +1159,7 @@ function navigateTo(title, opts) {
   var prevStatus = state.status;
   state.status = 'loading';
   setLoading(true, 'Loading “' + title + '”…');
-  fetchArticle(title).then(function (art) {
+  getArticle(title).then(function (art) {
     setLoading(false);
     state.current = art.title;
     if (opts.first) {
@@ -959,7 +1171,7 @@ function navigateTo(title, opts) {
       state.clicks++;
       state.path.push(art.title);
     }
-    renderArticle(art.title, sanitizeArticle(art.html));
+    renderArticle(art.title, art.doc);
     updateScoreboard();
     if (tnorm(art.title) === tnorm(state.targetCanonical)) win();
   }).catch(function (err) {
@@ -970,6 +1182,7 @@ function navigateTo(title, opts) {
 }
 
 function errText(err) {
+  if (state.source === 'corpus') return (err && err.message) || 'Something went wrong with that article.';
   if (err && err.name === 'AbortError') return 'Wikipedia took too long to answer. Check your connection and try again.';
   return (err && err.message) || 'Something went wrong talking to Wikipedia.';
 }
@@ -993,11 +1206,21 @@ function beginRace() {
   els.startError.hidden = true;
   state.seed = normSeed(seed);
   state.difficulty = els.difficultySelect.value;
-  var m = computeMatchup(state.seed, state.difficulty);
+  state.source = els.sourceSelect.value === 'corpus' ? 'corpus' : 'wiki';
+  var m = state.source === 'corpus' ? computeCorpusMatchup(state.seed, state.difficulty) : computeMatchup(state.seed, state.difficulty);
   state.startTitle = m.start;
   state.targetTitle = m.target;
   state.hints = 0;
   targetPreview = null;
+
+  if (state.source === 'corpus') { /* no canonical-title lookup: nothing here is a redirect */
+    state.targetCanonical = m.target;
+    els.startLabel.textContent = m.start;
+    els.targetLabel.textContent = m.target;
+    showScreen('race');
+    navigateTo(m.start, { first: true });
+    return;
+  }
 
   els.startBtn.disabled = true;
   setLoading(true, 'Setting up your race…');
@@ -1010,7 +1233,7 @@ function beginRace() {
   }).catch(function (err) {
     setLoading(false);
     els.startError.textContent = 'Couldn’t reach Wikipedia: ' + errText(err) +
-      ' — Wiki Race needs the internet.';
+      ' — Wikipedia races need the internet. Choose “Offline articles” above to play without it.';
     els.startError.hidden = false;
   }).finally(function () {
     els.startBtn.disabled = false;
@@ -1022,7 +1245,7 @@ function beginRace() {
    ===================================================================== */
 function showResults() {
   $('resultsMatchup').textContent = state.path[0] + ' ➞ ' + state.targetCanonical +
-    ' · seed “' + state.seed + '” · ' + state.difficulty;
+    ' · seed “' + state.seed + '” · ' + state.difficulty + (state.source === 'corpus' ? ' · offline articles' : '');
   var penaltyMs = state.hints * 30000;
   $('resTime').textContent = fmtTime(state.elapsedMs + penaltyMs);
   $('resClicks').textContent = state.clicks;
@@ -1094,6 +1317,7 @@ function buildFinishCode() {
     t: Math.round(state.elapsedMs), c: state.clicks, h: state.hints,
     p: state.path
   };
+  if (state.source === 'corpus') payload.src = 'corpus'; /* absent on a Wikipedia code, so old codes read as before */
   var bytes = new TextEncoder().encode(JSON.stringify(payload));
   var done = (typeof CompressionStream !== 'undefined')
     ? pipeBytes(bytes, CompressionStream, 'deflate-raw').then(function (out) {
@@ -1126,6 +1350,7 @@ function decodeFinishCode(code) {
     if (payload.v !== 1 || !Array.isArray(payload.p) || !payload.p.length) {
       throw new Error('Unsupported or incomplete finish code.');
     }
+    if (payload.src !== undefined && payload.src !== 'corpus') throw new Error('This code names an article source this page does not know.');
     return payload;
   });
 }
@@ -1140,13 +1365,14 @@ function runVerify() {
   box.innerHTML = '<em>Checking…</em>';
   decodeFinishCode(code).then(function (p) {
     var penaltyMs = p.h * 30000;
-    var expected = computeMatchup(p.s, p.d);
+    var isCorpus = p.src === 'corpus';
+    var expected = isCorpus ? computeCorpusMatchup(p.s, p.d) : computeMatchup(p.s, p.d);
     // Soft consistency note: path endpoints are canonical titles, the drawn
     // matchup is our stored form — compare loosely and only warn.
     var startOk = tnorm(p.p[0]) === tnorm(expected.start);
     var endOk = tnorm(p.p[p.p.length - 1]) === tnorm(expected.target);
     var rows = [
-      ['Seed', p.s], ['Difficulty', p.d],
+      ['Seed', p.s], ['Difficulty', p.d], ['Articles from', isCorpus ? 'Offline articles' : 'Wikipedia'],
       ['Race', p.p[0] + ' ➞ ' + p.p[p.p.length - 1]],
       ['Base time', fmtTime(p.t)],
       ['Hints', p.h + (p.h ? ' (+' + fmtTime(penaltyMs) + ')' : '')],
@@ -1157,6 +1383,10 @@ function runVerify() {
     var html = '<span class="badge badge-ok">&#10003; VALID CODE</span>';
     if (!startOk || !endOk) {
       html += ' <span class="badge badge-bad" title="The path endpoints don’t match what this seed + difficulty produces (a redirect can cause this — spot-check by running the seed).">&#9888; check matchup</span>';
+    }
+    var pathProblem = isCorpus ? corpusPathProblem(p.p) : '';
+    if (pathProblem) {
+      html += ' <span class="badge badge-bad" title="' + escapeHtml(pathProblem) + '">&#9888; check path</span>';
     }
     html += '<table style="margin-top:12px;border-collapse:collapse">' + rows.map(function (r) {
       return '<tr><th style="text-align:left;padding:3px 14px 3px 0;color:var(--muted)">' + r[0] +
@@ -1203,12 +1433,13 @@ function validNumbers(p) {
 function rankRaces(items) {
   var groups = [], byKey = {}, seenData = {};
   items.forEach(function (it) {
-    var p = it.payload, seed = normSeed(p.s), key = seed + '\n' + p.d;
-    if (!byKey[key]) { byKey[key] = { seed: seed, difficulty: p.d, rows: [], dupes: [] }; groups.push(byKey[key]); }
+    var p = it.payload, seed = normSeed(p.s), source = p.src === 'corpus' ? 'corpus' : 'wiki';
+    var key = (source === 'corpus' ? 'corpus\n' : '') + seed + '\n' + p.d;
+    if (!byKey[key]) { byKey[key] = { seed: seed, difficulty: p.d, source: source, rows: [], dupes: [] }; groups.push(byKey[key]); }
     var data = JSON.stringify([key, p.t, p.c, p.h, p.p]);
     if (seenData[data]) { byKey[key].dupes.push({ line: it.line, label: it.label, sameAs: seenData[data] }); return; }
     seenData[data] = it.line;
-    var exp = computeMatchup(seed, p.d);
+    var exp = source === 'corpus' ? computeCorpusMatchup(seed, p.d) : computeMatchup(seed, p.d);
     byKey[key].rows.push({
       line: it.line, label: it.label, ms: finalMs(p), baseMs: p.t, clicks: p.c, hints: p.h,
       visited: p.p.length, from: p.p[0], to: p.p[p.p.length - 1],
@@ -1255,7 +1486,7 @@ function runBoard() {
     groups.forEach(function (g) {
       var table = document.createElement('table'); table.className = 'board-table';
       var cap = document.createElement('caption');
-      cap.textContent = 'Seed “' + g.seed + '” · ' + g.difficulty + ' · ' + g.rows.length + ' ranked';
+      cap.textContent = 'Seed “' + g.seed + '” · ' + g.difficulty + (g.source === 'corpus' ? ' · offline articles' : '') + ' · ' + g.rows.length + ' ranked';
       table.appendChild(cap);
       var head = document.createElement('tr');
       ['Rank', 'Who', 'Final time', 'Clicks', 'Hints', 'Articles', 'Notes'].forEach(function (h, k) {
@@ -1263,7 +1494,7 @@ function runBoard() {
         if (k === 0 || (k >= 2 && k <= 5)) th.className = 'num'; head.appendChild(th);
       });
       table.appendChild(head);
-      text.push('Seed ' + g.seed + ' (' + g.difficulty + ')');
+      text.push('Seed ' + g.seed + ' (' + g.difficulty + (g.source === 'corpus' ? ', offline articles' : '') + ')');
       g.rows.forEach(function (r) {
         var tr = document.createElement('tr');
         var cells = [r.rank, r.label || '(line ' + r.line + ')', fmtTime(r.ms), r.clicks, r.hints, r.visited,
@@ -1298,6 +1529,10 @@ var targetPreview = null;
 
 function loadTargetPreview() {
   if (targetPreview) return Promise.resolve(targetPreview);
+  if (state.source === 'corpus') {
+    targetPreview = { extract: corpusPlain(state.targetCanonical), thumb: null };
+    return Promise.resolve(targetPreview);
+  }
   return fetchTargetPreview(state.targetCanonical).then(function (p) {
     targetPreview = p;
     return p;
@@ -1325,7 +1560,7 @@ function doPeek() { // free: what does the target article look like?
 function doHint() { // +30s: which direction should I head?
   if (state.status !== 'racing') return;
   state.hints++;
-  var cat = categoryOf(state.targetTitle);
+  var cat = state.source === 'corpus' ? corpusCategoryOf(state.targetTitle) : categoryOf(state.targetTitle);
   var base = 'Head toward ' + (cat ? cat.toUpperCase() : 'the target') + ' topics.';
   loadTargetPreview().then(function (p) {
     var firstSentence = (p.extract.match(/^[^.!?]*[.!?]/) || [p.extract.slice(0, 160)])[0];
@@ -1482,17 +1717,25 @@ $('copyCodeBtn').addEventListener('click', function () {
   }
 });
 
+/* Offline with Wikipedia chosen: say so and offer the offline articles. Once they
+   are chosen the banner has done its job and goes away. */
 function refreshOnline() {
-  els.offlineBanner.hidden = navigator.onLine !== false;
+  els.offlineBanner.hidden = !(navigator.onLine === false && els.sourceSelect.value !== 'corpus');
 }
 window.addEventListener('online', refreshOnline);
 window.addEventListener('offline', refreshOnline);
+els.sourceSelect.addEventListener('change', refreshOnline);
+$('offlineUseCorpus').addEventListener('click', function () {
+  els.sourceSelect.value = 'corpus';
+  refreshOnline();
+  els.seedInput.focus();
+});
 refreshOnline();
 
 /* tiny debug/test hook (used by the repo's throwaway e2e checks) */
 window.__wr = {
   state: state, navigateTo: navigateTo, computeMatchup: computeMatchup,
-  TOPICS: TOPICS, buildFinishCode: buildFinishCode, decodeFinishCode: decodeFinishCode,
+  TOPICS: TOPICS, computeCorpusMatchup: computeCorpusMatchup, CORPUS: CORPUS, corpusPairs: corpusPairs, buildFinishCode: buildFinishCode, decodeFinishCode: decodeFinishCode,
   parseCodeLines: parseCodeLines, rankRaces: rankRaces
 };
 

@@ -14,6 +14,7 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="prompt-builder/pb-library.js"></script>
 <style>
   *{ box-sizing: border-box; }
   html{ scroll-behavior: smooth; }
@@ -79,8 +80,8 @@
   .token-panel{ border: 1px solid var(--color-accent-300, #cbd5e1); border-radius: 8px; padding: 0.7rem 0.8rem; margin-bottom: 0.8rem; background: var(--color-accent-50, #f8fafc); }
   .token-panel h3{ font-size: 0.85rem; margin: 0 0 0.15rem; }
   .token-panel .token-hint{ font-size: 0.76rem; opacity: 0.75; margin: 0 0 0.5rem; }
-  .token-grid{ display: grid; grid-template-columns: auto 1fr; gap: 0.35rem 0.6rem; align-items: center; }
-  .token-grid label{ font-size: 0.8rem; font-family: ui-monospace, Consolas, monospace; white-space: nowrap; }
+  .token-grid{ display: grid; grid-template-columns: minmax(0, auto) minmax(7rem, 1fr); gap: 0.35rem 0.6rem; align-items: center; }
+  .token-grid label{ font-size: 0.8rem; font-family: ui-monospace, Consolas, monospace; white-space: normal; overflow-wrap: anywhere; min-width: 0; }
   .token-grid input{ font-size: 0.85rem; padding: 0.3rem 0.4rem; width: 100%; }
   .token-panel .token-left{ font-size: 0.76rem; margin: 0.5rem 0 0; color: #7a4b06; font-weight: 600; }
 
@@ -109,6 +110,14 @@
   }
   .preset-remove:hover{ opacity: 1; }
   .custom-preset-row:empty{ display: none; }
+  .lib-panel{ margin-top: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-divider); border-radius: 6px; }
+  .lib-panel h3{ margin: 0 0 var(--space-2); font-size: 15px; }
+  .lib-filter-label{ display: block; font-size: 12px; margin: var(--space-2) 0 4px; }
+  .lib-group h4{ margin: var(--space-3) 0 var(--space-2); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
+  .lib-list{ list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: var(--space-2); }
+  .lib-entry .btn{ width: 100%; text-align: left; display: block; white-space: normal; }
+  .lib-entry .lib-about{ display: block; font-weight: 400; font-size: 12px; margin-top: 2px; }
+  .lib-group[hidden], .lib-entry[hidden]{ display: none !important; }
 
   /* Share presets: the sheet itself is _shared/share.js (Path 6 P3). The page
      is on theme.css, whose tokens have other names, so the sheet gets them
@@ -232,11 +241,21 @@
         <button type="button" class="btn btn-secondary preset-btn" data-preset="reviewBoard">Review game questions</button>
         <button type="button" class="btn btn-secondary preset-btn" data-preset="vocabList">Vocab list</button>
         <button type="button" class="btn btn-secondary preset-btn" data-preset="exitTickets">Exit ticket prompts</button>
+        <button type="button" class="btn btn-secondary" id="libraryBtn" aria-expanded="false" aria-controls="libraryPanel">Prompt library&hellip;</button>
         <button type="button" class="btn btn-secondary" id="savePresetBtn">+ Save current as preset</button>
         <button type="button" class="btn btn-secondary" id="shareBtn" title="Send your saved presets to another teacher">Share presets&hellip;</button>
         <button type="button" class="btn btn-ghost preset-btn-clear" id="clearAllTop">Clear all fields</button>
       </div>
       <div class="preset-row custom-preset-row" id="customPresetRow" style="margin-top: var(--space-2);"></div>
+      <section class="lib-panel" id="libraryPanel" aria-labelledby="libraryTitle" style="display:none;">
+        <h3 id="libraryTitle">Prompt library by teaching task</h3>
+        <p class="section-hint">Pick the job, not the technique. An entry fills the whole form; your name, grade, subject and class stay as they are. Anything in {{double braces}} is a blank for you to fill in the Placeholders panel. Loading replaces the other fields, the same as the examples above.</p>
+        <label for="libFilter" class="lib-filter-label">Find a task</label>
+        <input class="input" type="search" id="libFilter" placeholder="e.g. families, feedback, reading level" autocomplete="off">
+        <div id="libGroups"></div>
+        <p class="lib-empty" id="libEmpty" style="display:none;">Nothing matches. Try one word, such as &ldquo;feedback&rdquo;.</p>
+        <p class="share-note" id="libStatus" role="status" aria-live="polite"></p>
+      </section>
       <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
     </div>
 
@@ -1017,6 +1036,56 @@
 
   document.querySelectorAll('.preset-btn[data-preset]').forEach(btn => {
     btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+  });
+
+  // ---- prompt library (pb-library.js): the same loading path as the examples, filed by teaching task ----
+  const LIB_CONTEXT_IDS = ['name','grade','subject','classLevel','classSize','schoolContext'];
+  const libEls = { btn: $('libraryBtn'), panel: $('libraryPanel'), filter: $('libFilter'), groups: $('libGroups'), empty: $('libEmpty'), status: $('libStatus') };
+  function loadLibraryEntry(entry){
+    const fields = entry.preset ? PRESETS[entry.preset] : entry.fields;
+    if (!fields) return;
+    const keep = {};
+    LIB_CONTEXT_IDS.forEach(id => { keep[id] = $(id).value; });
+    clearAllFields();
+    setMode('advanced');
+    applyFieldsFromData(Object.assign({}, keep, fields));
+    const blanks = PromptLibrary.placeholders(entry);
+    libEls.status.textContent = 'Loaded \u201c' + entry.title + '\u201d.' + (blanks.length
+      ? ' Fill in: ' + blanks.join(', ') + '.'
+      : (entry.preset ? ' It is an example with sample details; type over them.' : ''));
+  }
+  function buildLibrary(){
+    PromptLibrary.GROUPS.forEach(g => {
+      const sec = document.createElement('div');
+      sec.className = 'lib-group'; sec.dataset.group = g.id;
+      const h = document.createElement('h4'); h.textContent = g.title; sec.appendChild(h);
+      const ul = document.createElement('ul'); ul.className = 'lib-list';
+      g.entries.forEach(e => {
+        const li = document.createElement('li'); li.className = 'lib-entry'; li.dataset.entry = e.id;
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'btn btn-secondary';
+        b.appendChild(document.createTextNode(e.title));
+        const about = document.createElement('span'); about.className = 'lib-about'; about.textContent = e.about;
+        b.appendChild(about);
+        b.addEventListener('click', () => loadLibraryEntry(e));
+        li.appendChild(b); ul.appendChild(li);
+      });
+      sec.appendChild(ul); libEls.groups.appendChild(sec);
+    });
+  }
+  function filterLibrary(){
+    const hit = new Set(PromptLibrary.search(libEls.filter.value));
+    libEls.groups.querySelectorAll('.lib-entry').forEach(li => { li.hidden = !hit.has(li.dataset.entry); });
+    libEls.groups.querySelectorAll('.lib-group').forEach(g => { g.hidden = !g.querySelector('.lib-entry:not([hidden])'); });
+    libEls.empty.style.display = hit.size ? 'none' : '';
+  }
+  buildLibrary();
+  libEls.filter.addEventListener('input', filterLibrary);
+  libEls.btn.addEventListener('click', () => {
+    const open = libEls.panel.style.display === 'none';
+    libEls.panel.style.display = open ? '' : 'none';
+    libEls.btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) libEls.filter.focus();
   });
 
   // ---- custom saved presets ----

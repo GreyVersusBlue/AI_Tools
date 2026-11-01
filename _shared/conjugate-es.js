@@ -99,6 +99,72 @@
   var EV = ['é', 'ás', 'á', 'emos', 'éis', 'án'], CV = ['ía', 'ías', 'ía', 'íamos', 'íais', 'ían'];
   var VOW = 'aeiouáéíóú';
 
+  // ---- a reflexive pronoun joined to a command or an infinitive (levántate, levantémonos, levantaos, levantarme) ----
+  // The stressed vowel of the form stays where it is; the joined word gets a written accent when its own rule would put
+  // the stress elsewhere (levanta + te -> levántate) or when the stress falls on an i/u next to a strong vowel (vestid + os
+  // -> vestíos). Only the stressed vowel of a diphthong is marked: on the strong vowel, or the second of two weak ones.
+  var STRONG = 'aeoáéó', ACCENTED = 'áéíóú', PLAIN = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u' }, MARKED = { a: 'á', e: 'é', i: 'í', o: 'ó', u: 'ú' };
+  function isV(w, i) {
+    var c = w.charAt(i);
+    if ('aeiouáéíóúü'.indexOf(c) < 0) return false;
+    // the u of que, qui, gue, gui is silent
+    if (c === 'u' && /[qg]/.test(w.charAt(i - 1)) && /[eiéí]/.test(w.charAt(i + 1))) return false;
+    return true;
+  }
+  function weakPlain(c) { return c === 'i' || c === 'u' || c === 'ü'; }
+  // the syllables of a word: [{ vowels: [index...] }]
+  function syllables(w) {
+    var out = [], i = 0;
+    while (i < w.length) {
+      if (!isV(w, i)) { i++; continue; }
+      var cur = { vowels: [i] }; i++;
+      while (i < w.length && isV(w, i)) {
+        var prev = w.charAt(cur.vowels[cur.vowels.length - 1]), c = w.charAt(i);
+        // a diphthong needs an unaccented i/u beside any vowel; two strong vowels, or an accented i/u, are a hiatus
+        if ((weakPlain(prev) || weakPlain(c)) && cur.vowels.length < 3) { cur.vowels.push(i); i++; } else break;
+      }
+      out.push(cur);
+    }
+    return out;
+  }
+  function stressedVowel(syl, w) {
+    for (var k = 0; k < syl.vowels.length; k++) if (STRONG.indexOf(w.charAt(syl.vowels[k])) >= 0) return syl.vowels[k];
+    return syl.vowels[syl.vowels.length - 1];
+  }
+  function stressOf(f) {
+    for (var i = 0; i < f.length; i++) if (ACCENTED.indexOf(f.charAt(i)) >= 0) return i;
+    var syl = syllables(f);
+    if (!syl.length) return -1;
+    var n = syl.length, last = f.charAt(f.length - 1);
+    var which = n === 1 ? 0 : ('aeiouns'.indexOf(last) >= 0 ? n - 2 : n - 1);
+    return stressedVowel(syl[which], f);
+  }
+  // `drop` is the letter a command loses before the pronoun (levantemos + nos, levantad + os); the stress is found first
+  function joinClitic(f, clitic, drop) {
+    var at = stressOf(f);
+    if (at < 0) return '';
+    var plain = f.split('').map(function (c, i) { return i === at ? (PLAIN[c] || c) : c; }).join('');
+    if (drop && plain.charAt(plain.length - 1) === drop) plain = plain.slice(0, -1);
+    plain += clitic;
+    var syl = syllables(plain), n = syl.length, last = plain.charAt(plain.length - 1);
+    var which = n === 1 ? 0 : ('aeiouns'.indexOf(last) >= 0 ? n - 2 : n - 1);
+    var natural = stressedVowel(syl[which], plain), c = plain.charAt(at);
+    var hiatus = weakPlain(c) && ((at > 0 && isV(plain, at - 1) && STRONG.indexOf(plain.charAt(at - 1)) >= 0) || (isV(plain, at + 1) && STRONG.indexOf(plain.charAt(at + 1)) >= 0));
+    var mark = natural !== at || hiatus;
+    return mark ? plain.slice(0, at) + (MARKED[c] || c) + plain.slice(at + 1) : plain;
+  }
+  function attachEs(form, slot, ctx, tdef) {
+    var pron = ctx.p.reflexivePronouns[slot], f = form, drop = '';
+    // dé and sé are written with a mark only to tell them from de and se: whether it stays when a pronoun follows is left to the teacher
+    if (f === 'dé' || f === 'sé') return '';
+    if (tdef.id === 'command') {
+      if (slot === 4 && f === 'id') return 'idos';
+      if (slot === 3) drop = 's';
+      if (slot === 4) drop = 'd';
+    }
+    return joinClitic(f, pron, drop);
+  }
+
   window.Conjugate.register({
     id: 'es', name: 'Spanish', reviewed: false,
     persons: ['yo', 'tú', 'él / ella / usted', 'nosotros', 'vosotros', 'ellos / ellas / ustedes'],
@@ -133,17 +199,22 @@
       { id: 'subjunctive', name: 'Present subjunctive', mood: 'subjunctive', kind: 'subjunctive', boot: [0, 1, 2, 5], weak: [3, 4],
         endings: { ar: ['e', 'es', 'e', 'emos', 'éis', 'en'], er: ['a', 'as', 'a', 'amos', 'áis', 'an'], ir: ['a', 'as', 'a', 'amos', 'áis', 'an'] } }
     ],
-    // beyond the six: the present perfect, the -ra imperfect subjunctive and the affirmative command
-    // (a negative command is the present subjunctive after no: not built; a reflexive command takes its
-    // pronoun after the verb: not built)
+    // beyond the six: the present perfect and the pluperfect, the compound subjunctives (haya hablado, hubiera hablado),
+    // the -ra imperfect subjunctive and the affirmative command; a reflexive verb's command and its infinitive take the
+    // pronoun on the end (levántate, levantarme). A negative command (no hables) is not built: it waits on Devon's S1.
     extraTenses: [
       { id: 'present-perfect', name: 'Present perfect', mood: 'indicative', kind: 'compound', compound: { auxiliary: 'haber', tense: 'present' } },
+      { id: 'pluperfect', name: 'Pluperfect', mood: 'indicative', kind: 'compound', compound: { auxiliary: 'haber', tense: 'imperfect' } },
+      { id: 'present-perfect-subjunctive', name: 'Present perfect subjunctive', mood: 'subjunctive', kind: 'compound', compound: { auxiliary: 'haber', tense: 'subjunctive' } },
+      { id: 'pluperfect-subjunctive', name: 'Pluperfect subjunctive (-ra)', mood: 'subjunctive', kind: 'compound', compound: { auxiliary: 'haber', tense: 'imperfect-subjunctive' } },
       { id: 'imperfect-subjunctive', name: 'Imperfect subjunctive (-ra)', mood: 'subjunctive', kind: 'derived',
         derived: { from: 'preterite', pick: [5, 5, 5, 5, 5, 5], cut: [3, 3, 3, 3, 3, 3], accent: [3] },
         endings: { all: ['ra', 'ras', 'ra', 'ramos', 'rais', 'ran'] } },
-      { id: 'command', name: 'Command (affirmative)', mood: 'imperative', kind: 'pick', noReflexive: true,
-        pick: [null, { from: 'present', slot: 2 }, { from: 'subjunctive', slot: 2 }, { from: 'subjunctive', slot: 3 }, { infinitive: [/r$/, 'd'] }, { from: 'subjunctive', slot: 5 }] }
+      { id: 'command', name: 'Command (affirmative)', mood: 'imperative', kind: 'pick', attach: true,
+        pick: [null, { from: 'present', slot: 2 }, { from: 'subjunctive', slot: 2 }, { from: 'subjunctive', slot: 3 }, { infinitive: [/r$/, 'd'] }, { from: 'subjunctive', slot: 5 }] },
+      { id: 'infinitive-pronoun', name: 'Infinitive with pronoun (reflexive verbs)', mood: 'infinitive', kind: 'infinitive', onlyReflexive: true, noSubject: true, attach: true }
     ],
+    attach: attachEs,
     spelling: [
       { id: 'c>qu', cls: ['ar'], stem: /c$/, next: /^[eé]/, stemRepl: [/c$/, 'qu'] },
       { id: 'g>gu', cls: ['ar'], stem: /g$/, next: /^[eé]/, stemRepl: [/g$/, 'gu'] },
@@ -156,6 +227,8 @@
       { id: 'u>uy', cls: ['er', 'ir'], stem: /[^gq]u$/, next: /^[aeoáéó]/, stemRepl: [/$/, 'y'] },
       { id: 'i>í', cls: ['er', 'ir'], stem: /[aeo]$/, next: /^i(ste|mos|steis|do)$/, endRepl: [/^i/, 'í'] }
     ],
+    // reflexive verbs are a -se ending on a verb the pack knows; listed so the check sheet prints their commands
+    examples: ['levantarse', 'lavarse', 'sentarse', 'dormirse', 'vestirse', 'ponerse', 'irse', 'reírse'],
     records: R,
     regulars: REG
   });

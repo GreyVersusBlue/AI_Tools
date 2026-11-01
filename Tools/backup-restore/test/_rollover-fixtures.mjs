@@ -133,6 +133,8 @@ export const FIX = {
           [J(a.rosters['Period 3'].students) === '[]' && J(a.rosters['Period 3'].orphans) === '[]', 'students and orphans empty (an orphan would hand next year\'s namesake an old id)']]],
   'crh_archive_v1': [{ version: 1, rosters: [{ name: 'Period 3', names: ['Avery Stone'] }], years: [{ id: 'y', label: '2025-26', rosters: [{ names: ['Blake Rivers'] }] }] },
     a => [[J(a) === '{"version":1,"rosters":[],"years":[]}', 'past years and archived rosters gone (Devon: the file is the only copy)']]],
+  'gvb-roleplay:speaking': [{ 'Period 3': { criteria: ['Stays in Spanish'], marks: [{ id: 'm1', date: '2027-05-01', students: ['Avery Stone', 'Blake Rivers'], scores: [{ c: 'Stays in Spanish', v: 3 }] }] } },
+    a => [[J(a) === '{"Period 3":{"criteria":["Stays in Spanish"],"marks":[]}}', 'the class and its rubric kept, every mark gone']]],
   'gvb-roleplay:roster': [{ 'Period 3': ['Avery Stone'] }, a => [[J(a) === '{"Period 3":[]}', 'class names kept, lists empty']]],
   'data-chart-builder-datasets': [{ 'Quiz scores': 'Avery Stone,91\nBlake Rivers,77', 'Seedling heights': 'Mon,3\nTue,4' },
     a => [[J(Object.keys(a)) === '["Seedling heights"]', 'the dataset naming students goes, the other stays']]],

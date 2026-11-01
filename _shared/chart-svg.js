@@ -354,7 +354,9 @@
     var groupPad = slot * 0.18;
     var barW = (slot - groupPad * 2) / built.series.length;
 
-    var parts = [open(c, 'Bar chart', categoryDesc('Bar chart', built, c), seriesDefs(c, built.series.map(function (s) { return s.color; }))), titleEl(c), axes(c, maxVal, built.categories), yAxisLabel(c, built.series[0] ? built.series[0].label : '')];
+    var layer = categoryNoteLayer(c, built, 'bar', maxVal);
+    var parts = [open(c, 'Bar chart', categoryDesc('Bar chart', built, c) + (layer ? layer.desc : ''), seriesDefs(c, built.series.map(function (s) { return s.color; })) + (layer ? layer.defs : '')), titleEl(c), axes(c, maxVal, built.categories), yAxisLabel(c, built.series[0] ? built.series[0].label : '')];
+    if (layer) parts.push(layer.under);
     built.categories.forEach(function (cat, i) {
       built.series.forEach(function (s, si) {
         var val = s.values[i];
@@ -368,6 +370,7 @@
         }
       });
     });
+    if (layer) parts.push(layer.over);
     parts.push(seriesLegend(c, built.series));
     parts.push('</svg>');
     return parts.join('');
@@ -380,7 +383,9 @@
     var n = built.categories.length;
     var slot = plotW / Math.max(n - 1, 1);
 
-    var parts = [open(c, 'Line chart', categoryDesc('Line chart', built, c)), titleEl(c), axes(c, maxVal, built.categories), yAxisLabel(c, built.series[0] ? built.series[0].label : '')];
+    var layer = categoryNoteLayer(c, built, 'line', maxVal);
+    var parts = [open(c, 'Line chart', categoryDesc('Line chart', built, c) + (layer ? layer.desc : ''), layer ? layer.defs : ''), titleEl(c), axes(c, maxVal, built.categories), yAxisLabel(c, built.series[0] ? built.series[0].label : '')];
+    if (layer) parts.push(layer.under);
     built.series.forEach(function (s) {
       var pts = s.values.map(function (v, i) {
         var x = n === 1 ? PAD.left + plotW / 2 : PAD.left + slot * i;
@@ -397,6 +402,7 @@
         }
       });
     });
+    if (layer) parts.push(layer.over);
     parts.push(seriesLegend(c, built.series));
     parts.push('</svg>');
     return parts.join('');
@@ -533,6 +539,7 @@
   function noteLayer(notes, env) {
     var c = env.c, PAD = c.pad, left = PAD.left, right = c.W - PAD.right, top = PAD.top;
     var under = [], over = [], sentences = [], skipped = 0, hasRegion = false, ink = '#16222e';
+    var xs = env.xText || formatNum, rp = env.regionPad || 0;   // a bar chart shades whole categories, so a band reaches half a category past each end
     function fits(x, y) {   // on a log axis xLo and yLo are above 0, so a note at or below 0 is outside
       return x >= env.xLo && x <= env.xHi && y >= env.yLo && y <= env.yHi;
     }
@@ -540,7 +547,7 @@
     cleanNotes(notes).forEach(function (n, i) {
       var t = escapeXml(n.text);
       if (n.type === 'region') {
-        var x1 = clamp(n.x1, env.xLo, env.xHi), x2 = clamp(n.x2, env.xLo, env.xHi);
+        var x1 = clamp(n.x1 - rp, env.xLo, env.xHi), x2 = clamp(n.x2 + rp, env.xLo, env.xHi);
         var hasY = 'y1' in n;
         var y1 = hasY ? clamp(n.y1, env.yLo, env.yHi) : env.yLo, y2 = hasY ? clamp(n.y2, env.yLo, env.yHi) : env.yHi;
         if (!(x2 > x1) || !(y2 > y1)) { skipped++; return; }
@@ -548,7 +555,7 @@
         var px1 = env.toX(x1), px2 = env.toX(x2), py1 = env.toY(y2), py2 = env.toY(y1);
         under.push('<rect x="' + px1.toFixed(1) + '" y="' + py1.toFixed(1) + '" width="' + (px2 - px1).toFixed(1) + '" height="' + (py2 - py1).toFixed(1) + '" fill="url(#' + c.idPrefix + '-nr)" stroke="#8a97a3" stroke-width="1" stroke-dasharray="2,3"/>');
         if (n.text) over.push('<text x="' + (px1 + 4).toFixed(1) + '" y="' + (py1 + 12).toFixed(1) + '" font-size="10" font-weight="600" fill="' + ink + '">' + t + '</text>');
-        sentences.push('Shaded region ' + (hasY ? 'from ' + formatNum(n.x1) + ' to ' + formatNum(n.x2) + ' across, ' + formatNum(n.y1) + ' to ' + formatNum(n.y2) + ' up' : 'across ' + formatNum(n.x1) + ' to ' + formatNum(n.x2)) + (n.text ? ': ' + n.text : '') + '.');
+        sentences.push('Shaded region ' + (hasY ? 'from ' + xs(n.x1) + ' to ' + xs(n.x2) + ' across, ' + formatNum(n.y1) + ' to ' + formatNum(n.y2) + ' up' : 'across ' + xs(n.x1) + ' to ' + xs(n.x2)) + (n.text ? ': ' + n.text : '') + '.');
       } else if (n.type === 'arrow') {
         if (!fits(n.x1, n.y1) || !fits(n.x2, n.y2)) { skipped++; return; }
         var ax = env.toX(n.x1), ay = env.toY(n.y1), bx = env.toX(n.x2), by = env.toY(n.y2);
@@ -561,7 +568,7 @@
           var anchor = ax > right - 80 ? 'end' : ax < left + 80 ? 'start' : 'middle';
           over.push('<text x="' + ax.toFixed(1) + '" y="' + ty.toFixed(1) + '" text-anchor="' + anchor + '" font-size="10" font-weight="600" fill="' + ink + '" stroke="#ffffff" stroke-width="3" paint-order="stroke">' + t + '</text>');
         }
-        sentences.push('Arrow from ' + formatNum(n.x1) + ', ' + formatNum(n.y1) + ' to ' + formatNum(n.x2) + ', ' + formatNum(n.y2) + (n.text ? ': ' + n.text : '') + '.');
+        sentences.push('Arrow from ' + xs(n.x1) + ', ' + formatNum(n.y1) + ' to ' + xs(n.x2) + ', ' + formatNum(n.y2) + (n.text ? ': ' + n.text : '') + '.');
       } else {
         if (!fits(n.x, n.y)) { skipped++; return; }
         var cx = env.toX(n.x), cy = env.toY(n.y);
@@ -572,7 +579,7 @@
         over.push('<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="7" fill="none" stroke="' + ink + '" stroke-width="1.4"/>');
         over.push('<rect x="' + bxp.toFixed(1) + '" y="' + byp.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h + '" rx="4" fill="#ffffff" stroke="' + ink + '" stroke-width="1.2"/>');
         over.push('<text x="' + (bxp + w / 2).toFixed(1) + '" y="' + (byp + 14).toFixed(1) + '" text-anchor="middle" font-size="10" fill="' + ink + '">' + t + '</text>');
-        sentences.push('Callout at ' + formatNum(n.x) + ', ' + formatNum(n.y) + ': ' + n.text + '.');
+        sentences.push('Callout at ' + xs(n.x) + ', ' + formatNum(n.y) + ': ' + n.text + '.');
       }
     });
     if (skipped) sentences.push(skipped + ' note' + (skipped === 1 ? '' : 's') + ' outside the plot ' + (skipped === 1 ? 'is' : 'are') + ' not drawn.');
@@ -585,6 +592,23 @@
   /* ---------- Step 3: more than one series on a scatter (shape as well as colour) ---------- */
 
   var SHAPES = ['circle', 'square', 'triangle', 'diamond'];
+
+  /* Notes on a bar or line chart. The x of a note is a CATEGORY NUMBER (1 is the first row of the table; 2.5 is
+     between the second and third), the y is a value on the axis. On a bar chart a band covers the whole of each
+     category from its first number to its second; on a line chart it runs from the first point to the second. The
+     description names the category ("category 2 (Tue)"), so the chart reads the same without seeing it. */
+  function categoryNoteLayer(c, built, kind, maxVal) {
+    if (!c.notes || !c.notes.length) return null;
+    var PAD = c.pad, plotW = c.W - PAD.left - PAD.right, plotH = c.H - PAD.top - PAD.bottom, n = built.categories.length;
+    var isBar = kind === 'bar', slot = isBar ? plotW / n : plotW / Math.max(n - 1, 1);
+    function toX(x) { return isBar ? PAD.left + slot * (x - 0.5) : (n === 1 ? PAD.left + plotW / 2 : PAD.left + slot * (x - 1)); }
+    function toY(v) { return PAD.top + plotH - (v / maxVal) * plotH; }
+    function xText(x) {
+      var i = Math.round(x), name = x === i && built.categories[i - 1] != null ? ' (' + String(built.categories[i - 1]) + ')' : '';
+      return 'category ' + formatNum(x) + name;
+    }
+    return noteLayer(c.notes, { c: c, toX: toX, toY: toY, xLo: isBar ? 0.5 : 1, xHi: isBar ? n + 0.5 : Math.max(n, 1), yLo: 0, yHi: maxVal, xLog: false, yLog: false, xText: xText, regionPad: isBar ? 0.5 : 0 });
+  }
 
   function markerEl(shape, cx, cy, fill, r, opacity) {
     var a = ' fill="' + fill + '" opacity="' + opacity + '"';

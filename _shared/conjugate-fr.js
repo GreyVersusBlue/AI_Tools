@@ -81,6 +81,8 @@
   // conduire and its family are records ('-duire'); the names above only mark them known
 
   var IMP = ['ais', 'ais', 'ait', 'ions', 'iez', 'aient'];
+  // the impératif borrows tu, nous and vous from the présent (tu loses its -s on an -er verb: parle, va)
+  var COMMAND = [null, { from: 'present', slot: 1, drop: { cls: ['er', 'ir-er'], end: 's' } }, null, { from: 'present', slot: 3 }, { from: 'present', slot: 4 }, null];
   var MUTE = /^e(s|nt)?$|^er/;
 
   window.Conjugate.register({
@@ -90,13 +92,13 @@
     reflexive: { prefixes: ['se ', "s'"] },
     reflexivePronouns: ['me', 'te', 'se', 'nous', 'vous', 'se'],
     reflexiveAux: 'être', agreementAux: 'être',
-    elision: { je: "j'", me: "m'", te: "t'", se: "s'" },
+    elision: { je: "j'", me: "m'", te: "t'", se: "s'", ne: "n'" },
     aspirateH: ['haïr'],
     pronouns: {
       words: ['je', 'tu', 'il', 'elle', 'on', 'nous', 'vous', 'ils', 'elles', 'me', 'te', 'se', 'que'],
       elided: /^(?:j|m|t|s|qu)'\s*/,
-      unelide: /(?:^|\s)(je|me|te|se|que)\s+(?=[aeiouhàâéèêëîïôûù])/g,
-      unelideTo: { je: " j'", me: " m'", te: " t'", se: " s'", que: " qu'" }
+      unelide: /(?:^|\s)(je|me|te|se|ne|que)\s+(?=[aeiouhàâéèêëîïôûù])/g,
+      unelideTo: { je: " j'", me: " m'", te: " t'", se: " s'", ne: " n'", que: " qu'" }
     },
     classes: {
       er: { name: '-er', example: 'parler', suffixes: ['er'], futureSuffix: 'er', participle: { add: 'é' } },
@@ -130,12 +132,20 @@
       { id: 'subjunctive', name: 'Subjonctif présent', mood: 'subjunctive', kind: 'derived',
         derived: { from: 'present', pick: [5, 5, 5, 3, 3, 5], cut: [3, 3, 3, 3, 3, 3] }, endings: { all: ['e', 'es', 'e', 'ions', 'iez', 'ent'] } }
     ],
-    // beyond the six: the affirmative impératif (tu, nous, vous; a negative one and the pronoun that follows
-    // it, lève-toi, are not built). The imparfait du subjonctif is literary and is not built.
+    // beyond the six: the plus-que-parfait and the passé du subjonctif, the impératif (tu, nous, vous), its negative
+    // (ne parle pas, ne te lève pas) and, for a reflexive verb, the pronoun that follows the affirmative one with a hyphen
+    // (lève-toi). The imparfait du subjonctif is literary and is not built.
     extraTenses: [
-      { id: 'command', name: 'Impératif', mood: 'imperative', kind: 'pick', noReflexive: true,
-        pick: [null, { from: 'present', slot: 1, drop: { cls: ['er', 'ir-er'], end: 's' } }, null, { from: 'present', slot: 3 }, { from: 'present', slot: 4 }, null] }
+      { id: 'pluperfect', name: 'Plus-que-parfait', mood: 'indicative', kind: 'compound', compound: { auxiliary: 'avoir', tense: 'imperfect' } },
+      { id: 'past-subjunctive', name: 'Subjonctif passé', mood: 'subjunctive', kind: 'compound', compound: { auxiliary: 'avoir', tense: 'subjunctive' } },
+      { id: 'command', name: 'Impératif', mood: 'imperative', kind: 'pick', attach: true, pick: COMMAND },
+      { id: 'negative-command', name: 'Impératif négatif', mood: 'imperative', kind: 'pick', negateOf: 'command', negate: ['ne', 'pas'] }
     ],
+    // lève-toi, levons-nous, levez-vous
+    attach: function (form, slot, ctx) {
+      var pron = { 1: 'toi', 3: 'nous', 4: 'vous' }[slot];
+      return pron ? form + '-' + pron : '';
+    },
     spelling: [
       { id: 'c>ç', cls: ['er'], stem: /c$/, next: /^[aouâ]/, stemRepl: [/c$/, 'ç'] },
       { id: 'g>ge', cls: ['er'], stem: /g$/, next: /^[aouâ]/, stemRepl: [/$/, 'e'] },
@@ -144,6 +154,8 @@
       { id: 'y>i', cls: ['er'], stem: /[ou]y$/, next: MUTE, stemRepl: [/y$/, 'i'] },
       { id: 'y>i', cls: ['er'], stem: /ay$/, next: MUTE, stemRepl: [/y$/, 'i'], alt: true }
     ],
+    // reflexive verbs are a se ending on a verb the pack knows; listed so the check sheet prints their commands
+    examples: ['se lever', 'se laver', "s'habiller", 'se dépêcher', "s'appeler", 'se réveiller', 'se coucher'],
     records: R,
     regulars: REG
   });

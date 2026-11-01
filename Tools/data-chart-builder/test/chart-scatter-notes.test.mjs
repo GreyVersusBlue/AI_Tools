@@ -98,7 +98,7 @@ const MUTANTS = {
   'strings accepted as numbers': s => s.replace("typeof v === 'number' && isFinite(v) ? v : null", "isFinite(v) ? +v : null"),
   'region not clipped': s => s.replace("var x1 = clamp(n.x1, env.xLo, env.xHi), x2 = clamp(n.x2, env.xLo, env.xHi);", "var x1 = n.x1, x2 = n.x2;"),
   'region without hatch': s => s.replace('<line x1="0" y1="0" x2="0" y2="7" stroke="rgba(31,36,48,.35)" stroke-width="1.2"/>', ''),
-  'region drawn over the points': s => s.replace("if (layer) parts.push(layer.under);", ""),
+  'region drawn over the points': s => s.replace("    if (layer) parts.push(layer.under);\n\n    if (trend) {", "\n    if (trend) {"),
   'out-of-plot notes drawn': s => s.replace("return x >= env.xLo && x <= env.xHi && y >= env.yLo && y <= env.yHi;", "return true;"),
   'skipped not counted': s => s.replace("if (skipped) sentences.push(", "if (false) sentences.push("),
   'arrow head at the tail': s => s.replace("var ax = env.toX(n.x1), ay = env.toY(n.y1), bx = env.toX(n.x2), by = env.toY(n.y2);", "var ax = env.toX(n.x2), ay = env.toY(n.y2), bx = env.toX(n.x1), by = env.toY(n.y1);"),

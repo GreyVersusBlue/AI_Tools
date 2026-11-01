@@ -67,6 +67,15 @@
   .control-group label { font-size: 11.5px; opacity: 0.65; font-weight: 500; }
   .control-group label input[type="checkbox"] { margin-right: 5px; vertical-align: -2px; }
   [hidden] { display: none !important; }
+  /* Phone fold (AI-30, rank 66): .tb-more is invisible to the flex row on a desktop. At 600px and
+     under the first card keeps sort, page size and orientation up and folds the rest behind More. */
+  .controls .tb-more { display: contents; }
+  .controls .tb-toggle { display: none; }
+  @media (max-width: 600px) {
+    .controls .tb-toggle { display: inline-block; flex: 0 0 100%; }
+    .controls .tb-more { display: none; flex-wrap: wrap; gap: var(--space-4); flex: 0 0 100%; }
+    .controls.expanded .tb-more { display: flex; }
+  }
 
   .toggle-group {
     display: flex; background: var(--color-surface);
@@ -207,6 +216,9 @@
       </div>
     </div>
 
+    <button type="button" class="btn btn-secondary tb-toggle" id="sortMoreBtn" aria-expanded="false" aria-controls="sortMore"
+            title="Show the layout, quality, size, clean-up and filename options">More options &#9662;</button>
+    <div class="tb-more" id="sortMore">
     <div class="control-group">
       <label for="grid-density">Layout</label>
       <select class="input" id="grid-density">
@@ -260,6 +272,7 @@
     <div class="control-group">
       <label for="filename">Output filename</label>
       <input class="input" type="text" id="filename" value="assembled.pdf" placeholder="assembled.pdf">
+    </div>
     </div>
 
   </div>
@@ -1912,6 +1925,13 @@
   }
 
 })();
+
+/* Phone options card: the More button unfolds the layout, quality, size, clean-up and filename groups (display:none above 600px). */
+document.getElementById('sortMoreBtn').addEventListener('click', function () {
+  var bar = this.closest('.controls'), open = bar.classList.toggle('expanded');
+  this.setAttribute('aria-expanded', open ? 'true' : 'false');
+  this.textContent = open ? 'Fewer options ▴' : 'More options ▾';
+});
 </script>
 <script src="../_shared/sw-register.js" defer></script>
 </body>

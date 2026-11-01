@@ -1,0 +1,1736 @@
+{
+ "articles": [
+  [
+   "Atom",
+   "Science"
+  ],
+  [
+   "Gravity",
+   "Science"
+  ],
+  [
+   "Light",
+   "Science"
+  ],
+  [
+   "Electricity",
+   "Science"
+  ],
+  [
+   "Magnetism",
+   "Science"
+  ],
+  [
+   "Energy",
+   "Science"
+  ],
+  [
+   "Sound",
+   "Science"
+  ],
+  [
+   "Heat",
+   "Science"
+  ],
+  [
+   "Telescope",
+   "Science"
+  ],
+  [
+   "Microscope",
+   "Science"
+  ],
+  [
+   "Periodic table",
+   "Science"
+  ],
+  [
+   "Ancient Egypt",
+   "History"
+  ],
+  [
+   "Ancient Greece",
+   "History"
+  ],
+  [
+   "Roman Empire",
+   "History"
+  ],
+  [
+   "Printing press",
+   "History"
+  ],
+  [
+   "Silk Road",
+   "History"
+  ],
+  [
+   "Industrial Revolution",
+   "History"
+  ],
+  [
+   "Renaissance",
+   "History"
+  ],
+  [
+   "Great Wall of China",
+   "History"
+  ],
+  [
+   "Vikings",
+   "History"
+  ],
+  [
+   "Mesopotamia",
+   "History"
+  ],
+  [
+   "Maya",
+   "History"
+  ],
+  [
+   "Nile River",
+   "Geography"
+  ],
+  [
+   "Amazon rainforest",
+   "Geography"
+  ],
+  [
+   "Sahara Desert",
+   "Geography"
+  ],
+  [
+   "Himalayas",
+   "Geography"
+  ],
+  [
+   "Pacific Ocean",
+   "Geography"
+  ],
+  [
+   "Equator",
+   "Geography"
+  ],
+  [
+   "Map",
+   "Geography"
+  ],
+  [
+   "Compass",
+   "Geography"
+  ],
+  [
+   "Volcano",
+   "Geography"
+  ],
+  [
+   "Earthquake",
+   "Geography"
+  ],
+  [
+   "Climate",
+   "Geography"
+  ],
+  [
+   "Number",
+   "Mathematics"
+  ],
+  [
+   "Zero",
+   "Mathematics"
+  ],
+  [
+   "Fraction",
+   "Mathematics"
+  ],
+  [
+   "Geometry",
+   "Mathematics"
+  ],
+  [
+   "Triangle",
+   "Mathematics"
+  ],
+  [
+   "Circle",
+   "Mathematics"
+  ],
+  [
+   "Pi",
+   "Mathematics"
+  ],
+  [
+   "Algebra",
+   "Mathematics"
+  ],
+  [
+   "Probability",
+   "Mathematics"
+  ],
+  [
+   "Statistics",
+   "Mathematics"
+  ],
+  [
+   "Symmetry",
+   "Mathematics"
+  ],
+  [
+   "Painting",
+   "Arts"
+  ],
+  [
+   "Sculpture",
+   "Arts"
+  ],
+  [
+   "Music",
+   "Arts"
+  ],
+  [
+   "Piano",
+   "Arts"
+  ],
+  [
+   "Poetry",
+   "Arts"
+  ],
+  [
+   "Theatre",
+   "Arts"
+  ],
+  [
+   "Dance",
+   "Arts"
+  ],
+  [
+   "Photography",
+   "Arts"
+  ],
+  [
+   "Architecture",
+   "Arts"
+  ],
+  [
+   "Pottery",
+   "Arts"
+  ],
+  [
+   "Color",
+   "Arts"
+  ],
+  [
+   "Photosynthesis",
+   "Nature"
+  ],
+  [
+   "Plant",
+   "Nature"
+  ],
+  [
+   "Seed",
+   "Nature"
+  ],
+  [
+   "Bee",
+   "Nature"
+  ],
+  [
+   "Butterfly",
+   "Nature"
+  ],
+  [
+   "Whale",
+   "Nature"
+  ],
+  [
+   "Coral reef",
+   "Nature"
+  ],
+  [
+   "Food chain",
+   "Nature"
+  ],
+  [
+   "Bird",
+   "Nature"
+  ],
+  [
+   "Tree",
+   "Nature"
+  ],
+  [
+   "Soil",
+   "Nature"
+  ]
+ ],
+ "farPairs": [
+  [
+   "Arts",
+   "Science"
+  ],
+  [
+   "Mathematics",
+   "History"
+  ],
+  [
+   "Nature",
+   "Mathematics"
+  ],
+  [
+   "Geography",
+   "Arts"
+  ],
+  [
+   "History",
+   "Science"
+  ],
+  [
+   "Nature",
+   "History"
+  ]
+ ],
+ "matchups": [
+  {
+   "s": "bulldogs1",
+   "d": "easy",
+   "start": "Music",
+   "target": "Architecture"
+  },
+  {
+   "s": "bulldogs1",
+   "d": "medium",
+   "start": "Painting",
+   "target": "Sound"
+  },
+  {
+   "s": "bulldogs1",
+   "d": "hard",
+   "start": "Zero",
+   "target": "Great Wall of China"
+  },
+  {
+   "s": "Bulldogs1",
+   "d": "easy",
+   "start": "Music",
+   "target": "Architecture"
+  },
+  {
+   "s": "Bulldogs1",
+   "d": "medium",
+   "start": "Painting",
+   "target": "Sound"
+  },
+  {
+   "s": "Bulldogs1",
+   "d": "hard",
+   "start": "Zero",
+   "target": "Great Wall of China"
+  },
+  {
+   "s": "  bulldogs1  ",
+   "d": "easy",
+   "start": "Music",
+   "target": "Architecture"
+  },
+  {
+   "s": "  bulldogs1  ",
+   "d": "medium",
+   "start": "Painting",
+   "target": "Sound"
+  },
+  {
+   "s": "  bulldogs1  ",
+   "d": "hard",
+   "start": "Zero",
+   "target": "Great Wall of China"
+  },
+  {
+   "s": "bulldogs   1",
+   "d": "easy",
+   "start": "Sound",
+   "target": "Heat"
+  },
+  {
+   "s": "bulldogs   1",
+   "d": "medium",
+   "start": "Map",
+   "target": "Food chain"
+  },
+  {
+   "s": "bulldogs   1",
+   "d": "hard",
+   "start": "Plant",
+   "target": "Great Wall of China"
+  },
+  {
+   "s": "",
+   "d": "easy",
+   "start": "Bee",
+   "target": "Tree"
+  },
+  {
+   "s": "",
+   "d": "medium",
+   "start": "Piano",
+   "target": "Butterfly"
+  },
+  {
+   "s": "",
+   "d": "hard",
+   "start": "Roman Empire",
+   "target": "Telescope"
+  },
+  {
+   "s": "a",
+   "d": "easy",
+   "start": "Pi",
+   "target": "Statistics"
+  },
+  {
+   "s": "a",
+   "d": "medium",
+   "start": "Roman Empire",
+   "target": "Music"
+  },
+  {
+   "s": "a",
+   "d": "hard",
+   "start": "Roman Empire",
+   "target": "Bird"
+  },
+  {
+   "s": "period 3",
+   "d": "easy",
+   "start": "Silk Road",
+   "target": "Renaissance"
+  },
+  {
+   "s": "period 3",
+   "d": "medium",
+   "start": "Roman Empire",
+   "target": "Tree"
+  },
+  {
+   "s": "period 3",
+   "d": "hard",
+   "start": "Sahara Desert",
+   "target": "Architecture"
+  },
+  {
+   "s": "period 4",
+   "d": "easy",
+   "start": "Vikings",
+   "target": "Printing press"
+  },
+  {
+   "s": "period 4",
+   "d": "medium",
+   "start": "Symmetry",
+   "target": "Amazon rainforest"
+  },
+  {
+   "s": "period 4",
+   "d": "hard",
+   "start": "Mesopotamia",
+   "target": "Bird"
+  },
+  {
+   "s": "EMS",
+   "d": "easy",
+   "start": "Energy",
+   "target": "Atom"
+  },
+  {
+   "s": "EMS",
+   "d": "medium",
+   "start": "Theatre",
+   "target": "Telescope"
+  },
+  {
+   "s": "EMS",
+   "d": "hard",
+   "start": "Music",
+   "target": "Climate"
+  },
+  {
+   "s": "room 214",
+   "d": "easy",
+   "start": "Industrial Revolution",
+   "target": "Silk Road"
+  },
+  {
+   "s": "room 214",
+   "d": "medium",
+   "start": "Telescope",
+   "target": "Bee"
+  },
+  {
+   "s": "room 214",
+   "d": "hard",
+   "start": "Ancient Greece",
+   "target": "Atom"
+  },
+  {
+   "s": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "d": "easy",
+   "start": "Triangle",
+   "target": "Pi"
+  },
+  {
+   "s": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "d": "medium",
+   "start": "Poetry",
+   "target": "Statistics"
+  },
+  {
+   "s": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "d": "hard",
+   "start": "Renaissance",
+   "target": "Bee"
+  },
+  {
+   "s": "ünïcode",
+   "d": "easy",
+   "start": "Printing press",
+   "target": "Ancient Egypt"
+  },
+  {
+   "s": "ünïcode",
+   "d": "medium",
+   "start": "Map",
+   "target": "Gravity"
+  },
+  {
+   "s": "ünïcode",
+   "d": "hard",
+   "start": "Printing press",
+   "target": "Food chain"
+  },
+  {
+   "s": "race 7",
+   "d": "easy",
+   "start": "Telescope",
+   "target": "Electricity"
+  },
+  {
+   "s": "race 7",
+   "d": "medium",
+   "start": "Music",
+   "target": "Nile River"
+  },
+  {
+   "s": "race 7",
+   "d": "hard",
+   "start": "Butterfly",
+   "target": "Probability"
+  },
+  {
+   "s": "friday",
+   "d": "easy",
+   "start": "Compass",
+   "target": "Nile River"
+  },
+  {
+   "s": "friday",
+   "d": "medium",
+   "start": "Probability",
+   "target": "Tree"
+  },
+  {
+   "s": "friday",
+   "d": "hard",
+   "start": "Energy",
+   "target": "Poetry"
+  },
+  {
+   "s": "monday",
+   "d": "easy",
+   "start": "Triangle",
+   "target": "Circle"
+  },
+  {
+   "s": "monday",
+   "d": "medium",
+   "start": "Coral reef",
+   "target": "Poetry"
+  },
+  {
+   "s": "monday",
+   "d": "hard",
+   "start": "Volcano",
+   "target": "Architecture"
+  },
+  {
+   "s": "tigers",
+   "d": "easy",
+   "start": "Circle",
+   "target": "Triangle"
+  },
+  {
+   "s": "tigers",
+   "d": "medium",
+   "start": "Nile River",
+   "target": "Roman Empire"
+  },
+  {
+   "s": "tigers",
+   "d": "hard",
+   "start": "Electricity",
+   "target": "Poetry"
+  },
+  {
+   "s": "tigers2",
+   "d": "easy",
+   "start": "Bee",
+   "target": "Bird"
+  },
+  {
+   "s": "tigers2",
+   "d": "medium",
+   "start": "Whale",
+   "target": "Painting"
+  },
+  {
+   "s": "tigers2",
+   "d": "hard",
+   "start": "Theatre",
+   "target": "Periodic table"
+  },
+  {
+   "s": "seed",
+   "d": "easy",
+   "start": "Pacific Ocean",
+   "target": "Sahara Desert"
+  },
+  {
+   "s": "seed",
+   "d": "medium",
+   "start": "Climate",
+   "target": "Ancient Egypt"
+  },
+  {
+   "s": "seed",
+   "d": "hard",
+   "start": "Bee",
+   "target": "Symmetry"
+  },
+  {
+   "s": "Seed 1",
+   "d": "easy",
+   "start": "Mesopotamia",
+   "target": "Great Wall of China"
+  },
+  {
+   "s": "Seed 1",
+   "d": "medium",
+   "start": "Poetry",
+   "target": "Amazon rainforest"
+  },
+  {
+   "s": "Seed 1",
+   "d": "hard",
+   "start": "Equator",
+   "target": "Piano"
+  },
+  {
+   "s": "seed 2",
+   "d": "easy",
+   "start": "Geometry",
+   "target": "Zero"
+  },
+  {
+   "s": "seed 2",
+   "d": "medium",
+   "start": "Theatre",
+   "target": "Whale"
+  },
+  {
+   "s": "seed 2",
+   "d": "hard",
+   "start": "Vikings",
+   "target": "Photosynthesis"
+  },
+  {
+   "s": "class0",
+   "d": "easy",
+   "start": "Periodic table",
+   "target": "Gravity"
+  },
+  {
+   "s": "class0",
+   "d": "medium",
+   "start": "Zero",
+   "target": "Great Wall of China"
+  },
+  {
+   "s": "class0",
+   "d": "hard",
+   "start": "Statistics",
+   "target": "Industrial Revolution"
+  },
+  {
+   "s": "class1",
+   "d": "easy",
+   "start": "Equator",
+   "target": "Volcano"
+  },
+  {
+   "s": "class1",
+   "d": "medium",
+   "start": "Theatre",
+   "target": "Zero"
+  },
+  {
+   "s": "class1",
+   "d": "hard",
+   "start": "Mesopotamia",
+   "target": "Statistics"
+  },
+  {
+   "s": "class2",
+   "d": "easy",
+   "start": "Ancient Egypt",
+   "target": "Ancient Greece"
+  },
+  {
+   "s": "class2",
+   "d": "medium",
+   "start": "Color",
+   "target": "Pottery"
+  },
+  {
+   "s": "class2",
+   "d": "hard",
+   "start": "Soil",
+   "target": "Silk Road"
+  },
+  {
+   "s": "class3",
+   "d": "easy",
+   "start": "Magnetism",
+   "target": "Gravity"
+  },
+  {
+   "s": "class3",
+   "d": "medium",
+   "start": "Tree",
+   "target": "Zero"
+  },
+  {
+   "s": "class3",
+   "d": "hard",
+   "start": "Heat",
+   "target": "Ancient Greece"
+  },
+  {
+   "s": "class4",
+   "d": "easy",
+   "start": "Pacific Ocean",
+   "target": "Sahara Desert"
+  },
+  {
+   "s": "class4",
+   "d": "medium",
+   "start": "Volcano",
+   "target": "Bird"
+  },
+  {
+   "s": "class4",
+   "d": "hard",
+   "start": "Ancient Greece",
+   "target": "Telescope"
+  },
+  {
+   "s": "class5",
+   "d": "easy",
+   "start": "Mesopotamia",
+   "target": "Industrial Revolution"
+  },
+  {
+   "s": "class5",
+   "d": "medium",
+   "start": "Algebra",
+   "target": "Earthquake"
+  },
+  {
+   "s": "class5",
+   "d": "hard",
+   "start": "Himalayas",
+   "target": "Pottery"
+  },
+  {
+   "s": "class6",
+   "d": "easy",
+   "start": "Ancient Greece",
+   "target": "Printing press"
+  },
+  {
+   "s": "class6",
+   "d": "medium",
+   "start": "Silk Road",
+   "target": "Architecture"
+  },
+  {
+   "s": "class6",
+   "d": "hard",
+   "start": "Printing press",
+   "target": "Gravity"
+  },
+  {
+   "s": "class7",
+   "d": "easy",
+   "start": "Telescope",
+   "target": "Sound"
+  },
+  {
+   "s": "class7",
+   "d": "medium",
+   "start": "Music",
+   "target": "Coral reef"
+  },
+  {
+   "s": "class7",
+   "d": "hard",
+   "start": "Architecture",
+   "target": "Sound"
+  },
+  {
+   "s": "class8",
+   "d": "easy",
+   "start": "Silk Road",
+   "target": "Mesopotamia"
+  },
+  {
+   "s": "class8",
+   "d": "medium",
+   "start": "Painting",
+   "target": "Plant"
+  },
+  {
+   "s": "class8",
+   "d": "hard",
+   "start": "Algebra",
+   "target": "Seed"
+  },
+  {
+   "s": "class9",
+   "d": "easy",
+   "start": "Nile River",
+   "target": "Pacific Ocean"
+  },
+  {
+   "s": "class9",
+   "d": "medium",
+   "start": "Whale",
+   "target": "Renaissance"
+  },
+  {
+   "s": "class9",
+   "d": "hard",
+   "start": "Poetry",
+   "target": "Light"
+  },
+  {
+   "s": "class10",
+   "d": "easy",
+   "start": "Heat",
+   "target": "Microscope"
+  },
+  {
+   "s": "class10",
+   "d": "medium",
+   "start": "Electricity",
+   "target": "Geometry"
+  },
+  {
+   "s": "class10",
+   "d": "hard",
+   "start": "Sculpture",
+   "target": "Energy"
+  },
+  {
+   "s": "class11",
+   "d": "easy",
+   "start": "Sound",
+   "target": "Periodic table"
+  },
+  {
+   "s": "class11",
+   "d": "medium",
+   "start": "Statistics",
+   "target": "Heat"
+  },
+  {
+   "s": "class11",
+   "d": "hard",
+   "start": "Sahara Desert",
+   "target": "Piano"
+  },
+  {
+   "s": "class12",
+   "d": "easy",
+   "start": "Triangle",
+   "target": "Pi"
+  },
+  {
+   "s": "class12",
+   "d": "medium",
+   "start": "Food chain",
+   "target": "Statistics"
+  },
+  {
+   "s": "class12",
+   "d": "hard",
+   "start": "Seed",
+   "target": "Fraction"
+  },
+  {
+   "s": "class13",
+   "d": "easy",
+   "start": "Architecture",
+   "target": "Music"
+  },
+  {
+   "s": "class13",
+   "d": "medium",
+   "start": "Gravity",
+   "target": "Industrial Revolution"
+  },
+  {
+   "s": "class13",
+   "d": "hard",
+   "start": "Zero",
+   "target": "Renaissance"
+  },
+  {
+   "s": "class14",
+   "d": "easy",
+   "start": "Periodic table",
+   "target": "Light"
+  },
+  {
+   "s": "class14",
+   "d": "medium",
+   "start": "Statistics",
+   "target": "Coral reef"
+  },
+  {
+   "s": "class14",
+   "d": "hard",
+   "start": "Probability",
+   "target": "Silk Road"
+  },
+  {
+   "s": "class15",
+   "d": "easy",
+   "start": "Mesopotamia",
+   "target": "Ancient Greece"
+  },
+  {
+   "s": "class15",
+   "d": "medium",
+   "start": "Nile River",
+   "target": "Number"
+  },
+  {
+   "s": "class15",
+   "d": "hard",
+   "start": "Statistics",
+   "target": "Photosynthesis"
+  },
+  {
+   "s": "class16",
+   "d": "easy",
+   "start": "Silk Road",
+   "target": "Mesopotamia"
+  },
+  {
+   "s": "class16",
+   "d": "medium",
+   "start": "Bee",
+   "target": "Himalayas"
+  },
+  {
+   "s": "class16",
+   "d": "hard",
+   "start": "Mesopotamia",
+   "target": "Tree"
+  },
+  {
+   "s": "class17",
+   "d": "easy",
+   "start": "Triangle",
+   "target": "Fraction"
+  },
+  {
+   "s": "class17",
+   "d": "medium",
+   "start": "Volcano",
+   "target": "Painting"
+  },
+  {
+   "s": "class17",
+   "d": "hard",
+   "start": "Whale",
+   "target": "Mesopotamia"
+  },
+  {
+   "s": "class18",
+   "d": "easy",
+   "start": "Architecture",
+   "target": "Poetry"
+  },
+  {
+   "s": "class18",
+   "d": "medium",
+   "start": "Climate",
+   "target": "Whale"
+  },
+  {
+   "s": "class18",
+   "d": "hard",
+   "start": "Zero",
+   "target": "Great Wall of China"
+  },
+  {
+   "s": "class19",
+   "d": "easy",
+   "start": "Great Wall of China",
+   "target": "Maya"
+  },
+  {
+   "s": "class19",
+   "d": "medium",
+   "start": "Atom",
+   "target": "Painting"
+  },
+  {
+   "s": "class19",
+   "d": "hard",
+   "start": "Silk Road",
+   "target": "Zero"
+  },
+  {
+   "s": "class20",
+   "d": "easy",
+   "start": "Sculpture",
+   "target": "Piano"
+  },
+  {
+   "s": "class20",
+   "d": "medium",
+   "start": "Coral reef",
+   "target": "Algebra"
+  },
+  {
+   "s": "class20",
+   "d": "hard",
+   "start": "Energy",
+   "target": "Photography"
+  },
+  {
+   "s": "class21",
+   "d": "easy",
+   "start": "Renaissance",
+   "target": "Mesopotamia"
+  },
+  {
+   "s": "class21",
+   "d": "medium",
+   "start": "Equator",
+   "target": "Theatre"
+  },
+  {
+   "s": "class21",
+   "d": "hard",
+   "start": "Poetry",
+   "target": "Map"
+  },
+  {
+   "s": "class22",
+   "d": "easy",
+   "start": "Sound",
+   "target": "Microscope"
+  },
+  {
+   "s": "class22",
+   "d": "medium",
+   "start": "Pottery",
+   "target": "Equator"
+  },
+  {
+   "s": "class22",
+   "d": "hard",
+   "start": "Bird",
+   "target": "Silk Road"
+  },
+  {
+   "s": "class23",
+   "d": "easy",
+   "start": "Bee",
+   "target": "Bird"
+  },
+  {
+   "s": "class23",
+   "d": "medium",
+   "start": "Food chain",
+   "target": "Climate"
+  },
+  {
+   "s": "class23",
+   "d": "hard",
+   "start": "Light",
+   "target": "Pottery"
+  },
+  {
+   "s": "class24",
+   "d": "easy",
+   "start": "Pi",
+   "target": "Symmetry"
+  },
+  {
+   "s": "class24",
+   "d": "medium",
+   "start": "Telescope",
+   "target": "Silk Road"
+  },
+  {
+   "s": "class24",
+   "d": "hard",
+   "start": "Map",
+   "target": "Dance"
+  },
+  {
+   "s": "class25",
+   "d": "easy",
+   "start": "Soil",
+   "target": "Whale"
+  },
+  {
+   "s": "class25",
+   "d": "medium",
+   "start": "Number",
+   "target": "Symmetry"
+  },
+  {
+   "s": "class25",
+   "d": "hard",
+   "start": "Gravity",
+   "target": "Color"
+  },
+  {
+   "s": "class26",
+   "d": "easy",
+   "start": "Algebra",
+   "target": "Fraction"
+  },
+  {
+   "s": "class26",
+   "d": "medium",
+   "start": "Seed",
+   "target": "Printing press"
+  },
+  {
+   "s": "class26",
+   "d": "hard",
+   "start": "Seed",
+   "target": "Probability"
+  },
+  {
+   "s": "class27",
+   "d": "easy",
+   "start": "Pacific Ocean",
+   "target": "Himalayas"
+  },
+  {
+   "s": "class27",
+   "d": "medium",
+   "start": "Heat",
+   "target": "Probability"
+  },
+  {
+   "s": "class27",
+   "d": "hard",
+   "start": "Music",
+   "target": "Himalayas"
+  },
+  {
+   "s": "class28",
+   "d": "easy",
+   "start": "Pi",
+   "target": "Statistics"
+  },
+  {
+   "s": "class28",
+   "d": "medium",
+   "start": "Symmetry",
+   "target": "Nile River"
+  },
+  {
+   "s": "class28",
+   "d": "hard",
+   "start": "Roman Empire",
+   "target": "Electricity"
+  },
+  {
+   "s": "class29",
+   "d": "easy",
+   "start": "Soil",
+   "target": "Bee"
+  },
+  {
+   "s": "class29",
+   "d": "medium",
+   "start": "Roman Empire",
+   "target": "Bird"
+  },
+  {
+   "s": "class29",
+   "d": "hard",
+   "start": "Plant",
+   "target": "Fraction"
+  },
+  {
+   "s": "class30",
+   "d": "easy",
+   "start": "Coral reef",
+   "target": "Whale"
+  },
+  {
+   "s": "class30",
+   "d": "medium",
+   "start": "Pi",
+   "target": "Himalayas"
+  },
+  {
+   "s": "class30",
+   "d": "hard",
+   "start": "Ancient Greece",
+   "target": "Microscope"
+  },
+  {
+   "s": "class31",
+   "d": "easy",
+   "start": "Map",
+   "target": "Sahara Desert"
+  },
+  {
+   "s": "class31",
+   "d": "medium",
+   "start": "Pacific Ocean",
+   "target": "Himalayas"
+  },
+  {
+   "s": "class31",
+   "d": "hard",
+   "start": "Dance",
+   "target": "Gravity"
+  },
+  {
+   "s": "class32",
+   "d": "easy",
+   "start": "Number",
+   "target": "Geometry"
+  },
+  {
+   "s": "class32",
+   "d": "medium",
+   "start": "Light",
+   "target": "Piano"
+  },
+  {
+   "s": "class32",
+   "d": "hard",
+   "start": "Poetry",
+   "target": "Electricity"
+  },
+  {
+   "s": "class33",
+   "d": "easy",
+   "start": "Equator",
+   "target": "Earthquake"
+  },
+  {
+   "s": "class33",
+   "d": "medium",
+   "start": "Telescope",
+   "target": "Plant"
+  },
+  {
+   "s": "class33",
+   "d": "hard",
+   "start": "Renaissance",
+   "target": "Microscope"
+  },
+  {
+   "s": "class34",
+   "d": "easy",
+   "start": "Renaissance",
+   "target": "Maya"
+  },
+  {
+   "s": "class34",
+   "d": "medium",
+   "start": "Fraction",
+   "target": "Sahara Desert"
+  },
+  {
+   "s": "class34",
+   "d": "hard",
+   "start": "Mesopotamia",
+   "target": "Microscope"
+  },
+  {
+   "s": "class35",
+   "d": "easy",
+   "start": "Dance",
+   "target": "Sculpture"
+  },
+  {
+   "s": "class35",
+   "d": "medium",
+   "start": "Renaissance",
+   "target": "Periodic table"
+  },
+  {
+   "s": "class35",
+   "d": "hard",
+   "start": "Silk Road",
+   "target": "Seed"
+  },
+  {
+   "s": "class36",
+   "d": "easy",
+   "start": "Compass",
+   "target": "Equator"
+  },
+  {
+   "s": "class36",
+   "d": "medium",
+   "start": "Fraction",
+   "target": "Electricity"
+  },
+  {
+   "s": "class36",
+   "d": "hard",
+   "start": "Algebra",
+   "target": "Renaissance"
+  },
+  {
+   "s": "class37",
+   "d": "easy",
+   "start": "Heat",
+   "target": "Sound"
+  },
+  {
+   "s": "class37",
+   "d": "medium",
+   "start": "Printing press",
+   "target": "Equator"
+  },
+  {
+   "s": "class37",
+   "d": "hard",
+   "start": "Soil",
+   "target": "Symmetry"
+  },
+  {
+   "s": "class38",
+   "d": "easy",
+   "start": "Theatre",
+   "target": "Sculpture"
+  },
+  {
+   "s": "class38",
+   "d": "medium",
+   "start": "Color",
+   "target": "Pi"
+  },
+  {
+   "s": "class38",
+   "d": "hard",
+   "start": "Fraction",
+   "target": "Butterfly"
+  },
+  {
+   "s": "class39",
+   "d": "easy",
+   "start": "Color",
+   "target": "Piano"
+  },
+  {
+   "s": "class39",
+   "d": "medium",
+   "start": "Amazon rainforest",
+   "target": "Industrial Revolution"
+  },
+  {
+   "s": "class39",
+   "d": "hard",
+   "start": "Butterfly",
+   "target": "Triangle"
+  },
+  {
+   "s": "class40",
+   "d": "easy",
+   "start": "Light",
+   "target": "Magnetism"
+  },
+  {
+   "s": "class40",
+   "d": "medium",
+   "start": "Pi",
+   "target": "Ancient Egypt"
+  },
+  {
+   "s": "class40",
+   "d": "hard",
+   "start": "Poetry",
+   "target": "Map"
+  },
+  {
+   "s": "class41",
+   "d": "easy",
+   "start": "Printing press",
+   "target": "Ancient Egypt"
+  },
+  {
+   "s": "class41",
+   "d": "medium",
+   "start": "Circle",
+   "target": "Roman Empire"
+  },
+  {
+   "s": "class41",
+   "d": "hard",
+   "start": "Geometry",
+   "target": "Coral reef"
+  },
+  {
+   "s": "class42",
+   "d": "easy",
+   "start": "Number",
+   "target": "Triangle"
+  },
+  {
+   "s": "class42",
+   "d": "medium",
+   "start": "Whale",
+   "target": "Maya"
+  },
+  {
+   "s": "class42",
+   "d": "hard",
+   "start": "Theatre",
+   "target": "Equator"
+  },
+  {
+   "s": "class43",
+   "d": "easy",
+   "start": "Pottery",
+   "target": "Theatre"
+  },
+  {
+   "s": "class43",
+   "d": "medium",
+   "start": "Color",
+   "target": "Probability"
+  },
+  {
+   "s": "class43",
+   "d": "hard",
+   "start": "Triangle",
+   "target": "Butterfly"
+  },
+  {
+   "s": "class44",
+   "d": "easy",
+   "start": "Map",
+   "target": "Sahara Desert"
+  },
+  {
+   "s": "class44",
+   "d": "medium",
+   "start": "Symmetry",
+   "target": "Theatre"
+  },
+  {
+   "s": "class44",
+   "d": "hard",
+   "start": "Probability",
+   "target": "Ancient Greece"
+  },
+  {
+   "s": "class45",
+   "d": "easy",
+   "start": "Vikings",
+   "target": "Mesopotamia"
+  },
+  {
+   "s": "class45",
+   "d": "medium",
+   "start": "Printing press",
+   "target": "Ancient Egypt"
+  },
+  {
+   "s": "class45",
+   "d": "hard",
+   "start": "Microscope",
+   "target": "Color"
+  },
+  {
+   "s": "class46",
+   "d": "easy",
+   "start": "Ancient Greece",
+   "target": "Maya"
+  },
+  {
+   "s": "class46",
+   "d": "medium",
+   "start": "Sound",
+   "target": "Himalayas"
+  },
+  {
+   "s": "class46",
+   "d": "hard",
+   "start": "Renaissance",
+   "target": "Statistics"
+  },
+  {
+   "s": "class47",
+   "d": "easy",
+   "start": "Soil",
+   "target": "Bee"
+  },
+  {
+   "s": "class47",
+   "d": "medium",
+   "start": "Pi",
+   "target": "Statistics"
+  },
+  {
+   "s": "class47",
+   "d": "hard",
+   "start": "Atom",
+   "target": "Theatre"
+  },
+  {
+   "s": "class48",
+   "d": "easy",
+   "start": "Maya",
+   "target": "Mesopotamia"
+  },
+  {
+   "s": "class48",
+   "d": "medium",
+   "start": "Tree",
+   "target": "Maya"
+  },
+  {
+   "s": "class48",
+   "d": "hard",
+   "start": "Telescope",
+   "target": "Ancient Greece"
+  },
+  {
+   "s": "class49",
+   "d": "easy",
+   "start": "Magnetism",
+   "target": "Sound"
+  },
+  {
+   "s": "class49",
+   "d": "medium",
+   "start": "Bee",
+   "target": "Renaissance"
+  },
+  {
+   "s": "class49",
+   "d": "hard",
+   "start": "Dance",
+   "target": "Electricity"
+  },
+  {
+   "s": "class50",
+   "d": "easy",
+   "start": "Pacific Ocean",
+   "target": "Amazon rainforest"
+  },
+  {
+   "s": "class50",
+   "d": "medium",
+   "start": "Algebra",
+   "target": "Map"
+  },
+  {
+   "s": "class50",
+   "d": "hard",
+   "start": "Geometry",
+   "target": "Silk Road"
+  },
+  {
+   "s": "class51",
+   "d": "easy",
+   "start": "Geometry",
+   "target": "Zero"
+  },
+  {
+   "s": "class51",
+   "d": "medium",
+   "start": "Nile River",
+   "target": "Piano"
+  },
+  {
+   "s": "class51",
+   "d": "hard",
+   "start": "Statistics",
+   "target": "Whale"
+  },
+  {
+   "s": "class52",
+   "d": "easy",
+   "start": "Sculpture",
+   "target": "Dance"
+  },
+  {
+   "s": "class52",
+   "d": "medium",
+   "start": "Algebra",
+   "target": "Sound"
+  },
+  {
+   "s": "class52",
+   "d": "hard",
+   "start": "Coral reef",
+   "target": "Algebra"
+  },
+  {
+   "s": "class53",
+   "d": "easy",
+   "start": "Triangle",
+   "target": "Statistics"
+  },
+  {
+   "s": "class53",
+   "d": "medium",
+   "start": "Energy",
+   "target": "Probability"
+  },
+  {
+   "s": "class53",
+   "d": "hard",
+   "start": "Electricity",
+   "target": "Roman Empire"
+  },
+  {
+   "s": "class54",
+   "d": "easy",
+   "start": "Mesopotamia",
+   "target": "Ancient Greece"
+  },
+  {
+   "s": "class54",
+   "d": "medium",
+   "start": "Pi",
+   "target": "Music"
+  },
+  {
+   "s": "class54",
+   "d": "hard",
+   "start": "Butterfly",
+   "target": "Probability"
+  },
+  {
+   "s": "class55",
+   "d": "easy",
+   "start": "Vikings",
+   "target": "Maya"
+  },
+  {
+   "s": "class55",
+   "d": "medium",
+   "start": "Ancient Greece",
+   "target": "Microscope"
+  },
+  {
+   "s": "class55",
+   "d": "hard",
+   "start": "Photosynthesis",
+   "target": "Vikings"
+  },
+  {
+   "s": "class56",
+   "d": "easy",
+   "start": "Dance",
+   "target": "Sculpture"
+  },
+  {
+   "s": "class56",
+   "d": "medium",
+   "start": "Printing press",
+   "target": "Bee"
+  },
+  {
+   "s": "class56",
+   "d": "hard",
+   "start": "Piano",
+   "target": "Compass"
+  },
+  {
+   "s": "class57",
+   "d": "easy",
+   "start": "Light",
+   "target": "Periodic table"
+  },
+  {
+   "s": "class57",
+   "d": "medium",
+   "start": "Triangle",
+   "target": "Statistics"
+  },
+  {
+   "s": "class57",
+   "d": "hard",
+   "start": "Maya",
+   "target": "Symmetry"
+  },
+  {
+   "s": "class58",
+   "d": "easy",
+   "start": "Painting",
+   "target": "Architecture"
+  },
+  {
+   "s": "class58",
+   "d": "medium",
+   "start": "Microscope",
+   "target": "Industrial Revolution"
+  },
+  {
+   "s": "class58",
+   "d": "hard",
+   "start": "Renaissance",
+   "target": "Energy"
+  },
+  {
+   "s": "class59",
+   "d": "easy",
+   "start": "Volcano",
+   "target": "Himalayas"
+  },
+  {
+   "s": "class59",
+   "d": "medium",
+   "start": "Vikings",
+   "target": "Soil"
+  },
+  {
+   "s": "class59",
+   "d": "hard",
+   "start": "Vikings",
+   "target": "Algebra"
+  }
+ ]
+}

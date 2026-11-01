@@ -24,6 +24,7 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="art-critique-worksheet-generator/acw-rubric.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -66,7 +67,20 @@
   .sub-row { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; }
   .sub-row input { margin-bottom: 0; }
 
+  [hidden] { display: none !important; }
+  .rubric-opts { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; align-items: center; margin-top: .4rem; }
+  .rubric-opts label { margin: 0; font-weight: 600; }
+  .rubric-opts select { width: auto; margin: 0 0 0 .35rem; }
+  .check-row { display: flex; gap: .5rem; align-items: center; font-weight: 600; font-size: .9rem; margin: 0; }
+  .check-row input { width: auto; margin: 0; }
+  .step-points { display: flex; align-items: center; gap: .5rem; margin-top: .4rem; }
+  .step-points label { margin: 0; }
+  .step-points input { width: 4.5rem; margin: 0; }
   #printArea { display: none; }
+  .half-sheet .hs-step h4.hs-scored { display: flex; justify-content: space-between; align-items: baseline; gap: .6rem; }
+  .half-sheet .hs-score { font-weight: 400; font-size: .78rem; color: var(--ink); white-space: nowrap; }
+  .half-sheet .hs-score .hs-dot { display: inline-block; min-width: 1.15rem; height: 1.15rem; line-height: 1.05rem; text-align: center; border: 1px solid #555; border-radius: 50%; margin-left: .15rem; font-size: .72rem; }
+  .half-sheet .hs-total { text-align: right; font-weight: 700; font-size: .88rem; margin-top: .5rem; }
   .half-sheet { border: 1px dashed var(--line-strong); border-radius: 8px; padding: 1rem 1.2rem; margin-bottom: 1rem; }
   .half-sheet h2 { margin: 0 0 .1rem; font-size: 1.2rem; }
   .half-sheet .names { font-size: .82rem; color: var(--muted); margin-bottom: .6rem; }
@@ -136,6 +150,15 @@
     </div>
   </div>
 
+  <div class="card" id="rubricCard">
+    <label class="check-row" for="rubricOn"><input type="checkbox" id="rubricOn"> Add a teacher score to each step</label>
+    <p class="hint">Prints a “Score ___ / 4” box on every step, and a total at the bottom, so the critique can be graded. Off, the worksheet prints exactly as before.</p>
+    <div class="rubric-opts" id="rubricOpts" hidden>
+      <div><label for="rubricPoints">Points per step</label><select id="rubricPoints"></select></div>
+      <label class="check-row" for="rubricCircle"><input type="checkbox" id="rubricCircle"> A row of numbers to circle (up to 5 points)</label>
+    </div>
+    <p class="hint" id="rubricTotal" role="status" hidden></p>
+  </div>
   <div id="stepsWrap"></div>
 </div>
 
@@ -176,7 +199,7 @@
   var els = {};
   ['activityName', 'copyCount', 'stepsWrap', 'printBtn', 'printArea',
    'worksheetSwitch', 'worksheetName', 'newWorksheetBtn', 'duplicateWorksheetBtn', 'deleteWorksheetBtn',
-   'modeSwitch', 'shareBtn', 'shareNote'
+   'modeSwitch', 'shareBtn', 'shareNote', 'rubricOn', 'rubricOpts', 'rubricPoints', 'rubricCircle', 'rubricTotal'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { name: 'New Worksheet', activityName: '', copyCount: 10, mode: DEFAULT_MODE, steps: [] };
@@ -296,8 +319,43 @@
     els.copyCount.value = state.copyCount;
     els.modeSwitch.value = state.mode || DEFAULT_MODE;
     renderWorksheetSwitch();
+    renderRubric();
     renderSteps();
   }
+
+  CritiqueRubric.CHOICES.forEach(function (n) {
+    var o = document.createElement('option'); o.value = String(n); o.textContent = String(n); els.rubricPoints.appendChild(o);
+  });
+
+  function rubricOn() { return !!CritiqueRubric.clean(state.rubric); }
+
+  function renderRubric() {
+    var r = CritiqueRubric.clean(state.rubric);
+    els.rubricOn.checked = !!r;
+    els.rubricOpts.hidden = !r;
+    els.rubricTotal.hidden = !r;
+    if (r) {
+      els.rubricPoints.value = String(r.points);
+      els.rubricCircle.checked = r.circle;
+      els.rubricTotal.textContent = 'The worksheet is worth ' + CritiqueRubric.total(state.steps, state.rubric) + ' points.';
+    }
+  }
+
+  els.rubricOn.addEventListener('change', function () {
+    if (els.rubricOn.checked) state.rubric = { on: true, points: 4, circle: true };
+    else delete state.rubric;
+    save(); renderRubric(); renderSteps();
+  });
+  els.rubricPoints.addEventListener('change', function () {
+    if (!rubricOn()) return;
+    state.rubric.points = parseInt(els.rubricPoints.value, 10);
+    save(); renderRubric(); renderSteps();
+  });
+  els.rubricCircle.addEventListener('change', function () {
+    if (!rubricOn()) return;
+    state.rubric.circle = els.rubricCircle.checked;
+    save();
+  });
 
   function renderSteps() {
     els.stepsWrap.innerHTML = state.steps.map(function (step, i) {
@@ -311,6 +369,11 @@
         '<textarea data-prompt="' + step.key + '" aria-label="Main prompt for ' + escapeAttr(step.label) + '">' + escapeHtml(step.prompt) + '</textarea>' +
         '<label>Follow-up questions</label>' + subs +
         '<button type="button" class="secondary small" data-add-sub="' + step.key + '">+ Add follow-up question</button>' +
+        (rubricOn()
+          ? '<div class="step-points"><label for="pts-' + escapeAttr(step.key) + '">Points for this step</label>' +
+            '<input type="number" id="pts-' + escapeAttr(step.key) + '" data-points="' + escapeAttr(step.key) + '" min="0" max="' + CritiqueRubric.MAX_STEP + '" value="' + CritiqueRubric.pointsFor(step, state.rubric) + '">' +
+            '<span class="hint" style="margin:0;">0 leaves this step unscored.</span></div>'
+          : '') +
         '</div>';
     }).join('');
   }
@@ -320,6 +383,16 @@
   els.stepsWrap.addEventListener('input', function (ev) {
     var promptKey = ev.target.getAttribute('data-prompt');
     var subId = ev.target.getAttribute('data-sub');
+    var ptsKey = ev.target.getAttribute('data-points');
+    if (ptsKey) {
+      var pstep = findStep(ptsKey);
+      if (pstep) {
+        var pv = CritiqueRubric.cleanStepPoints(ev.target.value);
+        if (pv === undefined) delete pstep.points; else pstep.points = pv;
+      }
+      save(); renderRubric();
+      return;
+    }
     if (promptKey) {
       var step = findStep(promptKey);
       if (step) step.prompt = ev.target.value;
@@ -416,12 +489,25 @@
       var subs = step.subs.filter(function (s) { return s.text.trim(); }).map(function (s) {
         return '<div style="font-size:.8rem;margin:.15rem 0 0 .8rem;">&bull; ' + escapeHtml(s.text) + '<span class="hs-line"></span></div>';
       }).join('');
-      return '<div class="hs-step"><h4>' + (i + 1) + '. ' + escapeHtml(step.label) + '</h4>' +
+      var box = CritiqueRubric.scoreBox(CritiqueRubric.pointsFor(step, state.rubric), state.rubric);
+      var scoreHtml = box
+        ? '<span class="hs-score">' + box.label + ' ' + box.blank + ' ' + box.of +
+          box.circles.map(function (n) { return '<span class="hs-dot">' + n + '</span>'; }).join('') + '</span>'
+        : '';
+      var heading = scoreHtml
+        ? '<h4 class="hs-scored"><span>' + (i + 1) + '. ' + escapeHtml(step.label) + '</span>' + scoreHtml + '</h4>'
+        : '<h4>' + (i + 1) + '. ' + escapeHtml(step.label) + '</h4>';
+      return '<div class="hs-step">' + heading +
         '<p class="prompt">' + escapeHtml(step.prompt) + '</p><span class="hs-line"></span>' + subs + '</div>';
     }).join('');
     return '<div class="half-sheet"><h2>' + title + '</h2>' +
       '<div class="names">' + namesLine + '</div>' +
-      steps + '</div>';
+      steps + totalHtml() + '</div>';
+  }
+
+  function totalHtml() {
+    var line = CritiqueRubric.totalLine(state.steps, state.rubric);
+    return line ? '<div class="hs-total">' + line.label + ': ' + line.blank + ' ' + line.of + '</div>' : '';
   }
 
   els.printBtn.addEventListener('click', function () {
@@ -459,7 +545,7 @@
     title: 'Share this worksheet',
     noun: 'this worksheet',
     filename: function () { return state.name || 'art critique worksheet'; },
-    note: 'The four steps, every prompt and follow-up question, the activity name and the copy count travel. Opening the link saves this worksheet on the receiving device as a new saved worksheet; nothing already saved there is changed.',
+    note: 'The four steps, every prompt and follow-up question, the activity name, the copy count and the teacher score (points per step) travel. Opening the link saves this worksheet on the receiving device as a new saved worksheet; nothing already saved there is changed.',
     successMessage: 'Link copied. Opening it anywhere saves this worksheet there alongside whatever is already saved.',
     onMessage: function (text, isError) { setShareNote(text, isError); }
   });
@@ -472,13 +558,13 @@
       strings coerced, and every follow-up question given a local id. */
   function normalizeWorksheet(obj, name) {
     var count = parseInt(obj.copyCount, 10);
-    return {
+    var w = {
       name: name,
       activityName: typeof obj.activityName === 'string' ? obj.activityName : '',
       copyCount: (count >= 1 && count <= 60) ? count : 10,
       mode: obj.mode === 'self' ? 'self' : DEFAULT_MODE,
       steps: obj.steps.map(function (step) {
-        return {
+        var out = {
           key: String(step && step.key || uid()),
           label: String(step && step.label || ''),
           prompt: String(step && step.prompt || ''),
@@ -486,8 +572,14 @@
             return { id: uid(), text: String(sub && sub.text || '') };
           })
         };
+        var pts = CritiqueRubric.cleanStepPoints(step && step.points);
+        if (pts !== undefined) out.points = pts;
+        return out;
       })
     };
+    var rubric = CritiqueRubric.clean(obj.rubric);
+    if (rubric) w.rubric = rubric;
+    return w;
   }
 
   /** Consumes a ?worksheet= link on load, saving the arrival as a NEW named

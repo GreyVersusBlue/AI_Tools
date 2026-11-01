@@ -19,6 +19,9 @@
  *   defective { slots: [2] } (only those slots) or { tenses: ['future'] } (not those tenses)
  *   prefixes  the prefixes a derived verb may carry (mantener from tener)
  * A cell is computed in this order: forms, defective, then the tense's shape.
+ * More shapes a tense may have: `custom` (a pack function builds the cell: German Konjunktiv II), `infinitive` (the
+ * infinitive itself), and the flags `attach` (a reflexive verb's pronoun is joined to the form by the pack's attach(),
+ * levántate / lavati / lève-toi), `negate` (ne ... pas around the form), `onlyReflexive` and `noSubject`.
  *
  * Results: conjugate() -> { forms: [6], alts: [[...] x6], notes: [{ slot, kind, from }],
  *   complete, known, reviewed: false, status: 'unreviewed' }. A note's kind is one of
@@ -73,7 +76,7 @@
         id: id, name: p.name, persons: p.persons.slice(), reviewed: false, status: STATUS,
         tenses: p.tenses.map(function (t) { return { id: t.id, name: t.name, mood: t.mood }; }),
         // tenses beyond the pack's usual six: offered, never in a default table or a page's default list
-        extraTenses: p.extraTenses.map(function (t) { return { id: t.id, name: t.name, mood: t.mood }; }),
+        extraTenses: p.extraTenses.map(function (t) { return { id: t.id, name: t.name, mood: t.mood, onlyReflexive: !!t.onlyReflexive }; }),
         classes: Object.keys(p.classes).filter(function (c) { return p.classes[c].auto !== false; })
           .map(function (c) { return { id: c, name: p.classes[c].name, example: p.classes[c].example }; })
       };
@@ -87,6 +90,11 @@
         // Italian lavarsi is lavare + si: `restore` puts back the vowel the -si dropped
         var b = s.slice(0, -r.suffix.length) + (r.restore || '');
         if (classEnding(p, b)) return { base: b, reflexive: true };
+      }
+      // German sich (dat.) vorstellen: the same verb with the dative pronoun (mir, dir...)
+      var dp = r.dativePrefixes || [];
+      for (var d = 0; d < dp.length; d++) {
+        if (s.indexOf(dp[d]) === 0 && s.length - dp[d].length >= 3) return { base: s.slice(dp[d].length), reflexive: true, dative: true };
       }
       var pre = r.prefixes || [];
       for (var i = 0; i < pre.length; i++) {
@@ -147,6 +155,7 @@
       }
       if (rec.stem != null) out.stem = prefix + rec.stem;
       if (rec.participle) out.participle = prefix + rec.participle;
+      if (rec.ppp) out.ppp = prefix + rec.ppp;
       if (rec.gerund) out.gerund = prefix + rec.gerund;
     }
     return out;
@@ -205,28 +214,31 @@
 
   function resolve(lang, verb) {
     var p = packs[lang]; if (!p) return null;
-    var rec, inf, reflexive;
+    var rec, inf, reflexive, dative = false;
     if (typeof verb === 'string') {
       var b = baseOf(p, normalize(verb));
-      inf = b.base; reflexive = b.reflexive;
+      inf = b.base; reflexive = b.reflexive; dative = !!b.dative;
       rec = lookupBase(p, inf);
     } else {
       rec = verb || {};
       var bb = baseOf(p, normalize(rec.infinitive || ''));
-      inf = bb.base; reflexive = bb.reflexive || !!rec.reflexive;
+      inf = bb.base; reflexive = bb.reflexive || !!rec.reflexive; dative = !!bb.dative;
     }
     var sepSplit = splitSeparable(p, inf), sep = '', full = inf;
     if (sepSplit) {
       sep = sepSplit.prefix; inf = sepSplit.base;
       if (typeof verb === 'string') rec = lookupBase(p, inf);
     }
+    // a reflexive verb the pack lists as always taking the dative (sich etwas merken), or a record marked dative
+    if (reflexive && p.dativeVerbs && p.dativeVerbs.indexOf(full) >= 0) dative = true;
+    if (reflexive && rec && rec.dative) dative = true;
     var cl = (rec && rec['class']) || (classEnding(p, inf) || {}).id || null;
     var cdef = cl ? p.classes[cl] : null;
     var cut = cdef ? (cdef.cut || 2) : 0;
     var known = typeof verb === 'string' ? (!!rec || has(p.regulars, inf))
       : !!(lookupBase(p, inf) || has(p.regulars, inf) || (rec && rec.teacher && Object.keys(rec.teacher).length));
     return {
-      lang: lang, p: p, rec: rec || null, base: inf, sep: sep, full: full, reflexive: reflexive, cls: cl, 'class': cdef,
+      lang: lang, p: p, rec: rec || null, base: inf, sep: sep, full: full, reflexive: reflexive, dative: dative, cls: cl, 'class': cdef,
       // rec.stem is a lexical stem the infinitive does not show (Latin: dīcere -> dīc-)
       stem: cdef ? (rec && rec.stem != null ? rec.stem : inf.slice(0, inf.length - cut)) : '', known: known, cutLen: cut,
       infBase: inf.replace(/í(r)$/, 'i$1')
@@ -239,7 +251,11 @@
     return null;
   }
 
-  function endingsFor(tdef, cls) { var e = tdef.endings || {}; return e[cls] || e.all || null; }
+  function endingsFor(tdef, cls, ctx) {
+    // a Latin deponent imperative wears the passive-infinitive endings (loquere, loquiminī)
+    var e = (ctx && ctx.rec && ctx.rec.deponent && tdef.deponentEndings) || tdef.endings || {};
+    return e[cls] || e.all || null;
+  }
 
   function specStem(spec, slot, base) {
     if (typeof spec === 'string') return spec;
@@ -295,7 +311,7 @@
 
   function simpleCell(ctx, tdef, slot) {
     var rec = ctx.rec || {}, kinds = [], from = '';
-    var ends = endingsFor(tdef, ctx.cls);
+    var ends = endingsFor(tdef, ctx.cls, ctx);
     if (!ends) return fail();
     var ending = ends[slot];
     var key = (tdef.stemsAlias && !(rec.stems && has(rec.stems, tdef.id))) ? tdef.stemsAlias : tdef.id;
@@ -323,7 +339,7 @@
   }
 
   function subjunctiveCell(ctx, tdef, slot) {
-    var rec = ctx.rec || {}, ends = endingsFor(tdef, ctx.cls);
+    var rec = ctx.rec || {}, ends = endingsFor(tdef, ctx.cls, ctx);
     if (!ends) return fail();
     var kinds = [], from = '', stem, literal = false;
     var spec = rec.stems ? rec.stems[tdef.id] : undefined;
@@ -342,7 +358,7 @@
   }
 
   function derivedCell(ctx, tdef, slot) {
-    var rec = ctx.rec || {}, ends = endingsFor(tdef, ctx.cls);
+    var rec = ctx.rec || {}, ends = endingsFor(tdef, ctx.cls, ctx);
     if (!ends) return fail();
     var spec = rec.stems ? rec.stems[tdef.id] : undefined;
     if (spec != null) {
@@ -417,7 +433,9 @@
       auxName = (ctx.reflexive && p.reflexiveAux) || rec.auxiliary || cd.auxiliary;
       ac = cellOf(resolve(ctx.lang, auxName), tenseDef(p, cd.tense), slot);
     }
-    part = cd.part === 'infinitive' ? (ctx.sep || '') + ctx.base : participleOf(ctx);
+    // 'ppp': a pack that builds a perfect passive participle (Latin amātus) says how; the other parts are the
+    // infinitive or the ordinary participle
+    part = cd.part === 'infinitive' ? (ctx.sep || '') + ctx.base : cd.part === 'ppp' ? (p.pppOf ? p.pppOf(ctx) : '') : participleOf(ctx);
     if (!ac.forms.length || !part) return fail();
     var kinds = [], from = '';
     if (!cd.forms && auxName === p.agreementAux) {
@@ -425,8 +443,10 @@
       // a pack that prints the masculine plural for nous/noi/vous... says how
       if (p.agreementPlural && slot >= 3) part = part.replace(p.agreementPlural[0], p.agreementPlural[1]);
     }
-    if (cd.part !== 'infinitive' && rec.participle) { kinds.push('irregular'); if (!from) from = rec.as || rec.infinitive || ''; }
-    return { forms: [ac.forms[0] + ' ' + part], kinds: kinds, from: from, whole: true };
+    if (cd.part === 'ppp' && rec.ppp) { kinds.push('irregular'); if (!from) from = rec.as || rec.infinitive || ''; }
+    if (cd.part !== 'infinitive' && cd.part !== 'ppp' && rec.participle) { kinds.push('irregular'); if (!from) from = rec.as || rec.infinitive || ''; }
+    // Latin puts the participle first (amātus sum); the other languages the auxiliary (ai parlé)
+    return { forms: [cd.partFirst ? part + ' ' + ac.forms[0] : ac.forms[0] + ' ' + part], kinds: kinds, from: from, whole: true };
   }
 
   function cellOf(ctx, tdef, slot) {
@@ -439,11 +459,29 @@
     if (ctx.sep && c.forms.length && !c.whole && c.kinds.indexOf('teacher') < 0) {
       c.forms = c.forms.map(function (f) { return f + ' ' + ctx.sep; });
     }
+    // a reflexive verb's command or infinitive with its pronoun joined on (levántate, lavati, lève-toi); the pack's
+    // attach() returns the whole word, or nothing for a form it will not guess
+    if (tdef.attach && ctx.reflexive && c.forms.length && ctx.p.attach) {
+      var made = [];
+      c.forms.forEach(function (f) { var a = ctx.p.attach(f, slot, ctx, tdef); if (a && made.indexOf(a) < 0) made.push(a); });
+      c.forms = made; c.placed = true;
+    }
+    // a negative command: ne ... pas around the verb, the reflexive pronoun between (ne te lève pas)
+    if (tdef.negate && c.forms.length) {
+      c.forms = c.forms.map(function (f) {
+        var s = f;
+        if (ctx.reflexive && ctx.p.reflexivePronouns) s = joinWord(ctx, ctx.p.reflexivePronouns[slot], s);
+        return joinWord(ctx, tdef.negate[0], s) + ' ' + tdef.negate[1];
+      });
+      c.placed = true;
+    }
     return c;
   }
 
   function cellOf1(ctx, tdef, slot) {
     var rec = ctx.rec || {};
+    // a negative command is the affirmative one (a teacher's edit and être's sois included) with ne ... pas round it
+    if (tdef.negateOf) { var inner = cellOf1(ctx, tenseDef(ctx.p, tdef.negateOf), slot); ctx.tid = tdef.id; return inner; }
     ctx.tid = tdef.id;
     var tf = rec.forms && rec.forms[tdef.id];
     if (tf && tf[slot] != null && tf[slot] !== '') {
@@ -459,6 +497,13 @@
     if (tdef.none && tdef.none.indexOf(slot) >= 0) return { forms: [], kinds: ['defective'], from: '', defective: true };
     // a deponent verb (Latin loquor) wears the passive endings of the tenses that have a passive twin
     if (rec.deponent && tdef.deponentAs) tdef = tenseDef(ctx.p, tdef.deponentAs);
+    if (tdef.kind === 'infinitive') return { forms: [ctx.base], kinds: [], from: '' };
+    if (tdef.kind === 'custom') {
+      // the pack builds the cell: custom(ctx, slot, api) -> { forms, kinds, from } or null
+      var made = tdef.custom(ctx, slot, { cell: function (id, sl) { return cellOf1(ctx, tenseDef(ctx.p, id), sl); }, splitAlts: splitAlts });
+      ctx.tid = tdef.id;
+      return made && made.forms.length ? { forms: made.forms, kinds: made.kinds || [], from: made.from || '' } : fail();
+    }
     if (tdef.kind === 'compound') return compoundCell(ctx, tdef, slot);
     if (tdef.kind === 'derived') return derivedCell(ctx, tdef, slot);
     if (tdef.kind === 'pick') return pickCell(ctx, tdef, slot);
@@ -490,16 +535,18 @@
     return word + ' ' + rest;
   }
 
-  function render(ctx, form, slot, opts) {
+  function render(ctx, form, slot, opts, tdef, placed) {
     var s = form;
-    if (ctx.reflexive && ctx.p.reflexivePronouns) {
+    if (!placed && ctx.reflexive && ctx.p.reflexivePronouns) {
+      // a dative reflexive (German sich etwas vorstellen: mir, dir...) has its own pronouns
+      var rp = ctx.dative && ctx.p.reflexivePronounsDative ? ctx.p.reflexivePronounsDative : ctx.p.reflexivePronouns;
       if (ctx.p.reflexivePlacement === 'after') {
         // German: the pronoun follows the finite verb (ich wasche mich, ich habe mich gewaschen, ich ziehe mich an)
         var sp = s.indexOf(' ');
-        s = sp < 0 ? s + ' ' + ctx.p.reflexivePronouns[slot] : s.slice(0, sp) + ' ' + ctx.p.reflexivePronouns[slot] + s.slice(sp);
-      } else s = joinWord(ctx, ctx.p.reflexivePronouns[slot], s);
+        s = sp < 0 ? s + ' ' + rp[slot] : s.slice(0, sp) + ' ' + rp[slot] + s.slice(sp);
+      } else s = joinWord(ctx, rp[slot], s);
     }
-    if (opts.pronouns && ctx.p.subjects) s = joinWord(ctx, ctx.p.subjects[slot], s);
+    if (opts.pronouns && ctx.p.subjects && !placed && !(tdef && tdef.noSubject)) s = joinWord(ctx, ctx.p.subjects[slot], s);
     return s;
   }
 
@@ -516,7 +563,9 @@
     if (!tdef) return blank('no tense ' + tenseId);
     if (!ctx['class']) return blank('not a verb this pack knows');
     if (tdef.noReflexive && ctx.reflexive) return blank('not built for a reflexive verb');
+    if (tdef.onlyReflexive && !ctx.reflexive) return blank('only for a reflexive verb');
     var slots = opts.slots || SLOTS;
+    if (opts.dative && ctx.reflexive) ctx.dative = true;
     var out = { forms: [], alts: [], notes: [], complete: true, known: ctx.known, reviewed: false, status: STATUS,
       lang: lang, tense: tenseId, infinitive: ctx.full || ctx.base, reflexive: ctx.reflexive };
     SLOTS.forEach(function (slot) {
@@ -528,7 +577,7 @@
         else out.complete = false;
         return;
       }
-      var rendered = c.forms.map(function (f) { return render(ctx, f, slot, opts); });
+      var rendered = c.forms.map(function (f) { return render(ctx, f, slot, opts, tdef, c.placed); });
       out.forms.push(rendered[0]); out.alts.push(rendered.slice(1));
       var n = noteOf(ctx, c);
       out.notes.push({ slot: slot, kind: n.kind, from: n.from });
@@ -563,7 +612,8 @@
     } while (s !== prev);
     // a pack that puts the reflexive pronoun after the verb: a missing or extra one is the same close answer
     if (p.reflexivePlacement === 'after') {
-      s = s.split(' ').filter(function (w, k) { return k === 0 || p.reflexivePronouns.indexOf(w) < 0; }).join(' ');
+      var rps = p.reflexivePronouns.concat(p.reflexivePronounsDative || []);
+      s = s.split(' ').filter(function (w, k) { return k === 0 || rps.indexOf(w) < 0; }).join(' ');
     }
     return s;
   }
@@ -583,6 +633,8 @@
     // ss typed for ß is close, not wrong: a US keyboard has no ß
     if (e.indexOf('\u00df') >= 0 && t === e.replace(/\u00df/g, 'ss')) return { verdict: 'close', reason: 'eszett' };
     if (stripAccents(t) === stripAccents(e)) return { verdict: 'close', reason: 'accent' };
+    // lève toi for lève-toi: the hyphen of a French command is a slip, not a different word
+    if (e.indexOf('-') >= 0 && t === e.replace(/-/g, ' ')) return { verdict: 'close', reason: 'hyphen' };
     if (undoElision(p, t) === undoElision(p, e)) return { verdict: 'close', reason: 'elision' };
     var st = stripPronouns(p, t), se = stripPronouns(p, e);
     if (st === se) return { verdict: 'close', reason: 'pronoun' };

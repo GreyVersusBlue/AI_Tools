@@ -63,6 +63,11 @@
   .sub { color: var(--muted); margin: 0 0 20px; font-size: 0.92rem; }
 
   .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; align-items: center; }
+  /* Phone fold (AI-30, rank 66): .tb-more / .tb-primary are invisible to the flex layout on a
+     desktop, so the toolbar is one flat wrapping row exactly as before. At 600px and under the
+     primary controls stay up and the file, calendar and print-mode groups fold behind More. */
+  .toolbar .tb-more, .toolbar .tb-primary { display: contents; }
+  .toolbar .tb-toggle { display: none; }
   .print-mode { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; color: var(--muted); }
   .print-mode label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
   button {
@@ -422,6 +427,15 @@
   @media (max-width: 480px) {
     .print-mode { flex-wrap: wrap; }
   }
+  @media (max-width: 600px) {
+    .toolbar { gap: 6px; margin-bottom: 14px; }
+    .toolbar .tb-primary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex: 0 0 100%; order: -1; }
+    .toolbar .tb-primary > select { flex: 1 1 8rem; min-width: 0; }
+    .toolbar .tb-toggle { display: inline-block; margin-left: auto; }
+    .toolbar .tb-more { display: none; flex-wrap: wrap; align-items: center; gap: 6px; flex: 0 0 100%; }
+    .toolbar.expanded .tb-more { display: flex; }
+    .toolbar .tb-more.print-opts { flex-direction: column; align-items: flex-start; }
+  }
 </style>
 </head>
 <body>
@@ -443,42 +457,52 @@
     </span>
   </div>
 
-  <div class="toolbar no-print">
-    <button id="btnNewYear">Start New Year From This Template</button>
-    <button id="btnSeed">Load 2026–27 CCPS Calendar</button>
-    <button id="btnBlank">Clear All Days (Keep Legend)</button>
-    <button id="btnExport">Export Backup (JSON)</button>
-    <button id="btnImport">Import Backup</button>
-    <input type="file" id="fileImport" accept="application/json" hidden>
-    <button id="btnExportIcs">Export Calendar (.ics)</button>
-    <label class="ics-opt"><input type="checkbox" id="icsLessons"> with paced lessons</label>
-    <button id="btnImportIcs">Import Calendar (.ics)</button>
-    <input type="file" id="fileImportIcs" accept=".ics,text/calendar" hidden>
-    <button id="btnPasteTable" aria-expanded="false" aria-controls="pastePanel">Paste a Date Table…</button>
-    <select id="jumpMonth" aria-label="Jump to month" title="Jump to month"></select>
-    <button id="btnJumpToday">Jump to Today</button>
-    <select id="viewCols" aria-label="Months across" title="Months across">
-      <option value="1">1 month across</option>
-      <option value="2">2 months across</option>
-      <option value="compact">Compact (3+ across)</option>
-    </select>
-    <span class="print-mode">
-      <label><input type="radio" name="printMode" value="month" checked> Month-by-month</label>
-      <label><input type="radio" name="printMode" value="year"> Whole year</label>
-      <label><input type="radio" name="printMode" value="week"> One week</label>
-      <label><input type="radio" name="printMode" value="units"> Unit pacing calendar</label>
-      <label><input type="radio" name="printMode" value="wall"> Wall calendar (one page)</label>
-    </span>
-    <span class="print-mode" id="weekPickWrap" style="display:none;">
-      <label for="weekPick">Week of</label>
-      <input type="date" id="weekPick">
-      <label for="weekThrough">through the week of</label>
-      <input type="date" id="weekThrough">
-      <button type="button" id="btnAllWeeks" class="small">Every week of the year</button>
-      <span id="weekCount" role="status" aria-live="polite"></span>
-    </span>
-    <button id="btnWallPreview" type="button" hidden>Preview pages</button>
-    <button id="btnPrint" class="primary">Print / Save PDF</button>
+  <div class="toolbar no-print" id="calToolbar">
+    <div class="tb-more" id="tbFiles">
+      <button id="btnNewYear">Start New Year From This Template</button>
+      <button id="btnSeed">Load 2026–27 CCPS Calendar</button>
+      <button id="btnBlank">Clear All Days (Keep Legend)</button>
+      <button id="btnExport">Export Backup (JSON)</button>
+      <button id="btnImport">Import Backup</button>
+      <input type="file" id="fileImport" accept="application/json" hidden>
+      <button id="btnExportIcs">Export Calendar (.ics)</button>
+      <label class="ics-opt"><input type="checkbox" id="icsLessons"> with paced lessons</label>
+      <button id="btnImportIcs">Import Calendar (.ics)</button>
+      <input type="file" id="fileImportIcs" accept=".ics,text/calendar" hidden>
+      <button id="btnPasteTable" aria-expanded="false" aria-controls="pastePanel">Paste a Date Table…</button>
+    </div>
+    <div class="tb-primary">
+      <select id="jumpMonth" aria-label="Jump to month" title="Jump to month"></select>
+      <button id="btnJumpToday">Jump to Today</button>
+      <select id="viewCols" aria-label="Months across" title="Months across">
+        <option value="1">1 month across</option>
+        <option value="2">2 months across</option>
+        <option value="compact">Compact (3+ across)</option>
+      </select>
+    </div>
+    <div class="tb-more print-opts" id="tbPrintOpts">
+      <span class="print-mode">
+        <label><input type="radio" name="printMode" value="month" checked> Month-by-month</label>
+        <label><input type="radio" name="printMode" value="year"> Whole year</label>
+        <label><input type="radio" name="printMode" value="week"> One week</label>
+        <label><input type="radio" name="printMode" value="units"> Unit pacing calendar</label>
+        <label><input type="radio" name="printMode" value="wall"> Wall calendar (one page)</label>
+      </span>
+      <span class="print-mode" id="weekPickWrap" style="display:none;">
+        <label for="weekPick">Week of</label>
+        <input type="date" id="weekPick">
+        <label for="weekThrough">through the week of</label>
+        <input type="date" id="weekThrough">
+        <button type="button" id="btnAllWeeks" class="small">Every week of the year</button>
+        <span id="weekCount" role="status" aria-live="polite"></span>
+      </span>
+    </div>
+    <div class="tb-primary">
+      <button id="btnWallPreview" type="button" hidden>Preview pages</button>
+      <button id="btnPrint" class="primary">Print / Save PDF</button>
+      <button type="button" class="tb-toggle" id="btnToolbarMore" aria-expanded="false" aria-controls="tbFiles tbPrintOpts"
+              title="Show the file, calendar and print-mode controls">More &#9662;</button>
+    </div>
   </div>
   <div id="icsPreview" class="no-print"></div>
   <div id="pastePanel" class="plan-preview no-print" role="region" aria-labelledby="pasteTitle" hidden>
@@ -2817,6 +2841,14 @@ function showPastePanel(open) {
   if (open) { renderIcsPreview(null); document.getElementById("pasteText").focus(); }
   else { document.getElementById("pastePreview").textContent = ""; btn.focus(); }
 }
+/* Phone toolbar: the More button unfolds the file, calendar and print-mode groups (a no-op above 600px, where the button is display:none). */
+document.getElementById("btnToolbarMore").addEventListener("click", () => {
+  const bar = document.getElementById("calToolbar"), b = document.getElementById("btnToolbarMore");
+  const open = bar.classList.toggle("expanded");
+  b.setAttribute("aria-expanded", open ? "true" : "false");
+  b.textContent = open ? "Less ▴" : "More ▾";
+  b.title = open ? "Hide the file, calendar and print-mode controls" : "Show the file, calendar and print-mode controls";
+});
 document.getElementById("btnPasteTable").addEventListener("click", () => showPastePanel(document.getElementById("pastePanel").hidden));
 document.getElementById("pasteClose").addEventListener("click", () => showPastePanel(false));
 document.getElementById("pasteRead").addEventListener("click", () => {

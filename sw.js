@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v496';
+const CACHE_VERSION = 'v509';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -252,7 +252,9 @@ const PRECACHE_URLS = [
   "Tools/005-Seating%20Chart%20Generator.html",
   "Tools/044-Sub%20Plan%20Builder.html",
   "Tools/047-art-critique-worksheet-generator.html",
+  "Tools/art-critique-worksheet-generator/acw-rubric.js",
   "Tools/048-art-portfolio-label-maker.html",
+  "Tools/art-portfolio-label-maker/apl-photos.js",
   "Tools/009-backup-restore.html",
   "Tools/backup-restore/br-pair.js",
   "Tools/backup-restore/br-rollover.js",
@@ -289,6 +291,7 @@ const PRECACHE_URLS = [
   "Tools/blank-map-generator/data/us-nation-10m.json",
   "Tools/blank-map-generator/data/us-states-10m.json",
   "Tools/049-book-tasting-menu-generator.html",
+  "Tools/book-tasting-menu-generator/btmg-import.js",
   "Tools/020-bracket-tournament-generator.html",
   "Tools/bracket-tournament-generator/bt-store.js",
   "Tools/bracket-tournament-generator/bt-teams.js",
@@ -307,6 +310,7 @@ const PRECACHE_URLS = [
   "Tools/certificate-award-maker/cam-borders.js",
   "Tools/certificate-award-maker/cam-image.js",
   "Tools/certificate-award-maker/cam-store.js",
+  "Tools/certificate-award-maker/cam-templates.js",
   "Tools/082-citation-generator.html",
   "Tools/050-civics-role-card-generator.html",
   "Tools/civics-role-card-generator/crcg-store.js",
@@ -342,6 +346,7 @@ const PRECACHE_URLS = [
   "Tools/dbq-source-packet-builder/dbq-image.js",
   "Tools/057-dichotomous-key-builder.html",
   "Tools/031-docx-merger.html",
+  "Tools/docx-merger/dm-frame.js",
   "Tools/058-duty-roster-builder.html",
   "Tools/019-escape-room-builder.html",
   "Tools/escape-room-builder/er-board.js",
@@ -360,6 +365,7 @@ const PRECACHE_URLS = [
   "Tools/061-fraction-decimal-percent-drill-generator.html",
   "Tools/041-formula-sheet-builder.html",
   "Tools/formula-sheet-builder/fsb-image.js",
+  "Tools/formula-sheet-builder/fsb-math.js",
   "Tools/formula-sheet-builder/fsb-store.js",
   "Tools/formula-sheet-builder/fsb-templates.js",
   "Tools/017-gallery-walk-qr.html",
@@ -454,6 +460,7 @@ const PRECACHE_URLS = [
   "Tools/028-primary-source-analysis-generator.html",
   "Tools/primary-source-analysis-generator/psa-image.js",
   "Tools/029-prompt-builder.html",
+  "Tools/prompt-builder/pb-library.js",
   "Tools/083-propaganda-analysis-worksheet-generator.html",
   "Tools/016-qr-code-generator.html",
   "Tools/qr-code-generator/bulk-rows.js",
@@ -470,6 +477,7 @@ const PRECACHE_URLS = [
   "Tools/review-game-board/rgb-image.js",
   "Tools/review-game-board/rgb-store.js",
   "Tools/014-roleplay-scenario-generator.html",
+  "Tools/roleplay-scenario-generator/speaking.js",
   "Tools/003-rubric-builder.html",
   "Tools/rubric-builder/rb-gdv-handoff.js",
   "Tools/rubric-builder/rb-store.js",
@@ -527,6 +535,7 @@ const PRECACHE_URLS = [
   "Tools/075-staff-directory-builder.html",
   "Tools/staff-directory-builder/wallet-card.js",
   "Tools/033-ssr-log-tracker.html",
+  "Tools/ssr-log-tracker/ssr-report.js",
   "Tools/045-sub-binder-generator.html",
   "Tools/076-sub-note-feedback-slip-generator.html",
   "Tools/077-testing-accommodations-card-generator.html",

@@ -34,6 +34,7 @@
 <script src="../_shared/print-kit.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="certificate-award-maker/cam-store.js"></script>
+<script src="certificate-award-maker/cam-templates.js"></script>
 <script src="certificate-award-maker/cam-borders.js"></script>
 <script src="../_shared/media-db.js"></script>
 <script src="certificate-award-maker/cam-image.js"></script>
@@ -143,7 +144,7 @@
   /* ---- the certificate itself ---- */
   .cert {
     position: relative; width: 100%; max-width: 68.75rem; aspect-ratio: 1100 / 850;
-    margin: 0 auto 1.4rem; background: #fff; overflow: hidden;
+    margin: 0 auto 1.4rem; overflow: hidden;
     box-shadow: 0 2px 10px rgba(0,0,0,.18);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     text-align: center;
@@ -166,7 +167,7 @@
   .cert-logo { max-height: 3.4rem; max-width: 40%; object-fit: contain; margin-bottom: .5rem; }
   .cert-qr { position: absolute; top: calc(7% + var(--ins-y, 0%)); right: calc(7% + var(--ins-x, 0%)); width: 3.2rem; height: 3.2rem; image-rendering: pixelated; }
   .cert-kicker { font-size: 1rem; letter-spacing: .18em; text-transform: uppercase; margin-bottom: .6rem; }
-  .cert-title { font-size: 2.6rem; font-weight: 700; margin-bottom: 1.1rem; line-height: 1.1; }
+  .cert-title { margin-bottom: 1.1rem; line-height: 1.1; }
   .cert-presented { font-size: 1rem; color: var(--muted-cert, #555); margin-bottom: .5rem; }
   .cert-name { font-size: 2.3rem; font-weight: 700; margin-bottom: 1rem; border-bottom: 2px solid currentColor; padding-bottom: .3rem; display: inline-block; }
   .cert-reason { font-size: 1.05rem; max-width: 80%; margin: 0 auto 1.4rem; }
@@ -212,26 +213,20 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
-  /* theme skins */
-  .theme-playful { color: #e0459b; font-family: "Trebuchet MS", "Segoe UI", sans-serif; background: linear-gradient(135deg, #fff8f0, #fff); }
-  .theme-playful .cert-title { color: #e0459b; }
-  .theme-playful .cert-kicker { color: #ffb400; }
-
-  .theme-varsity { color: #1b3a6b; font-family: "Arial Black", Arial, sans-serif; background: #fff; }
-  .theme-varsity .cert-title { color: #1b3a6b; text-transform: uppercase; }
-  .theme-varsity .cert-kicker { color: #c81d25; }
-
-  .theme-elegant { color: #8a6d1d; font-family: Georgia, "Times New Roman", serif; background: #fdfaf3; }
-  .theme-elegant .cert-title { color: #1f2f4d; font-style: italic; }
-  .theme-elegant .cert-kicker { color: #8a6d1d; }
-
-  .theme-modern { color: #0f766e; font-family: "Segoe UI", system-ui, sans-serif; font-weight: 300; background: #fff; }
-  .theme-modern .cert-title { color: #16211f; font-weight: 300; letter-spacing: .04em; }
-  .theme-modern .cert-kicker { color: #0f766e; }
-
-  .theme-ribbon { color: #1e3a5f; font-family: Georgia, "Times New Roman", serif; background: #fff; }
-  .theme-ribbon .cert-title { color: #1e3a5f; }
-  .theme-ribbon .cert-kicker { color: #b08d2f; }
+  /* template skins: every value comes from a template object (certificate-award-maker/cam-templates.js)
+     as the --t-* variables CertificateTemplates.vars() writes on the .cert. The fallbacks are Elegant's. */
+  .cert { color: var(--t-ink, #8a6d1d); font-family: var(--t-font, Georgia, "Times New Roman", serif);
+          font-weight: var(--t-body-weight, inherit); background: var(--t-bg, #fdfaf3); }
+  .cert .cert-title { color: var(--t-title, #1f2f4d); text-transform: var(--t-title-transform, none);
+          font-style: var(--t-title-style, italic); font-weight: var(--t-title-weight, 700);
+          letter-spacing: var(--t-title-spacing, 0); font-size: var(--t-title-size, 2.6rem); }
+  .cert .cert-kicker { color: var(--t-kicker, #8a6d1d); }
+  .tpl-maker { margin-top: .6rem; }
+  .tpl-maker summary { cursor: pointer; font-weight: 600; font-size: .88rem; }
+  .tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .5rem; margin: .5rem 0; }
+  .tpl-grid label { font-size: .78rem; margin: 0; }
+  .tpl-grid input[type=color] { width: 100%; height: 2rem; padding: 0; }
+  .tpl-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
@@ -303,6 +298,27 @@
       <div class="card">
         <label>Template</label>
         <div class="swatches" id="themeSwatches"></div>
+        <details class="tpl-maker" id="tplMaker">
+          <summary>Make your own template</summary>
+          <p class="hint">A template is a font, a few colours and how the title looks. It is kept on this device, with up to 12 of your own. Check that the ink reads on the background: the preview is the real thing.</p>
+          <div class="tpl-grid">
+            <div><label for="tplName">Name</label><input type="text" id="tplName" maxlength="30" placeholder="e.g. Spring"></div>
+            <div><label for="tplFont">Font</label><select id="tplFont"></select></div>
+            <div><label for="tplInk">Ink and name</label><input type="color" id="tplInk" value="#1e3a5f"></div>
+            <div><label for="tplBg">Paper</label><input type="color" id="tplBg" value="#ffffff"></div>
+            <div><label for="tplTitleColor">Title colour</label><input type="color" id="tplTitleColor" value="#1e3a5f"></div>
+            <div><label for="tplKickerColor">Small line colour</label><input type="color" id="tplKickerColor" value="#b08d2f"></div>
+            <div><label for="tplTitleStyle">Title</label><select id="tplTitleStyle">
+              <option value="plain">Plain</option><option value="italic">Italic</option><option value="caps">Capitals</option><option value="light">Light, spaced</option></select></div>
+            <div><label for="tplTitleSize">Title size</label><select id="tplTitleSize">
+              <option value="small">Small</option><option value="medium" selected>Medium</option><option value="large">Large</option></select></div>
+          </div>
+          <div class="tpl-actions">
+            <button type="button" id="tplSave">Save and use this template</button>
+            <button type="button" class="secondary" id="tplRemove" hidden>Remove this template</button>
+            <span class="hint" id="tplStatus" role="status"></span>
+          </div>
+        </details>
         <label>Border</label>
         <div class="swatches" id="borderSwatches"></div>
         <label>Seal</label>
@@ -445,13 +461,11 @@
 (function () {
   'use strict';
 
-  var THEMES = [
-    { key: 'playful', label: 'Playful', swatch: 'linear-gradient(90deg,#e0459b,#ffd23f)' },
-    { key: 'varsity', label: 'Varsity', swatch: 'linear-gradient(90deg,#1b3a6b,#c81d25)' },
-    { key: 'elegant', label: 'Elegant', swatch: 'linear-gradient(90deg,#8a6d1d,#1f2f4d)' },
-    { key: 'modern', label: 'Modern', swatch: '#0f766e' },
-    { key: 'ribbon', label: 'Ribbon', swatch: 'linear-gradient(90deg,#1e3a5f,#b08d2f)' }
-  ];
+  /* Templates are data (cam-templates.js): the built-in five plus any the teacher made. */
+  var TEMPLATES = CertificateTemplates.list(CertificateTemplates.load());
+  function themeItems() {
+    return TEMPLATES.map(function (t) { return { key: t.key, label: t.label, swatch: CertificateTemplates.swatch(t) }; });
+  }
 
   /* Seals and ribbons are rendered art (Path 21 P4). A saved value that is
      not one of these keys is 'none' (normalizeSettings), so nothing a preset
@@ -477,7 +491,7 @@
    'awardTitle','awardTitleCustom','reason','certDate','signature',
    'signatureFile','signaturePreview','signaturePreviewImg','signatureMissing','signatureRemove',
    'qrUrl','printBtn','previewBtn','showGuides','stockInset',
-   'orientTabs','perPageTabs',
+   'orientTabs','perPageTabs','tplName','tplFont','tplInk','tplBg','tplTitleColor','tplKickerColor','tplTitleStyle','tplTitleSize','tplSave','tplRemove','tplStatus',
    'previewArea','previewNote','viewToggle'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -534,6 +548,7 @@
     if (typeof s.signatureImage !== 'string') s.signatureImage = '';
     s.showGuides = !!s.showGuides;
     s.stockInset = STOCK_INSETS.indexOf(Number(s.stockInset)) === -1 ? 0 : Number(s.stockInset);
+    if (!CertificateTemplates.find(TEMPLATES, s.theme)) s.theme = 'elegant';
     if (SEALS.indexOf(s.seal) === -1) s.seal = 'none';
     if (RIBBONS.indexOf(s.ribbon) === -1) s.ribbon = 'none';
     return s;
@@ -600,20 +615,76 @@
   }
 
   function buildThemeSwatches() {
-    buildSwatches(els.themeSwatches, THEMES, settings.theme, function (key) {
+    if (els.tplRemove) syncTemplateRemove();
+    buildSwatches(els.themeSwatches, themeItems(), settings.theme, function (key) {
       settings.theme = key;
-      /* The Ribbon template gets a real ribbon: picking it with no seal
-         chosen yet puts a gold seal with blue tails on. A seal already
-         chosen is left alone. */
-      if (key === 'ribbon' && settings.seal === 'none') {
-        settings.seal = 'gold';
-        if (settings.ribbon === 'none') settings.ribbon = 'blue';
+      /* A template that suggests a seal (Ribbon) gets one: picking it with no seal
+         chosen yet puts that seal on. A seal already chosen is left alone. */
+      var sug = CertificateTemplates.find(TEMPLATES, key).seal;
+      if (sug && settings.seal === 'none' && SEALS.indexOf(sug.seal) !== -1 && sug.seal !== 'none') {
+        settings.seal = sug.seal;
+        if (settings.ribbon === 'none' && RIBBONS.indexOf(sug.ribbon) !== -1) settings.ribbon = sug.ribbon;
         buildAwardSwatches();
       }
       buildThemeSwatches();
       renderAll();
     });
   }
+
+  /* ---- your own templates (data, kept in CertificateTemplates.STORE_KEY) ---- */
+  var TITLE_LOOKS = {
+    plain:  { transform: 'none', style: 'normal', weight: 700, spacing: 'none' },
+    italic: { transform: 'none', style: 'italic', weight: 700, spacing: 'none' },
+    caps:   { transform: 'uppercase', style: 'normal', weight: 700, spacing: 'wide' },
+    light:  { transform: 'none', style: 'normal', weight: 300, spacing: 'wider' }
+  };
+  Object.keys(CertificateTemplates.FONTS).forEach(function (k) {
+    var o = document.createElement('option');
+    o.value = k; o.textContent = CertificateTemplates.FONTS[k].label;
+    els.tplFont.appendChild(o);
+  });
+  function customTemplates() { return TEMPLATES.filter(function (t) { return t.custom; }); }
+  function syncTemplateRemove() {
+    var t = CertificateTemplates.find(TEMPLATES, settings.theme);
+    els.tplRemove.hidden = !(t && t.custom);
+  }
+  els.tplSave.addEventListener('click', function () {
+    var name = els.tplName.value.replace(/\s+/g, ' ').trim();
+    if (!name) { els.tplStatus.textContent = 'Give the template a name first.'; els.tplName.focus(); return; }
+    var key = 'my-' + CertificateTemplates.slug(name);
+    var mine = customTemplates().filter(function (t) { return t.key !== key; });
+    if (mine.length >= CertificateTemplates.MAX_CUSTOM) { els.tplStatus.textContent = 'Twelve is the most; remove one first.'; return; }
+    var look = TITLE_LOOKS[els.tplTitleStyle.value] || TITLE_LOOKS.plain;
+    var tpl = CertificateTemplates.clean({
+      key: key, label: name, font: els.tplFont.value, color: els.tplInk.value, bg: els.tplBg.value,
+      title: { color: els.tplTitleColor.value, transform: look.transform, style: look.style, weight: look.weight,
+               spacing: look.spacing, size: els.tplTitleSize.value },
+      kicker: { color: els.tplKickerColor.value }
+    });
+    mine.push(tpl);
+    CertificateTemplates.save(mine);
+    TEMPLATES = CertificateTemplates.list(mine);
+    settings.theme = key;
+    persist();
+    buildThemeSwatches();
+    syncTemplateRemove();
+    renderAll();
+    els.tplStatus.textContent = 'Saved "' + tpl.label + '" and chose it.';
+  });
+  els.tplRemove.addEventListener('click', function () {
+    var t = CertificateTemplates.find(TEMPLATES, settings.theme);
+    if (!t || !t.custom) return;
+    if (!confirm('Remove the template "' + t.label + '"? Certificates that use it switch to Elegant.')) return;
+    var mine = customTemplates().filter(function (x) { return x.key !== t.key; });
+    CertificateTemplates.save(mine);
+    TEMPLATES = CertificateTemplates.list(mine);
+    settings.theme = 'elegant';
+    persist();
+    buildThemeSwatches();
+    syncTemplateRemove();
+    renderAll();
+    els.tplStatus.textContent = 'Removed "' + t.label + '".';
+  });
 
   function buildAwardSwatches() {
     buildSwatches(els.sealSwatches, artItems(SEALS, 'seal-'), settings.seal, function (key) {
@@ -793,7 +864,7 @@
     var effReason = (reason != null && reason !== '') ? reason : settings.reason;
     var logoSrc = CamImage.url(settings.logo), sigSrc = CamImage.url(settings.signatureImage);
     return (
-      '<div class="cert theme-' + settings.theme + '" style="aspect-ratio:' + w + '/' + h + ';' + stockInsetVars() + '">' +
+      '<div class="cert theme-' + settings.theme + '" style="aspect-ratio:' + w + '/' + h + ';' + stockInsetVars() + CertificateTemplates.vars(CertificateTemplates.find(TEMPLATES, settings.theme)) + '">' +
         CertificateBorders.borderSvg(settings.border, w, h) +
         awardHtml() +
         (logoSrc ? '<img class="cert-logo" src="' + logoSrc + '" alt="">' : '') +

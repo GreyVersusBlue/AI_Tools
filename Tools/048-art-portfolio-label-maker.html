@@ -24,6 +24,7 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="art-portfolio-label-maker/apl-photos.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -62,6 +63,14 @@
   button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
   button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .25rem .55rem; font-size: .78rem; }
+  [hidden] { display: none !important; }
+  .bulk-box { background: var(--card-2); border: 1px solid var(--line); border-radius: 8px; padding: .9rem; margin-top: .6rem; }
+  .bulk-box .check-row { display: flex; gap: .5rem; align-items: center; font-size: .85rem; margin: .35rem 0; }
+  .bulk-box .check-row input { width: auto; margin: 0; }
+  .bulk-plan { width: 100%; border-collapse: collapse; font-size: .82rem; margin: .5rem 0; }
+  .bulk-plan th, .bulk-plan td { text-align: left; padding: .25rem .4rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .bulk-plan select { width: 100%; margin: 0; }
+  .bulk-plan .how { color: var(--muted); white-space: nowrap; }
   button.link-btn { background: transparent; color: var(--accent-2); border: none; text-decoration: underline; padding: .2rem 0; font-size: .78rem; }
   button.link-btn:hover { background: transparent; color: var(--accent); }
   button:disabled { opacity: .4; cursor: not-allowed; }
@@ -196,6 +205,29 @@
           <button class="secondary" id="addRowBtn" type="button">+ Add entry</button>
         </div>
 
+        <div class="bulk-box">
+          <div class="card-title"><span>Add photos in bulk</span></div>
+          <p class="hint">Choose many photos at once, or a whole folder. Each is shrunk on this device to fit a label (nothing is uploaded), then matched to an entry by its file name &mdash; <em>ava-r.jpg</em> for the artist Ava R. You see the matches and can change any before they are added.</p>
+          <div class="btn-row">
+            <button class="secondary" id="bulkFilesBtn" type="button">Choose photos&hellip;</button>
+            <button class="secondary" id="bulkFolderBtn" type="button">Choose a folder&hellip;</button>
+          </div>
+          <p class="hint" id="bulkDone" role="status" hidden></p>
+          <div id="bulkPlan" hidden>
+            <p id="bulkSummary" role="status"></p>
+            <table class="bulk-plan"><caption class="sr-only" style="position:absolute;left:-9999px;">Where each photo goes</caption>
+              <thead><tr><th scope="col">Photo</th><th scope="col">Goes to</th><th scope="col">Matched</th></tr></thead>
+              <tbody id="bulkRows"></tbody></table>
+            <label class="check-row" for="bulkOrder"><input type="checkbox" id="bulkOrder"> Put photos with no name match on the entries still without one, in file-name order</label>
+            <label class="check-row" for="bulkReplace"><input type="checkbox" id="bulkReplace"> Replace photos that entries already have</label>
+            <label class="check-row" for="bulkNew"><input type="checkbox" id="bulkNew"> Make a new entry for each photo left over</label>
+            <div class="btn-row">
+              <button id="bulkApplyBtn" type="button">Add these photos</button>
+              <button class="secondary" id="bulkCancelBtn" type="button">Cancel</button>
+            </div>
+          </div>
+        </div>
+
         <div class="import-box" id="importBox">
           <label for="importText">One entry per line &mdash; title, then the artist statement, separated by a tab or a comma.
             Pasting three tab-separated columns from a spreadsheet reads them as title, artist, statement.</label>
@@ -268,7 +300,8 @@
    'labelsPerPage', 'ecLevel', 'printBtn', 'printSheetBtn', 'previewGrid', 'previewNote', 'msg',
    'printArea', 'printHeaderTitle', 'printLabelGrid', 'printRefSheet',
    'portfolioSelect', 'newPortfolioBtn', 'dupPortfolioBtn', 'renamePortfolioBtn', 'deletePortfolioBtn',
-   'shareBtn', 'shareNote'
+   'shareBtn', 'shareNote',
+   'bulkFilesBtn', 'bulkFolderBtn', 'bulkPlan', 'bulkDone', 'bulkSummary', 'bulkRows', 'bulkOrder', 'bulkReplace', 'bulkNew', 'bulkApplyBtn', 'bulkCancelBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var store = { list: [], currentId: null };
@@ -331,7 +364,7 @@
     state = first;
   }
   function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) { /* storage full/blocked */ }
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); return true; } catch (e) { return false; /* storage full/blocked */ }
   }
 
   function renderPortfolioSelect() {
@@ -522,6 +555,168 @@
       save(); renderRows(); scheduleRender();
       return;
     }
+  });
+
+  /* ---------- bulk photos (apl-photos.js decides the matches) ----------
+     Photos are read and shrunk here, in the browser, one at a time; the originals are never
+     kept and nothing is sent anywhere. The teacher sees the plan and may change any line before
+     a photo is stored. */
+  var PHOTO_MAX_SIDE = 480;       // longest side of a stored photo, in px
+  var PHOTO_QUALITY = 0.82;
+  var bulk = null;                // { items: [{ name, image }], failed: [names], plan: [...] }
+
+  function makeBulkInput(folder) {
+    var input = document.createElement('input');
+    input.type = 'file'; input.multiple = true; input.accept = 'image/*';
+    if (folder) input.setAttribute('webkitdirectory', '');
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    input.addEventListener('change', function () {
+      var files = Array.prototype.slice.call(input.files || []);
+      input.value = '';
+      startBulk(files);
+    });
+    return input;
+  }
+  var bulkFilesInput = makeBulkInput(false);
+  var bulkFolderInput = makeBulkInput(true);
+  els.bulkFilesBtn.addEventListener('click', function () { bulkFilesInput.click(); });
+  els.bulkFolderBtn.addEventListener('click', function () { bulkFolderInput.click(); });
+
+  /* Decodes a file and returns a small JPEG data URL. */
+  function shrinkPhoto(file) {
+    function draw(src, w, h) {
+      var fit = PortfolioPhotos.fitWithin(w, h, PHOTO_MAX_SIDE);
+      var c = document.createElement('canvas');
+      c.width = fit.w; c.height = fit.h;
+      var ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, fit.w, fit.h);   // a transparent PNG becomes white, not black
+      ctx.drawImage(src, 0, 0, fit.w, fit.h);
+      return c.toDataURL('image/jpeg', PHOTO_QUALITY);
+    }
+    if (window.createImageBitmap) {
+      return createImageBitmap(file, { imageOrientation: 'from-image' }).then(function (bmp) {
+        var url = draw(bmp, bmp.width, bmp.height);
+        if (bmp.close) bmp.close();
+        return url;
+      });
+    }
+    return new Promise(function (resolve, reject) {
+      var u = URL.createObjectURL(file), img = new Image();
+      img.onload = function () { var url = draw(img, img.naturalWidth, img.naturalHeight); URL.revokeObjectURL(u); resolve(url); };
+      img.onerror = function () { URL.revokeObjectURL(u); reject(new Error('unreadable')); };
+      img.src = u;
+    });
+  }
+
+  function startBulk(files) {
+    clearMsg();
+    els.bulkDone.hidden = true;
+    var images = files.filter(PortfolioPhotos.looksLikeImage);
+    var skipped = files.length - images.length;
+    if (!images.length) { showMsg('None of those files are pictures.'); return; }
+    var over = Math.max(0, images.length - PortfolioPhotos.MAX_FILES);
+    images = images.slice(0, PortfolioPhotos.MAX_FILES);
+    bulk = { items: [], failed: [], skipped: skipped, over: over, plan: [] };
+    els.bulkSummary.textContent = 'Reading ' + images.length + ' photos…';
+    els.bulkPlan.hidden = false;
+    var chain = Promise.resolve();
+    images.forEach(function (f) {
+      chain = chain.then(function () {
+        return shrinkPhoto(f).then(function (url) { bulk.items.push({ name: f.webkitRelativePath || f.name, image: url }); },
+          function () { bulk.failed.push(f.name); });
+      });
+    });
+    chain.then(function () { replan(); });
+  }
+
+  function entryLabel(e) {
+    var t = (e.artist || '').trim(), ti = (e.title || '').trim();
+    return (t && ti) ? t + ' — ' + ti : (t || ti || 'Entry ' + (state.entries.indexOf(e) + 1));
+  }
+
+  /* Recomputes the plan from the options; a line the teacher changed by hand is kept. */
+  function replan(keepEdits) {
+    if (!bulk) return;
+    var edits = {};
+    if (keepEdits) bulk.plan.forEach(function (p) { if (p.edited) edits[p.index] = p.entryId; });
+    var opts = { fillInOrder: els.bulkOrder.checked, replace: els.bulkReplace.checked };
+    var plan = PortfolioPhotos.plan(bulk.items, state.entries, opts);
+    plan.forEach(function (p) { if (Object.prototype.hasOwnProperty.call(edits, p.index)) { p.entryId = edits[p.index]; p.how = p.entryId ? 'you' : 'none'; p.edited = true; } });
+    bulk.plan = plan;
+    renderBulk();
+  }
+
+  function renderBulk() {
+    var rows = els.bulkRows;
+    rows.textContent = '';
+    bulk.plan.forEach(function (p, i) {
+      var tr = document.createElement('tr');
+      var name = document.createElement('td'); name.textContent = bulk.items[i].name;
+      var pick = document.createElement('td');
+      var sel = document.createElement('select');
+      sel.setAttribute('aria-label', 'Where ' + bulk.items[i].name + ' goes');
+      var none = document.createElement('option'); none.value = ''; none.textContent = els.bulkNew.checked ? '(new entry)' : '(skip this photo)';
+      sel.appendChild(none);
+      state.entries.forEach(function (e) {
+        var o = document.createElement('option'); o.value = e.id; o.textContent = entryLabel(e) + (e.image ? ' (has a photo)' : '');
+        sel.appendChild(o);
+      });
+      sel.value = p.entryId || '';
+      sel.addEventListener('change', function () {
+        p.entryId = sel.value || null; p.how = p.entryId ? 'you' : 'none'; p.edited = true;
+        renderBulk();
+      });
+      pick.appendChild(sel);
+      var how = document.createElement('td'); how.className = 'how';
+      how.textContent = { name: 'by name', order: 'by order', you: 'by you', none: '' }[p.how] || '';
+      tr.appendChild(name); tr.appendChild(pick); tr.appendChild(how);
+      rows.appendChild(tr);
+    });
+    var matched = bulk.plan.filter(function (p) { return p.entryId; }).length;
+    var left = bulk.plan.length - matched;
+    var bits = [matched + ' of ' + bulk.plan.length + ' photos matched to an entry'];
+    if (left) bits.push(left + (els.bulkNew.checked ? ' will each get a new entry' : ' will be skipped'));
+    if (bulk.failed.length) bits.push('could not read: ' + bulk.failed.join(', '));
+    if (bulk.skipped) bits.push(bulk.skipped === 1 ? '1 file is not a picture' : bulk.skipped + ' files are not pictures');
+    if (bulk.over) bits.push(bulk.over + ' past the limit of ' + PortfolioPhotos.MAX_FILES + ' were left out');
+    els.bulkSummary.textContent = bits.join('; ') + '.';
+    els.bulkApplyBtn.disabled = !matched && !(left && els.bulkNew.checked);
+  }
+
+  [els.bulkOrder, els.bulkReplace, els.bulkNew].forEach(function (box) {
+    box.addEventListener('change', function () { replan(true); });
+  });
+  function endBulk() { bulk = null; els.bulkPlan.hidden = true; els.bulkRows.textContent = ''; }
+  els.bulkCancelBtn.addEventListener('click', endBulk);
+
+  els.bulkApplyBtn.addEventListener('click', function () {
+    if (!bulk) return;
+    var before = JSON.stringify(state.entries);
+    var put = 0, made = 0;
+    // A blank starter row is used up before new rows are added.
+    function blank(e) { return !e.title && !e.artist && !e.description && !e.image; }
+    bulk.plan.forEach(function (p, i) {
+      var e = p.entryId && state.entries.find(function (x) { return x.id === p.entryId; });
+      if (e) { e.image = bulk.items[i].image; put++; return; }
+      if (els.bulkNew.checked) {
+        var fresh = state.entries.find(blank);
+        if (fresh) { fresh.title = PortfolioPhotos.titleFromName(bulk.items[i].name); fresh.image = bulk.items[i].image; }
+        else state.entries.push({ id: uid(), title: PortfolioPhotos.titleFromName(bulk.items[i].name), artist: '', description: '', image: bulk.items[i].image });
+        made++;
+      }
+    });
+    if (!save()) {
+      state.entries = JSON.parse(before);
+      showMsg('There is not enough room on this device to keep those photos, so none were added. Remove some photos or delete a portfolio you no longer need, then try again.');
+      return;
+    }
+    var n = put + made;
+    var kb = Math.round(bulk.plan.reduce(function (sum, p, i) { return sum + ((p.entryId || els.bulkNew.checked) ? bulk.items[i].image.length : 0); }, 0) / 1024);
+    endBulk();
+    renderRows(); scheduleRender();
+    els.bulkDone.textContent = 'Added ' + n + ' photo' + (n === 1 ? '' : 's') + (made ? ' (' + made + ' on new entries)' : '') + ', about ' + kb + ' KB in all.';
+    els.bulkDone.hidden = false;
   });
 
   els.addRowBtn.addEventListener('click', function () {

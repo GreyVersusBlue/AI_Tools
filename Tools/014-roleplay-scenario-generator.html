@@ -31,6 +31,7 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="roleplay-scenario-generator/speaking.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
@@ -153,6 +154,23 @@
   .stage-success ul { margin: .3rem 0 0; padding-left: 1.2rem; }
   .stage-success li { margin-bottom: .15rem; }
 
+  .spk-who { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .6rem; margin: .6rem 0; }
+  .spk-who label, #speakingPanel > label { display: block; font-weight: 600; font-size: .82rem; margin: .3rem 0; }
+  #speakingPanel select, #speakingPanel textarea { width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px; padding: .45rem .6rem; }
+  #spkPrintWho { width: auto; min-width: 12rem; }
+  .spk-crit { border: 1px solid var(--line); border-radius: 8px; padding: .5rem .8rem .6rem; margin: 0 0 .6rem; }
+  .spk-crit legend { font-weight: 700; font-size: .9rem; padding: 0 .3rem; }
+  .spk-levels { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .spk-levels label { display: inline-flex; align-items: center; gap: .35rem; border: 1px solid var(--line-strong); border-radius: 7px;
+    padding: .45rem .7rem; font-weight: 600; font-size: .85rem; cursor: pointer; background: var(--card); min-height: 2.4rem; }
+  .spk-levels input { width: auto; margin: 0; }
+  .spk-levels label:has(input:checked) { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .spk-levels label:has(input:focus-visible) { outline: 3px solid var(--accent-2); outline-offset: 2px; }
+  #spkSummary table { width: 100%; border-collapse: collapse; font-size: .85rem; margin-bottom: .8rem; }
+  #spkSummary th, #spkSummary td { text-align: left; padding: .3rem .5rem; border-bottom: 1px solid var(--line); }
+  #speakingPanel, #speakingPanel .set-actions { overflow-wrap: anywhere; }
+
   /* ── Print handout ─────────────────────────────────────────────────── */
   .print-only { display: none; }
   @media print {
@@ -178,6 +196,14 @@
     .print-only .h-success .h-success-label { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em; color: #333; font-weight: 700; }
     .print-only .h-success ul { margin: .2rem 0 0; padding-left: 1.1rem; font-size: .84rem; }
     .print-only .h-success li { margin-bottom: .1rem; }
+    .print-only .spk-record h1 { font-size: 1.4rem; margin: 0 0 .2rem; }
+    .print-only .spk-record .spk-sub { color: #333; font-size: .9rem; margin: 0 0 .8rem; }
+    .print-only .spk-record table { width: 100%; border-collapse: collapse; font-size: .85rem; margin-bottom: .8rem; }
+    .print-only .spk-record th, .print-only .spk-record td { border: 1px solid #333; padding: .3rem .5rem; text-align: left; vertical-align: top; }
+    .print-only .spk-record tr { break-inside: avoid; page-break-inside: avoid; }
+    .print-only .spk-record ul { margin: 0; padding-left: 1rem; }
+    .print-only .spk-record h2 { font-size: .9rem; text-transform: uppercase; letter-spacing: .05em; margin: .8rem 0 .3rem; }
+    .print-only .spk-record .spk-foot { font-size: .75rem; color: #333; margin-top: .8rem; }
     @page { size: letter portrait; margin: 0.2in; }
   }
 </style>
@@ -236,6 +262,7 @@
     <button type="button" class="secondary big" id="printCurrentBtn">Print this scenario</button>
     <button type="button" class="secondary big" id="printRoleCardsBtn">Print role cards (one per student)</button>
     <button type="button" class="secondary big" id="toggleCriteriaBtn">Success criteria&hellip;</button>
+    <button type="button" class="secondary big" id="toggleSpeakingBtn">Speaking record&hellip;</button>
     <button type="button" class="secondary big" id="toggleSetBtn">Build a handout set&hellip;</button>
     <button type="button" class="secondary big" id="toggleAddBtn">Add your own scenario&hellip;</button>
   </div>
@@ -251,6 +278,35 @@
     <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;margin-top:.4rem;">
       <input type="checkbox" id="criteriaOn" checked style="width:auto;"> Print the strip on handouts and role cards
     </label>
+  </div>
+
+  <div class="set-panel" id="speakingPanel" style="display:none;">
+    <h3>Speaking record</h3>
+    <p class="hint">Walk the room, tap a level for each thing you listened for, press Record. The mark goes on
+      both partners&rsquo; records. It stays on this device, per class, and is not in any share link. Print one
+      page per student for a conference.</p>
+    <label for="spkCriteria">What you score (one per line, up to 6)</label>
+    <textarea id="spkCriteria" rows="4"></textarea>
+    <div class="spk-who">
+      <div><label for="spkPair">Pair from the class pairing</label><select id="spkPair"></select></div>
+      <div><label for="spkA">Partner A</label><select id="spkA"></select></div>
+      <div><label for="spkB">Partner B</label><select id="spkB"></select></div>
+    </div>
+    <p class="hint" id="spkScenarioNote"></p>
+    <div id="spkRubric"></div>
+    <div class="set-actions">
+      <button type="button" id="spkRecordBtn">Record</button>
+      <button type="button" class="secondary" id="spkUndoBtn">Undo last mark</button>
+    </div>
+    <p class="hint" id="spkStatus" role="status" aria-live="polite"></p>
+    <h3>Marks so far</h3>
+    <div id="spkSummary"></div>
+    <div class="set-actions">
+      <label for="spkPrintWho" style="margin:0;font-weight:600;font-size:.85rem;align-self:center;">Print for</label>
+      <select id="spkPrintWho"></select>
+      <button type="button" id="spkPrintBtn">Print speaking record</button>
+      <button type="button" class="danger" id="spkClearBtn">Clear this class&rsquo;s marks&hellip;</button>
+    </div>
   </div>
 
   <div class="set-panel" id="setPanel" style="display:none;">
@@ -317,6 +373,7 @@
   var CUSTOM_KEY = 'gvb-roleplay:custom';
   var ROSTER_KEY = 'gvb-roleplay:roster';
   var CRITERIA_KEY = 'gvb-roleplay:criteria';
+  var SPEAKING_KEY = 'gvb-roleplay:speaking';
   var USEFUL_FILLS_KEY = 'gvb-roleplay:usefulFills';
   var FRAMES_KEY = 'gvb-roleplay:frames';
   var TTS_LANG_KEY = 'gvb-roleplay:ttsLang';
@@ -675,7 +732,9 @@
    'toggleAddBtn', 'addPanel', 'addTitle', 'addCategory', 'addRoleA', 'addRoleB', 'addSetup', 'addPhrases',
    'saveCustomBtn', 'cancelCustomBtn', 'customList',
    'stage', 'printArea', 'shareBtn', 'shareNote',
-   'criteriaPanel', 'criteriaText', 'criteriaOn', 'toggleCriteriaBtn'
+   'criteriaPanel', 'criteriaText', 'criteriaOn', 'toggleCriteriaBtn',
+   'toggleSpeakingBtn', 'speakingPanel', 'spkCriteria', 'spkPair', 'spkA', 'spkB', 'spkScenarioNote', 'spkRubric',
+   'spkRecordBtn', 'spkUndoBtn', 'spkStatus', 'spkSummary', 'spkPrintWho', 'spkPrintBtn', 'spkClearBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var filter = localStorage.getItem(FILTER_KEY) || 'all';
@@ -717,6 +776,7 @@
     currentId = id;
     if (id) localStorage.setItem(CURRENT_KEY, id);
     else localStorage.removeItem(CURRENT_KEY);
+    updateSpeakingNote();
   }
 
   function buildCategorySelect() {
@@ -951,6 +1011,7 @@
        class change — otherwise it shows the previous class's text while
        writing into the new class's record. */
     renderCriteriaPanel();
+    renderSpeakingPanel();
     renderStage();
     if (els.setPanel.style.display !== 'none') renderSetList();
     if (els.addPanel.style.display !== 'none') renderCustomList();
@@ -1294,6 +1355,7 @@
     if (ttsLangByClass[currentClass]) { ttsLangByClass[name] = ttsLangByClass[currentClass]; delete ttsLangByClass[currentClass]; }
     if (classPairs[currentClass]) { classPairs[name] = classPairs[currentClass]; delete classPairs[currentClass]; }
     if (criteriaByClass[currentClass]) { criteriaByClass[name] = criteriaByClass[currentClass]; delete criteriaByClass[currentClass]; }
+    if (speakingByClass[currentClass]) { speakingByClass[name] = speakingByClass[currentClass]; delete speakingByClass[currentClass]; }
     classes = classes.map(function (c) { return c === currentClass ? name : c; });
     currentClass = name;
     saveCurrentClass();
@@ -1303,6 +1365,7 @@
     saveFrames();
     saveTtsLang();
     saveCriteria();
+    saveSpeaking();
     renderAll();
   });
 
@@ -1316,6 +1379,7 @@
     delete ttsLangByClass[currentClass];
     delete classPairs[currentClass];
     delete criteriaByClass[currentClass];
+    delete speakingByClass[currentClass];
     classes = classes.filter(function (c) { return c !== currentClass; });
     currentClass = classes[0];
     saveCurrentClass();
@@ -1325,6 +1389,7 @@
     saveFrames();
     saveTtsLang();
     saveCriteria();
+    saveSpeaking();
     renderAll();
   });
 
@@ -1355,6 +1420,8 @@
     delete classPairs[currentClass]; // stale pairing from a previous roster
     saveRosters();
     renderRosterStatus();
+    refreshSpeakingWho();
+    renderSpeakingSummary();
     renderStage();
   });
 
@@ -1383,6 +1450,7 @@
     // Odd student out joins the last pair as a trio rather than being left without a partner.
     if (shuffled.length % 2 === 1 && pairs.length) pairs[pairs.length - 1].push(shuffled[shuffled.length - 1]);
     classPairs[currentClass] = pairs;
+    refreshSpeakingWho();
     renderStage();
   });
 
@@ -1596,6 +1664,211 @@
       }
     });
   }
+
+  /* ---------- speaking record ----------
+     A rubric tap per pair while circulating, kept per class, printed as one
+     page per student. The rules live in roleplay-scenario-generator/speaking.js;
+     this is the page half. A mark is stored once for the pair and only ever
+     written by the Record button, never by loading the page. */
+  var speakingByClass = safeParse(localStorage.getItem(SPEAKING_KEY), null);
+  if (!speakingByClass || typeof speakingByClass !== 'object' || Array.isArray(speakingByClass)) speakingByClass = {};
+  function saveSpeaking() {
+    try { localStorage.setItem(SPEAKING_KEY, JSON.stringify(speakingByClass)); } catch (e) { /* storage full/blocked */ }
+  }
+  /* The class's record, read through normalize() but only stored once something changes. */
+  function speakingRec() { return RpSpeaking.normalize(speakingByClass[currentClass]); }
+  function commitSpeaking(rec) {
+    speakingByClass[currentClass] = { criteria: rec.criteria, marks: rec.marks };
+    saveSpeaking();
+  }
+  var spkExtras = []; // third student of a trio picked from the pairing
+  function spkText(tag, text, cls) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    n.textContent = text;
+    return n;
+  }
+  function today() {
+    var d = new Date(), pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+  function fillSelect(sel, items, firstLabel) {
+    var keep = sel.value;
+    sel.textContent = '';
+    if (firstLabel != null) { var o0 = document.createElement('option'); o0.value = ''; o0.textContent = firstLabel; sel.appendChild(o0); }
+    items.forEach(function (it) {
+      var o = document.createElement('option');
+      o.value = it.value; o.textContent = it.label; sel.appendChild(o);
+    });
+    if (Array.prototype.some.call(sel.options, function (o) { return o.value === keep; })) sel.value = keep;
+  }
+  function currentScores() {
+    var out = {};
+    Array.prototype.forEach.call(els.spkRubric.querySelectorAll('input[type=radio]:checked'), function (r) {
+      out[r.getAttribute('data-crit')] = parseInt(r.value, 10);
+    });
+    return out;
+  }
+  function renderSpeakingRubric() {
+    var keep = currentScores();
+    els.spkRubric.textContent = '';
+    speakingRec().criteria.forEach(function (c, i) {
+      var fs = document.createElement('fieldset');
+      fs.className = 'spk-crit';
+      fs.appendChild(spkText('legend', c));
+      var row = document.createElement('div');
+      row.className = 'spk-levels';
+      RpSpeaking.LEVELS.forEach(function (lv) {
+        var lab = document.createElement('label');
+        var r = document.createElement('input');
+        r.type = 'radio'; r.name = 'spk-c' + i; r.value = String(lv.v); r.setAttribute('data-crit', c);
+        if (keep[c] === lv.v) r.checked = true;
+        lab.appendChild(r);
+        lab.appendChild(document.createTextNode(lv.v + ' ' + lv.label));
+        row.appendChild(lab);
+      });
+      fs.appendChild(row);
+      els.spkRubric.appendChild(fs);
+    });
+  }
+  function updateSpeakingNote() {
+    var s = SCENARIO_BY_ID[currentId];
+    els.spkScenarioNote.textContent = s ? 'This mark is for: ' + s.title + '.' : 'Pick a scenario first; marks are filed under it.';
+  }
+  function renderSpeakingSummary() {
+    var rec = speakingRec(), roster = currentRoster();
+    var names = RpSpeaking.studentsWithMarks(rec, roster);
+    els.spkSummary.textContent = '';
+    if (!names.length) {
+      els.spkSummary.appendChild(spkText('p', 'No marks yet for ' + currentClass + '.', 'hint'));
+    } else {
+      var t = document.createElement('table');
+      t.setAttribute('aria-label', 'Marks so far for ' + currentClass);
+      var hr = document.createElement('tr');
+      ['Student', 'Marks', 'Average (of 4)'].forEach(function (h) { var th = spkText('th', h); th.scope = 'col'; hr.appendChild(th); });
+      t.appendChild(hr);
+      names.forEach(function (n) {
+        var sm = RpSpeaking.summary(rec, n), tr = document.createElement('tr');
+        var th = spkText('th', n); th.scope = 'row'; tr.appendChild(th);
+        tr.appendChild(spkText('td', String(sm.marks)));
+        tr.appendChild(spkText('td', sm.overall == null ? '' : sm.overall.toFixed(1)));
+        t.appendChild(tr);
+      });
+      els.spkSummary.appendChild(t);
+    }
+    var keep = els.spkPrintWho.value;
+    fillSelect(els.spkPrintWho, names.map(function (n) { return { value: n, label: n }; }), 'All students with marks');
+    if (names.indexOf(keep) >= 0) els.spkPrintWho.value = keep;
+    els.spkPrintBtn.disabled = !names.length;
+    els.spkUndoBtn.disabled = !rec.marks.length;
+    els.spkClearBtn.disabled = !rec.marks.length;
+  }
+  /* Who can be picked: follows a roster load or a new pairing while the panel is open. */
+  function refreshSpeakingWho() {
+    var roster = currentRoster();
+    var opts = roster.map(function (n) { return { value: n, label: n }; });
+    fillSelect(els.spkA, opts, roster.length ? 'Choose a student' : 'Load a roster first');
+    fillSelect(els.spkB, opts, '(no partner)');
+    var pairs = classPairs[currentClass] || [];
+    fillSelect(els.spkPair, pairs.map(function (p, i) { return { value: String(i), label: p.join(' & ') }; }),
+      pairs.length ? 'Choose a pair' : 'No pairing yet');
+  }
+  function renderSpeakingPanel() {
+    els.spkCriteria.value = speakingRec().criteria.join('\n');
+    refreshSpeakingWho();
+    spkExtras = [];
+    renderSpeakingRubric();
+    updateSpeakingNote();
+    renderSpeakingSummary();
+  }
+  function spkStudents() {
+    var out = [];
+    [els.spkA.value, els.spkB.value].concat(spkExtras).forEach(function (n) { if (n && out.indexOf(n) < 0) out.push(n); });
+    return out;
+  }
+  els.toggleSpeakingBtn.addEventListener('click', function () {
+    var showing = els.speakingPanel.style.display !== 'none';
+    els.speakingPanel.style.display = showing ? 'none' : '';
+    if (!showing) renderSpeakingPanel();
+  });
+  els.spkCriteria.addEventListener('input', function () {
+    var rec = speakingRec(), c = RpSpeaking.cleanCriteria(els.spkCriteria.value.split('\n'));
+    rec.criteria = c.length ? c : RpSpeaking.DEFAULT_CRITERIA.slice();
+    commitSpeaking(rec);
+    renderSpeakingRubric();
+  });
+  els.spkPair.addEventListener('change', function () {
+    var p = (classPairs[currentClass] || [])[parseInt(els.spkPair.value, 10)];
+    spkExtras = [];
+    if (!p) return;
+    els.spkA.value = p[0]; els.spkB.value = p[1] || ''; spkExtras = p.slice(2);
+  });
+  [els.spkA, els.spkB].forEach(function (sel) {
+    sel.addEventListener('change', function () { spkExtras = []; els.spkPair.value = ''; });
+  });
+  els.spkRecordBtn.addEventListener('click', function () {
+    var who = spkStudents(), scores = currentScores(), rec = speakingRec();
+    if (!who.length) { els.spkStatus.textContent = 'Choose who you listened to first.'; return; }
+    if (!Object.keys(scores).length) { els.spkStatus.textContent = 'Tap at least one level, then press Record.'; return; }
+    var s = SCENARIO_BY_ID[currentId];
+    var mark = RpSpeaking.addMark(rec, { date: today(), scenario: currentId || '', title: s ? s.title : '', students: who, scores: scores });
+    if (!mark) { els.spkStatus.textContent = 'That mark could not be saved.'; return; }
+    commitSpeaking(rec);
+    Array.prototype.forEach.call(els.spkRubric.querySelectorAll('input:checked'), function (r) { r.checked = false; });
+    els.spkStatus.textContent = 'Recorded for ' + who.join(' & ') + ': ' + mark.scores.length + ' of ' + rec.criteria.length + ' scored.';
+    renderSpeakingSummary();
+  });
+  els.spkUndoBtn.addEventListener('click', function () {
+    var rec = speakingRec(), m = RpSpeaking.undoLast(rec);
+    if (!m) return;
+    commitSpeaking(rec);
+    els.spkStatus.textContent = 'Removed the last mark (' + m.students.join(' & ') + ').';
+    renderSpeakingSummary();
+  });
+  els.spkClearBtn.addEventListener('click', function () {
+    var rec = speakingRec();
+    if (!rec.marks.length) return;
+    if (!window.confirm('Delete all ' + rec.marks.length + ' speaking marks for "' + currentClass + '"? This cannot be undone.')) return;
+    rec.marks = [];
+    commitSpeaking(rec);
+    els.spkStatus.textContent = 'Cleared the marks for ' + currentClass + '.';
+    renderSpeakingSummary();
+  });
+  function speakingPageNode(rec, student) {
+    var sm = RpSpeaking.summary(rec, student), page = document.createElement('div');
+    page.className = 'handout spk-record';
+    page.appendChild(spkText('h1', 'Speaking record: ' + student));
+    page.appendChild(spkText('p', currentClass + ' · ' + sm.marks + (sm.marks === 1 ? ' mark' : ' marks') +
+      ' · levels run 1 (Beginning) to 4 (Advanced)', 'spk-sub'));
+    var t = document.createElement('table'), hr = document.createElement('tr');
+    ['Date', 'Scenario', 'Partner', 'What you heard'].forEach(function (h) { hr.appendChild(spkText('th', h)); });
+    t.appendChild(hr);
+    RpSpeaking.marksFor(rec, student).forEach(function (m) {
+      var tr = document.createElement('tr'), ul = document.createElement('ul'), td = document.createElement('td');
+      tr.appendChild(spkText('td', m.date));
+      tr.appendChild(spkText('td', m.title));
+      tr.appendChild(spkText('td', m.students.filter(function (n) { return n !== student; }).join(' & ')));
+      m.scores.forEach(function (s) { ul.appendChild(spkText('li', s.c + ': ' + s.v + ' ' + RpSpeaking.levelLabel(s.v))); });
+      td.appendChild(ul); tr.appendChild(td); t.appendChild(tr);
+    });
+    page.appendChild(t);
+    page.appendChild(spkText('h2', 'Average by criterion'));
+    var ul2 = document.createElement('ul');
+    sm.averages.forEach(function (a) { ul2.appendChild(spkText('li', a.c + ': ' + a.avg.toFixed(1) + ' of 4 (' + a.n + (a.n === 1 ? ' mark' : ' marks') + ')')); });
+    page.appendChild(ul2);
+    page.appendChild(spkText('p', 'A teacher’s notes from listening to pairs, not a grade.', 'spk-foot'));
+    return page;
+  }
+  els.spkPrintBtn.addEventListener('click', function () {
+    var rec = speakingRec(), who = els.spkPrintWho.value;
+    var names = who ? [who] : RpSpeaking.studentsWithMarks(rec, currentRoster());
+    if (!names.length) return;
+    els.printArea.textContent = '';
+    names.forEach(function (n) { els.printArea.appendChild(speakingPageNode(rec, n)); });
+    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
+    els.printArea.classList.add('active');
+    window.print();
+  });
 
   /* ---------- boot ---------- */
   wordListDo(function () { WordList.importLegacy(window.localStorage); WordList.importLegacyDrill(window.localStorage); });

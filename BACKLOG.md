@@ -87,6 +87,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-27 (v499), rank 56 (Path 19 P3) rewritten to what waits on Devon; every item the session was given is built.** A reflexive verb's command and infinitive carry their pronoun (Spanish levántate / levantémonos / levantaos / levantarme, Italian lavati / si lavi / lavarmi, French lève-toi), a French negative command (ne te lève pas), the pluperfect and compound subjunctives in Spanish, French and Italian, German Konjunktiv II proper (wäre, käme) and dative reflexives (`sich (dat.) vorstellen`), a ge- rule built on what can begin a German word (the four-name exception list is gone), and Latin's perfect / pluperfect / future perfect passive and imperative. All opt-in `extraTenses`; the six and every old cell are unchanged but reflexive commands that used to say "not built". No new suite port (**next free: 8627**). Not built because they are Devon's: a Spanish or Italian negative command (S1, I4), a deponent perfect (L4). Every table is unreviewed.
 - **AI-29 (v487), ranks 61 and 62 (Track B1 and B2) DELETED, and ranks 63 and 64 (Track V) DELETED as cut at Devon's word; ranks 77 and 84 (built by Path 19 P3 and P5) deleted too, gaps not renumbered.** The school accent: `_shared/a11y.js`'s fenced `/* === brand === */` block reads `gvb-brand:settings.v1` (`{v:1, accent, accent2?}`, a setting in 009's backup, not student data) and writes one screen-only `<style id="gvb-brand-style">` before first paint (`--accent`, `--accent-2`, `--accent-ink`, the Industry tools' ten-step `--color-accent-*` scales, an accent lifted to read on the dark paper); no key means no element and no pixel changes (001, 003, 005, 044 byte-identical in both themes; 007 is nondeterministic run to run on its own). `window.BRAND_OPT_OUT` (007), `window.Brand` (`get`/`set`/`reset`/`onChange`), live across tabs; the widget's **School branding** section (colour inputs, second colour automatic unless unticked, a warning that never blocks, Reset school colours with no reload). **No logo** (Devon, 2026-10-21). Suite `test:brand` (8622), **next free suite port: 8623.** Detail and the questions in `HISTORY.md`.
 - **AI-27 (v479-v486), rank 56 (Path 19 P3) rewritten to what is left; Path 19 is otherwise built.** Reflexive verbs in German and Italian; **tenses beyond the six** as `extraTenses` on a pack (offered in 039's menu and on the check sheet, never in a default list: Spanish present perfect, -ra subjunctive and command; German Plusquamperfekt, passive and imperative; Italian congiuntivo imperfetto and imperativo; French impératif; Latin subjunctive, passive and deponents); Latin prefix compounds and the German ge- exceptions; **079's `irregulars.js` computed from the engine** (byte-identical; the typed literals frozen in `_079-irregulars-frozen.json`); and 039, 014 and 044 on `_shared/speak.js` (`speak.js` joins `SHELL_URLS`). Suite `test:speak-adopters` (8621), **next free suite port: 8622**. Every table is still unreviewed.
 - **AI-27 (v477-v478), ranks 57 and 58 (Path 19 P4 and P5) DELETED, gaps not renumbered.** P4: four new tabs in 040 on a pure `Tools/vocab-flashcard-generator/vfg-study.js` (`VfgStudy`): a **Frayer model** page per word (blank, or the list's definition and example filled in; one or two to a page), **fill in the blank** from each word's `example` (a word bank, an answer key, and a list of the words left out and why), a **review schedule** (new words per teaching day, reviews at 1, 3, 7, 14 days by default, a plan table or one day's drill sheet with a key; dated from a typed first day with weekends skipped, otherwise only numbered), and the **word wall as a system** (a `unit:<name>` tag on the word in Word Lists; cards a unit at a time, an A-to-Z index with unit and card number, retire a unit and print a take-down list). All through `PrintKit` and its preview. P5: `_shared/speak.js` (`Speak`), a small speechSynthesis helper, used by 040's self-quiz (**Hear it**, in a language chosen per list) and by 051's word table (Hear), and teacher **recordings** in 051 (`Tools/classroom-label-maker/clm-pron.js`, MediaRecorder into `gvb-media`, namespace `labels`, per language and word; plays in 051 on this device; **not** in the label's QR). Suites `test:vocab-study-logic`, `test:vocab-study` (8619), `test:speak`, `test:label-pron` (8620), **next free suite port: 8621**. Rank 56 is untouched.
@@ -662,7 +663,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 92 rows, **234 keys and 32 prefixes across 132 files** (`check:registry`); **55** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 90) | `sw-register.js` 88 · `a11y.css` 87 · `a11y.js` 87 · `ink-paper.css` 79 · `base.css` 73 · `qr-draw.js` 61 · `share.js` 56 · `state-link.js` 56 · `store.js` 45 · `roster.js` 35 · `print-area.css` 32 · `print-kit.css` 18 · `print-kit.js` 18 · `media-db.js` 17 · `stage.js` 16 · `export.js` 15 · `tool-registry.js` 13 · `qr-scan.js` 10 · `school-day.js` 9 · `handoffs.js` 8 · `sample-data.js` 8 · `webrtc-pair.js` 8 · `grouping.js` 6 · `question-bank.js` 6 · `student-flags.js` 6 · `undo.js` 6 · `word-list.js` 6 · `paste-table.js` 5 (+2 via a module) · `speak.js` 5 · `theme.css` 5 · `chart-svg.js` 4 · `levels.js` 4 · `list-sentence.js` 4 (+3 via a module) · `seating-read.js` 4 · `countdown.js` 3 · `restore-kit.js` 3 · `binder-stale.js` 2 · `bracket.js` 2 · `conjugate-de.js` 2 · `conjugate-es.js` 2 · `conjugate-fr.js` 2 · `conjugate-it.js` 2 · `conjugate-la.js` 2 · `conjugate.js` 2 · `rotation.js` 2 · `ss-glossary.js` 2 · `stations-bank.js` 2 · `stations.js` 2 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `stations-debrief.css` 1 · `stations-debrief.js` 1 · `student-details.js` 1 (+1 via a module) · `geo-project.js` 0 (+2 via a module) |
+| Shared-file adoption (of 90) | `sw-register.js` 88 · `a11y.css` 87 · `a11y.js` 87 · `ink-paper.css` 79 · `base.css` 73 · `qr-draw.js` 61 · `share.js` 56 · `state-link.js` 56 · `store.js` 45 · `roster.js` 35 · `print-area.css` 32 · `print-kit.css` 18 · `print-kit.js` 18 · `media-db.js` 17 · `stage.js` 16 · `export.js` 15 · `tool-registry.js` 13 · `qr-scan.js` 10 · `school-day.js` 9 · `handoffs.js` 8 · `sample-data.js` 8 · `webrtc-pair.js` 8 · `grouping.js` 6 · `question-bank.js` 6 · `student-flags.js` 6 · `undo.js` 6 · `word-list.js` 6 · `paste-table.js` 6 (+2 via a module) · `speak.js` 5 · `theme.css` 5 · `chart-svg.js` 4 · `levels.js` 4 · `list-sentence.js` 4 (+3 via a module) · `seating-read.js` 4 · `countdown.js` 3 · `restore-kit.js` 3 · `binder-stale.js` 2 · `bracket.js` 2 · `conjugate-de.js` 2 · `conjugate-es.js` 2 · `conjugate-fr.js` 2 · `conjugate-it.js` 2 · `conjugate-la.js` 2 · `conjugate.js` 2 · `rotation.js` 2 · `ss-glossary.js` 2 · `stations-bank.js` 2 · `stations.js` 2 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `stations-debrief.css` 1 · `stations-debrief.js` 1 · `student-details.js` 1 (+1 via a module) · `geo-project.js` 0 (+2 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **105 ranked rows, ranks to 164** (ranks 19 and 20 shipped on 2026-10-29 and leave gaps, as the earlier deletions did; rank 43 shipped three times on 2026-10-28, Path 16 P1 and then P2, and the ranks after it moved up one each time; the ranks before it keep the gaps earlier deletions left). Path 21 is finished; per-tool rows start at rank **75**; 156–164 are Path 22 P6–P14 |
@@ -814,23 +815,12 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 51 | Path 18 P3 — feature parity between 018 and 019 (built v384-v393: 018's pictures, required set, per-answer branching on choice stations with its answer key and route-card notes, 019's teams/timing/leaderboard on the monitor). **Left:** branching on text and numeric stations (no list of accepted answers to key it on; left out by default); a room's `run` field is still unused, the monitor keeps nothing across a reload; **minutes or points is still Devon's question 5** (default built: time ranks, score beside it) | 019 | ½ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
 | 52 | Path 18 P4 — the debrief print. **Built for 018 (v394) and for a 019 room (v395-v397):** the sheet is `_shared/stations-debrief.js` (+ css), drawn by both; 019's teacher monitor keeps a record of a room's play (when each team moved off each station, on the monitor's clock, in `escape-room-builder:monitor-record`, a registry student key) and prints it through the kit with a Preview. **Left:** wrong tries and hints for a 019 room (a device does not report them; adding two fields to `lock.html`'s message is the student player, held by "nothing is student-facing right now"); a room's stations have no names, so its sheet says "Station n"; the annotated floor-plan map via 046 or 035 (cross-tool, no design says how); print one on paper and read it | 018, 019 | ¼ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
 | 53 | Path 18 P5 — decide the product: two entry points on one engine, or one tool with a mode switch | 018 | ¼ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
-| 56 | Path 19 P3 — polish that is left (everything in the design is built, v469-v486): negative commands and a command or infinitive with its pronoun attached (levántate, lavarmi), German dative reflexives (sich etwas vorstellen) and Konjunktiv II proper (wäre, käme), compound subjunctives and the pluperfect for Spanish, French and Italian, Latin's perfect passive, deponent perfect and imperative, a better rule than the German ge- exception list, and Devon's questions G4, I4 and L4 in the P3 bullet. Each is one data entry or one small engine rule; none is wanted by a course yet. No table is called reviewed until the language teacher has read the check sheet | 079 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
+| 56 | Path 19 P3 — what waits on Devon (everything else in the design and its polish is built, v469-v499): his questions S1 (a Spanish negative command, `no hables`), I4 (an Italian negative command and the tu imperative of -are), L4 (the deponent perfect, `locūtus sum`), G4 (the German passive for every verb) and G5 (the du imperative `mach` or `mache`), in the P3 bullet. Each is one data entry or one small rule once he answers; small leftovers the bullet lists (kennte / nennte / rennte, the `dé` and `sé` commands with a pronoun, the Italian short tu forms, a Latin future imperative, a German reflexive imperative). No table is called reviewed until the language teacher has read the check sheet | 079 | ¼ | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 59 | Path 20 P1, what is left — the curriculum gazetteer only if a second tool wants it (the port shipped in v401; 062's `gbq-map.js` switched to `_shared/geo-project.js` in v424) | `_shared/` | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 60 | Path 20 P4, what is left — the way back from Timeline Builder into a map project (needs a route 015 does not accept; Devon's call on where an event's year goes on a map), and the slice sheet in the print preview (the kit's `preview()` does not cover 046's canvas export); time slices themselves shipped in v433 | 046, 015 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 65 | First-run "Load sample data" across the tools that open to an empty form (P15); 059, 072, 049 (v488) and 043, 042, 082, 038, 084 (v489) done; the people-content tools wait on Devon (question below) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 66 | Phone-sized layout pass beyond 005: sideways overflow is gone from all 90 pages at 360 px (v490-v491, `base.css` phone block plus per-page rules); left: toolbars over half a 740 px screen on 011 (663 px), 032 (424) and 054 (373), and a real phone has not been tried | site | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 71 | Wiki Race (086): the teacher scoreboard from finish codes and the Node suite for the seed logic are done (v496); left: an offline corpus mode (authored article texts and links, no network source) | 086 | 1 | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 72 | Speaking assessment layer — a short rubric per pair while circulating, stored per class, printed as a per-student speaking record | 014 | ½ | | [014 Immersion Roleplay Scenario Generator](#014--immersion-roleplay-scenario-generator) |
-| 73 | Task-organized prompt library — grouped by teaching task, each entry loading a full form state | 029 | ½ | | [029 Prompt Builder](#029--prompt-builder) |
-| 74 | Cover page, headers, and page numbers across the merged document | 031 | ½ | | [031 Word Doc Merger](#031--word-doc-merger) |
-| 75 | Printable parent reading report — one page per student, batch-printed for conferences | 033 | ½ | | [033 Silent Reading (SSR) Log Tracker](#033--silent-reading-ssr-log-tracker) |
-| 76 | Chart annotation layer — arrows, text callouts and shaded regions so a printed figure makes an argument | 038 | ½ | | [038 Data Table → Chart Builder](#038--data-table--chart-builder) |
-| 78 | Local math notation renderer — fractions, radicals, exponents, subscripts, Greek letters | 041 | ½ | | [041 Formula Reference Sheet Builder](#041--formula-reference-sheet-builder) |
-| 79 | Templates as data — layout, fonts, borders and colors as template objects, so new designs need no code | 042 | ½ | | [042 Certificate & Award Maker](#042--certificate--award-maker) |
+| 66 | Phone-sized layout pass beyond 005: sideways overflow is gone from all 90 pages at 360 px (v490-v491) and the three toolbars over half a 740 px screen fold behind a More button (011, 032, 054; v498, `test:phone-toolbar`); left: only that a real phone has not been tried | site | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 80 | Evergreen emergency binder — date-independent sections only, with a staleness reminder | 045 | ½ | | [045 Sub Binder / Day Bundle Generator](#045--sub-binder--day-bundle-generator) |
-| 81 | Rubric-scored critique variant — an optional per-step point scale and teacher score column | 047 | ½ | | [047 Art Critique Worksheet Generator](#047--art-critique-worksheet-generator) |
-| 82 | Bulk photo import — a whole folder at once, downscaled and auto-matched by filename | 048 | ½ | | [048 Student Art Portfolio Label & QR Tag Maker](#048--student-art-portfolio-label--qr-tag-maker) |
-| 83 | Spreadsheet book-list import via the shared SheetJS build, with a genre-balance warning | 049 | ½ | | [049 Book Tasting Menu Generator](#049--book-tasting-menu-generator) |
 | 85 | Practice worksheet variants — matching, fill-in-the-blank and "trap or true cognate" with answer keys | 052 | ½ | | [052 Cognates & False Friends Reference List Builder](#052--cognates--false-friends-reference-list-builder) |
 | 86 | Export into Review Game Board — a board built straight from 053’s questions, with categories and points. **Since v269 the sheet’s “Send to Quiz / Review Game Board” row puts a teacher’s own questions in 030’s bank by link (Path 6 P4), up to about fifty; since v297 a longer list is offered as a bank file instead (“Save a bank file instead”), which 030’s “Share the bank” import reads, shows first and only adds from (Devon, 2026-10-07: “yes, the file”). Left: the ready-made board (which categories and points it gets is not decided)** | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
 | 87 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
@@ -7866,7 +7856,7 @@ dropped) with no write-back; 014's scenario vocabulary and 027's vocabulary log 
 unbridged; 051 and 052 hold word lists in their own shapes. Regular Spanish/French
 conjugation is entirely mechanical and 039 makes teachers type every form.
 
-**Status.** P1 and P2 are built (AI-27, 2026-10-29, v461-v468). P3 increments 1-4 are built (AI-27, v469-v486: the engine, all five languages Devon named, storage on the word, 039 drilling, 079's starters, call-outs and Add a verb box, reflexives, the tenses beyond the six, prefix compounds); only polish is left (rank 56). The design is in its bullet;
+**Status.** P1 and P2 are built (AI-27, 2026-10-29, v461-v468). P3 increments 1-5 are built (AI-27, v469-v499: the engine, all five languages Devon named, storage on the word, 039 drilling, 079's starters, call-outs and Add a verb box, reflexives, the tenses beyond the six, prefix compounds, pronouns joined to commands and infinitives, the compound tenses, German Konjunktiv II and dative reflexives, Latin's perfect passive and imperative); only Devon's questions are left (rank 56). The design is in its bullet;
 Devon answered its questions on 2026-10-07 and 2026-10-21 (languages in order Spanish, German, Italian, Latin, French; the six tenses; a language
 teacher proofreads, and **no verb table is called reviewed until that teacher has read it**). P4 and P5 are built (AI-27, v477-v478): see their bullets.
 
@@ -8213,6 +8203,8 @@ teacher proofreads, and **no verb table is called reviewed until that teacher ha
   *The golden tables are the language teacher's to check, not a source: they were typed by the session from its own knowledge.*
   *What shipped for P3 increment 4 (AI-27, v479-v486; `HISTORY.md` has the detail).* Reflexives in German and Italian; `extraTenses` (a pack lists tenses beyond its six; `languages()` returns them in `extraTenses`, 039's menu and the check sheet show them, `table()` and 079 do not, and a test pins each language's six); Spanish present perfect, -ra imperfect subjunctive and affirmative command; German Plusquamperfekt, Vorgangspassiv (Präsens, Präteritum) and imperative; Italian congiuntivo imperfetto and imperativo; French impératif; Latin present and imperfect subjunctive, present, imperfect and future passive, deponents (`loqui`...: the three infectum tenses, "none" elsewhere); Latin prefix compounds (`pf()` lists on ducere, mittere, scribere, ponere, dicere, trahere, vincere, cedere, movere, videre, venire; weakening compounds are records); German `bellen`/`ernten` ge- exceptions and longer separable prefixes; 079's call-out tables computed. Suites: `test:conjugate` (126 broken copies), `test:conjugate-039` (52), `test:speak-adopters` (8621).
   *New questions for Devon, none answered, each built on its default.* (G4) **German passive** is printed for every verb the pack does not mark (so `gehen` gives `werde gegangen`); wanted, or only for a list of transitive verbs? (G5) **The du imperative** drops the final -e (`mach`) except where the spelling needs one (`arbeite`); the textbook `mache` is also right in the north. (I4) The Italian **tu imperative of -are** is the present third singular (`parla`); `-ere`/`-ire` use the second (`vendi`); negative commands are not built. (L4) Latin **deponents** are built for the present, imperfect and future only; the perfect (`locūtus sum`) needs a participle and sum: wanted? (S1) Spanish **commands** are affirmative only; the negative is the present subjunctive after no: wanted on the same menu?
+  *What shipped for P3 increment 5 (AI-27, v499; `HISTORY.md` has the detail).* A pack's `attach()` joins a reflexive verb's pronoun to a command or infinitive (`levántate`, `levantémonos`, `levantaos`, `levantarme`: the written accent is worked out from where the stress falls; `lavati`, `si lavi`, `lavarmi`; `lève-toi`), `negateOf` + `negate` make a French negative command, `custom` is a tense a pack builds itself (German Konjunktiv II), `ppp` is Latin's fourth principal part. Spanish: the pluperfect, the present perfect subjunctive, the pluperfect subjunctive (-ra); French: plus-que-parfait, subjonctif passé; Italian: trapassato prossimo, congiuntivo passato and trapassato; German: Konjunktiv II proper and `sich (dat.) vorstellen` (a verb the pack lists as always dative, a record with `dative: true`, or the typed marker `sich (dat.) ...`), and a ge- rule that asks whether what follows the prefix can begin a German word (bellen, betteln, ernten, gerben need no list; beugen, beichten and entern, which look prefixed to a vowel, are listed); Latin: perfect, pluperfect and future perfect passive (masculine, plural for nōs/vōs/eī, a verb with no fourth part or no personal passive is left empty) and the imperative (dīc, dūc, fac, fer; deponents loquere / loquiminī).
+  *New questions for Devon, none answered, each built on its default.* (G6) **kennen, nennen, rennen** have no Konjunktiv II in the pack (kennte, nennte, rennte are uncommon): wanted, or left to the textbook's würde + infinitive? (S2) **`dé` and `sé`** with a pronoun after them (darse) are left empty: does the diacritic accent stay (déme / deme)? (I5) The Italian short **tu forms** with a pronoun (fa' + ti = fatti) are built for fa', da', sta' only; va' + ne (vattene) is not. (L5) Latin **fourth parts** are typed for the verbs a first-year text meets (a verb without one has no perfect passive in the pack); a course's own vocabulary needs a record each.
 - **P4 — Printables. BUILT (AI-27, 2026-10-30, v477).** Frayer model page; spaced-repetition scheduling for printed
   drills (which list, which day); fill-in-the-blank sentence mode; a word wall as a
   system (cards by unit, printable index, retire a unit).
@@ -10565,10 +10557,11 @@ end of the year.
 
 #### Major Features
 
-- **Assessment layer.** Speaking is the hardest thing to assess in a language
-  classroom. A quick rubric tap per pair during a roleplay, with a printable
-  record, would be genuinely valuable — and `003-rubric-builder.html` already has
-  scoring machinery to reuse (P7).
+- **Assessment layer — shipped (v500, AI-31).** A Speaking record panel: up to six
+  criteria per class, four levels tapped per pair, one mark filed under both
+  partners, a printed page per student (`gvb-roleplay:speaking`, student data).
+  Not built: a link to 003's rubric engine (the criteria are 014's own), notes
+  per mark, a term-over-term view.
 - **Audio.** `039-vocab-conjugation-drill.html` already uses `speechSynthesis`
   with a language selector; hearing the target-language prompts spoken would
   serve pronunciation directly, and the code already exists one file away.
@@ -11669,10 +11662,14 @@ work, and don't promote one without Devon saying so.
   hands it straight to that tool (P7). This would make the AI a content
   supplier for the whole site without any of the tools themselves needing an
   API key or a network call.
-- **A prompt library organized by teaching task**, not by prompt technique —
-  differentiation, translation for families, reading-level adjustment, IEP
-  accommodation ideas, feedback comment banks, parent communication for
-  difficult conversations.
+- **A prompt library organized by teaching task — shipped (v501, AI-31).** A
+  "Prompt library" panel: five task groups, thirteen entries (the page's eight
+  examples filed by task, plus feedback comment bank, reading-level rewrite,
+  accommodation ideas, family-letter translation and a difficult-conversation
+  email), each loading a full form state with `{{blanks}}`; your name, grade,
+  subject and class stay. Data in `Tools/prompt-builder/pb-library.js`. The five
+  new entries' wording is unread by a teacher (see HISTORY). Not built: a user-saved
+  library entry (saved presets already do that) and 030/040/Rubric Builder paste-back.
 - **Prompt versioning and comparison.** Keep v1 and v2 of a prompt with notes
   on what changed and which worked better — the actual skill of prompting,
   made visible.
@@ -11814,8 +11811,12 @@ work, and don't promote one without Devon saying so.
   orientation, and margins by keeping its `sectPr` — so a landscape rubric
   merged into a portrait packet stays landscape. `stripTrailingSectPr` and
   `createDefaultSectPr` show the groundwork is already understood.
-- **Headers, footers, and page numbers** across the merged document — the
-  single biggest gap between "merged file" and "packet you can hand out".
+- **Headers, footers, and page numbers — shipped (v502, AI-31).** A "Cover page,
+  header and page numbers" group of options: header text, footer text, "Page 1" /
+  "Page 1 of 5" / "1", left, center or right, and the first page kept clear. The
+  merged document is still one section, so these apply to every page.
+  Not built: a different header per source file, numbering that starts after the
+  cover, roman numerals, merging the source files' own headers.
 - **Split, extract, and reorder pages**, not just merge. The natural sibling
   operations, and there is no free local tool for them.
 - **Merge PDFs too, or export the merged result as PDF.** `011-image-to-pdf.html`
@@ -11825,7 +11826,8 @@ work, and don't promote one without Devon saying so.
   printable documents — rubric, permission slip, sub plan, worksheet, answer
   key. A tool that assembles those into one ordered packet with a cover page
   and a table of contents is more valuable than a generic merger.
-- **Cover page generator** with title, class, date, and teacher name.
+- **Cover page generator — shipped (v502, AI-31)** with title, class, teacher and date,
+  in front of the contents page. Not built: a logo (the repo takes none), a cover from the packet builder (P7).
 
 #### Moonshot / North Star
 
@@ -11957,9 +11959,14 @@ it is read by twenty.
   students reading assigned books with chapter checkpoints; this tracks
   independent reading. A student is doing both and the tools don't know about
   each other.
-- **Parent-facing reading report**, printable, showing what a child read this
-  quarter and how consistently — one of the most welcome things a parent can
-  receive.
+- **Parent-facing reading report — shipped (v503, AI-31).** A "Parent reading
+  reports" card: pick a period and one student or every student; one page each with
+  days read, pages, minutes, books finished, a week-by-week strip of days read
+  (symbols, not colour), the books with genre and finished/in progress, the
+  weekly goal if set, and an optional note box. Only that student's reading is on
+  their page. Not built: a pace-over-time comparison with an earlier period, "what to try
+  next" suggestions from the genre data, a take-home version without the note box
+  layout, and a preview (the page prints through its own `#printArea`, not the print kit).
 - **Classroom library inventory.** Which books exist, who has which one
   checked out, what's missing — the natural sibling problem, and one every
   classroom library has (QR codes on books; the site already has both a
@@ -12324,9 +12331,14 @@ list — locally, privately, with no gradebook integration required.
 - **Skipped — deferred.** **Templates by subject.** A lab data template (trial, measurement, average),
   a survey template, a grade template — each with the right chart type and
   stats preselected (P15). *(Not attempted this round.)*
-- **Skipped — deferred.** **Chart annotation.** Arrows, labels, a shaded region, a "line of best fit"
-  callout — the difference between a chart and a chart that makes an argument.
-  *(Not attempted this round.)*
+- **Partly done.** **Chart annotation.** Shaded regions, arrows and callouts: on the
+  scatter since Path 16 P5 step 4 (in the scatter's own X and Y), and on **bar and line
+  charts since v504 (AI-31)**, placed by category number (1 = the first row) and a value, named in
+  the chart's description ("category 2 (Tue)"), up to 12 per chart, carried in the share link as
+  `catNotes`. The scatter and the category notes are two lists. Not done: box plots and pie
+  charts (no axis to place a note on), annotations in the printed worksheet or the
+  multiple-charts-per-page idea, dragging a note on the chart, and a "line of best fit" callout
+  on a bar chart.
 - **Skipped — deferred.** **Multiple charts on one printed page**, for a lab report or a comparison.
   *(Not attempted this round.)*
 - **Skipped — deferred.** **XLSX import** (P13). Currently CSV-ish paste only; `036-final_grade_checker.html`
@@ -12600,13 +12612,11 @@ work, and don't promote one without Devon saying so.
 
 #### Quick Wins
 
-- **Skipped — deferred.** **Real math rendering.** Formulas are currently text. Even a small
-  local subset renderer — superscripts, subscripts, fractions, radicals,
-  Greek letters — would transform how the output looks. A vendored KaTeX
-  build would be the complete answer and stays within the offline rule (P5)
-  as long as it's bundled, not CDN-loaded. *(Not part of this round's scoped
-  list — a genuinely separate effort; see Open Questions for the
-  KaTeX-vs-hand-rolled tradeoff, still unresolved.)*
+- **Done (v505).** **Real math rendering.** Built as a local subset renderer
+  (`Tools/formula-sheet-builder/fsb-math.js`, no library, no network): `\frac{a}{b}`, `\sqrt{x}`,
+  `\sqrt[n]{x}`, `^` and `_`, and Greek letters; plain text prints as typed. A vendored KaTeX
+  stays unneeded for middle school sheets. Left: matrices, sums/integrals and an on-screen
+  button palette for the notation.
 
 #### Major Features
 
@@ -12658,10 +12668,8 @@ work, and don't promote one without Devon saying so.
 
 #### Open Questions
 
-- Is vendoring KaTeX (a few hundred KB) acceptable given the site's
-  single-file-tool ethos? A minimal hand-rolled renderer covering fractions,
-  exponents, roots, and Greek would be much smaller and cover most of what a
-  middle school sheet needs.
+- ~~Is vendoring KaTeX acceptable?~~ Decided (AI-31, v505): no. The hand-rolled renderer
+  covers fractions, exponents, roots and Greek, which is most of a middle school sheet.
 - Should the formula library be shared with `026-math-drill-generator.html` and a
   future unit-conversion tool rather than living only here?
 
@@ -12688,12 +12696,12 @@ work, and don't promote one without Devon saying so.
 - **Skipped — deferred.** **Data-driven batch generation.** Pull from another tool: everyone above a
   reading-goal threshold, everyone with a positive behavior trend, everyone
   who finished the novel study — and generate that certificate set in one pass.
-- **Skipped — deferred.** **A real template system.** Templates as data (fonts, layout boxes, border,
-  colours) rather than code, so a new design is a small JSON object. This
-  makes seasonal and subject-specific designs cheap, and would let a teacher
-  build their own. *(This round's three new templates are still code, just
-  with a configurable kicker string — a real step toward this would be
-  layout-as-data, not layout-as-markup.)*
+- **Partly done (v506).** **A real template system.** The five designs are data
+  (`Tools/certificate-award-maker/cam-templates.js`: font key, ink, paper, title look and
+  size, kicker colour, an optional suggested seal) and a teacher can make up to twelve of
+  their own on the page, kept in `gvb-certificate-maker:templates`. Left: layout as data
+  (where the blocks sit, left-aligned or portrait-first designs), a border colour of its
+  own, and sharing a template between teachers by file.
 - **Skipped — deferred.** **Full-page design surface.** Drag text blocks, resize, choose fonts — the
   step from "fill in five fields" to "make the certificate look how I want."
 - **Skipped — deferred.** **Postcards and notes home.** Same engine, different output: a printable
@@ -13091,9 +13099,10 @@ work, and don't promote one without Devon saying so.
 - **Digital fill-in mode** via a share link (this toolkit's P3 pattern),
   useful for a 1:1 classroom gallery walk where photographing artwork
   digitally makes more sense than a paper half-sheet per station.
-- **A rubric-style scoring option** alongside the open-ended critique
-  questions, for when a critique doubles as a graded assignment rather than
-  a purely formative gallery-walk activity.
+- **Done (v507).** **A rubric-style scoring option.** An opt-in "Add a teacher score to each step" card: a
+  Score box and an optional row of numbers to circle on every step, a point value per step (0 leaves a
+  step unscored) and a teacher total at the bottom, in `Tools/art-critique-worksheet-generator/acw-rubric.js`.
+  Left: named level descriptors (Beginning / Proficient / ...) per step.
 
 #### Moonshot / North Star
 
@@ -13148,9 +13157,12 @@ one click away, every year.
   plain text, one per row) the way Gallery Walk QR Codes prints a
   reference sheet alongside its QR codes — handy for a teacher's own
   binder copy without needing to scan every code.
-- **Bulk photo import**: select a whole folder of photos at once and
-  match them to existing entries by filename or by upload order, instead
-  of clicking "Add photo" once per entry.
+- **Done (v508).** **Bulk photo import.** "Add photos in bulk" on the entries card: many photos or a
+  whole folder at once, each shrunk in the browser to 480 px on its long side as a JPEG, matched to entries
+  by file name (`Tools/art-portfolio-label-maker/apl-photos.js`), shown as a plan with a picker per line, and
+  stored only on Add. Options: fill the rest in file-name order, replace photos already there, a new entry
+  for each leftover. Left: photo cropping/rotation by hand (the browser's own EXIF turn is applied, which
+  no test covers), and matching by upload order across devices.
 
 #### Moonshot / North Star
 
@@ -13205,18 +13217,18 @@ time.
 
 #### Major Features
 
-- **CSV/spreadsheet import** for a whole list of books at once (title,
-  author, genre, blurb columns), matching the bulk-import pattern already
-  used in Staff Directory Builder and Review Game Board — typing books one
-  at a time doesn't scale to a real classroom library cart.
+- **Done (v509).** **CSV/spreadsheet import** and the **genre-balance check**: an "Import a book list" card reads
+  an .xlsx or .xls (the vendored SheetJS, loaded only when one is chosen), a CSV or tab-separated file, or pasted
+  cells (`PasteTable`), finds title / author / genre / blurb by heading or by position, shows what will be added
+  and what is left out, and adds nothing until told to; the Books card warns when one genre is over half the list,
+  there is only one, many books have none, or most genres hold one book (`Tools/book-tasting-menu-generator/btmg-import.js`).
+  Left: covers by file name (the way 048 now matches photos), and a column-picker for a sheet with unusual headings.
 - **QR code per book linking to a longer review/trailer/Goodreads-style
   page**, reusing this toolkit's QR Code Generator pattern, for browsing
   beyond the blurb.
 - **Multiple named saved menus** (e.g. "Fall Book Tasting" vs "Spring Book
   Tasting"), matching the multi-save convention used elsewhere in this
   toolkit — right now it's one flat list per browser.
-- **A genre-balance check**: warn if one genre dominates the list, useful
-  for a teacher trying to build a deliberately varied tasting menu.
 
 #### Moonshot / North Star
 

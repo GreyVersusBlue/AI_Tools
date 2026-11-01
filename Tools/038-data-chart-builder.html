@@ -299,7 +299,7 @@
 
     <div class="card" id="notes-card" style="display:none;">
       <h2>Annotations</h2>
-      <p class="hint" style="margin-top:0;">Mark the scatter in its own numbers: shade a range, point an arrow, or label a point. They stay on their points if you change the axes. They travel in a share link and are not saved on this device.</p>
+      <p class="hint" id="notes-hint" style="margin-top:0;" data-scatter="Mark the scatter in its own numbers: shade a range, point an arrow, or label a point. They stay on their points if you change the axes. They travel in a share link and are not saved on this device.">Mark the scatter in its own numbers: shade a range, point an arrow, or label a point. They stay on their points if you change the axes. They travel in a share link and are not saved on this device.</p>
       <div class="control-group">
         <label for="note-type">Add a</label>
         <select id="note-type">
@@ -818,19 +818,34 @@
     els.scatterColsGroup.style.display = isScatter ? 'block' : 'none';
     els.sortRow.style.display = (isScatter || isPie || isBox) ? 'none' : 'flex';
     els.yAxisLabelGroup.style.display = isPie ? 'none' : 'block';
-    els.notesCard.style.display = isScatter ? 'block' : 'none';
+    els.notesCard.style.display = (isScatter || type === 'bar' || type === 'line') ? 'block' : 'none';
+    syncNoteForm();
+    renderNotesList();
     renderErrorBarConfig();
   }
 
-  // ── Annotations on the scatter (ChartSvg notes: data coordinates, in memory and the share link only) ──
+  // ── Annotations (ChartSvg notes: data coordinates, in memory and the share link only) ──
+  // A scatter's notes are in its own X and Y; a bar or line chart's are a CATEGORY NUMBER (1 = the first row) and a value.
+  // They are two lists, so switching the chart type never reads one chart's numbers as the other's.
   var notes = [];
+  var catNotes = [];
+  function activeNotes() { return getChartType() === 'scatter' ? notes : catNotes; }
+  var CAT_NOTE_FIELDS = {
+    region: [['From category number (1 = first row)', 1], ['To category number', 1], ['From value (optional)', 1], ['To value (optional)', 1], 'Label (optional)'],
+    arrow: [['Tail: category number', 1], ['Tail: value', 1], ['Head: category number', 1], ['Head: value', 1], 'Label (optional)'],
+    callout: [['Category number of the point', 1], ['Value of the point', 1], null, null, 'Text of the label']
+  };
   var NOTE_FIELDS = {
     region: [['From X', 1], ['To X', 1], ['From Y (optional)', 1], ['To Y (optional)', 1], 'Label (optional)'],
     arrow: [['Tail X', 1], ['Tail Y', 1], ['Head X', 1], ['Head Y', 1], 'Label (optional)'],
     callout: [['X of the point', 1], ['Y of the point', 1], null, null, 'Text of the label']
   };
   function syncNoteForm() {
-    var f = NOTE_FIELDS[els.noteType.value] || NOTE_FIELDS.region;
+    var cat = getChartType() !== 'scatter';
+    var f = (cat ? CAT_NOTE_FIELDS : NOTE_FIELDS)[els.noteType.value] || (cat ? CAT_NOTE_FIELDS : NOTE_FIELDS).region;
+    document.getElementById('notes-hint').textContent = cat
+      ? 'Mark the chart: shade some categories, point an arrow, or label a bar or point. Places are a category number (1 is the first row of your table; 2.5 is between the second and third) and a value on the axis. Notes stay with their categories if the data changes. They travel in a share link and are not saved with a dataset.'
+      : document.getElementById('notes-hint').getAttribute('data-scatter');
     ['a', 'b', 'c', 'd'].forEach(function (k, i) {
       var inp = els['note' + k.toUpperCase()], lab = document.getElementById('note-' + k + '-label');
       inp.parentNode.style.display = f[i] ? '' : 'none';
@@ -845,7 +860,8 @@
   }
   function renderNotesList() {
     els.notesList.textContent = '';
-    notes.forEach(function (n, i) {
+    var list = activeNotes();
+    list.forEach(function (n, i) {
       var li = document.createElement('li');
       li.style.cssText = 'display:flex;gap:0.5rem;align-items:center;margin:0.25rem 0;font-size:0.84rem;';
       var span = document.createElement('span');
@@ -855,7 +871,7 @@
       btn.type = 'button'; btn.className = 'btn-secondary'; btn.textContent = 'Remove';
       btn.setAttribute('aria-label', 'Remove note: ' + describeNote(n));
       btn.addEventListener('click', function () {
-        notes.splice(i, 1);
+        list.splice(i, 1);
         renderNotesList(); els.notesMsg.textContent = 'Note removed.'; scheduleRender();
       });
       li.appendChild(span); li.appendChild(btn);
@@ -867,7 +883,8 @@
   els.noteAdd.addEventListener('click', function () {
     var type = els.noteType.value, a = noteNum(els.noteA), b = noteNum(els.noteB), c = noteNum(els.noteC), d = noteNum(els.noteD);
     var text = els.noteText.value, raw;
-    if (notes.length >= 12) { els.notesMsg.textContent = 'A chart holds 12 notes. Remove one first.'; return; }
+    var list = activeNotes();
+    if (list.length >= 12) { els.notesMsg.textContent = 'A chart holds 12 notes. Remove one first.'; return; }
     if (type === 'region') {
       if ((c === null) !== (d === null)) { els.notesMsg.textContent = 'Fill in both Y values for a band, or neither for the full height.'; return; }
       raw = { type: 'region', x1: a, x2: b, text: text };
@@ -876,9 +893,9 @@
     else raw = { type: 'callout', x: a, y: b, text: text };
     var clean = ChartSvg.cleanNotes([raw])[0];
     if (!clean) { els.notesMsg.textContent = type === 'callout' ? 'A callout needs both numbers and some text.' : type === 'arrow' ? 'An arrow needs four different numbers.' : 'Fill in the numbers for the region.'; return; }
-    notes.push(clean);
+    list.push(clean);
     els.noteA.value = els.noteB.value = els.noteC.value = els.noteD.value = els.noteText.value = '';
-    els.notesMsg.textContent = 'Added. ' + notes.length + ' note' + (notes.length === 1 ? '' : 's') + ' on the chart.';
+    els.notesMsg.textContent = 'Added. ' + list.length + ' note' + (list.length === 1 ? '' : 's') + ' on the chart.';
     renderNotesList(); scheduleRender();
   });
 
@@ -913,7 +930,8 @@
       if (type === 'bar' || type === 'line') {
         var built = buildCategorySeries();
         if (!built) { renderEmpty('Pick at least one value column.'); disableDownloads(); return; }
-        svg = type === 'bar' ? ChartSvg.bar(built, chartOpts()) : ChartSvg.line(built, chartOpts());
+        var catOpts = chartOpts(catNotes.length ? { notes: catNotes } : undefined);
+        svg = type === 'bar' ? ChartSvg.bar(built, catOpts) : ChartSvg.line(built, catOpts);
         statsSourceValues = built.series[0] ? built.series[0].values : [];
         statsLabel = built.series[0] ? built.series[0].label : '';
       } else if (type === 'pie') {
@@ -1190,6 +1208,7 @@
         yLog: els.yLog.checked || undefined,
         scatterYs: extraYs.length ? extraYs.slice() : undefined,
         notes: notes.length ? notes : undefined,
+        catNotes: catNotes.length ? catNotes : undefined,
         errorBars: els.showErrorBars.checked,
         errorCols: errorCols,
         title: els.chartTitle.value,
@@ -1246,6 +1265,7 @@
         extraYs = Array.isArray(c.scatterYs) ? c.scatterYs.filter(function (n, i, a) { return inRange(n) && numericCols.indexOf(n) !== -1 && a.indexOf(n) === i; }).slice(0, 6) : [];
         renderExtraYs();
         notes = ChartSvg.cleanNotes(c.notes);
+        catNotes = ChartSvg.cleanNotes(c.catNotes);
         renderNotesList();
         if (Array.isArray(c.valueCols) && c.valueCols.length) {
           document.querySelectorAll('.value-col-cb').forEach(function (cb) {

@@ -31,6 +31,7 @@
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/export.js"></script>
+<script src="ssr-log-tracker/ssr-report.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
@@ -219,6 +220,23 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
+  .rep-page { break-after: page; page-break-after: always; }
+  .rep-page:last-child { break-after: auto; page-break-after: auto; }
+  .rep-stats { display: flex; gap: .6rem; margin: .3rem 0 .6rem; }
+  .rep-stat { flex: 1; border: 1.5px solid #333; border-radius: 6px; padding: .4rem .6rem; text-align: center; break-inside: avoid; page-break-inside: avoid; }
+  .rep-stat b { display: block; font-size: 1.3rem; line-height: 1.15; }
+  .rep-stat span { font-size: .78rem; color: #333; }
+  .rep-page h3 { font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; margin: .6rem 0 .25rem; }
+  .rep-page p { margin: .3rem 0; }
+  .rep-page table { border-collapse: collapse; width: 100%; font-size: .85rem; }
+  .rep-page th, .rep-page td { border: 1px solid #333; padding: .12rem .5rem; text-align: left; }
+  .rep-page tr { break-inside: avoid; page-break-inside: avoid; }
+  .rep-dots { font-family: monospace; letter-spacing: .15em; white-space: nowrap; }
+  .rep-note { border: 1.5px solid #333; border-radius: 6px; padding: .3rem .6rem .1rem; margin-top: .6rem; }
+  .rep-note p { margin: 0 0 .2rem; font-size: .8rem; }
+  .rep-note .rep-line { border-bottom: 1px solid #666; height: 1.4rem; }
+  .rep-foot { margin-top: .8rem; font-size: .75rem; color: #333; }
+
   #printArea { display: none; }
   .print-title { font-size: 1.3rem; font-weight: 700; margin-bottom: .2rem; }
   .print-sub { color: #555; font-size: .85rem; margin-bottom: 1rem; }
@@ -358,6 +376,23 @@
     </div>
   </div>
 
+  <div class="card" id="reportCard">
+    <div class="log-header">
+      <div class="card-title" style="margin:0;">Parent reading reports</div>
+    </div>
+    <p class="hint" style="margin-top:.4rem;">One page per student for a conference or to send home: what they read in this period, how many days they read each week, and a space for your note. Only that student&rsquo;s own reading is on their page; nothing is compared with a classmate.</p>
+    <div class="summary-filter" style="margin-bottom:.6rem;">
+      <label>From <input type="date" id="reportFrom"></label>
+      <label>To <input type="date" id="reportTo"></label>
+      <label>For <select id="reportWho"><option value="">Every student</option></select></label>
+      <label style="display:flex;align-items:center;gap:.4rem;"><input type="checkbox" id="reportNote" checked style="width:auto;"> Leave room for my note</label>
+    </div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+      <button type="button" class="small" id="printReportsBtn">Print reading reports</button>
+      <span class="hint" id="reportHint" style="margin:0;" role="status" aria-live="polite"></span>
+    </div>
+  </div>
+
   <div class="card">
     <div class="log-header">
       <div class="card-title" style="margin:0;">Class summary</div>
@@ -462,7 +497,8 @@
     'readingRate', 'bookDatalist',
     'entryGenre', 'genreDatalist', 'studentGenreChips', 'filterGenre', 'genreFilterHint',
     'genreSpread', 'genreTable', 'genreTableHead', 'genreTableBody', 'printGenreBtn',
-    'readingDiet', 'dietRows', 'dietNobody', 'dietSortBtn'
+    'readingDiet', 'dietRows', 'dietNobody', 'dietSortBtn',
+    'reportFrom', 'reportTo', 'reportWho', 'reportNote', 'printReportsBtn', 'reportHint'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   // state = { name, roster: [names...], logs: { studentName: [ {id,date,book,pagesTo,minutes} ] },
@@ -498,6 +534,97 @@
   function makeId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
+
+  /* ---------- parent reading reports ----------
+     One printed page per student for the period picked: the numbers are SsrReport's
+     (ssr-report.js), the sentences and the page are built here from the student's own
+     entries only. The pages a sitting added are worked out over the student's WHOLE log so
+     a period that starts mid-book does not count the pages read before it. */
+  function reportPeriodDefaults() {
+    var from = els.filterFrom.value, to = els.filterTo.value;
+    if (!from || !to) {
+      var all = [];
+      (state ? state.roster : []).forEach(function (n) { studentEntries(n).forEach(function (e) { all.push(e.date); }); });
+      all.sort();
+      if (!from) from = all[0] || todayStr();
+      if (!to) to = todayStr();
+    }
+    return { from: from, to: to };
+  }
+  function refreshReportCard() {
+    var prevWho = els.reportWho.value;
+    els.reportWho.innerHTML = '<option value="">Every student</option>' + (state ? state.roster : []).map(function (n) {
+      return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + '</option>';
+    }).join('');
+    els.reportWho.value = prevWho;
+    if (els.reportWho.value !== prevWho) els.reportWho.value = '';
+    if (!els.reportFrom.value || !els.reportTo.value) {
+      var d = reportPeriodDefaults();
+      if (!els.reportFrom.value) els.reportFrom.value = d.from;
+      if (!els.reportTo.value) els.reportTo.value = d.to;
+    }
+    els.printReportsBtn.disabled = !state || !state.roster.length;
+  }
+  function reportPageHtml(name, from, to, withNote) {
+    var all = studentEntries(name), session = withSessionPages(all);
+    var rows = all.map(function (e) { return { date: e.date, book: e.book, pages: session[e.id] || 0, minutes: e.minutes || 0 }; });
+    var rep = SsrReport.build({ entries: rows, from: from, to: to, goalPages: state.weeklyGoalPages || 0, goalMinutes: state.weeklyGoalMinutes || 0 });
+    var h = '<div class="rep-page">' +
+      '<div class="print-title">Reading report: ' + escapeHtml(name) + '</div>' +
+      '<div class="print-sub">' + escapeHtml(state.name) + ' &middot; ' + escapeHtml(SsrReport.short(from)) + ' to ' + escapeHtml(SsrReport.short(to)) +
+      ' &middot; Printed ' + escapeHtml(todayStr()) + '</div>';
+    if (!rep) return h + '<p>That date range could not be read.</p></div>';
+    var finished = studentFinished(name);
+    h += '<div class="rep-stats">' +
+      '<div class="rep-stat"><b>' + rep.daysRead + '</b><span>days read</span></div>' +
+      '<div class="rep-stat"><b>' + rep.pages + '</b><span>pages</span></div>' +
+      '<div class="rep-stat"><b>' + rep.minutes + '</b><span>minutes</span></div>' +
+      '<div class="rep-stat"><b>' + rep.books.filter(function (b) { return finished.indexOf(b.key) !== -1; }).length + '</b><span>books finished</span></div>' +
+      '</div>';
+    if (!rep.daysRead) {
+      h += '<p>No reading was logged for ' + escapeHtml(name) + ' in this period.</p>';
+    } else {
+      h += '<p>Read on ' + rep.daysRead + ' day' + (rep.daysRead === 1 ? '' : 's') + ' over ' + rep.weeksInPeriod + ' week' + (rep.weeksInPeriod === 1 ? '' : 's') +
+        ', about ' + rep.avgDaysPerWeek + ' days a week' + (rep.longestRun > 1 ? ', with ' + rep.longestRun + ' days in a row at best' : '') +
+        (rep.avgMinutesPerDayRead ? ', about ' + rep.avgMinutesPerDayRead + ' minutes on a day they read' : '') + '.</p>';
+    }
+    if (rep.goalPages || rep.goalMinutes) {
+      h += '<p>Weekly goal' + (rep.goalPages ? ': ' + rep.goalPages + ' pages, met in ' + rep.weeksMetPages + ' of ' + rep.weeksInPeriod + ' weeks' : '') +
+        (rep.goalMinutes ? (rep.goalPages ? '; ' : ': ') + rep.goalMinutes + ' minutes, met in ' + rep.weeksMetMinutes + ' of ' + rep.weeksInPeriod + ' weeks' : '') + '.</p>';
+    }
+    h += '<h3>Week by week</h3><table><thead><tr><th>Week of</th><th>Mon&ndash;Sun (&#9679; read, &#9675; no entry, &ndash; outside the dates)</th><th>Days</th><th>Pages</th><th>Min</th></tr></thead><tbody>' +
+      rep.weeks.map(function (w) {
+        return '<tr><td>' + escapeHtml(SsrReport.short(w.start)) + '</td><td class="rep-dots">' +
+          w.flags.map(function (f) { return f === null ? '&ndash;' : (f ? '&#9679;' : '&#9675;'); }).join(' ') + '</td><td>' + w.days + '</td><td>' + w.pages + '</td><td>' + w.minutes + '</td></tr>';
+      }).join('') + '</tbody></table>';
+    if (rep.earlierWeeks) h += '<p class="rep-foot">The ' + rep.earlierWeeks + ' earlier week' + (rep.earlierWeeks === 1 ? ' is' : 's are') + ' left off this list; their reading is in the totals above.</p>';
+    if (rep.books.length) {
+      var shown = rep.books.slice(0, 6);
+      h += '<h3>Books</h3><table><thead><tr><th>Title</th><th>Genre</th><th>Pages</th><th></th></tr></thead><tbody>' +
+        shown.map(function (b) {
+          return '<tr><td>' + escapeHtml(b.title) + '</td><td>' + escapeHtml(genreFor(b.key) || '') + '</td><td>' + b.pages + '</td><td>' + (finished.indexOf(b.key) !== -1 ? 'finished' : 'in progress') + '</td></tr>';
+        }).join('') + '</tbody></table>';
+      if (rep.books.length > shown.length) h += '<p class="rep-foot">and ' + (rep.books.length - shown.length) + ' more.</p>';
+    }
+    if (withNote) {
+      h += '<div class="rep-note"><p>A note from the teacher:</p><div class="rep-line"></div><div class="rep-line"></div></div>';
+    }
+    return h + '<p class="rep-foot">Based on the reading log kept in class during silent reading.</p></div>';
+  }
+  function printReports() {
+    if (!state || !state.roster.length) { alert('Add a roster first.'); return; }
+    var from = els.reportFrom.value, to = els.reportTo.value;
+    if (!SsrReport.validDate(from) || !SsrReport.validDate(to) || from > to) {
+      els.reportHint.textContent = 'Pick a From date that is on or before the To date.';
+      return;
+    }
+    var who = els.reportWho.value;
+    var names = who && state.roster.indexOf(who) !== -1 ? [who] : state.roster.slice();
+    els.printArea.innerHTML = names.map(function (n) { return reportPageHtml(n, from, to, els.reportNote.checked); }).join('');
+    els.reportHint.textContent = names.length + ' page' + (names.length === 1 ? '' : 's') + ' sent to the printer.';
+    window.print();
+  }
+  els.printReportsBtn.addEventListener('click', printReports);
 
   /* ---------- undo (one slot — the most recent destructive action) ---------- */
   var pendingUndo = null;
@@ -587,6 +714,7 @@
     applyStateToForm();
     refreshSectionSwitch();
     els.toolbar.style.display = '';
+    els.reportFrom.value = ''; els.reportTo.value = ''; els.reportWho.value = '';
     renderStudentList();
     renderActiveStudent();
     renderSummaryTable();
@@ -612,6 +740,7 @@
     applyStateToForm();
     refreshSectionSwitch();
     els.toolbar.style.display = '';
+    els.reportFrom.value = ''; els.reportTo.value = ''; els.reportWho.value = '';
     renderStudentList();
     renderActiveStudent();
     renderSummaryTable();
@@ -800,6 +929,7 @@
       });
       els.studentList.appendChild(btn);
     });
+    refreshReportCard();
   }
 
   /* ---------- per-student log ---------- */
@@ -1773,6 +1903,7 @@
      when a roster is re-loaded, and that path follows the rename itself. */
   followRenames();
   renderGenreUI();
+  refreshReportCard();
 
 })();
 </script>

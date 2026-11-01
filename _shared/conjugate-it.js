@@ -20,8 +20,9 @@
  * for noi/voi/loro (sono andato, siamo andati), every such cell noted "agreement": the Italian
  * counterpart of the French choice (Devon, 2026-10-21, P19-2), taken here without asking.
  *
- * Reflexive verbs (lavarsi, alzarsi) carry the pronoun in front and take essere. NOT BUILT: the passato remoto,
- * the gerund, a pronoun joined to an infinitive (voglio lavarmi).
+ * Reflexive verbs (lavarsi, alzarsi) carry the pronoun in front and take essere; the imperativo and the infinitive
+ * join it (lavati, lavarmi). NOT BUILT: the passato remoto, the gerund, a negative imperativo, a pronoun joined to a
+ * modal's infinitive form in the other direction (mi voglio lavare).
  *
  * NOTHING HERE HAS BEEN READ BY A LANGUAGE TEACHER. Records were written from the standard
  * paradigm as remembered, not copied from a table. A teacher reads the sheet
@@ -113,14 +114,30 @@
       { id: 'subjunctive', name: 'Congiuntivo presente', mood: 'subjunctive', kind: 'simple',
         endings: { are: ['i', 'i', 'i', 'iamo', 'iate', 'ino'], ere: ['a', 'a', 'a', 'iamo', 'iate', 'ano'], ire: ['a', 'a', 'a', 'iamo', 'iate', 'ano'], isc: ['isca', 'isca', 'isca', 'iamo', 'iate', 'iscano'] } }
     ],
-    // beyond the six: the congiuntivo imperfetto (the stem of the imperfetto, so fare gives facessi) and the
-    // affirmative imperativo (tu, Lei, noi, voi, Loro; a negative one is not built)
+    // beyond the six: the trapassato prossimo and the compound subjunctives (congiuntivo passato, trapassato), the
+    // congiuntivo imperfetto (the stem of the imperfetto, so fare gives facessi), the affirmative imperativo (tu, Lei, noi,
+    // voi, Loro) and, for a reflexive verb, the infinitive with its pronoun (lavarmi). A negative imperativo
+    // (non parlare) is not built: it waits on Devon's I4.
     extraTenses: [
+      { id: 'pluperfect', name: 'Trapassato prossimo', mood: 'indicative', kind: 'compound', compound: { auxiliary: 'avere', tense: 'imperfect' } },
+      { id: 'past-subjunctive', name: 'Congiuntivo passato', mood: 'subjunctive', kind: 'compound', compound: { auxiliary: 'avere', tense: 'subjunctive' } },
+      { id: 'pluperfect-subjunctive', name: 'Congiuntivo trapassato', mood: 'subjunctive', kind: 'compound', compound: { auxiliary: 'avere', tense: 'imperfect-subjunctive' } },
       { id: 'imperfect-subjunctive', name: 'Congiuntivo imperfetto', mood: 'subjunctive', kind: 'simple', stemsAlias: 'imperfect',
         endings: { are: ['assi', 'assi', 'asse', 'assimo', 'aste', 'assero'], ere: ['essi', 'essi', 'esse', 'essimo', 'este', 'essero'], ire: ['issi', 'issi', 'isse', 'issimo', 'iste', 'issero'], isc: ['issi', 'issi', 'isse', 'issimo', 'iste', 'issero'] } },
-      { id: 'command', name: 'Imperativo', mood: 'imperative', kind: 'pick', noReflexive: true,
-        pick: [null, { from: 'present', slot: 1, byClass: { are: 2 } }, { from: 'subjunctive', slot: 2 }, { from: 'present', slot: 3 }, { from: 'present', slot: 4 }, { from: 'subjunctive', slot: 5 }] }
+      { id: 'command', name: 'Imperativo', mood: 'imperative', kind: 'pick', attach: true,
+        pick: [null, { from: 'present', slot: 1, byClass: { are: 2 } }, { from: 'subjunctive', slot: 2 }, { from: 'present', slot: 3 }, { from: 'present', slot: 4 }, { from: 'subjunctive', slot: 5 }] },
+      { id: 'infinitive-pronoun', name: 'Infinito con pronome (verbi riflessivi)', mood: 'infinitive', kind: 'infinitive', onlyReflexive: true, noSubject: true, attach: true }
     ],
+    // lavati, laviamoci, lavatevi; Lei and Loro keep the pronoun in front (si lavi); the infinitive drops its -e (lavarmi).
+    // A short tu form with an apostrophe doubles the pronoun's consonant (fa' + ti = fatti); the pack builds only fa', da' and sta'.
+    attach: function (form, slot, ctx, tdef) {
+      var pron = ctx.p.reflexivePronouns[slot];
+      if (tdef.id === 'infinitive-pronoun') return form.replace(/e$/, '') + pron;
+      if (slot === 2 || slot === 5) return pron + ' ' + form;
+      if (/'$/.test(form)) return /^(?:fa|da|sta)'$/.test(form) ? form.slice(0, -1) + pron.charAt(0) + pron : '';
+      if (/^(?:fai|dai|stai|vai)$/.test(form)) return '';
+      return form + pron;
+    },
     spelling: [
       // mangiare: mangi, mangiamo, mangerò, cominceremo
       { id: 'cia>ci', stem: /[cg]i$/, next: /^[ie]/, stemRepl: [/i$/, ''] },
