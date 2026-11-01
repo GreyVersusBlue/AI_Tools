@@ -258,6 +258,21 @@ eq(C.readCommand({ cmd: 'screen', id: 's_abc-1' }), { cmd: 'screen', id: 's_abc-
 eq(C.readCommand({ cmd: 'screen', id: '<img src=x>' }), null, 'a bad screen id refused');
 eq(C.readCommand({ cmd: 'light', color: 'purple' }), null, 'unknown light refused');
 
+// ── a timer's links (Path 22 P8) ─────────────────────────────────────
+const tl = (link) => C.normalizeWidget({ type: 'timer', data: { duration: 60, link } }).data;
+eq(tl(undefined).link, undefined, 'a timer with no link has no link field (older saves are unchanged)');
+eq(Object.keys(tl(undefined)).sort(), ['duration', 'endsAt', 'remaining', 'sound'], 'and keeps its four old fields');
+eq(tl({ flash: false, light: '', agenda: false }).link, undefined, 'a link with everything off is dropped');
+eq(tl({ flash: true }).link, { flash: true, light: '', agenda: false }, 'flash alone');
+eq(tl({ light: 'red' }).link, { flash: false, light: 'red', agenda: false }, 'a light alone');
+eq(tl({ agenda: true }).link, { flash: false, light: '', agenda: true }, 'an agenda tick alone is kept, with no agenda widget needed');
+eq(tl({ flash: true, light: 'purple' }).link, { flash: true, light: '', agenda: false }, 'an unknown light colour is dropped');
+eq(tl({ flash: 'yes', light: 5, agenda: 1 }).link, undefined, 'non-boolean flags are not truthy');
+eq(tl('flash').link, undefined, 'a string is not a link');
+eq(tl({ flash: true, extra: '<img>' }).link, { flash: true, light: '', agenda: false }, 'unknown link fields are dropped');
+eq(C.defaultData('timer'), { duration: 300, endsAt: 0, remaining: 300, sound: true }, 'a new timer has no link');
+eq(C.normalizeWidget({ type: 'text', data: { text: 'x', link: { flash: true } } }).data.link, undefined, 'only a timer carries a link');
+
 // ── keyboard and clicker shortcuts ───────────────────────────────────
 eq(C.readKey({ key: ' ' }, {}), { act: 'timer' }, 'Space runs the timer');
 eq(C.readKey({ key: 'n' }, {}), { act: 'pick' }, 'n picks a name');

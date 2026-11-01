@@ -206,6 +206,16 @@
     return {};
   }
 
+  /* What a timer also does when it runs out (Path 22 P8): flash the board, set
+     the traffic light, tick the next agenda item. null when none is on. The
+     agenda flag is kept even on a page that has no agenda widget yet, so a
+     link set on a later build survives a round trip through this one. */
+  function normalizeLink(l) {
+    if (!isObj(l)) return null;
+    var out = { flash: bool(l.flash, false), light: LIGHTS.indexOf(l.light) !== -1 ? l.light : '', agenda: bool(l.agenda, false) };
+    return out.flash || out.light || out.agenda ? out : null;
+  }
+
   function normalizeData(type, d) {
     d = isObj(d) ? d : {};
     var dd = defaultData(type);
@@ -214,12 +224,15 @@
         return { text: str(d.text, MAX_TEXT, ''), size: TEXT_SIZES.indexOf(d.size) !== -1 ? d.size : dd.size };
       case 'timer': {
         var duration = Math.round(num(d.duration, 1, MAX_TIMER_S, dd.duration));
-        return {
+        var t = {
           duration: duration,
           endsAt: num(d.endsAt, 0, 8.64e15, 0),
           remaining: num(d.remaining, 0, MAX_TIMER_S, duration),
           sound: bool(d.sound, true)
         };
+        var link = normalizeLink(d.link);
+        if (link) t.link = link;            // present only once a link is on, so an older save is unchanged
+        return t;
       }
       case 'stopwatch':
         return { startedAt: num(d.startedAt, 0, 8.64e15, 0), elapsed: num(d.elapsed, 0, 8.64e15, 0) };

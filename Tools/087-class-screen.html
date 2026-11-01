@@ -291,6 +291,24 @@
   .w-fill { border: 0; background: transparent; padding: .1rem .4rem; font-size: .95rem; line-height: 1; color: var(--muted); border-radius: 0; }
   .w-fill:hover, .w-fill[aria-pressed="true"] { color: var(--ink); background: transparent; }
 
+  /* ── linked widgets (Path 22 P8): the board flash when a linked timer ends ── */
+  /* A ring and a tint over the whole board. It blinks slowly (about once a
+     second, four times); with reduced motion it holds still, then goes. */
+  #board::after {
+    content: ''; position: absolute; inset: 0; z-index: 9000; pointer-events: none;
+    border: 0 solid var(--err); background: transparent;
+  }
+  #board.flash::after {
+    border-width: 14px; background: color-mix(in srgb, var(--err) 14%, transparent);
+    animation: board-flash 1s steps(2, jump-none) 4;
+  }
+  @keyframes board-flash { 50% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { #board.flash::after { animation: none; } }
+  .w-link { width: 100%; font-size: .78rem; text-align: center; }
+  .w-link summary { cursor: pointer; color: var(--muted); }
+  .w-link .w-link-body { display: flex; flex-wrap: wrap; gap: .3rem .8rem; justify-content: center; padding-top: .25rem; }
+  body.present .w-link { display: none; }
+
   /* ── toast ──────────────────────────────────────────────────────────── */
   .toast {
     position: fixed; left: 50%; bottom: 4.2rem; transform: translateX(-50%); z-index: 60;
@@ -550,6 +568,7 @@
         if (announce) {
           status.textContent = 'Time is up.';
           if (d.sound) beep();
+          ctx.fire(d.link);
         }
       }
 
@@ -590,6 +609,33 @@
         el('label', null, [sound, 'Sound'])
       ]));
       ctx.body.appendChild(err);
+
+      /* What else happens when it runs out (Path 22 P8). The agenda choice
+         appears only on a page that has an agenda widget; its flag is kept in
+         the data either way. */
+      var flashCb = el('input', { type: 'checkbox' });
+      var lightSel = el('select', { 'aria-label': 'Set the traffic light when time is up' });
+      [['', 'Leave the light'], ['red', 'Light: red'], ['yellow', 'Light: yellow'], ['green', 'Light: green']].forEach(function (o) {
+        lightSel.appendChild(el('option', { value: o[0], text: o[1] }));
+      });
+      var agendaCb = TYPES.agenda ? el('input', { type: 'checkbox' }) : null;
+      var linkSummary = el('summary');
+      var link = d.link || { flash: false, light: '', agenda: false };
+      flashCb.checked = link.flash; lightSel.value = link.light; if (agendaCb) agendaCb.checked = link.agenda;
+      function readLinks() {
+        var l = { flash: flashCb.checked, light: lightSel.value, agenda: agendaCb ? agendaCb.checked : link.agenda };
+        if (l.flash || l.light || l.agenda) d.link = l; else delete d.link;
+        link = l;
+        var on = [l.flash ? 'flash' : '', l.light ? 'light' : '', l.agenda ? 'agenda' : ''].filter(Boolean);
+        linkSummary.textContent = on.length ? 'When it ends: ' + on.join(', ') : 'When it ends';
+      }
+      [flashCb, lightSel, agendaCb].forEach(function (n) { if (n) n.addEventListener('change', function () { readLinks(); ctx.save(); }); });
+      readLinks();
+      ctx.body.appendChild(el('details', { className: 'w-link' }, [linkSummary, el('div', { className: 'w-link-body' }, [
+        el('label', null, [flashCb, 'Flash the board']),
+        lightSel,
+        agendaCb ? el('label', null, [agendaCb, 'Tick the next agenda item']) : null
+      ])]));
 
       if (restored.expired) finish(false);   // ran out while the page was closed: no late alarm
       else if (Countdown.isDone(c)) setDone(true);
@@ -1351,6 +1397,28 @@
     place(w); save();
   }
 
+  /* A timer that runs out can do more than flash itself (Path 22 P8). Each
+     link reaches its target the way the phone remote does: through the
+     topmost widget of that type on this screen, and quietly if there is none. */
+  var flashTimer = 0;
+  function flashBoard() {
+    board.classList.add('flash');
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(function () { board.classList.remove('flash'); }, 4200);
+  }
+  function fireLinks(link) {
+    if (!link) return;
+    if (link.flash) flashBoard();
+    if (link.light) {
+      var tw = topWidget('traffic'), ti = tw && instances[tw.id];
+      if (ti && ti.remote) ti.remote({ cmd: 'light', color: link.light });
+    }
+    if (link.agenda) {
+      var aw = topWidget('agenda'), ai = aw && instances[aw.id];
+      if (ai && ai.tickNext) ai.tickNext();
+    }
+  }
+
   function mountWidget(w) {
     var type = TYPES[w.type];
     var title = type.title;
@@ -1368,11 +1436,12 @@
     board.appendChild(node);
     place(w);
 
-    var api = type.build({ el: node, body: body, data: w.data, id: w.id, save: save }) || {};
+    var api = type.build({ el: node, body: body, data: w.data, id: w.id, save: save, fire: fireLinks }) || {};
     instances[w.id].tick = api.tick;
     instances[w.id].destroy = api.destroy;
     instances[w.id].remote = api.remote;
     instances[w.id].snap = api.snap;
+    instances[w.id].tickNext = api.tickNext;   // an agenda widget's hook for a timer's link
 
     node.addEventListener('pointerdown', function () { if (!presenting && !spotId) bringToFront(w); }, true);
     close.addEventListener('click', function () { removeWidget(w.id); });
