@@ -292,8 +292,8 @@ console.log('\nhandoffs — custom trivia to the question bank');
   const over = H.open(trivia[0], listOf(150));
   eq([over.ok, over.tooLong, over.url, win.__opened.length], [false, true, null, 1], 'a hundred and fifty do not: open() refuses and no second tab is opened');
   ok(/^Your 150 questions make a link of [\d,]+ characters, and a link longer than about 7,500 may not open\. Nothing was sent\./.test(over.message), 'and says so with the numbers: ' + JSON.stringify(over.message));
-  const others = H.all.filter(h => h !== trivia[0]);
-  ok(others.every(h => h.maxLink === undefined), 'no other entry has a bound, so none of them changed');
+  const others = H.all.filter(h => h !== trivia[0] && h.from !== 'scientific-method-planner');
+  ok(others.every(h => h.maxLink === undefined), 'no other old entry has a bound, so none of them changed (059 -> 065 has its own, tested below)');
 
   /* What 053 sends is what the bank's own reader takes, whole. */
   vm.runInContext(read('_shared/question-bank.js'), win, { filename: 'question-bank.js' });
@@ -378,6 +378,34 @@ console.log('\nhandoffs — refusals');
   msg = null;
   try { bare.Handoffs.url(bare.Handoffs.all[0], {}); } catch (e) { msg = e.message; }
   ok(msg && /tool-registry\.js/.test(msg), 'without the registry the module says which file is missing');
+}
+
+/* ── 3c. a plan to a lab report (rank 90) ────────────────────────────────── */
+console.log('\nhandoffs — an experiment plan to a lab report template');
+{
+  const win = make();
+  const H = win.Handoffs;
+  const e = H.all.filter(h => h.from === 'scientific-method-planner' && h.to === 'lab-report-template-builder');
+  eq(e.length, 1, '059 -> 065 is declared once');
+  eq(e[0].sheet, false, 'with no sheet row: 059 has no share sheet and calls open() itself');
+  const plan = { title: ' Soil drain ', question: 'How fast?', hypIf: 'sandy', hypThen: '', hypBecause: 'gaps', varIndependent: 'soil', varDependent: 'secs',
+    controlled: [{ id: 'c', text: 'cup' }], materials: [{ id: 'a', text: ' cup ' }, { id: 'b', text: '' }, null], procedure: [{ id: 'p', text: 'x'.repeat(400) }] };
+  const built = H.url(e[0], plan, { base: 'https://aspermylessonplan.com/Tools/059-experiment-design-planner.html' });
+  const u = new URL(built.url);
+  eq(u.pathname, '/Tools/065-lab-report-template-builder.html', '065\'s page comes off the registry');
+  eq([...u.searchParams.keys()], ['template'], 'and so does its parameter, ?template=');
+  const got = win.StateLink.decodeState(u.searchParams.get('template'));
+  eq([got.name, got.title, got.objective], ['Soil drain', 'Soil drain', 'How fast?'], 'name, title and objective');
+  eq(got.hypothesisPrompt, 'If sandy, then ____, because gaps.', 'the hypothesis with ____ for a missing part');
+  eq(got.materials, [{ text: 'cup' }], 'blank and null rows dropped, text trimmed');
+  eq(got.procedure[0].text.length, 300, 'a step is cut at 300 characters');
+  ok(!('columns' in got) && !('conclusion' in got) && !JSON.stringify(got).includes('soil\"'), 'no columns, no conclusion, no variables');
+  const big = { question: 'q', materials: Array.from({ length: 40 }, (_, i) => ({ text: 'm'.repeat(300) + i })), procedure: [] };
+  const r = H.open(e[0], big);
+  eq([r.ok, r.tooLong, r.url], [false, true, null], 'a plan too long for a link is refused by open(), not opened');
+  ok(/Nothing was sent/.test(r.message) && /7,500/.test(r.message), 'with the sentence: ' + r.message.slice(0, 80));
+  const ok2 = H.url(e[0], {}, { base: 'https://aspermylessonplan.com/Tools/059-experiment-design-planner.html' });
+  eq(win.StateLink.decodeState(new URL(ok2.url).searchParams.get('template')).hypothesisPrompt, 'If ____, then ____, because ____.', 'an empty plan is still a well-formed link');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

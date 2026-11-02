@@ -195,8 +195,27 @@
     return (t && t.hints) || null;
   }
 
+  /* The textures textureImages() knows, for htcm-theme-packs.js to check a pack against. */
+  var TEXTURES = ['parchment', 'crosshatch', 'linen', 'sunburst', 'diagonal', 'grid', 'ruled', 'blueprint', 'foxing'];
+
+  /** Replaces the themes a theme pack added (keys starting `pk-`) with `list`
+      and rebuilds the CSS. THEMES stays the same array, so a reader that holds
+      it sees the change; a built-in theme is never touched. */
+  function setPackThemes(list) {
+    for (var i = THEMES.length - 1; i >= 0; i--) {
+      if (THEMES[i].pack !== undefined) { delete byKey[THEMES[i].key]; THEMES.splice(i, 1); }
+    }
+    list.forEach(function (t) {
+      if (byKey[t.key]) return;                 // a pack can never replace a theme that is already here
+      THEMES.push(t); byKey[t.key] = t;
+    });
+    injectCss();
+  }
+
   global.HtcmThemes = {
     THEMES: THEMES,
+    TEXTURES: TEXTURES,
+    setPackThemes: setPackThemes,
     RARITIES: RARITIES,
     get: get,
     hints: hints,

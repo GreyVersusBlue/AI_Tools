@@ -26,6 +26,7 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/export.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -145,6 +146,10 @@
     <button type="button" class="action secondary" id="saveAsBoardBtn">Save as new&hellip;</button>
     <button type="button" class="action secondary" id="renameBoardBtn">Rename</button>
     <button type="button" class="action secondary" id="deleteBoardBtn">Delete</button>
+    <span class="divider"></span>
+    <button type="button" class="action secondary" id="exportBoardBtn" title="Download the board on screen as a file you can keep or send to a colleague">Export board</button>
+    <button type="button" class="action secondary" id="importBoardBtn" title="Open a board file made by Export board; it is added as a new saved board">Import board&hellip;</button>
+    <input type="file" id="importBoardFile" accept="application/json,.json" hidden aria-label="Board file">
     <span class="save-status" id="saveStatus" role="status" aria-live="polite"></span>
   </div>
 
@@ -154,41 +159,7 @@
   </div>
 
   <div class="pane active" id="pane-blocks">
-    <div class="palette">
-      <span class="group-label">Base-Ten</span>
-      <button data-add="unit">+1</button>
-      <button data-add="ten">+10</button>
-      <button data-add="hundred">+100</button>
-      <span class="divider"></span>
-      <span class="group-label">Fraction Tiles</span>
-      <button data-add-fraction="2">&frac12;</button>
-      <button data-add-fraction="3">&frac13;</button>
-      <button data-add-fraction="4">&frac14;</button>
-      <button data-add-fraction="5">1/5</button>
-      <button data-add-fraction="6">&frac16;</button>
-      <button data-add-fraction="8">&frac18;</button>
-      <button data-add-fraction="10">1/10</button>
-      <button data-add-fraction="12">1/12</button>
-      <span class="divider"></span>
-      <span class="group-label">Algebra Tiles</span>
-      <button data-add="alg-pos1">+1</button>
-      <button data-add="alg-neg1">&minus;1</button>
-      <button data-add="alg-posx">+x</button>
-      <button data-add="alg-negx">&minus;x</button>
-      <button data-add="alg-posx2">+x&sup2;</button>
-      <button data-add="alg-negx2">&minus;x&sup2;</button>
-      <span class="divider"></span>
-      <span class="group-label">Pattern Blocks</span>
-      <button data-add="pb-hex">Hexagon</button>
-      <button data-add="pb-trapezoid">Trapezoid</button>
-      <button data-add="pb-rhombus">Rhombus</button>
-      <button data-add="pb-thin">Thin rhombus</button>
-      <button data-add="pb-square">Square</button>
-      <button data-add="pb-triangle">Triangle</button>
-      <span class="divider"></span>
-      <span class="group-label">Dice</span>
-      <button data-add="die">Roll a die</button>
-    </div>
+    <div class="palette" id="palette"></div>
     <div class="btnrow">
       <button class="action secondary" id="clearBoardBtn">Clear board</button>
       <button class="action" id="snapshotBoardBtn">Snapshot board</button>
@@ -314,15 +285,75 @@
      decoration, and this is the piece's name and value. */
   var FRACTION_WORDS = { 2: 'half', 3: 'third', 4: 'quarter', 5: 'fifth', 6: 'sixth', 7: 'seventh', 8: 'eighth',
     9: 'ninth', 10: 'tenth', 11: 'eleventh', 12: 'twelfth' };
-  var PATTERN_NAMES = {
-    'pb-hex': 'yellow hexagon', 'pb-trapezoid': 'red trapezoid', 'pb-rhombus': 'blue rhombus',
-    'pb-thin': 'tan thin rhombus', 'pb-square': 'orange square', 'pb-triangle': 'green triangle'
-  };
-  var ALGEBRA = {
-    'alg-pos1': ['pos', '+1', 'positive one'], 'alg-neg1': ['neg', '&minus;1', 'negative one'],
-    'alg-posx': ['pos', '+x', 'positive x'], 'alg-negx': ['neg', '&minus;x', 'negative x'],
-    'alg-posx2': ['pos', '+x&sup2;', 'positive x squared'], 'alg-negx2': ['neg', '&minus;x&sup2;', 'negative x squared']
-  };
+
+  /* ---------- the piece families ----------
+     A family is data: the palette is built from this table and so is every piece
+     a board can hold, so a new family is a row here plus its cells in CELLS (and
+     the atlas), not a new function. A family's `pieces` are single-cell pieces
+     ({ type, label (button, HTML), name (screen reader), cell, cls?, text? }, where
+     `cls` and `text` make the cell an algebra tile that carries its sign); the
+     three families whose pieces are made rather than listed say how in `kind`:
+     'fraction' (a whole of n segments, one shaded; `denominators` are the buttons,
+     any n in FRACTION_WORDS loads), 'die' (a face from 1 to `faces`, rolled). */
+  var FAMILIES = [
+    { id: 'base-ten', label: 'Base-Ten', pieces: [
+      { type: 'unit', label: '+1', name: 'Unit block, 1', cell: 'unit' },
+      { type: 'ten', label: '+10', name: 'Ten rod, 10', cell: 'ten' },
+      { type: 'hundred', label: '+100', name: 'Hundred flat, 100', cell: 'hundred' }
+    ] },
+    { id: 'fraction', label: 'Fraction Tiles', kind: 'fraction', denominators: [2, 3, 4, 5, 6, 8, 10, 12],
+      labels: { 2: '&frac12;', 3: '&frac13;', 4: '&frac14;', 6: '&frac16;', 8: '&frac18;' } },
+    { id: 'algebra', label: 'Algebra Tiles', pieces: [
+      { type: 'alg-pos1', label: '+1', name: 'Algebra tile, positive one', cell: 'alg-pos1', cls: 'algebra-tile pos', text: '+1' },
+      { type: 'alg-neg1', label: '&minus;1', name: 'Algebra tile, negative one', cell: 'alg-neg1', cls: 'algebra-tile neg', text: '&minus;1' },
+      { type: 'alg-posx', label: '+x', name: 'Algebra tile, positive x', cell: 'alg-posx', cls: 'algebra-tile pos', text: '+x' },
+      { type: 'alg-negx', label: '&minus;x', name: 'Algebra tile, negative x', cell: 'alg-negx', cls: 'algebra-tile neg', text: '&minus;x' },
+      { type: 'alg-posx2', label: '+x&sup2;', name: 'Algebra tile, positive x squared', cell: 'alg-posx2', cls: 'algebra-tile pos', text: '+x&sup2;' },
+      { type: 'alg-negx2', label: '&minus;x&sup2;', name: 'Algebra tile, negative x squared', cell: 'alg-negx2', cls: 'algebra-tile neg', text: '&minus;x&sup2;' }
+    ] },
+    { id: 'pattern', label: 'Pattern Blocks', pieces: [
+      { type: 'pb-hex', label: 'Hexagon', name: 'Pattern block, yellow hexagon', cell: 'pb-hex' },
+      { type: 'pb-trapezoid', label: 'Trapezoid', name: 'Pattern block, red trapezoid', cell: 'pb-trapezoid' },
+      { type: 'pb-rhombus', label: 'Rhombus', name: 'Pattern block, blue rhombus', cell: 'pb-rhombus' },
+      { type: 'pb-thin', label: 'Thin rhombus', name: 'Pattern block, tan thin rhombus', cell: 'pb-thin' },
+      { type: 'pb-square', label: 'Square', name: 'Pattern block, orange square', cell: 'pb-square' },
+      { type: 'pb-triangle', label: 'Triangle', name: 'Pattern block, green triangle', cell: 'pb-triangle' }
+    ] },
+    { id: 'dice', label: 'Dice', kind: 'die', faces: 6, pieces: [{ type: 'die', label: 'Roll a die' }] }
+  ];
+
+  var SINGLE = {};   // type -> a single-cell piece's row
+  var DIE_FACES = 6;
+  FAMILIES.forEach(function (fam) {
+    if (fam.kind === 'die') DIE_FACES = fam.faces;
+    else if (!fam.kind) fam.pieces.forEach(function (spec) { SINGLE[spec.type] = spec; });
+  });
+
+  function buildPalette() {
+    var parts = [];
+    FAMILIES.forEach(function (fam, i) {
+      if (i) parts.push('<span class="divider"></span>');
+      parts.push('<span class="group-label">' + fam.label + '</span>');
+      if (fam.kind === 'fraction') {
+        fam.denominators.forEach(function (n) {
+          parts.push('<button data-add-fraction="' + n + '">' + (fam.labels[n] || '1/' + n) + '</button>');
+        });
+      } else {
+        fam.pieces.forEach(function (spec) { parts.push('<button data-add="' + spec.type + '">' + spec.label + '</button>'); });
+      }
+    });
+    document.getElementById('palette').innerHTML = parts.join('\n      ');
+  }
+  buildPalette();
+
+  /** Whether a saved or imported record's type names a piece this board can make. */
+  function isKnownType(type) {
+    type = String(type);
+    if (SINGLE[type] || type === 'die') return true;
+    if (type.indexOf('fraction-') === 0) return !!FRACTION_WORDS[parseInt(type.slice(9), 10)];
+    var m = /^die-(\d+)$/.exec(type);
+    return !!m && +m[1] >= 1 && +m[1] <= DIE_FACES;
+  }
 
   function addPieceEl(inner, type, name) {
     var pos = nextPos();
@@ -344,26 +375,16 @@
     return piece;
   }
 
-  function addUnit() { return addPieceEl(cellHtml('unit'), 'unit', 'Unit block, 1'); }
-  function addTen() { return addPieceEl(cellHtml('ten'), 'ten', 'Ten rod, 10'); }
-  function addHundred() { return addPieceEl(cellHtml('hundred'), 'hundred', 'Hundred flat, 100'); }
+  function addSingle(spec) { return addPieceEl(cellHtml(spec.cell, spec.cls, spec.text), spec.type, spec.name); }
   function addFraction(n) {
     var segs = cellHtml('frac-fill', 'seg filled', '<span class="lbl">1/' + n + '</span>');
     for (var i = 1; i < n; i++) segs += cellHtml('frac-empty', 'seg');
     return addPieceEl('<div class="fraction-tile">' + segs + '</div>', 'fraction-' + n,
       'Fraction tile, one ' + FRACTION_WORDS[n] + ' shaded: 1/' + n);
   }
-  function addAlgebra(kind) {
-    var spec = ALGEBRA[kind];
-    if (!spec) return null;
-    return addPieceEl(cellHtml(kind, 'algebra-tile ' + spec[0], spec[1]), kind, 'Algebra tile, ' + spec[2]);
-  }
-  function addPattern(kind) {
-    return addPieceEl(cellHtml(kind), kind, 'Pattern block, ' + PATTERN_NAMES[kind]);
-  }
   /* A die is saved as the face it shows ('die-4'), so a board reloads with the
      same roll; "Roll a die" and the ⚄ button roll it. */
-  function rollFace() { return 1 + Math.floor(Math.random() * 6); }
+  function rollFace() { return 1 + Math.floor(Math.random() * DIE_FACES); }
   function setDie(piece, face) {
     var art = piece.querySelector('.piece-art'), c = CELLS['die-' + face];
     art.setAttribute('data-cell', 'die-' + face);
@@ -385,17 +406,11 @@
 
   function addByType(type) {
     type = String(type);
-    if (type === 'unit') return addUnit();
-    if (type === 'ten') return addTen();
-    if (type === 'hundred') return addHundred();
-    if (type.indexOf('fraction-') === 0) {
-      var denom = parseInt(type.slice('fraction-'.length), 10);
-      return FRACTION_WORDS[denom] ? addFraction(denom) : null;
-    }
+    if (!isKnownType(type)) return null;
+    if (SINGLE[type]) return addSingle(SINGLE[type]);
+    if (type.indexOf('fraction-') === 0) return addFraction(parseInt(type.slice('fraction-'.length), 10));
     if (type === 'die') return addDie(rollFace());
-    if (/^die-[1-6]$/.test(type)) return addDie(parseInt(type.slice(4), 10));
-    if (PATTERN_NAMES[type]) return addPattern(type);
-    return addAlgebra(type);
+    return addDie(parseInt(type.slice(4), 10));
   }
 
   document.querySelectorAll('[data-add]').forEach(function (btn) {
@@ -739,6 +754,60 @@
     refreshSelect();
     touch();
     setStatus('Deleted "' + gone + '" — the board on screen is untouched.');
+  });
+
+  /* ---------- a board as a file ----------
+     Export writes the board on screen (the same record Save keeps) in a small
+     envelope; Import reads one, throws away anything this board cannot make or
+     draw (unknown piece types, off-board or non-numeric places, a long run of
+     pieces or markers), and adds what is left as a NEW saved board, so a file
+     never replaces a board by name. */
+  var FILE_KIND = 'vmb-board', MAX_FILE_BYTES = 1000000, MAX_PIECES = 300, MAX_MARKERS = 100, MAX_COORD = 4000;
+
+  function cleanState(st) {
+    var out = { pieces: [], line: { min: -10, max: 10, markers: [] } }, dropped = 0;
+    st = st && typeof st === 'object' ? st : {};
+    (Array.isArray(st.pieces) ? st.pieces : []).forEach(function (rec) {
+      var left = rec && Number(rec.left), top = rec && Number(rec.top);
+      if (!rec || typeof rec.type !== 'string' || !isKnownType(rec.type) || !isFinite(left) || !isFinite(top) || out.pieces.length >= MAX_PIECES) { dropped++; return; }
+      out.pieces.push({ type: rec.type, left: Math.round(Math.max(0, Math.min(MAX_COORD, left))), top: Math.round(Math.max(0, Math.min(MAX_COORD, top))) });
+    });
+    var line = st.line && typeof st.line === 'object' ? st.line : {};
+    var lo = Math.round(Number(line.min)), hi = Math.round(Number(line.max));
+    if (isFinite(lo) && isFinite(hi) && lo >= -1000 && hi <= 1000 && hi > lo) { out.line.min = lo; out.line.max = hi; }
+    (Array.isArray(line.markers) ? line.markers : []).forEach(function (v) {
+      if (typeof v === 'number' && isFinite(v) && out.line.markers.length < MAX_MARKERS) out.line.markers.push(Math.round(v)); else dropped++;
+    });
+    return { state: out, dropped: dropped };
+  }
+
+  document.getElementById('exportBoardBtn').addEventListener('click', function () {
+    var name = currentName || 'Manipulatives board';
+    ExportKit.download(JSON.stringify({ v: 1, kind: FILE_KIND, name: name, state: serializeState() }, null, 1) + '\n',
+      ExportKit.filename(name, 'json'), 'application/json');
+    setStatus('Exported "' + name + '".');
+  });
+  var importFile = document.getElementById('importBoardFile');
+  document.getElementById('importBoardBtn').addEventListener('click', function () { importFile.value = ''; importFile.click(); });
+  importFile.addEventListener('change', function () {
+    var file = importFile.files && importFile.files[0];
+    if (!file) return;
+    if (file.size > MAX_FILE_BYTES) { setStatus('That file is too big to be a board.'); return; }
+    var reader = new FileReader();
+    reader.onerror = function () { setStatus('That file could not be read.'); };
+    reader.onload = function () {
+      var rec;
+      try { rec = JSON.parse(String(reader.result)); } catch (e) { rec = null; }
+      if (!rec || rec.kind !== FILE_KIND || rec.v !== 1 || !rec.state) { setStatus('That is not a board file made by Export board.'); return; }
+      if (!okToReplace()) return;
+      var clean = cleanState(rec.state);
+      var name = uniqueName(typeof rec.name === 'string' && rec.name.trim() ? rec.name.trim().slice(0, 60) : file.name.replace(/\.json$/i, '').slice(0, 60) || 'Imported board');
+      if (!storeBoard(name, clean.state)) return;
+      loadBoard(name);
+      setStatus('Imported "' + name + '": ' + clean.state.pieces.length + (clean.state.pieces.length === 1 ? ' piece' : ' pieces') +
+        (clean.dropped ? ' (' + clean.dropped + ' could not be read and ' + (clean.dropped === 1 ? 'was' : 'were') + ' left out)' : '') + '.');
+    };
+    reader.readAsText(file);
   });
 
   [nlMin, nlMax].forEach(function (input) {

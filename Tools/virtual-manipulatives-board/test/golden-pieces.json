@@ -1,0 +1,247 @@
+{
+ "palette": "<span class=\"group-label\">Base-Ten</span> <button data-add=\"unit\">+1</button> <button data-add=\"ten\">+10</button> <button data-add=\"hundred\">+100</button> <span class=\"divider\"></span> <span class=\"group-label\">Fraction Tiles</span> <button data-add-fraction=\"2\">½</button> <button data-add-fraction=\"3\">⅓</button> <button data-add-fraction=\"4\">¼</button> <button data-add-fraction=\"5\">1/5</button> <button data-add-fraction=\"6\">⅙</button> <button data-add-fraction=\"8\">⅛</button> <button data-add-fraction=\"10\">1/10</button> <button data-add-fraction=\"12\">1/12</button> <span class=\"divider\"></span> <span class=\"group-label\">Algebra Tiles</span> <button data-add=\"alg-pos1\">+1</button> <button data-add=\"alg-neg1\">−1</button> <button data-add=\"alg-posx\">+x</button> <button data-add=\"alg-negx\">−x</button> <button data-add=\"alg-posx2\">+x²</button> <button data-add=\"alg-negx2\">−x²</button> <span class=\"divider\"></span> <span class=\"group-label\">Pattern Blocks</span> <button data-add=\"pb-hex\">Hexagon</button> <button data-add=\"pb-trapezoid\">Trapezoid</button> <button data-add=\"pb-rhombus\">Rhombus</button> <button data-add=\"pb-thin\">Thin rhombus</button> <button data-add=\"pb-square\">Square</button> <button data-add=\"pb-triangle\">Triangle</button> <span class=\"divider\"></span> <span class=\"group-label\">Dice</span> <button data-add=\"die\">Roll a die</button>",
+ "buttons": [
+  [
+   "unit",
+   null,
+   "+1"
+  ],
+  [
+   "ten",
+   null,
+   "+10"
+  ],
+  [
+   "hundred",
+   null,
+   "+100"
+  ],
+  [
+   null,
+   "2",
+   "½"
+  ],
+  [
+   null,
+   "3",
+   "⅓"
+  ],
+  [
+   null,
+   "4",
+   "¼"
+  ],
+  [
+   null,
+   "5",
+   "1/5"
+  ],
+  [
+   null,
+   "6",
+   "⅙"
+  ],
+  [
+   null,
+   "8",
+   "⅛"
+  ],
+  [
+   null,
+   "10",
+   "1/10"
+  ],
+  [
+   null,
+   "12",
+   "1/12"
+  ],
+  [
+   "alg-pos1",
+   null,
+   "+1"
+  ],
+  [
+   "alg-neg1",
+   null,
+   "−1"
+  ],
+  [
+   "alg-posx",
+   null,
+   "+x"
+  ],
+  [
+   "alg-negx",
+   null,
+   "−x"
+  ],
+  [
+   "alg-posx2",
+   null,
+   "+x²"
+  ],
+  [
+   "alg-negx2",
+   null,
+   "−x²"
+  ],
+  [
+   "pb-hex",
+   null,
+   "Hexagon"
+  ],
+  [
+   "pb-trapezoid",
+   null,
+   "Trapezoid"
+  ],
+  [
+   "pb-rhombus",
+   null,
+   "Rhombus"
+  ],
+  [
+   "pb-thin",
+   null,
+   "Thin rhombus"
+  ],
+  [
+   "pb-square",
+   null,
+   "Square"
+  ],
+  [
+   "pb-triangle",
+   null,
+   "Triangle"
+  ],
+  [
+   "die",
+   null,
+   "Roll a die"
+  ]
+ ],
+ "pieces": {
+  "unit": {
+   "html": "<div class=\"piece\" data-piece-type=\"unit\" role=\"img\" aria-label=\"Unit block, 1\" style=\"left: 16px; top: 16px;\"><div class=\"piece-art \" data-cell=\"unit\" style=\"width:26px;height:26px;background-position:-268px -34px;\"></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Unit block, 1",
+   "type": "unit"
+  },
+  "ten": {
+   "html": "<div class=\"piece\" data-piece-type=\"ten\" role=\"img\" aria-label=\"Ten rod, 10\" style=\"left: 16px; top: 16px;\"><div class=\"piece-art \" data-cell=\"ten\" style=\"width:260px;height:26px;background-position:-268px 0px;\"></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Ten rod, 10",
+   "type": "ten"
+  },
+  "hundred": {
+   "html": "<div class=\"piece\" data-piece-type=\"hundred\" role=\"img\" aria-label=\"Hundred flat, 100\" style=\"left: 16px; top: 16px;\"><div class=\"piece-art \" data-cell=\"hundred\" style=\"width:260px;height:260px;background-position:0px 0px;\"></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Hundred flat, 100",
+   "type": "hundred"
+  },
+  "fraction-2": {
+   "html": "<div class=\"piece\" data-piece-type=\"fraction-2\" role=\"img\" aria-label=\"Fraction tile, one half shaded: 1/2\" style=\"left: 16px; top: 16px;\"><div class=\"fraction-tile\"><div class=\"piece-art seg filled\" data-cell=\"frac-fill\" style=\"width:26px;height:40px;background-position:-378px -34px;\"><span class=\"lbl\">1/2</span></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Fraction tile, one half shaded: 1/2",
+   "type": "fraction-2"
+  },
+  "fraction-3": {
+   "html": "<div class=\"piece\" data-piece-type=\"fraction-3\" role=\"img\" aria-label=\"Fraction tile, one third shaded: 1/3\" style=\"left: 16px; top: 16px;\"><div class=\"fraction-tile\"><div class=\"piece-art seg filled\" data-cell=\"frac-fill\" style=\"width:26px;height:40px;background-position:-378px -34px;\"><span class=\"lbl\">1/3</span></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Fraction tile, one third shaded: 1/3",
+   "type": "fraction-3"
+  },
+  "fraction-4": {
+   "html": "<div class=\"piece\" data-piece-type=\"fraction-4\" role=\"img\" aria-label=\"Fraction tile, one quarter shaded: 1/4\" style=\"left: 16px; top: 16px;\"><div class=\"fraction-tile\"><div class=\"piece-art seg filled\" data-cell=\"frac-fill\" style=\"width:26px;height:40px;background-position:-378px -34px;\"><span class=\"lbl\">1/4</span></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Fraction tile, one quarter shaded: 1/4",
+   "type": "fraction-4"
+  },
+  "fraction-5": {
+   "html": "<div class=\"piece\" data-piece-type=\"fraction-5\" role=\"img\" aria-label=\"Fraction tile, one fifth shaded: 1/5\" style=\"left: 16px; top: 16px;\"><div class=\"fraction-tile\"><div class=\"piece-art seg filled\" data-cell=\"frac-fill\" style=\"width:26px;height:40px;background-position:-378px -34px;\"><span class=\"lbl\">1/5</span></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Fraction tile, one fifth shaded: 1/5",
+   "type": "fraction-5"
+  },
+  "fraction-6": {
+   "html": "<div class=\"piece\" data-piece-type=\"fraction-6\" role=\"img\" aria-label=\"Fraction tile, one sixth shaded: 1/6\" style=\"left: 16px; top: 16px;\"><div class=\"fraction-tile\"><div class=\"piece-art seg filled\" data-cell=\"frac-fill\" style=\"width:26px;height:40px;background-position:-378px -34px;\"><span class=\"lbl\">1/6</span></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Fraction tile, one sixth shaded: 1/6",
+   "type": "fraction-6"
+  },
+  "fraction-8": {
+   "html": "<div class=\"piece\" data-piece-type=\"fraction-8\" role=\"img\" aria-label=\"Fraction tile, one eighth shaded: 1/8\" style=\"left: 16px; top: 16px;\"><div class=\"fraction-tile\"><div class=\"piece-art seg filled\" data-cell=\"frac-fill\" style=\"width:26px;height:40px;background-position:-378px -34px;\"><span class=\"lbl\">1/8</span></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Fraction tile, one eighth shaded: 1/8",
+   "type": "fraction-8"
+  },
+  "fraction-10": {
+   "html": "<div class=\"piece\" data-piece-type=\"fraction-10\" role=\"img\" aria-label=\"Fraction tile, one tenth shaded: 1/10\" style=\"left: 16px; top: 16px;\"><div class=\"fraction-tile\"><div class=\"piece-art seg filled\" data-cell=\"frac-fill\" style=\"width:26px;height:40px;background-position:-378px -34px;\"><span class=\"lbl\">1/10</span></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Fraction tile, one tenth shaded: 1/10",
+   "type": "fraction-10"
+  },
+  "fraction-12": {
+   "html": "<div class=\"piece\" data-piece-type=\"fraction-12\" role=\"img\" aria-label=\"Fraction tile, one twelfth shaded: 1/12\" style=\"left: 16px; top: 16px;\"><div class=\"fraction-tile\"><div class=\"piece-art seg filled\" data-cell=\"frac-fill\" style=\"width:26px;height:40px;background-position:-378px -34px;\"><span class=\"lbl\">1/12</span></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div><div class=\"piece-art seg\" data-cell=\"frac-empty\" style=\"width:26px;height:40px;background-position:-412px -34px;\"></div></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Fraction tile, one twelfth shaded: 1/12",
+   "type": "fraction-12"
+  },
+  "alg-pos1": {
+   "html": "<div class=\"piece\" data-piece-type=\"alg-pos1\" role=\"img\" aria-label=\"Algebra tile, positive one\" style=\"left: 16px; top: 16px;\"><div class=\"piece-art algebra-tile pos\" data-cell=\"alg-pos1\" style=\"width:30px;height:30px;background-position:-302px -34px;\">+1</div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Algebra tile, positive one",
+   "type": "alg-pos1"
+  },
+  "alg-neg1": {
+   "html": "<div class=\"piece\" data-piece-type=\"alg-neg1\" role=\"img\" aria-label=\"Algebra tile, negative one\" style=\"left: 16px; top: 16px;\"><div class=\"piece-art algebra-tile neg\" data-cell=\"alg-neg1\" style=\"width:30px;height:30px;background-position:-340px -34px;\">−1</div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Algebra tile, negative one",
+   "type": "alg-neg1"
+  },
+  "alg-posx": {
+   "html": "<div class=\"piece\" data-piece-type=\"alg-posx\" role=\"img\" aria-label=\"Algebra tile, positive x\" style=\"left: 16px; top: 16px;\"><div class=\"piece-art algebra-tile pos\" data-cell=\"alg-posx\" style=\"width:30px;height:100px;background-position:-484px -82px;\">+x</div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Algebra tile, positive x",
+   "type": "alg-posx"
+  },
+  "alg-negx": {
+   "html": "<div class=\"piece\" data-piece-type=\"alg-negx\" role=\"img\" aria-label=\"Algebra tile, negative x\" style=\"left: 16px; top: 16px;\"><div class=\"piece-art algebra-tile neg\" data-cell=\"alg-negx\" style=\"width:30px;height:100px;background-position:-522px -82px;\">−x</div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Algebra tile, negative x",
+   "type": "alg-negx"
+  },
+  "alg-posx2": {
+   "html": "<div class=\"piece\" data-piece-type=\"alg-posx2\" role=\"img\" aria-label=\"Algebra tile, positive x squared\" style=\"left: 16px; top: 16px;\"><div class=\"piece-art algebra-tile pos\" data-cell=\"alg-posx2\" style=\"width:100px;height:100px;background-position:-268px -82px;\">+x²</div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Algebra tile, positive x squared",
+   "type": "alg-posx2"
+  },
+  "alg-negx2": {
+   "html": "<div class=\"piece\" data-piece-type=\"alg-negx2\" role=\"img\" aria-label=\"Algebra tile, negative x squared\" style=\"left: 16px; top: 16px;\"><div class=\"piece-art algebra-tile neg\" data-cell=\"alg-negx2\" style=\"width:100px;height:100px;background-position:-376px -82px;\">−x²</div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Algebra tile, negative x squared",
+   "type": "alg-negx2"
+  },
+  "pb-hex": {
+   "html": "<div class=\"piece\" data-piece-type=\"pb-hex\" role=\"img\" aria-label=\"Pattern block, yellow hexagon\" style=\"left: 16px; top: 16px;\"><div class=\"piece-art \" data-cell=\"pb-hex\" style=\"width:104px;height:90px;background-position:0px -268px;\"></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Pattern block, yellow hexagon",
+   "type": "pb-hex"
+  },
+  "pb-trapezoid": {
+   "html": "<div class=\"piece\" data-piece-type=\"pb-trapezoid\" role=\"img\" aria-label=\"Pattern block, red trapezoid\" style=\"left: 16px; top: 16px;\"><div class=\"piece-art \" data-cell=\"pb-trapezoid\" style=\"width:104px;height:45px;background-position:-112px -268px;\"></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Pattern block, red trapezoid",
+   "type": "pb-trapezoid"
+  },
+  "pb-rhombus": {
+   "html": "<div class=\"piece\" data-piece-type=\"pb-rhombus\" role=\"img\" aria-label=\"Pattern block, blue rhombus\" style=\"left: 16px; top: 16px;\"><div class=\"piece-art \" data-cell=\"pb-rhombus\" style=\"width:78px;height:45px;background-position:-224px -268px;\"></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Pattern block, blue rhombus",
+   "type": "pb-rhombus"
+  },
+  "pb-thin": {
+   "html": "<div class=\"piece\" data-piece-type=\"pb-thin\" role=\"img\" aria-label=\"Pattern block, tan thin rhombus\" style=\"left: 16px; top: 16px;\"><div class=\"piece-art \" data-cell=\"pb-thin\" style=\"width:97px;height:26px;background-position:-310px -268px;\"></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Pattern block, tan thin rhombus",
+   "type": "pb-thin"
+  },
+  "pb-square": {
+   "html": "<div class=\"piece\" data-piece-type=\"pb-square\" role=\"img\" aria-label=\"Pattern block, orange square\" style=\"left: 16px; top: 16px;\"><div class=\"piece-art \" data-cell=\"pb-square\" style=\"width:52px;height:52px;background-position:-415px -268px;\"></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Pattern block, orange square",
+   "type": "pb-square"
+  },
+  "pb-triangle": {
+   "html": "<div class=\"piece\" data-piece-type=\"pb-triangle\" role=\"img\" aria-label=\"Pattern block, green triangle\" style=\"left: 16px; top: 16px;\"><div class=\"piece-art \" data-cell=\"pb-triangle\" style=\"width:52px;height:45px;background-position:-475px -268px;\"></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span></div>",
+   "label": "Pattern block, green triangle",
+   "type": "pb-triangle"
+  },
+  "die": {
+   "html": "<div class=\"piece\" data-piece-type=\"die-3\" role=\"img\" aria-label=\"Die showing 3\" style=\"left: 16px; top: 16px;\"><div class=\"piece-art \" data-cell=\"die-3\" style=\"width:52px;height:52px;background-position:-388px -190px;\"></div><span class=\"dup\" title=\"Duplicate\">❐</span><span class=\"del\" title=\"Delete\">×</span><span class=\"roll\" title=\"Roll\">⚄</span></div>",
+   "label": "Die showing 3",
+   "type": "die-3"
+  }
+ }
+}

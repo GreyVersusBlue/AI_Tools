@@ -27,6 +27,7 @@
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
 <script src="current-events-discussion-guide-generator/cedg-readability.js"></script>
+<script src="current-events-discussion-guide-generator/cedg-qsets.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -90,6 +91,10 @@
   .vocab-row input.term { flex: 0 0 9rem; font-weight: 700; margin-bottom: 0; }
   .vocab-row input.def { flex: 1; margin-bottom: 0; }
   .q-row input { flex: 1; margin-bottom: 0; }
+  .qset-bar { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: .5rem; }
+  .qset-bar select { flex: 1; min-width: 10rem; margin-bottom: 0; }
+  .qset-bar label { margin: 0; }
+  .qset-bar button, .qset-bar select { min-height: 1.9rem; }
   /* The rule above was written for the custom-question text box, but it also
      matched the preset checkboxes, which stretched them across the row and
      shoved every question's text against the right edge. */
@@ -284,6 +289,17 @@
 
       <div class="card">
         <h2>Guiding questions</h2>
+        <div class="qset-bar">
+          <label for="qsetSelect">Question set</label>
+          <select id="qsetSelect"></select>
+          <button type="button" class="secondary small" id="qsetUseBtn">Use this set</button>
+          <button type="button" class="secondary small" id="qsetAddBtn">Add to this guide</button>
+          <button type="button" class="secondary small" id="qsetDeleteBtn">Delete set</button>
+        </div>
+        <div class="qset-bar">
+          <button type="button" class="secondary small" id="qsetSaveBtn">Save these questions as a set&hellip;</button>
+        </div>
+        <p class="hint" id="qsetNote" aria-live="polite">Save the questions this guide asks as a named set, then swap it in on another guide.</p>
         <div id="presetQuestions"></div>
         <div id="customQuestionsWrap"></div>
         <button class="secondary small" id="addQuestionBtn">+ Add your own question</button>
@@ -441,7 +457,7 @@
 
   var els = {};
   ['articleTitle', 'articleSource', 'articleUrl', 'articleUrlHint', 'articleText', 'analyzeBtn', 'wordCountHint', 'summaryText',
-   'suggestedWords', 'suggestHint', 'vocabWrap', 'addVocabBtn', 'presetQuestions', 'customQuestionsWrap',
+   'suggestedWords', 'suggestHint', 'vocabWrap', 'addVocabBtn', 'presetQuestions', 'customQuestionsWrap', 'qsetSelect', 'qsetUseBtn', 'qsetAddBtn', 'qsetDeleteBtn', 'qsetSaveBtn', 'qsetNote',
    'addQuestionBtn', 'printBtn', 'printArea', 'clearBtn',
    'guideSwitch', 'guideName', 'newGuideBtn', 'duplicateGuideBtn', 'deleteGuideBtn',
    'articleBCard', 'articleTitleB', 'articleSourceB', 'articleUrlB', 'articleUrlHintB', 'articleTextB', 'wordCountHintB', 'addArticleBBtn', 'removeArticleBBtn',
@@ -884,6 +900,103 @@
     state.customQuestions.push({ id: uid(), text: '' });
     save(); renderCustomQuestions();
   });
+
+  /* ---------- the teacher's bank of question sets ----------
+     CedgSets (cedg-qsets.js) holds the rules; this is the glue. A set is a
+     list of plain question texts kept under one device-wide key, not in any
+     guide, so it is in no share link and no guide file. "Use this set" makes
+     the set the guide's own questions (the six built-ins are unticked, the set
+     becomes the custom list); "Add to this guide" appends what is missing. */
+  var BUILTIN_SET = 'builtin';
+  var QSETS_KEY = 'cedg_qsets_v1';   // CedgSets.KEY; a literal here so check:registry can resolve it
+  var qsets = [];
+  function readQsets() { try { qsets = CedgSets.load(localStorage.getItem(QSETS_KEY)); } catch (e) { qsets = []; } }
+  function writeQsets(next) {
+    try { localStorage.setItem(QSETS_KEY, CedgSets.dump(next)); qsets = next; return true; }
+    catch (e) { return false; }
+  }
+  function qsetNote(text) { els.qsetNote.textContent = text; }
+  function renderQsets(keep) {
+    var want = keep || els.qsetSelect.value || BUILTIN_SET;
+    els.qsetSelect.textContent = '';
+    [{ id: BUILTIN_SET, label: 'The six built-in questions' }].concat(qsets.map(function (q) {
+      return { id: q.id, label: q.name + ' (' + q.questions.length + ')' };
+    })).forEach(function (o) {
+      var opt = document.createElement('option');
+      opt.value = o.id; opt.textContent = o.label;
+      els.qsetSelect.appendChild(opt);
+    });
+    els.qsetSelect.value = qsets.some(function (q) { return q.id === want; }) ? want : BUILTIN_SET;
+    els.qsetDeleteBtn.disabled = els.qsetSelect.value === BUILTIN_SET;
+  }
+  function currentQuestionTexts() {
+    return PRESET_QUESTIONS.filter(function (q, i) { return state.presetChecked[i] !== false; }).map(CedgSets.plain)
+      .concat(state.customQuestions.map(function (q) { return q.text; }));
+  }
+  function ownQuestionCount() { return state.customQuestions.filter(function (q) { return q.text.trim(); }).length; }
+  els.qsetSelect.addEventListener('change', function () { els.qsetDeleteBtn.disabled = els.qsetSelect.value === BUILTIN_SET; });
+  els.qsetSaveBtn.addEventListener('click', function () {
+    var texts = currentQuestionTexts();
+    if (!CedgSets.cleanQuestions(texts).length) { qsetNote('This guide asks no questions yet, so there is nothing to save.'); return; }
+    var name = CedgSets.cleanName(window.prompt('Name for this set of questions?', '') || '');
+    if (!name) return;
+    var i = CedgSets.indexOfName(qsets, name);
+    if (i !== -1 && !window.confirm('A set called \u201c' + qsets[i].name + '\u201d already exists. Replace it with these questions?')) return;
+    var res = CedgSets.save(qsets, name, texts);
+    if (res.status === 'full') { qsetNote('You have ' + CedgSets.MAX_SETS + ' sets already. Delete one to make room.'); return; }
+    if (!writeQsets(res.sets)) { qsetNote('This browser refused to save the set. Its storage is probably full.'); return; }
+    var saved = CedgSets.find(qsets, qsets[CedgSets.indexOfName(qsets, name)].id);
+    renderQsets(saved.id);
+    qsetNote('Saved \u201c' + saved.name + '\u201d with ' + saved.questions.length + ' question' + (saved.questions.length === 1 ? '' : 's') + '.' +
+      (res.dropped ? ' ' + res.dropped + ' more than the ' + CedgSets.MAX_QUESTIONS + '-question limit were left out.' : ''));
+  });
+  function chosenSet() {
+    if (els.qsetSelect.value === BUILTIN_SET) return { name: 'The six built-in questions', builtin: true };
+    return CedgSets.find(qsets, els.qsetSelect.value);
+  }
+  els.qsetUseBtn.addEventListener('click', function () {
+    var set = chosenSet();
+    if (!set) return;
+    if (ownQuestionCount() && !window.confirm('Using a set replaces the questions you added to this guide. Save them as a set first if you want to keep them. Continue?')) return;
+    if (set.builtin) {
+      state.presetChecked = {};
+      state.customQuestions = [];
+    } else {
+      state.presetChecked = {};
+      PRESET_QUESTIONS.forEach(function (q, i) { state.presetChecked[i] = false; });
+      state.customQuestions = set.questions.map(function (q) { return { id: uid(), text: q }; });
+    }
+    save(); renderPresetQuestions(); renderCustomQuestions();
+    qsetNote('This guide now asks \u201c' + set.name + '\u201d.');
+  });
+  els.qsetAddBtn.addEventListener('click', function () {
+    var set = chosenSet();
+    if (!set) return;
+    if (set.builtin) {
+      var anyOff = PRESET_QUESTIONS.some(function (q, i) { return state.presetChecked[i] === false; });
+      state.presetChecked = {};
+      save(); renderPresetQuestions();
+      qsetNote(anyOff ? 'The six built-in questions are all ticked again.' : 'The six built-in questions were already ticked.');
+      return;
+    }
+    var have = {};
+    state.customQuestions.forEach(function (c) { have[c.text.trim()] = 1; });
+    PRESET_QUESTIONS.forEach(function (q, i) { if (state.presetChecked[i] !== false) have[CedgSets.plain(q)] = 1; });
+    var added = 0;
+    set.questions.forEach(function (q) { if (!have[q]) { have[q] = 1; state.customQuestions.push({ id: uid(), text: q }); added++; } });
+    save(); renderCustomQuestions();
+    qsetNote(added ? 'Added ' + added + ' question' + (added === 1 ? '' : 's') + ' from \u201c' + set.name + '\u201d.' : 'Everything in \u201c' + set.name + '\u201d is already on this guide.');
+  });
+  els.qsetDeleteBtn.addEventListener('click', function () {
+    var set = chosenSet();
+    if (!set || set.builtin) return;
+    if (!window.confirm('Delete the set \u201c' + set.name + '\u201d? Guides that already use its questions keep them.')) return;
+    if (!writeQsets(CedgSets.remove(qsets, set.id))) { qsetNote('This browser refused to save the change.'); return; }
+    renderQsets(BUILTIN_SET);
+    qsetNote('Deleted \u201c' + set.name + '\u201d.');
+  });
+  window.addEventListener('storage', function (e) { if (e.key === QSETS_KEY) { readQsets(); renderQsets(); } });
+  readQsets(); renderQsets();
 
   /* ---------- class level + media literacy kit controls ---------- */
   els.levelSelect.addEventListener('change', function () {

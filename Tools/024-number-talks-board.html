@@ -121,6 +121,19 @@
 
   /* ── Strategy board ───────────────────────────────────────────────── */
   .strategy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .8rem; margin-bottom: .8rem; }
+  .s-sketch, .bank-sketch { display: block; max-width: 100%; height: auto; background: #fff; border: 1px solid var(--line-strong); border-radius: 6px; margin-top: .4rem; }
+  .bank-sketch { max-width: 11rem; }
+  .sk-dialog { width: min(660px, 96vw); max-height: 96vh; overflow: auto; padding: .8rem; border: 2px solid var(--line-strong); border-radius: 10px; background: var(--card); color: var(--ink); box-sizing: border-box; }
+  .sk-dialog::backdrop { background: rgba(0,0,0,.55); }
+  .sk-title { margin: 0 0 .2rem; font-size: 1.1rem; }
+  .sk-hint { margin: 0 0 .5rem; font-size: .85rem; color: var(--ink); }
+  .sk-tools { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; margin: .4rem 0; }
+  .sk-spacer { flex: 1; }
+  .sk-btn { width: auto; padding: .4rem .7rem; font-size: .88rem; background: var(--card-2); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 6px; cursor: pointer; }
+  .sk-btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .sk-done { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+  .sk-canvas { display: block; width: 100%; height: auto; aspect-ratio: 600 / 375; background: #fff; border: 2px solid var(--line-strong); border-radius: 6px; cursor: crosshair; touch-action: none; }
+  .sk-err { color: var(--err); font-weight: 700; margin: .3rem 0; }
   .strategy-card { background: var(--card-2); border: 2px solid var(--line-strong); border-radius: 10px; padding: .7rem .8rem; }
   .s-card-head { display: flex; gap: .4rem; margin-bottom: .5rem; }
   .s-card-head input[type="text"] { flex: 1; font-weight: 700; font-size: .88rem; }
@@ -180,6 +193,7 @@
   .rec-strategy { border: 1px solid #bbb; border-radius: 4px; padding: .4rem .55rem; margin-bottom: .45rem; page-break-inside: avoid; }
   .rec-strategy .rec-who { font-weight: 800; font-size: .92rem; margin-bottom: .12rem; }
   .rec-strategy .rec-what { font-size: .92rem; white-space: pre-wrap; }
+  .rec-strategy .rec-sketch { display: block; max-width: 3.4in; max-height: 2.1in; border: 1px solid #999; margin-top: .3rem; background: #fff; }
   .rec-list { margin: 0; padding-left: 1.2rem; font-size: .9rem; }
   .rec-list li { margin-bottom: .2rem; }
   .rec-empty { color: #666; font-size: .9rem; font-style: italic; }
@@ -196,6 +210,7 @@
   .poster-context { font-size: 1.2rem; color: #444; font-style: italic; margin-bottom: 1.4rem; }
   .poster-text { font-size: 2rem; font-weight: 700; line-height: 1.4; white-space: pre-wrap; margin-bottom: 1.6rem; }
   .poster-date { font-size: .9rem; color: #777; }
+  .poster-sketch { display: block; max-width: 6.2in; max-height: 3.6in; margin: 0 auto 1.4rem; border: 2px solid #333; background: #fff; }
 
   .mode-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
   .mode-tab { background: var(--card); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 7px; padding: .55rem 1rem; font-weight: 700; font-size: .88rem; cursor: pointer; }
@@ -470,6 +485,7 @@
 <div id="printArea"></div>
 
 <script src="number-talks-board/dot-images.js"></script>
+<script src="number-talks-board/sketch.js"></script>
 <script>
 (function () {
   'use strict';
@@ -738,21 +754,23 @@
       var saved = JSON.parse(raw);
       if (!Array.isArray(saved)) return;
       library = saved.filter(function (e) {
-        return e && typeof e === 'object' && typeof e.text === 'string' && e.text.trim();
+        return e && typeof e === 'object' && ((typeof e.text === 'string' && e.text.trim()) || NTSketch.isSketch(e.sketch));
       }).map(function (e) {
-        return {
+        var out = {
           id: typeof e.id === 'string' && e.id ? e.id : nextLibraryId(),
           name: typeof e.name === 'string' ? e.name.slice(0, 80) : '',
-          text: e.text.slice(0, 600),
+          text: typeof e.text === 'string' ? e.text.slice(0, 600) : '',
           context: typeof e.context === 'string' ? e.context.slice(0, 200) : '',
           ts: typeof e.ts === 'number' ? e.ts : Date.now()
         };
+        if (NTSketch.isSketch(e.sketch)) out.sketch = e.sketch;
+        return out;
       }).slice(0, LIBRARY_LIMIT);
     } catch (e) { /* ignore corrupt storage */ }
   }
   function saveStrategyLibrary() {
-    try { localStorage.setItem(LIBRARY_KEY, JSON.stringify(library)); }
-    catch (e) { /* private browsing / storage full */ }
+    try { localStorage.setItem(LIBRARY_KEY, JSON.stringify(library)); return true; }
+    catch (e) { /* private browsing / storage full */ return false; }
   }
   function nextLibraryId() { return 'lib' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
@@ -765,18 +783,26 @@
     return current ? promptText(current.exprs) : '';
   }
 
-  function addLibraryEntry(name, text, context) {
+  function addLibraryEntry(name, text, context, sketch) {
     var trimmedText = (text || '').trim();
-    if (!trimmedText) return;
-    library.unshift({
+    var pic = NTSketch.clean(sketch);
+    if (!trimmedText && !pic) return;
+    var before = library;
+    var entry = {
       id: nextLibraryId(),
       name: (name || '').trim().slice(0, 80),
       text: trimmedText.slice(0, 600),
       context: (context || '').trim().slice(0, 200),
       ts: Date.now()
-    });
-    library = library.slice(0, LIBRARY_LIMIT);
-    saveStrategyLibrary();
+    };
+    if (pic) entry.sketch = pic;
+    library = [entry].concat(library).slice(0, LIBRARY_LIMIT);
+    if (!saveStrategyLibrary() && pic) {
+      /* A drawing is what can fill the browser's storage; say so rather than lose it quietly. */
+      library = before;
+      alert('This device has no room left to keep another drawing in the library. Remove some saved strategies with drawings, or save this one without its drawing.');
+      return;
+    }
     renderLibrary();
   }
 
@@ -785,8 +811,8 @@
      a strategy worth keeping on the wall. */
   function addStrategyToLibrary(strategyId) {
     var s = strategies.filter(function (x) { return x.id === strategyId; })[0];
-    if (!s || !s.text || !s.text.trim()) return;
-    addLibraryEntry(s.name, s.text, currentPromptContext());
+    if (!s || ((!s.text || !s.text.trim()) && !s.sketch)) return;
+    addLibraryEntry(s.name, s.text, currentPromptContext(), s.sketch);
   }
 
   function removeLibraryEntry(id) {
@@ -810,7 +836,8 @@
       '<div class="bank-item-main">' +
         '<span class="bank-item-text">' + escapeHtml(name) + '</span>' +
         (entry.context ? '<span class="bank-item-cat">For: ' + escapeHtml(entry.context) + '</span>' : '') +
-        '<span class="bank-item-note">' + escapeHtml(entry.text) + '</span>' +
+        (entry.text ? '<span class="bank-item-note">' + escapeHtml(entry.text) + '</span>' : '') +
+        (entry.sketch ? '<img class="bank-sketch" src="' + entry.sketch + '" alt="' + escapeAttr('Drawing for ' + name) + '">' : '') +
         '<span class="bank-item-cat">Added ' + escapeHtml(date) + '</span>' +
       '</div>' +
       '<div class="bank-item-actions">' +
@@ -842,7 +869,8 @@
       '<div class="poster-label">Number Talks &mdash; Strategy Wall</div>' +
       '<div class="poster-name">' + escapeHtml(name) + '&rsquo;s Way</div>' +
       context +
-      '<div class="poster-text">' + escapeHtml(entry.text.trim()) + '</div>' +
+      (entry.sketch ? '<img class="poster-sketch" src="' + entry.sketch + '" alt="' + escapeAttr('Drawing for ' + name) + '">' : '') +
+      (entry.text.trim() ? '<div class="poster-text">' + escapeHtml(entry.text.trim()) + '</div>' : '') +
       '<div class="poster-date">Added ' + escapeHtml(date) + '</div>' +
     '</div>';
   }
@@ -1434,7 +1462,10 @@
           '<button type="button" class="remove-row-btn" data-remove="' + escapeAttr(s.id) + '" title="Remove card">&#10005;</button>' +
         '</div>' +
         '<textarea class="s-text" placeholder="Broke 36 into 30 + 6, doubled each, added…">' + escapeHtml(s.text) + '</textarea>' +
+        (s.sketch ? '<img class="s-sketch" src="' + s.sketch + '" alt="' + escapeAttr('Drawing for ' + (s.name && s.name.trim() ? s.name.trim() : 'this card')) + '">' : '') +
         '<div class="btn-row" style="margin-top:.4rem;">' +
+          '<button type="button" class="link-btn" data-draw="' + escapeAttr(s.id) + '">' + (s.sketch ? 'Edit drawing' : 'Draw') + '</button>' +
+          (s.sketch ? '<button type="button" class="link-btn" data-remove-sketch="' + escapeAttr(s.id) + '">Remove drawing</button>' : '') +
           '<button type="button" class="link-btn" data-save-to-library="' + escapeAttr(s.id) + '">+ Save to library</button>' +
         '</div>' +
       '</div>';
@@ -1451,6 +1482,35 @@
   });
 
   els.strategyGrid.addEventListener('click', function (e) {
+    var drawBtn = e.target.closest('[data-draw]');
+    if (drawBtn) {
+      var ds = strategies.filter(function (x) { return x.id === drawBtn.dataset.draw; })[0];
+      if (!ds) return;
+      NTSketch.open({
+        title: 'Draw ' + (ds.name && ds.name.trim() ? ds.name.trim() + '\u2019s' : 'this') + ' strategy',
+        initial: ds.sketch,
+        opener: drawBtn,
+        onDone: function (url) {
+          if (url) ds.sketch = url; else delete ds.sketch;
+          boardUndoSnapshot = null;
+          els.undoClearBtn.disabled = true;
+          renderStrategies();
+          var again = els.strategyGrid.querySelector('[data-draw="' + ds.id + '"]');
+          if (again) again.focus();
+        }
+      });
+      return;
+    }
+    var rmSketch = e.target.closest('[data-remove-sketch]');
+    if (rmSketch) {
+      var rs = strategies.filter(function (x) { return x.id === rmSketch.dataset.removeSketch; })[0];
+      if (!rs) return;
+      delete rs.sketch;
+      renderStrategies();
+      var back = els.strategyGrid.querySelector('[data-draw="' + rs.id + '"]');
+      if (back) back.focus();
+      return;
+    }
     var saveBtn = e.target.closest('[data-save-to-library]');
     if (saveBtn) { addStrategyToLibrary(saveBtn.dataset.saveToLibrary); return; }
     var btn = e.target.closest('[data-remove]');
@@ -1517,7 +1577,7 @@
       strategies.forEach(function (s, i) {
         var name = s.name && s.name.trim() ? s.name.trim() : 'Student ' + (i + 1);
         var text = s.text && s.text.trim() ? s.text.trim() : '(no notes entered)';
-        lines.push(name + ': ' + text);
+        lines.push(name + ': ' + text + (s.sketch ? ' (a drawing is on the card; it is not in this text file)' : ''));
       });
     }
     lines.push('');
@@ -1576,7 +1636,8 @@
       var name = s.name && s.name.trim() ? s.name.trim() : 'Student ' + (i + 1);
       var text = s.text && s.text.trim() ? s.text.trim() : '(no notes typed)';
       return '<div class="rec-strategy"><div class="rec-who">' + escapeHtml(name) + '</div>' +
-        '<div class="rec-what">' + escapeHtml(text) + '</div></div>';
+        '<div class="rec-what">' + escapeHtml(text) + '</div>' +
+        (s.sketch ? '<img class="rec-sketch" src="' + s.sketch + '" alt="' + escapeAttr('Drawing for ' + name) + '">' : '') + '</div>';
     }).join('');
   }
 

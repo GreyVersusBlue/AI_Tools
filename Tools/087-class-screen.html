@@ -17,6 +17,7 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/webrtc-pair.js"></script>
+<script src="../_shared/remote-channel.js"></script>
 <script src="class-screen/cs-remote.js"></script>
 <script src="../_shared/countdown.js"></script>
 <script src="../_shared/grouping.js"></script>
@@ -91,6 +92,8 @@
   .dock {
     display: flex; gap: .4rem; flex-wrap: wrap; justify-content: center; align-items: center;
     padding: .45rem .6rem; background: var(--card); border-top: 1px solid var(--line);
+    /* a11y.js's launcher is fixed 16px from the corner and 46px wide; keep the buttons clear of it */
+    padding-right: 4.5rem;
   }
   .dock .dock-label { font-size: .8rem; color: var(--muted); font-weight: 600; margin-right: .2rem; }
   .dock button { display: inline-flex; align-items: center; gap: .35rem; }
@@ -150,6 +153,68 @@
     font: inherit; font-size: calc(var(--fs, 2) * 1rem); line-height: 1.25; padding: .1rem;
   }
 
+  /* spinner wheel */
+  .wheel-stage { flex: 1; min-height: 0; container-type: size; display: grid; place-items: center; overflow: hidden; position: relative; }
+  .wheel-box { position: relative; width: min(92cqw, 72cqh); height: min(92cqw, 72cqh); }
+  .wheel-svg { width: 100%; height: 100%; display: block; }
+  .wheel-rot { transform-origin: 50% 50%; transform-box: view-box; transition: transform 4s cubic-bezier(.12, .6, .1, 1); }
+  .wheel-seg.a { fill: var(--card-2); }
+  .wheel-seg.b { fill: var(--info-bg); }
+  .wheel-seg { stroke: var(--line-strong); stroke-width: .6; }
+  .wheel-lab { fill: var(--ink); font-weight: 700; dominant-baseline: middle; text-anchor: end; }
+  .wheel-pointer { fill: var(--err); stroke: var(--paper); stroke-width: 1; }
+  .wheel-result { font-weight: 700; text-align: center; min-height: 1.3em; font-size: clamp(1rem, 9cqw, 2.2rem); overflow-wrap: anywhere; margin: 0; }
+  @media (prefers-reduced-motion: reduce) { .wheel-rot { transition: none; } }
+  body.present .wheel-edit { display: none; }
+  .wheel-text { width: 14em; max-width: 100%; font: inherit; font-size: .85rem; color: var(--ink); background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px; padding: .3rem .45rem; }
+
+  /* team scoreboard */
+  .score-wrap { flex: 1; min-height: 0; container-type: size; overflow: auto; }
+  .score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: .4rem; padding: .1rem; }
+  .score-card { border: 1px solid var(--line-strong); border-radius: 8px; padding: .3rem .4rem; display: flex; flex-direction: column; align-items: center; gap: .2rem; background: var(--card-2); }
+  .score-card.lead { border-color: var(--accent); border-width: 3px; }
+  .score-name { width: 100%; text-align: center; font-weight: 700; font-size: clamp(.85rem, 5cqmin, 1.6rem); }
+  .score-card input.score-name { border: 0; background: transparent; padding: .1rem; }
+  .score-num { font-family: Consolas, "Courier New", monospace; font-weight: 700; font-size: clamp(1.6rem, 14cqmin, 5rem); line-height: 1; font-variant-numeric: tabular-nums; }
+  .score-btns { display: flex; gap: .3rem; }
+  .score-btns button { font-size: clamp(1rem, 5cqmin, 1.8rem); min-width: 2.2em; }
+  body.present .score-btns.edit, body.present .score-foot { display: none; }
+
+  /* bell countdown */
+  .big.bell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; }
+  .bell-label { font-weight: 700; font-size: min(7cqw, 16cqh); line-height: 1.1; text-align: center; overflow-wrap: anywhere; }
+  .bell .big-text { font-size: min(20cqw, 44cqh); }
+
+  /* sequence timer */
+  .big.seq { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; }
+  .seq-name { font-weight: 700; font-size: min(11cqw, 22cqh); line-height: 1.1; text-align: center; overflow-wrap: anywhere; }
+  .seq .big-text { font-size: min(20cqw, 44cqh); }
+  .seq-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .25rem; justify-content: center; font-size: .78rem; }
+  .seq-chips li { border: 1px solid var(--line-strong); border-radius: 999px; padding: .1rem .55rem; color: var(--muted); background: var(--card); }
+  .seq-chips li.now { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+  .seq-chips li.past { text-decoration: line-through; }
+  .seq-edit { width: 16em; max-width: 100%; }
+
+  /* pie timer */
+  .big.pie { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; }
+  .pie-svg { width: min(92cqw, 66cqh); height: min(92cqw, 66cqh); flex: none; }
+  .pie-face { fill: var(--card-2); stroke: var(--line-strong); stroke-width: 2; }
+  .pie-wedge { fill: var(--accent); }
+  .pie-wedge.low { fill: var(--err); }
+  .pie .big-text { font-size: min(16cqw, 20cqh); }
+
+  /* agenda: a short checklist the room reads from a distance */
+  .agenda-wrap { flex: 1; min-height: 0; container-type: size; overflow: auto; }
+  .agenda-head { margin: 0 0 .25em; font-weight: 700; color: var(--muted); font-size: clamp(.9rem, 5cqmin, 1.6rem); }
+  .agenda-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .15em; font-size: clamp(1rem, 7cqmin, 2.4rem); }
+  .agenda-list li { display: flex; align-items: center; gap: .4em; border-left: .12em solid transparent; padding: .1em .3em; line-height: 1.2; }
+  .agenda-list li.now { border-left-color: var(--accent); background: var(--card-2); font-weight: 700; }
+  .agenda-list li.done .agenda-text { text-decoration: line-through; color: var(--muted); }
+  .agenda-list input[type="checkbox"] { width: .9em; height: .9em; flex: none; }
+  .agenda-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .agenda-list .agenda-x { font-size: .5em; padding: .1em .45em; }
+  body.present .agenda-x, body.present .agenda-foot { display: none; }
+
   /* timer */
   .w.timer-done { animation: done-flash 1s steps(2, jump-none) 6; border-color: var(--err); }
   .w.timer-done .big-text { color: var(--err); }
@@ -182,6 +247,11 @@
   .yt-form { display: flex; flex-direction: column; gap: .4rem; justify-content: center; flex: 1; }
   .yt-form label { font-size: .85rem; font-weight: 600; }
   .yt-form input { width: 100%; }
+  .site-frame { flex: 1; min-height: 0; width: 100%; border: 0; border-radius: 6px; background: var(--card); }
+  .frame-pick { flex: 1; display: flex; flex-direction: column; gap: .5rem; justify-content: center; align-items: center; text-align: center; }
+  .frame-lead { margin: 0; font-weight: 700; }
+  .frame-choices { display: flex; flex-direction: column; gap: .4rem; align-items: stretch; }
+  body.present .frame-foot { display: none; }
   .yt-offline { flex: 1; display: grid; place-items: center; text-align: center; color: var(--muted); font-size: .9rem; padding: .5rem; }
 
   /* work symbols */
@@ -249,11 +319,16 @@
   /* phone remote */
   .live-badge { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; font-weight: 700; color: var(--accent-2); }
   .live-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-2); }
-  #remoteDialog {
+  #remoteDialog, #keysDialog {
     width: min(460px, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); overflow: auto;
     border: 1px solid var(--line-strong); border-radius: 12px; background: var(--card); color: var(--ink); padding: 1rem 1.1rem;
   }
-  #remoteDialog::backdrop { background: rgba(0, 0, 0, .45); }
+  #remoteDialog::backdrop, #keysDialog::backdrop { background: rgba(0, 0, 0, .45); }
+  .keys-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  .keys-table th, .keys-table td { text-align: left; padding: .3rem .4rem; border-bottom: 1px solid var(--line); font-weight: 400; }
+  .keys-table thead th { font-weight: 700; }
+  .keys-table tbody th { white-space: nowrap; }
+  kbd { font: inherit; font-size: .85em; padding: .05rem .4rem; border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 5px; background: var(--card-2); }
   .rd-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; }
   .rd-head h2 { margin: 0; font-size: 1.1rem; }
   .rd-head button { border: 0; background: transparent; font-size: 1.3rem; line-height: 1; padding: .1rem .4rem; }
@@ -267,6 +342,116 @@
   .rd-status { font-size: .85rem; min-height: 1.2em; }
   .rd-status.bad { color: var(--err); }
   .rd-status.good { color: var(--accent-2); }
+
+  /* another tab saved (Path 22 P10) */
+  .tab-banner {
+    display: flex; align-items: center; gap: .5rem 1rem; flex-wrap: wrap; flex: none;
+    padding: .4rem 1rem; background: var(--info-bg); border-bottom: 1px solid var(--info-line); color: var(--ink); font-size: .88rem;
+  }
+  .tab-banner span { font-weight: 600; }
+  body.present .tab-banner { display: none; }
+
+  /* ── present mode and spotlight (Path 22 P6) ───────────────────────── */
+  /* Present locks the layout for the projector: no title bars (so nothing to drag
+     or close), no resize corners, no header and no dock. Spotlight lifts one
+     widget over the rest to fill the board. Both live in the page only: a
+     reload comes back to the editor, and neither is saved. */
+  body.present .app-header, body.present .dock, body.present .w-bar, body.present .w-resize { display: none; }
+  .present-exit {
+    position: absolute; top: .5rem; right: .5rem; z-index: 10000; font-size: .8rem; padding: .3rem .6rem;
+    background: var(--card); color: var(--ink); border: 1px solid var(--line-strong); box-shadow: 0 2px 8px rgba(0, 0, 0, .18);
+  }
+  #board.has-spot .w:not(.spot) { visibility: hidden; }
+  .w.spot { left: 0 !important; top: 0 !important; width: 100% !important; height: 100% !important; z-index: 5000 !important; border-radius: 0; }
+  .w.spot .w-resize { display: none; }
+  .w-fill { border: 0; background: transparent; padding: .1rem .4rem; font-size: .95rem; line-height: 1; color: var(--muted); border-radius: 0; }
+  .w-fill:hover, .w-fill[aria-pressed="true"] { color: var(--ink); background: transparent; }
+
+  /* ── linked widgets (Path 22 P8): the board flash when a linked timer ends ── */
+  /* A ring and a tint over the whole board. It blinks slowly (about once a
+     second, four times); with reduced motion it holds still, then goes. */
+  #board::after {
+    content: ''; position: absolute; inset: 0; z-index: 9000; pointer-events: none;
+    border: 0 solid var(--err); background: transparent;
+  }
+  #board.flash::after {
+    border-width: 14px; background: color-mix(in srgb, var(--err) 14%, transparent);
+    animation: board-flash 1s steps(2, jump-none) 4;
+  }
+  @keyframes board-flash { 50% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { #board.flash::after { animation: none; } }
+  .w-link { width: 100%; font-size: .78rem; text-align: center; }
+  .w-link summary { cursor: pointer; color: var(--muted); }
+  .w-link .w-link-body { display: flex; flex-wrap: wrap; gap: .3rem .8rem; justify-content: center; padding-top: .25rem; }
+  body.present .w-link { display: none; }
+
+  /* ── layout comforts (Path 22 P11) ─────────────────────────────────── */
+  /* A colour is a tint of a token over the card, never a literal, so it has a
+     dark counterpart for free. The tints stay light (12%) so --ink and --muted
+     keep their contrast; the page's suite measures it in both themes. */
+  .w[data-color="blue"]  { background: color-mix(in srgb, var(--accent-2) 12%, var(--card)); }
+  .w[data-color="slate"] { background: color-mix(in srgb, var(--accent) 12%, var(--card)); }
+  .w[data-color="warm"]  { background: color-mix(in srgb, var(--err) 10%, var(--card)); }
+  .w[data-color="info"]  { background: var(--info-bg); }
+  .w[data-color="blue"] .w-bar  { background: color-mix(in srgb, var(--accent-2) 18%, var(--card-2)); }
+  .w[data-color="slate"] .w-bar { background: color-mix(in srgb, var(--accent) 18%, var(--card-2)); }
+  .w[data-color="warm"] .w-bar  { background: color-mix(in srgb, var(--err) 14%, var(--card-2)); }
+  .w[data-color="info"] .w-bar  { background: var(--info-bg); }
+  /* muted grey on a tinted bar falls under 4.5:1 (measured), so a coloured widget's bar reads in full ink */
+  .w[data-color] .w-grip, .w[data-color] .w-hue, .w[data-color] .w-min, .w[data-color] .w-fill, .w[data-color] .w-close { color: var(--ink); }
+  .w-hue, .w-min { border: 0; background: transparent; padding: .1rem .4rem; font-size: .95rem; line-height: 1; color: var(--muted); border-radius: 0; }
+  .w-hue:hover, .w-min:hover { color: var(--ink); background: transparent; }
+  .w-hue i { display: inline-block; width: .8em; height: .8em; border-radius: 50%; border: 2px solid currentColor; vertical-align: -.1em; background: transparent; }
+  .w[data-color="blue"] .w-hue i  { background: var(--accent-2); }
+  .w[data-color="slate"] .w-hue i { background: var(--accent); }
+  .w[data-color="warm"] .w-hue i  { background: var(--err); }
+  .w[data-color="info"] .w-hue i  { background: var(--info-line); }
+  /* A minimized widget is only its title bar, a chip. It keeps running (a timer still ends);
+     present mode hides the chip, so minimizing is also how to take a widget off the projector. */
+  .w.is-min { height: auto !important; width: auto !important; min-width: 7rem; max-width: 60%; }
+  .w.is-min .w-body, .w.is-min .w-resize { display: none; }
+  .w.is-min .w-bar { border-bottom: 0; }
+  .w.is-min.spot { width: 100% !important; height: 100% !important; max-width: none; }
+  .w.is-min.spot .w-body { display: flex; }
+  body.present .w.is-min:not(.spot) { display: none; }
+  /* the snap grid shows while a widget is being dragged */
+  #board.drag-snap::before {
+    content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: .55;
+    background-image: linear-gradient(to right, var(--line) 1px, transparent 1px), linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+    background-size: 2.5% 2.5%;
+  }
+  /* screen thumbnails */
+  #shotsDialog { width: min(52rem, 94vw); }
+  .shots { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: .7rem; }
+  .shot-btn { display: flex; flex-direction: column; gap: .3rem; width: 100%; text-align: left; padding: .35rem; }
+  .shot-btn[aria-current="true"] { border-color: var(--accent); border-width: 3px; padding: calc(.35rem - 2px); }
+  .shot-name { font-size: .85rem; font-weight: 700; overflow-wrap: anywhere; }
+  .shot-meta { font-size: .75rem; font-weight: 400; color: var(--muted); }
+  .shot-board { position: relative; aspect-ratio: 16 / 9; container-type: size; overflow: hidden; border: 1px solid var(--line); border-radius: 4px; background-color: var(--paper); }
+  .shot-w { position: absolute; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--card); color: var(--ink); font-size: 7cqw; line-height: 1.1; padding: 1cqw; overflow: hidden; }
+  .shot-w.is-min { height: 9cqh !important; }
+  .shot-w[data-color="blue"]  { background: color-mix(in srgb, var(--accent-2) 22%, var(--card)); }
+  .shot-w[data-color="slate"] { background: color-mix(in srgb, var(--accent) 22%, var(--card)); }
+  .shot-w[data-color="warm"]  { background: color-mix(in srgb, var(--err) 18%, var(--card)); }
+  .shot-w[data-color="info"]  { background: var(--info-bg); }
+  .shot-board[data-bg="blue"]  { background-color: color-mix(in srgb, var(--accent-2) 16%, var(--paper)); }
+  .shot-board[data-bg="slate"] { background-color: color-mix(in srgb, var(--accent) 16%, var(--paper)); }
+  .shot-board[data-bg="warm"]  { background-color: color-mix(in srgb, var(--err) 10%, var(--paper)); }
+
+  /* ── projector theme (Path 22 P11): bigger type, full-strength lines ──────── */
+  /* Tokens only. Muted text becomes full ink and the soft lines become the strong
+     ones, so nothing on the board is read from a pale grey; the sizes that the page
+     fixes in rem are raised by hand. Set on <body>, never on <html>: a11y.js owns the theme. */
+  body.projector { --muted: var(--ink); --line: var(--line-strong); --line-strong: var(--ink); }
+  body.projector .w { border-width: 3px; }
+  body.projector .w-grip, body.projector .note, body.projector .err-note, body.projector .w-link,
+  body.projector .w-foot label { font-size: 1rem; }
+  body.projector .w-foot button, body.projector .w-foot select, body.projector .w-foot input[type="text"] { font-size: 1rem; }
+  body.projector .w-body button, body.projector .w-body select { font-size: 1.05rem; }
+  body.projector .text-area { font-size: calc(var(--fs, 2) * 1.3rem); }
+  body.projector .agenda-list, body.projector .agenda-head { font-size: clamp(1.2rem, 8cqmin, 2.8rem); }
+  body.projector button:focus-visible, body.projector select:focus-visible, body.projector input:focus-visible,
+  body.projector textarea:focus-visible, body.projector a:focus-visible { outline-width: 5px; }
 
   /* ── toast ──────────────────────────────────────────────────────────── */
   .toast {
@@ -292,11 +477,14 @@
   <div class="screen-bar">
     <label for="screenSelect">Screen</label>
     <select id="screenSelect"></select>
+    <button type="button" id="shotsBtn" title="See every screen as a small picture and pick one">Screens</button>
     <button type="button" id="newScreenBtn">New</button>
     <label for="templateSelect" class="sr-only">New screen from a starter</label>
     <select id="templateSelect"></select>
     <label for="periodSelect">Period</label>
     <select id="periodSelect"></select>
+    <label class="follow" title="Land widgets on a grid when you move or resize them"><input type="checkbox" id="snapToggle"> Snap to grid</label>
+    <label class="follow" title="Bigger text and stronger lines for a projector at the back of the room"><input type="checkbox" id="projectorToggle"> Projector theme</label>
     <label class="follow" title="Switch to each period's screen when its bell rings (bell times come from Command Center)"><input type="checkbox" id="followBell"> Follow the bell</label>
     <label for="bgSelect">Background</label>
     <select id="bgSelect">
@@ -324,18 +512,56 @@
     <input type="file" id="importFile" accept=".json,application/json" hidden>
     <span class="live-badge" id="remoteLive" hidden><span class="dot" aria-hidden="true"></span>Phone connected</span>
     <button type="button" id="remoteBtn">Phone remote</button>
+    <button type="button" id="keysBtn" title="Keyboard and clicker shortcuts (?)">Keys</button>
+    <button type="button" id="presentBtn" aria-pressed="false" title="Lock the layout for the projector and hide the controls (Esc to come back)">Present</button>
     <button type="button" id="fsBtn" class="primary">Fullscreen</button>
   </div>
 </header>
 
+<div class="tab-banner" id="tabBanner" role="status" hidden>
+  <span>This board was changed in another tab.</span>
+  <button type="button" id="tabLoad">Load their changes</button>
+  <button type="button" id="tabKeep">Keep what is here</button>
+</div>
+
 <main id="stage">
   <div id="board" aria-label="Board">
+    <button type="button" class="present-exit" id="presentExit" hidden>Exit present mode (Esc)</button>
     <p class="board-empty" id="boardEmpty">Add a widget from the bar below. Drag it by its title, resize it from the corner, and it stays where you put it.</p>
   </div>
   <nav class="dock" id="dock" aria-label="Add a widget">
     <span class="dock-label">Add:</span>
   </nav>
+  <dialog id="keysDialog" aria-labelledby="keysTitle">
+    <div class="rd-head">
+      <h2 id="keysTitle">Keyboard and clicker shortcuts</h2>
+      <button type="button" id="keysClose" aria-label="Close">×</button>
+    </div>
+    <table class="keys-table">
+      <caption class="sr-only">Shortcuts</caption>
+      <thead><tr><th scope="col">Key</th><th scope="col">Does</th></tr></thead>
+      <tbody>
+        <tr><th scope="row"><kbd>Space</kbd></th><td>Start or pause the timer on top</td></tr>
+        <tr><th scope="row"><kbd>N</kbd></th><td>Pick a name with the name picker on top</td></tr>
+        <tr><th scope="row"><kbd>→</kbd> <kbd>Page Down</kbd></th><td>Next screen</td></tr>
+        <tr><th scope="row"><kbd>←</kbd> <kbd>Page Up</kbd></th><td>Previous screen</td></tr>
+        <tr><th scope="row"><kbd>Esc</kbd></th><td>Back out of a widget filling the board, then out of present mode</td></tr>
+        <tr><th scope="row"><kbd>Ctrl</kbd> <kbd>Z</kbd></th><td>Undo the last removal, move, resize, colour or minimize</td></tr>
+        <tr><th scope="row"><kbd>F</kbd></th><td>Fullscreen</td></tr>
+        <tr><th scope="row"><kbd>?</kbd></th><td>This list</td></tr>
+      </tbody>
+    </table>
+    <p class="note">A presentation clicker sends the arrow and Page keys, so it can run the board. Nothing here fires while you are typing in a box.</p>
+  </dialog>
 </main>
+
+<dialog id="shotsDialog" aria-labelledby="shotsTitle">
+  <div class="rd-head">
+    <h2 id="shotsTitle">Screens</h2>
+    <button type="button" id="shotsClose" aria-label="Close">×</button>
+  </div>
+  <ul class="shots" id="shotsList"></ul>
+</dialog>
 
 <dialog id="remoteDialog" aria-labelledby="remoteTitle">
   <div class="rd-head">
@@ -464,9 +690,60 @@
     }
   };
 
+  /* The pie timer's picture: a wedge that shrinks clockwise as time runs out,
+     red in the last fifth. Painted from tokens, so it reads in dark mode. */
+  function pieWedge(f) {
+    f = Math.max(0, Math.min(1, f));
+    if (f <= 0) return '';
+    if (f >= 0.9999) return 'M50 5a45 45 0 1 1 -0.01 0z';
+    var a = f * 2 * Math.PI, x = 50 + 45 * Math.sin(a), y = 50 - 45 * Math.cos(a);
+    return 'M50 50L50 5A45 45 0 ' + (f > 0.5 ? 1 : 0) + ' 1 ' + x.toFixed(2) + ' ' + y.toFixed(2) + 'Z';
+  }
+
   TYPES.timer = {
     title: 'Timer', icon: ['M12 8v5l3 2', 'M9 2h6', 'M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z'],
-    build: function (ctx) {
+    build: function (ctx) { return buildTimer(ctx, false); }
+  };
+  TYPES.pie = {
+    title: 'Pie timer', icon: ['M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'M12 14V6', 'M12 14l5.5-5.5'],
+    build: function (ctx) { return buildTimer(ctx, true); }
+  };
+
+  /* "When it ends" (Path 22 P8), shared by every timer-like widget: flash the
+     board, set the traffic light, tick the next agenda item. Kept on the
+     widget's data as `link`, only once one is on. */
+  function mountLinks(ctx) {
+    var flashCb = el('input', { type: 'checkbox' });
+    var lightSel = el('select', { 'aria-label': 'Set the traffic light when time is up' });
+    [['', 'Leave the light'], ['red', 'Light: red'], ['yellow', 'Light: yellow'], ['green', 'Light: green']].forEach(function (o) {
+      lightSel.appendChild(el('option', { value: o[0], text: o[1] }));
+    });
+    var agendaCb = TYPES.agenda ? el('input', { type: 'checkbox' }) : null;
+    var linkSummary = el('summary');
+    var d = ctx.data;
+    var link = d.link || { flash: false, light: '', agenda: false };
+    flashCb.checked = link.flash; lightSel.value = link.light; if (agendaCb) agendaCb.checked = link.agenda;
+    function readLinks() {
+      var l = { flash: flashCb.checked, light: lightSel.value, agenda: agendaCb ? agendaCb.checked : link.agenda };
+      if (l.flash || l.light || l.agenda) d.link = l; else delete d.link;
+      link = l;
+      var on = [l.flash ? 'flash' : '', l.light ? 'light' : '', l.agenda ? 'agenda' : ''].filter(Boolean);
+      linkSummary.textContent = on.length ? 'When it ends: ' + on.join(', ') : 'When it ends';
+    }
+    [flashCb, lightSel, agendaCb].forEach(function (n) { if (n) n.addEventListener('change', function () { readLinks(); ctx.save(); }); });
+    readLinks();
+    ctx.body.appendChild(el('details', { className: 'w-link' }, [linkSummary, el('div', { className: 'w-link-body' }, [
+      el('label', null, [flashCb, 'Flash the board']),
+      lightSel,
+      agendaCb ? el('label', null, [agendaCb, 'Tick the next agenda item']) : null
+    ])]));
+  }
+
+  /* One timer, two faces: digits (type 'timer') or a shrinking pie with the
+     digits under it (type 'pie'). The saved shape, the links, the phone remote
+     and the shortcuts are the same. */
+  function buildTimer(ctx, pie) {
+    {
       var d = ctx.data;
       var shown = el('span', { className: 'big-text' });
       var status = el('span', { className: 'sr-only', 'aria-live': 'assertive' });
@@ -495,6 +772,11 @@
         var ms = remainingMs();
         shown.textContent = Core.formatClock(ms);
         startBtn.textContent = running() ? 'Pause' : (ms <= 0 ? 'Restart' : 'Start');
+        if (wedge) {
+          var f = c.totalMs > 0 ? ms / c.totalMs : 0;
+          wedge.setAttribute('d', pieWedge(f));
+          wedge.classList.toggle('low', f > 0 && f <= 0.2);
+        }
       }
       function setDuration(sec) {
         Countdown.setTotal(c, sec * 1000); setDone(false); sync(); render();
@@ -504,6 +786,7 @@
         if (announce) {
           status.textContent = 'Time is up.';
           if (d.sound) beep();
+          ctx.fire(d.link);
         }
       }
 
@@ -532,7 +815,17 @@
       [1, 2, 5, 10].forEach(function (m) {
         presets.appendChild(el('button', { type: 'button', text: m + ' min', onclick: function () { setDuration(m * 60); } }));
       });
-      ctx.body.appendChild(el('div', { className: 'big' }, [shown]));
+      var wedge = null, bigBox = el('div', { className: pie ? 'big pie' : 'big' }, [shown]);
+      if (pie) {
+        var svg = document.createElementNS(SVGNS, 'svg');
+        svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('class', 'pie-svg');
+        var face = document.createElementNS(SVGNS, 'circle');
+        face.setAttribute('cx', '50'); face.setAttribute('cy', '50'); face.setAttribute('r', '45'); face.setAttribute('class', 'pie-face');
+        wedge = document.createElementNS(SVGNS, 'path'); wedge.setAttribute('class', 'pie-wedge');
+        svg.appendChild(face); svg.appendChild(wedge);
+        bigBox.insertBefore(svg, shown);
+      }
+      ctx.body.appendChild(bigBox);
       ctx.body.appendChild(status);
       ctx.body.appendChild(presets);
       ctx.body.appendChild(el('div', { className: 'w-foot' }, [
@@ -544,6 +837,8 @@
         el('label', null, [sound, 'Sound'])
       ]));
       ctx.body.appendChild(err);
+
+      mountLinks(ctx);
 
       if (restored.expired) finish(false);   // ran out while the page was closed: no late alarm
       else if (Countdown.isDone(c)) setDone(true);
@@ -559,6 +854,298 @@
           else if (cmd.action === 'add') plus(60);
         },
         snap: function () { return { text: shown.textContent, running: running(), done: ctx.el.classList.contains('timer-done') }; }
+      };
+    }
+  }
+
+  /* A sequence timer: Think 1:00 -> Pair 2:00 -> Share 3:00. The current step
+     runs on a _shared/countdown.js state like the timer's; when it ends the
+     next step starts by itself, and "When it ends" fires after the last. */
+  TYPES.sequence = {
+    title: 'Sequence timer', icon: ['M4 6h4v4H4z', 'M10 12h4v4h-4z', 'M16 18h4v-4', 'M8 8h3', 'M14 14h3'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var stepName = el('span', { className: 'seq-name', 'aria-live': 'polite' });
+      var shown = el('span', { className: 'big-text' });
+      var chips = el('ol', { className: 'seq-chips', 'aria-label': 'Steps' });
+      var startBtn = el('button', { type: 'button', className: 'primary' });
+      var err = el('p', { className: 'err-note', hidden: true });
+      var editId = ctx.id + '-steps';
+      var edit = el('input', { type: 'text', id: editId, className: 'seq-edit' });
+      var restored = Countdown.restore({ totalMs: d.steps[d.i].sec * 1000, endAt: d.endsAt, leftMs: d.remaining * 1000 }, Date.now());
+      var c = restored.c;
+      function running() { return Countdown.isRunning(c); }
+      function sync() { d.endsAt = c.endAt; d.remaining = c.leftMs / 1000; ctx.save(); }
+      function setDone(on) { ctx.el.classList.toggle('timer-done', on); }
+      function render() {
+        var ms = Countdown.left(c, Date.now());
+        shown.textContent = Core.formatClock(ms);
+        stepName.textContent = d.steps[d.i].label;
+        var done = Countdown.isDone(c) && d.i === d.steps.length - 1;
+        startBtn.textContent = running() ? 'Pause' : (done ? 'Restart' : 'Start');
+      }
+      function drawChips() {
+        chips.textContent = '';
+        d.steps.forEach(function (x, i) {
+          var li = el('li', { className: i === d.i ? 'now' : (i < d.i ? 'past' : ''), text: x.label + ' ' + Core.formatClock(x.sec * 1000) });
+          if (i === d.i) li.setAttribute('aria-current', 'step');
+          chips.appendChild(li);
+        });
+        edit.value = Core.formatSequence(d.steps);
+      }
+      function goTo(i, run) {
+        d.i = i; Countdown.setTotal(c, d.steps[i].sec * 1000);
+        if (run) Countdown.start(c, Date.now());
+        setDone(false); sync(); drawChips(); render();
+      }
+      function finish(announce) {
+        sync(); render(); setDone(true);
+        if (announce) ctx.fire(d.link);
+      }
+      startBtn.addEventListener('click', function () {
+        if (!running() && Countdown.isDone(c) && d.i === d.steps.length - 1) { goTo(0, true); return; }
+        Countdown.toggle(c, Date.now());
+        setDone(false); sync(); render();
+      });
+      function skip() { if (d.i < d.steps.length - 1) goTo(d.i + 1, running()); }
+      function applySteps() {
+        var r = Core.parseSequence(edit.value);
+        err.hidden = !r.error;
+        if (r.error) { err.textContent = r.error; return; }
+        d.steps = r.steps; goTo(0, false);
+      }
+      edit.addEventListener('keydown', function (e) { if (e.key === 'Enter') applySteps(); });
+      ctx.body.appendChild(el('div', { className: 'big seq' }, [stepName, shown]));
+      ctx.body.appendChild(chips);
+      ctx.body.appendChild(el('div', { className: 'w-foot' }, [
+        startBtn,
+        el('button', { type: 'button', text: 'Skip', 'aria-label': 'Skip to the next step', onclick: skip }),
+        el('button', { type: 'button', text: 'Reset', onclick: function () { goTo(0, false); } })
+      ]));
+      ctx.body.appendChild(el('details', { className: 'w-link' }, [
+        el('summary', { text: 'Edit steps' }),
+        el('div', { className: 'w-link-body' }, [
+          el('label', { for: editId, className: 'sr-only', text: 'Steps, like Think 1:00, Pair 2:00, Share 3:00' }), edit,
+          el('button', { type: 'button', text: 'Set', onclick: applySteps })
+        ])
+      ]));
+      ctx.body.appendChild(err);
+      mountLinks(ctx);
+      drawChips();
+      if (restored.expired) finish(false);   // ran out while the page was closed: no late alarm
+      else if (Countdown.isDone(c) && d.i === d.steps.length - 1) setDone(true);
+      render();
+      return {
+        tick: function () {
+          if (Countdown.expire(c, Date.now())) {
+            if (d.i < d.steps.length - 1) goTo(d.i + 1, true);
+            else finish(true);
+          } else if (running()) render();
+        },
+        remote: function (cmd) {
+          if (cmd.action === 'toggle') startBtn.click();
+          else if (cmd.action === 'reset') goTo(0, false);
+          else if (cmd.action === 'add') { Countdown.add(c, 60000, Date.now()); sync(); render(); }
+        },
+        snap: function () { return { text: shown.textContent, running: running(), done: ctx.el.classList.contains('timer-done') }; }
+      };
+    }
+  };
+
+  /* Countdown to the bell: the time left in this period, or until the next one
+     starts, from 010's schedule (read, never written). Nothing is saved. */
+  TYPES.bell = {
+    title: 'Bell countdown', icon: ['M6 16V11a6 6 0 0 1 12 0v5l2 2H4z', 'M10 21h4'],
+    build: function (ctx) {
+      var label = el('span', { className: 'bell-label', 'aria-live': 'polite' });
+      var shown = el('span', { className: 'big-text' });
+      var note = el('p', { className: 'note' });
+      var bellList = readBell();
+      function update() {
+        var r = Core.untilBell(bellList, nowMinutes());
+        note.textContent = '';
+        if (r.kind === 'none') {
+          label.textContent = bellList.length ? 'No more bells today' : 'No bell times yet';
+          shown.textContent = '';
+          if (!bellList.length) {
+            note.appendChild(document.createTextNode('Add them in '));
+            note.appendChild(el('a', { href: COMMAND_CENTER, text: 'Command Center' }));
+            note.appendChild(document.createTextNode('.'));
+          }
+        } else {
+          label.textContent = r.label + (r.kind === 'ends' ? ' ends in' : ' starts in');
+          shown.textContent = Core.formatClock(r.secs * 1000);
+        }
+      }
+      function onStorage(e) { if (e.key === BELL_KEY) { bellList = readBell(); update(); } }
+      window.addEventListener('storage', onStorage);
+      ctx.body.appendChild(el('div', { className: 'big bell' }, [label, shown]));
+      ctx.body.appendChild(note);
+      update();
+      return {
+        tick: update,
+        destroy: function () { window.removeEventListener('storage', onStorage); },
+        snap: function () { return { label: label.textContent, text: shown.textContent }; }
+      };
+    }
+  };
+
+  /* A team scoreboard, for the projector. Teams are names the teacher types;
+     the highest score gets a heavier border (and the word, for a screen reader),
+     not colour alone. */
+  TYPES.score = {
+    title: 'Scoreboard', icon: ['M4 20V10', 'M10 20V4', 'M16 20v-8', 'M22 20H2'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var grid = el('div', { className: 'score-grid', role: 'list', 'aria-label': 'Team scores' });
+      var status = el('span', { className: 'sr-only', 'aria-live': 'polite' });
+      var cards = [];                      // one { t, num, card, lead, minus, plus, rm } per team
+      function bump(t, by) {
+        t.score = Math.max(-Core.MAX_SCORE, Math.min(Core.MAX_SCORE, t.score + by));
+        ctx.save(); refresh(); status.textContent = t.name + ' ' + t.score;
+      }
+      /* A score changes in place, so the button just pressed keeps the focus. */
+      function refresh() {
+        var best = d.teams.reduce(function (m, t) { return Math.max(m, t.score); }, -Infinity);
+        var leaders = d.teams.filter(function (t) { return t.score === best; }).length;
+        cards.forEach(function (c) {
+          var lead = c.t.score === best && leaders === 1 && d.teams.length > 1;
+          c.num.textContent = String(c.t.score);
+          c.card.classList.toggle('lead', lead);
+          c.note.hidden = !lead;
+          c.minus.setAttribute('aria-label', 'Take one point from ' + c.t.name);
+          c.plus.setAttribute('aria-label', 'Give one point to ' + c.t.name);
+          c.rm.setAttribute('aria-label', 'Remove ' + c.t.name);
+        });
+      }
+      function render() {
+        grid.textContent = ''; cards = [];
+        d.teams.forEach(function (t, i) {
+          var nameIn = el('input', { type: 'text', id: ctx.id + '-n' + i, className: 'score-name', maxlength: String(Core.MAX_TEAM_NAME), 'aria-label': 'Team name' });
+          nameIn.value = t.name;
+          nameIn.addEventListener('change', function () { t.name = nameIn.value.trim() || 'Team ' + (i + 1); nameIn.value = t.name; ctx.save(); refresh(); });
+          var minus = el('button', { type: 'button', text: '−' });
+          var plus = el('button', { type: 'button', className: 'primary', text: '+' });
+          minus.addEventListener('click', function () { bump(t, -1); });
+          plus.addEventListener('click', function () { bump(t, 1); });
+          var rm = el('button', { type: 'button', text: '×' });
+          rm.addEventListener('click', function () { d.teams.splice(i, 1); ctx.save(); render(); });
+          var num = el('span', { className: 'score-num' });
+          var note = el('span', { className: 'note', text: 'Leading', hidden: true });
+          var card = el('div', { className: 'score-card', role: 'listitem' }, [
+            nameIn, num, note,
+            el('div', { className: 'score-btns' }, [minus, plus]),
+            el('div', { className: 'score-btns edit' }, [rm])
+          ]);
+          grid.appendChild(card);
+          cards.push({ t: t, num: num, card: card, note: note, minus: minus, plus: plus, rm: rm });
+        });
+        addBtn.disabled = d.teams.length >= Core.MAX_TEAMS;
+        grid.hidden = !d.teams.length;
+        empty.hidden = d.teams.length > 0;
+        refresh();
+      }
+      var addBtn = el('button', { type: 'button', text: 'Add team', onclick: function () {
+        if (d.teams.length >= Core.MAX_TEAMS) return;
+        d.teams.push({ name: 'Team ' + (d.teams.length + 1), score: 0 }); ctx.save(); render();
+      } });
+      var empty = el('p', { className: 'note', text: 'No teams yet. Add one.', hidden: true });
+      ctx.body.appendChild(el('div', { className: 'score-wrap' }, [grid, empty]));
+      ctx.body.appendChild(status);
+      ctx.body.appendChild(el('div', { className: 'w-foot score-foot' }, [
+        addBtn,
+        el('button', { type: 'button', text: 'Zero scores', onclick: function () { d.teams.forEach(function (t) { t.score = 0; }); ctx.save(); refresh(); } })
+      ]));
+      render();
+      return { snap: function () { return { teams: d.teams.length }; } };
+    }
+  };
+
+  /* A spinner wheel for any list typed one entry per line. The pick is made
+     when the button is pressed (not saved); the picture then turns to it. Under
+     reduced motion it jumps straight there. */
+  TYPES.wheel = {
+    title: 'Spinner wheel', icon: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 2v10l7 7', 'M12 12L5 19'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var svg = document.createElementNS(SVGNS, 'svg');
+      svg.setAttribute('viewBox', '-105 -105 210 210'); svg.setAttribute('class', 'wheel-svg'); svg.setAttribute('aria-hidden', 'true');
+      var rot = document.createElementNS(SVGNS, 'g'); rot.setAttribute('class', 'wheel-rot');
+      var ptr = document.createElementNS(SVGNS, 'path'); ptr.setAttribute('class', 'wheel-pointer'); ptr.setAttribute('d', 'M-8 -104L8 -104L0 -84Z');
+      svg.appendChild(rot); svg.appendChild(ptr);
+      var result = el('p', { className: 'wheel-result', 'aria-live': 'polite' });
+      var spinBtn = el('button', { type: 'button', className: 'primary', text: 'Spin' });
+      var editId = ctx.id + '-items';
+      var edit = el('textarea', { id: editId, rows: '4', className: 'wheel-text', spellcheck: 'false' });
+      var angle = 0, spinning = false, settleTimer = 0;
+      function reduced() { return !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); }
+      function polar(r, deg) { var a = deg * Math.PI / 180; return [r * Math.sin(a), -r * Math.cos(a)]; }
+      function draw() {
+        rot.textContent = '';
+        var n = d.items.length;
+        if (!n) { return; }
+        var seg = 360 / n, fs = Math.max(5, Math.min(13, 150 / n + 3));
+        d.items.forEach(function (t, i) {
+          var p = document.createElementNS(SVGNS, 'path');
+          if (n === 1) p.setAttribute('d', 'M0 -100A100 100 0 1 1 -0.01 -100Z');
+          else {
+            var a = polar(100, i * seg), b = polar(100, (i + 1) * seg);
+            p.setAttribute('d', 'M0 0L' + a[0].toFixed(2) + ' ' + a[1].toFixed(2) + 'A100 100 0 ' + (seg > 180 ? 1 : 0) + ' 1 ' + b[0].toFixed(2) + ' ' + b[1].toFixed(2) + 'Z');
+          }
+          p.setAttribute('class', 'wheel-seg ' + (i % 2 ? 'b' : 'a'));
+          rot.appendChild(p);
+          var tx = document.createElementNS(SVGNS, 'text');
+          var mid = (i + 0.5) * seg, at = polar(92, mid);
+          tx.setAttribute('class', 'wheel-lab');
+          tx.setAttribute('transform', 'translate(' + at[0].toFixed(2) + ' ' + at[1].toFixed(2) + ') rotate(' + (mid - 90).toFixed(2) + ')');
+          tx.setAttribute('font-size', fs.toFixed(1));
+          tx.textContent = t.length > 16 ? t.slice(0, 15) + '…' : t;
+          rot.appendChild(tx);
+        });
+        edit.value = d.items.join('\n');
+        rot.style.transform = 'rotate(' + angle + 'deg)';
+      }
+      function arrive(index) {
+        spinning = false; spinBtn.disabled = false;
+        result.textContent = d.items[index];
+      }
+      function spin() {
+        if (spinning || d.items.length < 2) return;
+        var r = Core.spinTo(d.items.length, angle, Math.random, 5);
+        result.textContent = '';
+        angle = r.angle;
+        if (reduced()) { rot.style.transform = 'rotate(' + angle + 'deg)'; arrive(r.index); return; }
+        spinning = true; spinBtn.disabled = true;
+        rot.style.transform = 'rotate(' + angle + 'deg)';
+        clearTimeout(settleTimer);
+        settleTimer = setTimeout(function () { arrive(r.index); }, 4100);
+      }
+      spinBtn.addEventListener('click', spin);
+      function apply() {
+        var lines = edit.value.split('\n').map(function (x) { return x.trim().slice(0, Core.MAX_WHEEL_ITEM); }).filter(Boolean).slice(0, Core.MAX_WHEEL);
+        d.items = lines; ctx.save(); result.textContent = ''; angle = 0; spinning = false; clearTimeout(settleTimer); spinBtn.disabled = false;
+        draw(); gate();
+      }
+      function gate() {
+        spinBtn.disabled = spinning || d.items.length < 2;
+        note.textContent = d.items.length < 2 ? 'Add at least two entries to spin.' : '';
+      }
+      var note = el('p', { className: 'note' });
+      ctx.body.appendChild(el('div', { className: 'wheel-stage' }, [el('div', { className: 'wheel-box' }, [svg])]));
+      ctx.body.appendChild(result);
+      ctx.body.appendChild(note);
+      ctx.body.appendChild(el('div', { className: 'w-foot' }, [spinBtn]));
+      ctx.body.appendChild(el('details', { className: 'w-link wheel-edit' }, [
+        el('summary', { text: 'Edit the wheel' }),
+        el('div', { className: 'w-link-body' }, [
+          el('label', { for: editId, className: 'sr-only', text: 'Wheel entries, one per line' }), edit,
+          el('button', { type: 'button', text: 'Set', onclick: apply })
+        ])
+      ]));
+      draw(); gate();
+      return {
+        destroy: function () { clearTimeout(settleTimer); },
+        snap: function () { return { items: d.items.length, result: result.textContent }; }
       };
     }
   };
@@ -718,11 +1305,44 @@
     }
   };
 
+  /* The name picker's "no repeats" list outlives a reload but not the tab
+     (Path 22 P10). It is kept in sessionStorage as positions in the roster plus
+     a fingerprint of the roster it was made for, never as names, so nothing a
+     student is called is written anywhere; a roster that changed since (a name
+     added, removed or renamed) starts the list afresh. sessionStorage is not
+     scanned by check-registry on purpose: it dies with the tab. */
+  var USED_KEY = 'cls-screen:used';
+  function fingerprint(list) {
+    var h = 5381, t = list.join('\n');
+    for (var i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0;
+    return list.length + ':' + h.toString(36);
+  }
+  function readUsedAll() {
+    try { var o = JSON.parse(sessionStorage.getItem(USED_KEY) || '{}'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; } catch (e) { return {}; }
+  }
+  function writeUsedAll(o) {
+    try { if (Object.keys(o).length) sessionStorage.setItem(USED_KEY, JSON.stringify(o)); else sessionStorage.removeItem(USED_KEY); } catch (e) {}
+  }
+  function loadUsed(id, roster, names) {
+    var e = readUsedAll()[id];
+    if (!e || e.roster !== roster || e.fp !== fingerprint(names) || !Array.isArray(e.at)) return [];
+    return e.at.filter(function (i) { return typeof i === 'number' && i >= 0 && i < names.length && i === Math.floor(i); }).map(function (i) { return names[i]; });
+  }
+  function saveUsed(id, roster, names, used) {
+    var all = readUsedAll();
+    var at = used.map(function (n) { return names.indexOf(n); }).filter(function (i) { return i !== -1; });
+    if (at.length) all[id] = { roster: roster, fp: fingerprint(names), at: at }; else delete all[id];
+    writeUsedAll(all);
+  }
+  function forgetUsed(id) { var all = readUsedAll(); delete all[id]; writeUsedAll(all); }
+
   TYPES.names = {
     title: 'Name picker', icon: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M4 21a8 8 0 0 1 16 0'],
     build: function (ctx) {
       var d = ctx.data;
-      var used = [];                     // this session only: picks are never saved
+      var used = [];                     // names picked so far; kept for the browser tab (positions only), never in the board
+      var restoredUsed = false;
+      function keepUsed() { saveUsed(ctx.id, d.roster, names(), used); }
       var shown = el('span', { className: 'big-name', 'aria-live': 'polite' });
       var note = el('p', { className: 'note' });
       var selId = ctx.id + '-roster';
@@ -747,6 +1367,9 @@
         sel.textContent = '';
         list.forEach(function (n) { sel.appendChild(el('option', { value: n, text: n })); });
         if (list.indexOf(d.roster) === -1) { d.roster = list[0] || ''; used = []; }
+        if (!restoredUsed) { restoredUsed = true; used = loadUsed(ctx.id, d.roster, names()); }
+        used = used.filter(function (n) { return names().indexOf(n) !== -1; });
+        keepUsed();
         sel.value = d.roster;
         emptyBox.hidden = list.length > 0;
         shown.parentNode.hidden = !list.length;
@@ -758,8 +1381,8 @@
         note.textContent = !all.length ? '' : noRepeat.checked ? (all.length - used.length) + ' of ' + all.length + ' left' : all.length + ' names';
         note.hidden = !all.length;
       }
-      sel.addEventListener('change', function () { d.roster = sel.value; used = []; shown.textContent = ''; ctx.save(); updateNote(); });
-      noRepeat.addEventListener('change', function () { used = []; updateNote(); });
+      sel.addEventListener('change', function () { d.roster = sel.value; used = []; keepUsed(); shown.textContent = ''; ctx.save(); updateNote(); });
+      noRepeat.addEventListener('change', function () { used = []; keepUsed(); updateNote(); });
       pickBtn.addEventListener('click', function () {
         var all = names();
         if (!all.length) return;
@@ -767,6 +1390,7 @@
         if (!pool.length) { used = []; pool = all; }
         var name = pool[Math.floor(Math.random() * pool.length)];
         if (noRepeat.checked) used.push(name);
+        keepUsed();
         shown.textContent = name;
         updateNote();
       });
@@ -1282,6 +1906,107 @@
     }
   };
 
+  /* ── another site tool in a frame (Path 22 P12) ────────────────────── */
+  /* The teacher picks from a short fixed list (cs-core's FRAME_TOOLS); the widget
+     saves the tool's id, and the frame's address is built from the list's row,
+     never from anything typed or loaded. It is a same-origin page, so it is
+     precached like any tool and works offline, and it keeps its own saved work
+     under its own keys exactly as it does in a tab. Nothing is passed in or read
+     out, apart from one look at where the frame has gone: if it is anywhere but
+     its own page (its "back to the toolkit" link, say) it is sent back. The frame
+     is sandboxed with no top navigation, no popups and no forms. Keys pressed
+     while the frame has focus belong to the tool and do not reach the board. */
+  TYPES.frame = {
+    title: 'Site tool', icon: ['M3 5h18v14H3z', 'M3 9.5h18', 'M6.5 7.2h.01', 'M9.5 7.2h.01'],
+    build: function (ctx) {
+      var d = ctx.data, frameEl = null, token = 0, resets = 0, noted = false;
+      /* A tool on show is left alone when the connection flips (it would lose what is on its screen); a note is tried again. */
+      function onNet() { if (noted) draw(); }
+      function onBlur() { if (frameEl && document.activeElement === frameEl) ctx.raise(); }
+      window.addEventListener('blur', onBlur);
+      window.addEventListener('online', onNet);
+      window.addEventListener('offline', onNet);
+
+      function usedElsewhere(id) {
+        return currentScreen().widgets.some(function (o) { return o.type === 'frame' && o.id !== ctx.id && o.data.tool === id; });
+      }
+      function foot(t) {
+        return el('div', { className: 'w-foot frame-foot' }, [
+          el('button', { type: 'button', text: 'Reload', 'aria-label': 'Reload ' + t.title, onclick: function () { if (frameEl) { resets = 0; frameEl.src = t.file; } } }),
+          el('button', { type: 'button', text: 'Change tool', onclick: function () { drawChooser(); } })
+        ]);
+      }
+      function drawChooser() {
+        token++; frameEl = null; noted = false;
+        ctx.body.textContent = '';
+        var list = el('div', { className: 'frame-choices' });
+        Core.FRAME_TOOLS.forEach(function (t) {
+          var used = usedElsewhere(t.id);
+          list.appendChild(el('button', {
+            type: 'button', className: d.tool === t.id ? 'primary' : '', 'data-tool': t.id, disabled: used,
+            text: t.id + ' ' + t.title + (used ? ' (already on this screen)' : ''),
+            onclick: function () { d.tool = t.id; ctx.save(); draw(); }
+          }));
+        });
+        ctx.body.appendChild(el('div', { className: 'frame-pick' }, [
+          el('p', { className: 'frame-lead', text: 'Show a tool from this site here' }), list,
+          el('p', { className: 'note', text: 'It opens inside this widget and keeps its own work as it does on its own page. It works offline once the site has been visited.' })
+        ]));
+      }
+      function drawNote(t, text) {
+        token++; frameEl = null; noted = true;
+        ctx.body.textContent = '';
+        ctx.body.appendChild(el('div', { className: 'yt-offline' }, [el('p', { text: text })]));
+        ctx.body.appendChild(foot(t));
+      }
+      function show(t) {
+        noted = false;
+        ctx.body.textContent = '';
+        var f = el('iframe', {
+          className: 'site-frame', src: t.file, title: t.title + ', a tool from this site',
+          sandbox: 'allow-scripts allow-same-origin allow-modals allow-downloads',
+          allow: 'fullscreen', referrerpolicy: 'no-referrer'
+        });
+        f.addEventListener('load', function () {
+          var here = false;
+          try { here = f.contentWindow.location.origin === location.origin && decodeURIComponent(f.contentWindow.location.pathname).split('/').pop() === t.file; } catch (e) { here = false; }
+          if (here) return;
+          if (resets++ < 3) f.src = t.file;
+          else drawNote(t, t.title + ' could not be shown here. Open it from the toolkit instead.');
+        });
+        frameEl = f;
+        ctx.body.appendChild(f);
+        ctx.body.appendChild(foot(t));
+      }
+      function draw() {
+        var t = Core.frameTool(d.tool);
+        if (!t) return drawChooser();
+        var mine = ++token;
+        resets = 0;
+        /* Opened from a folder (the offline copy), every file is its own origin: the frame could not keep its work or be checked. */
+        if (location.protocol === 'file:') return drawNote(t, t.title + ' opens inside this widget when Class Screen is used from the website or the installed app. From this copy, open it from the toolkit.');
+        /* Offline, a tool the worker has not cached yet would show the browser's error page. */
+        if (!navigator.onLine && window.caches && caches.match) {
+          caches.match(new URL(t.file, location.href).href).then(function (hit) {
+            if (mine !== token) return;
+            if (hit) show(t); else drawNote(t, t.title + ' is not saved for offline use yet. Open it once while you are online.');
+          }, function () { if (mine === token) show(t); });
+          return;
+        }
+        show(t);
+      }
+      draw();
+      return {
+        destroy: function () {
+          token++; frameEl = null;
+          window.removeEventListener('blur', onBlur);
+          window.removeEventListener('online', onNet);
+          window.removeEventListener('offline', onNet);
+        }
+      };
+    }
+  };
+
   /* ── widget frame: drag, resize, keyboard, stacking ───────────────── */
 
   function place(w) {
@@ -1305,30 +2030,146 @@
     place(w); save();
   }
 
+  /* ── layout comforts (Path 22 P11): colour, minimize ─────────────── */
+  /* Both live on the widget record (`color`, `min`), present only once used, and both are
+     one undo step like a move. The widget keeps running when it is a chip. */
+  function look(w) {
+    var inst = instances[w.id];
+    if (!inst) return;
+    var n = inst.el, t = TYPES[w.type].title;
+    n.classList.toggle('is-min', !!w.min);
+    if (w.color) n.setAttribute('data-color', w.color); else n.removeAttribute('data-color');
+    var m = n.querySelector('.w-min'), h = n.querySelector('.w-hue');
+    m.textContent = w.min ? '+' : '–';
+    m.setAttribute('aria-label', (w.min ? 'Restore ' : 'Minimize ') + t);
+    h.setAttribute('aria-label', 'Colour of ' + t + ': ' + (w.color || 'none') + '. Next colour');
+    h.title = 'Colour: ' + (w.color || 'none');
+  }
+  function nextColor(c) {
+    var i = Core.COLORS.indexOf(c) + 1;
+    return i < Core.COLORS.length ? Core.COLORS[i] : '';
+  }
+  function setProp(w, field, value) {
+    var from = w[field];
+    if (value) w[field] = value; else delete w[field];
+    look(w);
+    var top = undoStack[undoStack.length - 1], now = Date.now();
+    if (top && top.k === 'prop' && top.id === w.id && top.field === field && now - top.t < 1500) top.t = now;
+    else pushUndo({ k: 'prop', screenId: currentScreen().id, id: w.id, field: field, from: from, t: now });
+    saveNow();
+    var t = TYPES[w.type].title;
+    showToast(field === 'min' ? t + (value ? ' minimized.' : ' restored.') : t + ' colour: ' + (value || 'none') + '.', true);
+  }
+
+  /* A timer that runs out can do more than flash itself (Path 22 P8). Each
+     link reaches its target the way the phone remote does: through the
+     topmost widget of that type on this screen, and quietly if there is none. */
+  var flashTimer = 0;
+  function flashBoard() {
+    board.classList.add('flash');
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(function () { board.classList.remove('flash'); }, 4200);
+  }
+  function fireLinks(link) {
+    if (!link) return;
+    if (link.flash) flashBoard();
+    if (link.light) {
+      var tw = topWidget('traffic'), ti = tw && instances[tw.id];
+      if (ti && ti.remote) ti.remote({ cmd: 'light', color: link.light });
+    }
+    if (link.agenda) {
+      var aw = topWidget('agenda'), ai = aw && instances[aw.id];
+      if (ai && ai.tickNext) ai.tickNext();
+    }
+  }
+
+  TYPES.agenda = {
+    title: 'Agenda', icon: ['M9 6h11', 'M9 12h11', 'M9 18h11', 'M4 6l1 1 2-2', 'M4 12l1 1 2-2', 'M4 18l1 1 2-2'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var list = el('ul', { className: 'agenda-list', 'aria-label': 'Agenda items' });
+      var status = el('span', { className: 'sr-only', 'aria-live': 'polite' });
+      var addId = ctx.id + '-add';
+      var add = el('input', { type: 'text', id: addId, placeholder: 'Add an item…', maxlength: String(Core.MAX_AGENDA_ITEM) });
+      var addBtn = el('button', { type: 'button', text: 'Add' });
+      function render() {
+        list.textContent = '';
+        var firstOpen = d.items.findIndex(function (it) { return !it.done; });
+        d.items.forEach(function (it, i) {
+          var id = ctx.id + '-i' + i;
+          var cb = el('input', { type: 'checkbox', id: id });
+          cb.checked = it.done;
+          cb.addEventListener('change', function () { it.done = cb.checked; ctx.save(); render(); });
+          var x = el('button', { type: 'button', className: 'agenda-x', text: '×', 'aria-label': 'Remove ' + it.t });
+          x.addEventListener('click', function () { d.items.splice(i, 1); ctx.save(); render(); });
+          list.appendChild(el('li', { className: (it.done ? 'done' : '') + (i === firstOpen ? ' now' : '') }, [
+            cb, el('label', { for: id, className: 'agenda-text', text: it.t }), x
+          ]));
+        });
+        addBtn.disabled = d.items.length >= Core.MAX_AGENDA;
+        add.disabled = addBtn.disabled;
+      }
+      function addItem() {
+        var t = add.value.trim();
+        if (!t || d.items.length >= Core.MAX_AGENDA) return;
+        d.items.push({ t: t.slice(0, Core.MAX_AGENDA_ITEM), done: false });
+        add.value = ''; ctx.save(); render();
+      }
+      addBtn.addEventListener('click', addItem);
+      add.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addItem(); } });
+      /* A timer's "Tick the next agenda item" calls this: the first item not yet done. */
+      function tickNext() {
+        var it = d.items.find(function (o) { return !o.done; });
+        if (!it) return false;
+        it.done = true; ctx.save(); render();
+        status.textContent = 'Done: ' + it.t;
+        return true;
+      }
+      ctx.body.appendChild(el('div', { className: 'agenda-wrap' }, [el('p', { className: 'agenda-head', text: 'Today we will…' }), list]));
+      ctx.body.appendChild(status);
+      ctx.body.appendChild(el('div', { className: 'w-foot agenda-foot' }, [
+        el('label', { for: addId, className: 'sr-only', text: 'New agenda item' }), add, addBtn,
+        el('button', { type: 'button', text: 'Tick next', onclick: tickNext }),
+        el('button', { type: 'button', text: 'Clear ticks', onclick: function () { d.items.forEach(function (o) { o.done = false; }); ctx.save(); render(); } })
+      ]));
+      render();
+      return { tickNext: tickNext, snap: function () { return { items: d.items.length, done: d.items.filter(function (o) { return o.done; }).length }; } };
+    }
+  };
+
   function mountWidget(w) {
     var type = TYPES[w.type];
     var title = type.title;
     var grip = el('button', { type: 'button', className: 'w-grip', text: title, 'aria-label': 'Move ' + title, 'aria-describedby': 'gripHelp' });
     var close = el('button', { type: 'button', className: 'w-close', text: '×', 'aria-label': 'Remove ' + title });
+    var fill = el('button', { type: 'button', className: 'w-fill', text: '⤢', 'aria-label': 'Fill the board with ' + title, 'aria-pressed': 'false' });
+    var hue = el('button', { type: 'button', className: 'w-hue' }, [el('i', { 'aria-hidden': 'true' })]);
+    var mini = el('button', { type: 'button', className: 'w-min', text: '–' });
     var body = el('div', { className: 'w-body' });
     var resize = el('div', { className: 'w-resize', 'aria-hidden': 'true' });
     /* 'wt-' + type, not 'w-' + type: the frame's own parts are .w-bar,
        .w-body and so on, and P1's text widget collided with one. */
     var node = el('section', { className: 'w wt-' + w.type, 'aria-label': title, 'data-id': w.id, 'data-type': w.type },
-      [el('div', { className: 'w-bar' }, [grip, close]), body, resize]);
+      [el('div', { className: 'w-bar' }, [grip, hue, mini, fill, close]), body, resize]);
 
     instances[w.id] = { el: node };
     board.appendChild(node);
     place(w);
+    look(w);
 
-    var api = type.build({ el: node, body: body, data: w.data, id: w.id, save: save }) || {};
+    var api = type.build({ el: node, body: body, data: w.data, id: w.id, save: save, fire: fireLinks,
+      raise: function () { if (!presenting && !spotId) bringToFront(w); } }) || {};
     instances[w.id].tick = api.tick;
     instances[w.id].destroy = api.destroy;
     instances[w.id].remote = api.remote;
     instances[w.id].snap = api.snap;
+    instances[w.id].tickNext = api.tickNext;   // an agenda widget's hook for a timer's link
 
-    node.addEventListener('pointerdown', function () { bringToFront(w); }, true);
+    node.addEventListener('pointerdown', function () { if (!presenting && !spotId) bringToFront(w); }, true);
     close.addEventListener('click', function () { removeWidget(w.id); });
+    hue.addEventListener('click', function () { if (!presenting && !spotId) setProp(w, 'color', nextColor(w.color)); });
+    mini.addEventListener('click', function () { if (!presenting && !spotId) setProp(w, 'min', !w.min); });
+    fill.addEventListener('click', function () { setSpot(spotId === w.id ? '' : w.id); });
     dragWith(grip, w, node, 'move');
     dragWith(resize, w, node, 'resize');
 
@@ -1337,12 +2178,15 @@
       var dy = { ArrowUp: -1, ArrowDown: 1 }[e.key] || 0;
       if (!dx && !dy) return;
       e.preventDefault();
-      var step = 0.01;
+      if (presenting || spotId) return;
+      var step = state.snap ? Core.SNAP_STEP : 0.01;
       var r = e.shiftKey
         ? { x: w.x, y: w.y, w: w.w + dx * step, h: w.h + dy * step }
         : { x: w.x + dx * step, y: w.y + dy * step, w: w.w, h: w.h };
-      r = Core.clampRect(r);
+      r = state.snap ? Core.snapRect(r, e.shiftKey ? 'resize' : 'move') : Core.clampRect(r);
+      var was = { x: w.x, y: w.y, w: w.w, h: w.h };
       w.x = r.x; w.y = r.y; w.w = r.w; w.h = r.h;
+      noteGeo(w, was, e.shiftKey ? 'resize' : 'move');
       place(w); save();
     });
   }
@@ -1351,11 +2195,13 @@
     handle.addEventListener('pointerdown', function (e) {
       if (e.button !== 0) return;
       e.preventDefault();
+      if (presenting || spotId) return;
       var rect = board.getBoundingClientRect();
       var start = { px: e.clientX, py: e.clientY, x: w.x, y: w.y, w: w.w, h: w.h };
       var moved = false;
       handle.setPointerCapture(e.pointerId);
       node.classList.add('dragging');
+      if (state.snap) board.classList.add('drag-snap');
       function move(ev) {
         var dx = (ev.clientX - start.px) / rect.width;
         var dy = (ev.clientY - start.py) / rect.height;
@@ -1363,7 +2209,7 @@
         var r = mode === 'move'
           ? { x: start.x + dx, y: start.y + dy, w: start.w, h: start.h }
           : { x: start.x, y: start.y, w: Math.min(start.w + dx, 1 - start.x), h: Math.min(start.h + dy, 1 - start.y) };
-        r = Core.clampRect(r);
+        r = state.snap ? Core.snapRect(r, mode) : Core.clampRect(r);
         w.x = r.x; w.y = r.y; w.w = r.w; w.h = r.h;
         place(w);
       }
@@ -1372,13 +2218,107 @@
         handle.removeEventListener('pointerup', up);
         handle.removeEventListener('pointercancel', up);
         node.classList.remove('dragging');
-        if (moved) save();
+        board.classList.remove('drag-snap');
+        if (moved) { noteGeo(w, { x: start.x, y: start.y, w: start.w, h: start.h }, mode); save(); }
       }
       handle.addEventListener('pointermove', move);
       handle.addEventListener('pointerup', up);
       handle.addEventListener('pointercancel', up);
     });
   }
+
+  /* ── present mode and spotlight (Path 22 P6) ──────────────────────── */
+
+  var presenting = false, spotId = '';
+  var presentBtn = document.getElementById('presentBtn');
+  var presentExit = document.getElementById('presentExit');
+
+  function setSpot(id) {
+    if (id && !instances[id]) id = '';
+    spotId = id;
+    Object.keys(instances).forEach(function (k) {
+      var on = k === id, n = instances[k].el;
+      n.classList.toggle('spot', on);
+      var f = n.querySelector('.w-fill');
+      if (f) f.setAttribute('aria-pressed', String(on));
+    });
+    board.classList.toggle('has-spot', !!id);
+    if (id) { var f2 = instances[id].el.querySelector('.w-fill'); if (f2 && !presenting) f2.focus(); }
+  }
+  function setPresent(on) {
+    presenting = on;
+    document.body.classList.toggle('present', on);
+    presentBtn.setAttribute('aria-pressed', String(on));
+    presentExit.hidden = !on;
+    /* focus is left on the page, not the exit button: a clicker's Space would press it */
+    if (on) { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
+    else { setSpot(''); presentBtn.focus(); }
+  }
+  presentBtn.addEventListener('click', function () { setPresent(!presenting); });
+  presentExit.addEventListener('click', function () { setPresent(false); });
+
+  /* A double-click fills the board with the widget under it. Controls and the
+     drawing pad keep their own double-clicks; a text box gives its up only
+     while presenting, where there is no editing to protect. */
+  board.addEventListener('dblclick', function (e) {
+    var node = e.target.closest ? e.target.closest('.w') : null;
+    if (!node) return;
+    var skip = presenting ? 'input, select, button:not(.w-grip), canvas, iframe, a, summary, label'
+                          : 'input, textarea, select, button:not(.w-grip), canvas, iframe, a, summary, label';
+    if (e.target.closest(skip)) return;
+    setSpot(spotId === node.getAttribute('data-id') ? '' : node.getAttribute('data-id'));
+  });
+
+  /* ── keyboard and clicker shortcuts (Path 22 P7) ───────────────────── */
+
+  var keysDialog = document.getElementById('keysDialog');
+  var keysBtn = document.getElementById('keysBtn');
+  keysBtn.addEventListener('click', function () { keysDialog.showModal(); });
+  document.getElementById('keysClose').addEventListener('click', function () { keysDialog.close(); });
+  keysDialog.addEventListener('close', function () { if (!presenting) keysBtn.focus(); });
+
+  /* Stage.isTyping is the site's one answer; the fallback is only for a page where stage.js did not load. */
+  function isTyping(n) {
+    if (window.Stage && Stage.isTyping) return Stage.isTyping(n);
+    return !!n && (/^(INPUT|TEXTAREA|SELECT)$/i.test(n.tagName || '') || !!n.isContentEditable);
+  }
+  function gotoScreen(delta) {
+    var i = state.screens.findIndex(function (o) { return o.id === state.current; }) + delta;
+    if (i < 0 || i >= state.screens.length) { showToast(delta < 0 ? 'This is the first screen.' : 'This is the last screen.', false); return; }
+    state.current = state.screens[i].id; saveNow(); renderBoard();
+    showToast('Screen ' + (i + 1) + ' of ' + state.screens.length + ': ' + state.screens[i].name, false);
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.defaultPrevented) return;                         // a focused title bar already took its arrow
+    var t = e.target;
+    var open = document.querySelector('dialog[open]');
+    if (open && open !== keysDialog) return;                // the phone remote's dialog owns the keys
+    var k = Core.readKey(e, {
+      typing: isTyping(t) || isTyping(document.activeElement),
+      control: !!(t && t.closest && t.closest('button, a, summary, [role="button"]'))
+    });
+    if (!k) return;
+    if (open) { if (k.act === 'help') { e.preventDefault(); keysDialog.close(); } return; }
+    e.preventDefault();
+    if (k.act === 'help') keysDialog.showModal();
+    else if (k.act === 'undo') { if (!presenting && !undoLast()) showToast('Nothing to undo.', false); }
+    else if (k.act === 'next') gotoScreen(1);
+    else if (k.act === 'prev') gotoScreen(-1);
+    else {
+      var type = k.act === 'timer' ? 'timer' : 'names';
+      var w = topWidget(type), inst = w && instances[w.id];
+      if (!inst || !inst.remote) showToast(k.act === 'timer' ? 'Add a timer to run it with Space.' : 'Add a name picker to pick with N.', false);
+      else inst.remote(k.act === 'timer' ? { cmd: 'timer', action: 'toggle' } : { cmd: 'pick' });
+    }
+  });
+
+  /* Esc steps back one level: the spotlight first, then present mode. */
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || e.defaultPrevented) return;
+    if (document.querySelector('dialog[open]')) return;
+    if (spotId) { setSpot(''); e.preventDefault(); }
+    else if (presenting) { setPresent(false); e.preventDefault(); }
+  });
 
   function unmountAll() {
     Object.keys(instances).forEach(function (id) {
@@ -1387,6 +2327,7 @@
       inst.el.remove();
     });
     instances = {};
+    spotId = ''; board.classList.remove('has-spot');
   }
 
   function renderBoard() {
@@ -1396,7 +2337,80 @@
     boardEmpty.hidden = s.widgets.length > 0;
     renderScreenBar();
     renderBackground();
+    syncSwitches();
   }
+
+  /* ── snap and the projector theme (Path 22 P11) ─────────────────────── */
+  var snapToggle = document.getElementById('snapToggle');
+  var projectorToggle = document.getElementById('projectorToggle');
+  function syncSwitches() {
+    snapToggle.checked = !!state.snap;
+    projectorToggle.checked = !!state.projector;
+    document.body.classList.toggle('projector', !!state.projector);
+  }
+  snapToggle.addEventListener('change', function () {
+    if (snapToggle.checked) state.snap = true; else delete state.snap;
+    saveNow();
+  });
+  projectorToggle.addEventListener('change', function () {
+    if (projectorToggle.checked) state.projector = true; else delete state.projector;
+    saveNow(); syncSwitches();
+  });
+
+  /* ── screen thumbnails (Path 22 P11) ────────────────────────────────── */
+  /* A small picture of every screen's layout, drawn from the saved fractions with
+     the same colours and the same backgrounds, and nothing live in it: no timer
+     runs, no picture loads. The button's name is the screen's name and its count. */
+  var shotsDialog = document.getElementById('shotsDialog');
+  var shotsList = document.getElementById('shotsList');
+  var shotsBtn = document.getElementById('shotsBtn');
+  function drawShots() {
+    shotsList.textContent = '';
+    state.screens.forEach(function (sc) {
+      var pic = el('div', { className: 'shot-board', 'aria-hidden': 'true', 'data-bg': sc.bg === 'image' ? 'plain' : sc.bg });
+      sc.widgets.slice().sort(function (a, b) { return a.z - b.z; }).forEach(function (w) {
+        var tile = el('div', { className: 'shot-w' + (w.min ? ' is-min' : ''), text: TYPES[w.type].title });
+        tile.style.left = (w.x * 100) + '%'; tile.style.top = (w.y * 100) + '%';
+        tile.style.width = (w.w * 100) + '%'; tile.style.height = (w.h * 100) + '%';
+        if (w.color) tile.setAttribute('data-color', w.color);
+        pic.appendChild(tile);
+      });
+      var n = sc.widgets.length;
+      var btn = el('button', { type: 'button', className: 'shot-btn', 'data-id': sc.id, 'aria-current': String(sc.id === state.current) },
+        [pic, el('span', { className: 'shot-name', text: sc.name }), el('span', { className: 'shot-meta', text: n + (n === 1 ? ' widget' : ' widgets') })]);
+      btn.addEventListener('click', function () {
+        shotsDialog.close();
+        if (sc.id === state.current) return;
+        state.current = sc.id; saveNow(); renderBoard();
+      });
+      shotsList.appendChild(el('li', null, [btn]));
+    });
+  }
+  shotsBtn.addEventListener('click', function () { drawShots(); shotsDialog.showModal(); });
+  document.getElementById('shotsClose').addEventListener('click', function () { shotsDialog.close(); });
+  shotsDialog.addEventListener('close', function () { if (!presenting) shotsBtn.focus(); });
+
+  /* ── another tab saved (Path 22 P10) ────────────────────────────────── */
+  /* Two tabs on one board used to be last writer wins, silently. A save from
+     another tab now raises a bar here: load what they saved, or keep this tab's
+     board (its next save then replaces theirs, as before). Nothing is reloaded
+     on its own, so a running timer or a drawing in progress is never swept away.
+     The bar waits behind present mode and shows when that ends. */
+  var tabBanner = document.getElementById('tabBanner');
+  window.addEventListener('storage', function (e) {
+    if (e.key !== KEY || e.storageArea !== window.localStorage || e.newValue === null) return;
+    tabBanner.hidden = false;
+  });
+  document.getElementById('tabLoad').addEventListener('click', function () {
+    clearTimeout(saveTimer); saveTimer = 0;            // drop this tab's unsaved edit: they chose theirs
+    state = Core.normalizeState(window.Store ? Store.get(KEY, { version: 1, default: null }) : null);
+    tabBanner.hidden = true;
+    renderBoard(); collectMedia();
+    showToast('Loaded the changes from the other tab.', false);
+  });
+  document.getElementById('tabKeep').addEventListener('click', function () {
+    tabBanner.hidden = true; saveNow();
+  });
 
   /* ── backgrounds ──────────────────────────────────────────────────── */
 
@@ -1454,10 +2468,12 @@
     var i = s.widgets.findIndex(function (o) { return o.id === id; });
     if (i === -1) return;
     var w = s.widgets.splice(i, 1)[0];
+    forgetUsed(id);
     var inst = instances[id];
     if (inst) { if (inst.destroy) try { inst.destroy(); } catch (e) {} inst.el.remove(); delete instances[id]; }
     boardEmpty.hidden = s.widgets.length > 0;
     lastRemoved = { screenId: s.id, widgets: [w] };
+    pushUndo({ k: 'remove', payload: lastRemoved });
     saveNow();
     showToast(TYPES[w.type].title + ' removed.', true);
   }
@@ -1473,19 +2489,60 @@
     toastUndo.hidden = !undoable;
     toast.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toast.hidden = true; lastRemoved = null; collectMedia(); }, 7000);
+    toastTimer = setTimeout(function () {
+      toast.hidden = true; lastRemoved = null;
+      undoStack = undoStack.filter(function (e) { return e.k !== 'remove'; });   // a removal can be undone only while its pictures are still kept
+      collectMedia();
+    }, 7000);
   }
-  toastUndo.addEventListener('click', function () {
-    toast.hidden = true;
-    if (!lastRemoved) return;
-    var s = state.screens.find(function (o) { return o.id === lastRemoved.screenId; });
-    if (s) {
-      lastRemoved.widgets.forEach(function (w) { if (s.widgets.length < Core.MAX_WIDGETS) s.widgets.push(w); });
-      state.current = s.id;
-      saveNow(); renderBoard();
+
+  /* Undo (Path 22 P10): the last twenty things done to the board, newest first.
+     A removal stays undoable for the toast's seven seconds, because the pictures
+     it held are then cleaned up; a move or a resize stays for the visit.
+     Nothing here is saved. A keyboard burst of arrow presses is one move. */
+  var undoStack = [];
+  function pushUndo(e) {
+    if (e.k === 'remove') undoStack = undoStack.filter(function (o) { return o.k !== 'remove'; });   // only the latest removal is kept
+    undoStack.push(e);
+    if (undoStack.length > 20) undoStack.shift();
+  }
+  function noteGeo(w, from, mode) {
+    if (from.x === w.x && from.y === w.y && from.w === w.w && from.h === w.h) return;
+    var top = undoStack[undoStack.length - 1], now = Date.now();
+    if (top && top.k === 'geo' && top.id === w.id && top.mode === mode && now - top.t < 1500) { top.t = now; return; }
+    pushUndo({ k: 'geo', screenId: currentScreen().id, id: w.id, mode: mode, from: from, t: now });
+    showToast(TYPES[w.type].title + (mode === 'move' ? ' moved.' : ' resized.'), true);
+  }
+  function undoLast() {
+    while (undoStack.length) {
+      var e = undoStack.pop();
+      if (e.k === 'remove') {
+        if (lastRemoved !== e.payload) continue;
+        var s = state.screens.find(function (o) { return o.id === e.payload.screenId; });
+        if (!s) continue;
+        e.payload.widgets.forEach(function (w) { if (s.widgets.length < Core.MAX_WIDGETS) s.widgets.push(w); });
+        state.current = s.id; lastRemoved = null;
+        saveNow(); renderBoard();
+        return true;
+      }
+      var sc = state.screens.find(function (o) { return o.id === e.screenId; });
+      var w2 = sc && sc.widgets.find(function (o) { return o.id === e.id; });
+      if (!w2) continue;
+      if (state.current !== sc.id) { state.current = sc.id; renderBoard(); }
+      if (e.k === 'prop') {
+        if (e.from) w2[e.field] = e.from; else delete w2[e.field];
+        look(w2); saveNow();
+        showToast('Undone: ' + TYPES[w2.type].title + (e.field === 'min' ? ' minimize.' : ' colour.'), false);
+        return true;
+      }
+      w2.x = e.from.x; w2.y = e.from.y; w2.w = e.from.w; w2.h = e.from.h;
+      place(w2); saveNow();
+      showToast('Undone: ' + TYPES[w2.type].title + (e.mode === 'move' ? ' move.' : ' resize.'), false);
+      return true;
     }
-    lastRemoved = null;
-  });
+    return false;
+  }
+  toastUndo.addEventListener('click', function () { toast.hidden = true; undoLast(); });
 
   /* ── screens ──────────────────────────────────────────────────────── */
 
@@ -1545,6 +2602,7 @@
     s.widgets = [];
     saveNow(); renderBoard();
     lastRemoved = { screenId: s.id, widgets: removed };
+    pushUndo({ k: 'remove', payload: lastRemoved });
     showToast('Screen cleared.', true);
   });
 
@@ -1690,9 +2748,11 @@
 
   var CMD_TYPE = { timer: 'timer', stopwatch: 'stopwatch', pick: 'names', groups: 'groups', roll: 'dice', light: 'traffic', symbol: 'symbols' };
   var SNAP_TYPES = ['timer', 'stopwatch', 'names', 'groups', 'dice', 'traffic', 'symbols'];
+  /* "The timer" means whichever timer is on top: a digits timer, a pie timer or a sequence. */
+  var FAMILY = { timer: ['timer', 'pie', 'sequence'] };
   function topWidget(type) {
-    var best = null;
-    currentScreen().widgets.forEach(function (w) { if (w.type === type && (!best || w.z > best.z)) best = w; });
+    var best = null, kinds = FAMILY[type] || [type];
+    currentScreen().widgets.forEach(function (w) { if (kinds.indexOf(w.type) !== -1 && (!best || w.z > best.z)) best = w; });
     return best;
   }
   function applyRemote(msg) {

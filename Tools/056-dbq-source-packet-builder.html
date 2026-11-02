@@ -34,6 +34,7 @@
 <script src="../_shared/handoffs.js"></script>
 <script src="../_shared/media-db.js"></script>
 <script src="dbq-source-packet-builder/dbq-image.js"></script>
+<script src="dbq-source-packet-builder/dbq-psa-pull.js"></script>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -71,6 +72,8 @@
   }
   .bank-row:last-child { border-bottom: none; }
   .bank-info { min-width: 0; }
+  .bank-sub { font-size: 1rem; margin: 1rem 0 .3rem; }
+  #psaWrap button { min-height: 1.9rem; }
   .bank-title { display: block; font-weight: 600; }
   .bank-meta { display: block; font-size: .76rem; color: var(--muted, #6b6b6b); }
   .source-block { border: 1px solid var(--line); border-radius: 8px; padding: .9rem 1rem; margin-bottom: .9rem; }
@@ -246,6 +249,12 @@
       <label for="bankFilter">Find a source</label>
       <input type="text" id="bankFilter" placeholder="Search titles and citations">
       <div id="bankWrap"></div>
+      <h3 class="bank-sub">From the Primary Source Analysis library</h3>
+      <p class="hint">Sources saved in Primary Source Analysis (028). Adding one copies it into this packet, picture and
+        all; it stays in that library, and nothing here changes it.</p>
+      <label for="psaFilter">Find a source there</label>
+      <input type="text" id="psaFilter" placeholder="Search titles, tags and citations">
+      <div id="psaWrap"></div>
       <p class="hint" id="bankNote" aria-live="polite" style="margin-bottom:0;"></p>
     </div>
   </div>
@@ -275,7 +284,7 @@
 
   var els = {};
   ['packetTitle', 'packetContext', 'essayPrompt', 'sharedQWrap', 'addSharedQBtn', 'sourcesWrap', 'addSourceBtn', 'printBtn', 'printAllLevelsBtn', 'printArea',
-   'toggleBankBtn', 'bankPanel', 'bankWrap', 'bankFilter', 'bankNote',
+   'toggleBankBtn', 'bankPanel', 'bankWrap', 'bankFilter', 'bankNote', 'psaFilter', 'psaWrap',
    'packetSwitch', 'packetName', 'newPacketBtn', 'duplicatePacketBtn', 'deletePacketBtn', 'loadExampleBtn',
    'levelSelect', 'organizerToggle', 'rubricToggle', 'rubricStyle', 'rubricGrid', 'addCriterionBtn', 'resetRubricBtn',
    'shareBtn', 'exportJsonBtn', 'importJsonBtn', 'importJsonFile', 'shareNote'
@@ -711,6 +720,7 @@
     els.toggleBankBtn.setAttribute('aria-expanded', 'true');
     els.toggleBankBtn.textContent = 'Hide library';
     renderBank();
+    renderPsa();
   }
 
   els.toggleBankBtn.addEventListener('click', function () {
@@ -725,6 +735,92 @@
     if (add) { addBankSourceToPacket(add); renderBank(); return; }
     var del = ev.target.getAttribute('data-bank-del');
     if (del) { removeBankEntry(del); }
+  });
+
+  /* ---------- sources from Primary Source Analysis (028)'s library ----------
+     The reverse of the hand-off to 028. DbqPsaPull (dbq-psa-pull.js) reads
+     028's library key and shapes an entry as a packet source; this is the list
+     and the copy. Read-only on 028's side: the key is never written here. A
+     picture is copied, not shared: 028 keeps its images under the `psa`
+     namespace of the media store and a packet's are under `dbq`, so the bytes
+     are read from one and kept in the other. Built from DOM nodes, not
+     markup, because the text came from another tool's storage. */
+  var PSA_LIBRARY_KEY = 'gvb-primary-source:library';
+  function loadPsaLibrary() {
+    try { return DbqPsaPull.read(localStorage.getItem(PSA_LIBRARY_KEY)); } catch (e) { return []; }
+  }
+  function renderPsa() {
+    var all = loadPsaLibrary();
+    var shown = all.filter(function (e) { return DbqPsaPull.matches(e, els.psaFilter.value); });
+    els.psaWrap.textContent = '';
+    function hint(text) {
+      var p = document.createElement('p'); p.className = 'hint'; p.textContent = text; els.psaWrap.appendChild(p);
+    }
+    if (!all.length) { hint('Nothing saved there yet. In Primary Source Analysis, use \u201cSave Source A to library\u201d and it will be listed here.'); return; }
+    if (!shown.length) { hint('No source there matches that search.'); return; }
+    shown.forEach(function (e) {
+      var row = document.createElement('div'); row.className = 'bank-row';
+      var info = document.createElement('div'); info.className = 'bank-info';
+      var t = document.createElement('span'); t.className = 'bank-title'; t.textContent = DbqPsaPull.label(e);
+      var m = document.createElement('span'); m.className = 'bank-meta';
+      m.textContent = [e.image ? 'Image' : 'Text', DbqPsaPull.citationOf(e), e.tags.join(', ')].filter(Boolean).join(' \u00b7 ');
+      info.appendChild(t); info.appendChild(m);
+      var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'secondary small';
+      btn.setAttribute('data-psa-add', e.id); btn.textContent = 'Add to packet';
+      btn.setAttribute('aria-label', 'Add ' + DbqPsaPull.label(e) + ' to this packet');
+      row.appendChild(info); row.appendChild(btn);
+      els.psaWrap.appendChild(row);
+    });
+  }
+  /** The picture 028 holds for an entry, as a value for a packet source. */
+  function copyPsaImage(ref) {
+    if (DbqImage.isInline(ref)) return Promise.resolve(ref);
+    return MediaDB.store({ ns: 'psa' }).getBlob(ref.slice(4)).then(function (blob) {
+      if (!blob) return null;
+      return DbqImage.fromFile(blob);
+    }, function () { return null; });
+  }
+  function addPsaSourceToPacket(id) {
+    var entry = loadPsaLibrary().filter(function (e) { return e.id === id; })[0];
+    if (!entry) return;
+    var copy = repairSource(DbqPsaPull.toSource(entry, uid(), uid()), true);
+    var label = DbqPsaPull.label(entry);
+    function place() {
+      var onlyBlank = state.sources.length === 1 && !state.sources[0].title.trim() &&
+        !state.sources[0].text.trim() && !state.sources[0].image && !state.sources[0].citation.trim();
+      if (onlyBlank) state.sources = [copy]; else state.sources.push(copy);
+      save();
+      renderSources();
+      renderBank();
+    }
+    if (!entry.image) {
+      place();
+      setBankNote('Added \u201c' + label + '\u201d from Primary Source Analysis to this packet as Source ' + LETTERS[(state.sources.length - 1) % 26] + '.');
+      return;
+    }
+    copyPsaImage(entry.image).then(function (value) {
+      if (!value) {
+        copy.type = 'text';
+        place();
+        setBankNote('Added \u201c' + label + '\u201d, but its picture is not on this device (it was saved on another computer or has been cleared), so it came as an empty text source. Upload the picture there again, or here.', true);
+        return;
+      }
+      copy.image = value;
+      place();
+      var probe = new Image();
+      probe.onload = function () {
+        if (copy.image !== value) return;
+        copy.imgW = probe.naturalWidth; copy.imgH = probe.naturalHeight;
+        save(); renderSources();
+      };
+      probe.src = DbqImage.url(value);
+      setBankNote('Added \u201c' + label + '\u201d and its picture from Primary Source Analysis to this packet as Source ' + LETTERS[(state.sources.length - 1) % 26] + '.');
+    });
+  }
+  els.psaFilter.addEventListener('input', renderPsa);
+  els.psaWrap.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-psa-add]');
+    if (b) addPsaSourceToPacket(b.getAttribute('data-psa-add'));
   });
 
   /* ---------- image crop/scale (non-destructive: crop+widthPct sit

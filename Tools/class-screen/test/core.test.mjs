@@ -91,7 +91,7 @@ for (const t of C.TYPES) {
   if (firstOverlap === -1 && all.some((q) => hit(r, q))) firstOverlap = all.length;
   all.push(r);
 }
-ok(firstOverlap === -1 || firstOverlap >= 9, `one of each of the fourteen: at least nine place before any overlap (first overlap at ${firstOverlap})`);
+ok(firstOverlap === -1 || firstOverlap >= 9, `one of each of the twenty-one: at least nine place before any overlap (first overlap at ${firstOverlap})`);
 const full = Array.from({ length: 20 }, () => C.placeNew('youtube', []));
 ok(full.every((r) => r.x >= 0 && r.y >= 0 && r.x + r.w <= 1 && r.y + r.h <= 1), 'placement on a crowded board stays on the board');
 
@@ -181,7 +181,7 @@ eq(C.mediaIds({ screens: [
   { bgImage: 'bg1', widgets: [{ type: 'image', data: { mediaId: 'img1' } }, { type: 'text', data: {} }] },
   { bgImage: '', widgets: [{ type: 'image', data: { mediaId: 'img1' } }, { type: 'image', data: { mediaId: '' } }] }
 ] }), ['bg1', 'img1'], 'media ids: backgrounds and images, each once');
-eq(C.TYPES.length, 14, 'fourteen widget types');
+eq(C.TYPES.length, 21, 'twenty-one widget types');
 C.TYPES.forEach((t) => ok(C.DEFAULT_SIZE[t], `a default size for ${t}`));
 
 // ── P3: periods, starters, files ─────────────────────────────────────
@@ -257,11 +257,202 @@ eq(C.readCommand({ cmd: 'timer', action: 'explode' }), null, 'unknown timer acti
 eq(C.readCommand({ cmd: 'screen', id: 's_abc-1' }), { cmd: 'screen', id: 's_abc-1' }, 'screen switch');
 eq(C.readCommand({ cmd: 'screen', id: '<img src=x>' }), null, 'a bad screen id refused');
 eq(C.readCommand({ cmd: 'light', color: 'purple' }), null, 'unknown light refused');
+
+// ── a timer's links (Path 22 P8) ─────────────────────────────────────
+const tl = (link) => C.normalizeWidget({ type: 'timer', data: { duration: 60, link } }).data;
+eq(tl(undefined).link, undefined, 'a timer with no link has no link field (older saves are unchanged)');
+eq(Object.keys(tl(undefined)).sort(), ['duration', 'endsAt', 'remaining', 'sound'], 'and keeps its four old fields');
+eq(tl({ flash: false, light: '', agenda: false }).link, undefined, 'a link with everything off is dropped');
+eq(tl({ flash: true }).link, { flash: true, light: '', agenda: false }, 'flash alone');
+eq(tl({ light: 'red' }).link, { flash: false, light: 'red', agenda: false }, 'a light alone');
+eq(tl({ agenda: true }).link, { flash: false, light: '', agenda: true }, 'an agenda tick alone is kept, with no agenda widget needed');
+eq(tl({ flash: true, light: 'purple' }).link, { flash: true, light: '', agenda: false }, 'an unknown light colour is dropped');
+eq(tl({ flash: 'yes', light: 5, agenda: 1 }).link, undefined, 'non-boolean flags are not truthy');
+eq(tl('flash').link, undefined, 'a string is not a link');
+eq(tl({ flash: true, extra: '<img>' }).link, { flash: true, light: '', agenda: false }, 'unknown link fields are dropped');
+eq(C.defaultData('timer'), { duration: 300, endsAt: 0, remaining: 300, sound: true }, 'a new timer has no link');
+eq(C.normalizeWidget({ type: 'text', data: { text: 'x', link: { flash: true } } }).data.link, undefined, 'only a timer carries a link');
+
+// ── keyboard and clicker shortcuts ───────────────────────────────────
+eq(C.readKey({ key: ' ' }, {}), { act: 'timer' }, 'Space runs the timer');
+eq(C.readKey({ key: 'n' }, {}), { act: 'pick' }, 'n picks a name');
+eq(C.readKey({ key: 'N' }, {}), { act: 'pick' }, 'N picks a name');
+eq(C.readKey({ key: 'ArrowRight' }, {}), { act: 'next' }, 'Right is the next screen');
+eq(C.readKey({ key: 'PageDown' }, {}), { act: 'next' }, 'a clicker\'s PageDown is the next screen');
+eq(C.readKey({ key: 'ArrowLeft' }, {}), { act: 'prev' }, 'Left is the previous screen');
+eq(C.readKey({ key: 'PageUp' }, {}), { act: 'prev' }, 'a clicker\'s PageUp is the previous screen');
+eq(C.readKey({ key: '?' }, {}), { act: 'help' }, '? opens the list');
+for (const k of [' ', 'n', 'N', 'ArrowRight', 'ArrowLeft', 'PageDown', 'PageUp', '?']) {
+  eq(C.readKey({ key: k }, { typing: true }), null, `${JSON.stringify(k)} types into a field and is not a shortcut`);
+}
+eq(C.readKey({ key: ' ' }, { control: true }), null, 'Space on a focused button presses the button');
+eq(C.readKey({ key: 'n' }, { control: true }), { act: 'pick' }, 'n works with a button focused');
+eq(C.readKey({ key: 'n', ctrlKey: true }, {}), null, 'Ctrl+N stays the browser\'s');
+eq(C.readKey({ key: 'ArrowRight', altKey: true }, {}), null, 'Alt+Right stays the browser\'s');
+eq(C.readKey({ key: 'n', metaKey: true }, {}), null, 'Cmd+N stays the browser\'s');
+eq(C.readKey({ key: 'z', ctrlKey: true }, {}), { act: 'undo' }, 'Ctrl+Z is undo (Path 22 P10)');
+eq(C.readKey({ key: 'Z', metaKey: true }, {}), { act: 'undo' }, 'Cmd+Z is undo');
+eq(C.readKey({ key: 'z', ctrlKey: true, shiftKey: true }, {}), null, 'Ctrl+Shift+Z (redo) is not ours');
+eq(C.readKey({ key: 'z', ctrlKey: true, repeat: true }, {}), null, 'a held Ctrl+Z does not run away');
+eq(C.readKey({ key: 'z', ctrlKey: true }, { typing: true }), null, 'typing in a box keeps its own undo');
+eq(C.readKey({ key: 'z', ctrlKey: true, altKey: true }, {}), null, 'Ctrl+Alt+Z is not ours');
+eq(C.readKey({ key: 'z' }, {}), null, 'a bare z does nothing');
+eq(C.readKey({ key: ' ', repeat: true }, {}), null, 'a held Space does not flip the timer');
+eq(C.readKey({ key: 'n', repeat: true }, {}), null, 'a held n does not pick again');
+eq(C.readKey({ key: 'ArrowRight', shiftKey: true }, {}), null, 'Shift+Right is a resize, not a screen');
+eq(C.readKey({ key: 'q' }, {}), null, 'other keys are left alone');
+eq(C.readKey(null, {}), null, 'no event');
+eq(C.readKey({ key: 5 }, {}), null, 'a malformed event');
 eq(C.readCommand({ cmd: 'light', color: 'red', extra: 1 }), { cmd: 'light', color: 'red' }, 'extra fields dropped');
 eq(C.readCommand({ cmd: 'symbol', mode: 'ask3' }), { cmd: 'symbol', mode: 'ask3' }, 'symbol');
 eq(C.readCommand({ cmd: 'stopwatch', action: 'add' }), null, 'stopwatch has no add');
 for (const c of ['pick', 'groups', 'roll', 'hello']) eq(C.readCommand({ cmd: c }), { cmd: c }, c);
 for (const bad of [null, 'pick', [], { cmd: 5 }, { cmd: 'eval' }, { cmd: '__proto__' }]) eq(C.readCommand(bad), null, 'refused: ' + JSON.stringify(bad));
+
+// ── agenda (Path 22 P9) ──────────────────────────────────────────────
+{
+  const ag = (items) => C.normalizeWidget({ type: 'agenda', x: 0, y: 0, w: 0.3, h: 0.4, data: { items } }).data.items;
+  eq(C.defaultData('agenda'), { items: [] }, 'a new agenda is empty');
+  eq(ag([{ t: ' Warm-up ', done: true }, { t: '', done: false }, { t: 'Notes' }, 'junk', null]), [{ t: 'Warm-up', done: true }, { t: 'Notes', done: false }], 'agenda items are trimmed, blanks and junk dropped');
+  eq(ag(Array.from({ length: 30 }, (_, i) => ({ t: 'Item ' + i }))).length, C.MAX_AGENDA, 'an agenda holds at most MAX_AGENDA lines');
+  eq(ag([{ t: 'x'.repeat(500) }])[0].t.length, C.MAX_AGENDA_ITEM, 'a long line is cut');
+  eq(ag('nope'), [], 'a non-list reads as empty');
+}
+
+// ── pie timer (Path 22 P9) ───────────────────────────────────────────
+{
+  const pw = (data) => C.normalizeWidget({ type: 'pie', x: 0, y: 0, w: 0.26, h: 0.46, data }).data;
+  eq(C.defaultData('pie'), C.defaultData('timer'), 'a new pie timer starts as a 5:00 timer');
+  eq(pw({ duration: 90, remaining: 30, endsAt: 0, sound: false, link: { flash: true } }), { duration: 90, endsAt: 0, remaining: 30, sound: false, link: { flash: true, light: '', agenda: false } }, 'a pie timer keeps the timer shape, link included');
+  eq(pw({ duration: -5 }).duration, 1, 'its duration is clamped like a timer\'s');
+}
+
+// ── sequence timer (Path 22 P9) ──────────────────────────────────────
+{
+  eq(C.parseSequence('Think 1:00, Pair 2:00, Share 3:00'), { steps: [{ label: 'Think', sec: 60 }, { label: 'Pair', sec: 120 }, { label: 'Share', sec: 180 }], error: '' }, 'the classic think/pair/share parses');
+  eq(C.parseSequence('Quick write 90s\nTalk it over 2 -> Report back 1:30').steps, [{ label: 'Quick write', sec: 90 }, { label: 'Talk it over', sec: 120 }, { label: 'Report back', sec: 90 }], 'names may hold spaces; commas, new lines and arrows all split');
+  ok(C.parseSequence('Think').error.includes('Step 1'), 'a part with no time is refused, naming the step');
+  ok(C.parseSequence('Think 1:00, Pair soon').error.includes('Step 2'), 'a bad time is refused, naming the step');
+  ok(C.parseSequence('').steps.length === 0 && C.parseSequence('').error !== '', 'an empty box is refused');
+  ok(C.parseSequence(Array.from({ length: 9 }, (_, i) => 'S' + i + ' 1:00').join(', ')).error.includes('at most'), 'nine steps is too many');
+  eq(C.formatSequence([{ label: 'Think', sec: 60 }, { label: 'Pair', sec: 125 }]), 'Think 1:00, Pair 2:05', 'steps print back in the form they are typed');
+  const sq = (data) => C.normalizeWidget({ type: 'sequence', x: 0, y: 0, w: 0.34, h: 0.42, data }).data;
+  eq(sq({}).steps.map((x) => x.label), ['Think', 'Pair', 'Share'], 'a new sequence is think / pair / share');
+  eq(sq({ steps: [{ label: 'A', sec: 30 }, { label: '', sec: 5 }, { label: 'B', sec: 0 }, 7], i: 9 }), { steps: [{ label: 'A', sec: 30 }], i: 0, endsAt: 0, remaining: 30 }, 'bad steps are dropped and the position is clamped');
+  eq(sq({ steps: [{ label: 'A', sec: 30 }, { label: 'B', sec: 40 }], i: 1, remaining: 12, link: { flash: true } }).i, 1, 'a position inside the list is kept');
+  ok('link' in sq({ link: { flash: true } }) && !('link' in sq({})), 'a sequence has a link only once one is on');
+}
+
+// ── countdown to the bell (Path 22 P9) ───────────────────────────────
+{
+  const bell = C.readPeriods({ periods: [
+    { id: 'p1', label: 'Period 1', start: '09:30', end: '10:20' },
+    { id: 'p2', label: 'Period 2', start: '10:25', end: '11:15' }] });
+  eq(C.untilBell(bell, 10 * 60), { kind: 'ends', label: 'Period 1', secs: 20 * 60 }, 'inside a period: time until it ends');
+  eq(C.untilBell(bell, 10 * 60 + 20.5), { kind: 'starts', label: 'Period 2', secs: 270 }, 'between periods: time until the next starts');
+  eq(C.untilBell(bell, 9 * 60), { kind: 'starts', label: 'Period 1', secs: 30 * 60 }, 'before the first: time until it starts');
+  eq(C.untilBell(bell, 11 * 60 + 15), { kind: 'none', label: '', secs: 0 }, 'at the last end: no more bells (end is outside the period)');
+  eq(C.untilBell(bell, 9 * 60 + 30), { kind: 'ends', label: 'Period 1', secs: 50 * 60 }, 'at a start: that period is on');
+  eq(C.untilBell(bell, 10 * 60 + 19 + 59.9 / 60).secs, 1, 'seconds round up, so it never reads 0:00 with time left');
+  eq(C.untilBell([], 600), { kind: 'none', label: '', secs: 0 }, 'no schedule: none');
+  eq(C.untilBell(null, 600).kind, 'none', 'a missing list is none, not a crash');
+  eq(C.defaultData('bell'), {}, 'the bell widget saves nothing');
+}
+
+// ── team scoreboard (Path 22 P9) ─────────────────────────────────────
+{
+  const sc = (data) => C.normalizeWidget({ type: 'score', x: 0, y: 0, w: 0.4, h: 0.4, data }).data.teams;
+  eq(sc({}).map((t) => t.name), ['Team 1', 'Team 2', 'Team 3', 'Team 4'], 'a new scoreboard has four teams at zero');
+  eq(sc({ teams: [{ name: ' Table A ', score: 3.6 }, { name: '', score: -2 }, { score: 'x' }, 'junk'] }), [{ name: 'Table A', score: 4 }, { name: 'Team 2', score: -2 }, { name: 'Team 3', score: 0 }], 'names are trimmed, blanks named, scores whole numbers, junk dropped');
+  eq(sc({ teams: [{ name: 'A', score: 99999 }, { name: 'B', score: -99999 }] }).map((t) => t.score), [C.MAX_SCORE, -C.MAX_SCORE], 'scores are clamped');
+  eq(sc({ teams: Array.from({ length: 20 }, (_, i) => ({ name: 'T' + i })) }).length, C.MAX_TEAMS, 'at most eight teams');
+  eq(sc({ teams: [] }), [], 'no teams is a state a teacher can leave it in');
+  eq(sc({ teams: 'x' }).length, 4, 'a non-list falls back to the starting four');
+}
+
+// ── spinner wheel (Path 22 P9) ───────────────────────────────────────
+{
+  const wh = (data) => C.normalizeWidget({ type: 'wheel', x: 0, y: 0, w: 0.34, h: 0.5, data }).data.items;
+  eq(wh({}).length, 4, 'a new wheel has four choices');
+  eq(wh({ items: [' A ', '', 'B', 5, null] }), ['A', 'B'], 'entries are trimmed and blanks dropped');
+  eq(wh({ items: Array.from({ length: 40 }, (_, i) => 'x' + i) }).length, C.MAX_WHEEL, 'at most 24 segments');
+  eq(wh({ items: [] }), [], 'an empty list is allowed (the wheel then says so)');
+  eq(wh({ items: 'nope' }).length, 4, 'a non-list falls back to the starting four');
+  // spinTo: always forward, always inside the chosen segment, for every n and many draws
+  let bad = 0, back = 0, edge = 0, seed = 12345;
+  const rng = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x80000000; };
+  for (let n = 1; n <= C.MAX_WHEEL; n++) {
+    let cur = 0;
+    for (let k = 0; k < 200; k++) {
+      const r = C.spinTo(n, cur, rng, 5);
+      if (C.wheelAt(n, r.angle) !== r.index) bad++;
+      if (r.angle < cur + 5 * 360) back++;
+      const seg = 360 / n, frac = ((((-r.angle) % 360) + 360) % 360) / seg - r.index;
+      if (frac < 0.09 || frac > 0.91) edge++;
+      cur = r.angle;
+    }
+  }
+  eq([bad, back, edge], [0, 0, 0], 'across 24 wheel sizes x 200 spins: the stop is always in the chosen segment, off its edges, and at least five turns on');
+  const pick = new Set();
+  for (let k = 0; k < 400; k++) pick.add(C.spinTo(6, 0, rng).index);
+  eq(pick.size, 6, 'every one of six segments gets picked in 400 spins');
+  eq(C.spinTo(1, 0, () => 0.5).index, 0, 'a one-segment wheel picks it');
+  eq(C.spinTo(4, 0, () => 0.9999).index, 3, 'a draw just under one picks the last segment, not past it');
+}
+
+// ── P11: snap, minimize, colour, the page-wide switches ──────────────
+{
+  const st = C.SNAP_STEP;
+  const onGrid = (v) => Math.abs(v / st - Math.round(v / st)) < 1e-6;
+  const mv = C.snapRect({ x: 0.113, y: 0.287, w: 0.3, h: 0.2 }, 'move');
+  ok(onGrid(mv.x) && onGrid(mv.y) && mv.w === 0.3 && mv.h === 0.2, 'a snapped move puts the top-left on the grid and keeps the size');
+  const rz = C.snapRect({ x: 0.1, y: 0.1, w: 0.313, h: 0.207 }, 'resize');
+  ok(onGrid(rz.x + rz.w) && onGrid(rz.y + rz.h) && rz.x === 0.1 && rz.y === 0.1, 'a snapped resize puts the far corner on the grid and leaves the near one');
+  const tiny = C.snapRect({ x: 0.5, y: 0.5, w: 0.081, h: 0.081 }, 'resize');
+  ok(tiny.w >= C.MIN_W - 1e-9 && tiny.h >= C.MIN_H - 1e-9, 'a snapped resize never goes under the minimum size');
+  const edge = C.snapRect({ x: 0.99, y: 0.99, w: 0.3, h: 0.3 }, 'move');
+  ok(edge.x + edge.w <= 1 + 1e-9 && edge.y + edge.h <= 1 + 1e-9, 'a snapped move stays on the board');
+  eq(C.snapRect({ x: NaN, y: 'a' }, 'move'), { x: 0, y: 0, w: 0.25, h: 0.25 }, 'garbage snaps to the default rect');
+  eq(C.snapRect({ x: 0.1, y: 0.1, w: 0.3, h: 0.3 }, 'move', 0.1).x, 0.1, 'a step can be passed');
+
+  const bare = C.normalizeWidget({ id: 'p', type: 'text', x: 0.1, y: 0.1, w: 0.3, h: 0.3, z: 1 });
+  ok(!('min' in bare) && !('color' in bare), 'a widget that never used the comforts has neither field');
+  const dressed = C.normalizeWidget({ id: 'q', type: 'text', x: 0.1, y: 0.1, w: 0.3, h: 0.3, z: 1, min: true, color: 'warm' });
+  ok(dressed.min === true && dressed.color === 'warm', 'minimized and colour are kept');
+  const odd = C.normalizeWidget({ id: 'r', type: 'text', min: 'yes', color: 'url(x)' });
+  ok(!('min' in odd) && !('color' in odd), 'a bad flag or colour is dropped, not kept as a string');
+  C.COLORS.forEach((c) => ok(C.normalizeWidget({ type: 'text', color: c }).color === c, `colour ${c} is accepted`));
+
+  // An old board (written before P11) opens exactly as before.
+  const oldBoard = { current: 's1', follow: false, screens: [{ id: 's1', name: 'Old', bg: 'dots', bgImage: '', period: '', widgets: [
+    { id: 'a', type: 'timer', x: 0.1, y: 0.1, w: 0.26, h: 0.34, z: 1, data: { duration: 300, endsAt: 0, remaining: 300, sound: true } }] }] };
+  eq(C.normalizeState(JSON.parse(JSON.stringify(oldBoard))), oldBoard, 'a board saved before P11 opens unchanged, with no new field added');
+  const on = C.normalizeState({ screens: [], snap: true, projector: true });
+  ok(on.snap === true && on.projector === true, 'snap and the projector theme are kept when on');
+  const off = C.normalizeState({ screens: [], snap: 'true', projector: 1 });
+  ok(!('snap' in off) && !('projector' in off), 'a non-boolean switch is dropped');
+  const rt = C.readImport(C.exportScreen(C.normalizeState({ screens: [{ id: 's', name: 'X', widgets: [{ id: 'a', type: 'text', min: true, color: 'blue' }] }] }).screens[0], {}));
+  ok(rt.screen.widgets[0].min === true && rt.screen.widgets[0].color === 'blue', 'minimized and colour survive an export and import');
+}
+
+// ── P12: another site tool in a frame ────────────────────────────────
+{
+  eq(C.FRAME_TOOLS.map((t) => t.id), ['024', '080'], 'two tools can be framed');
+  C.FRAME_TOOLS.forEach((t) => ok(/^\d{3}-[\w-]+\.html$/.test(t.file) && !/[/:\\]/.test(t.file), `${t.id}'s file is a bare file name in Tools/ (${t.file})`));
+  eq(C.frameTool('024').file, '024-number-talks-board.html', 'a known id gives its file');
+  eq(C.frameTool('https://evil.example/'), null, 'a URL is not an id');
+  eq(C.frameTool('001'), null, 'a tool that is not on the list gives null');
+  eq(C.frameTool('__proto__'), null, 'and so does a name from Object.prototype');
+  eq(C.defaultData('frame'), { tool: '' }, 'a new frame has no tool chosen');
+  const bad = ['https://evil.example', '//evil.example', 'javascript:alert(1)', '../index.html', '001', 5, null, {}, ['024']];
+  bad.forEach((v) => eq(C.normalizeWidget({ type: 'frame', data: { tool: v } }).data, { tool: '' }, `a saved tool of ${JSON.stringify(v)} becomes "choose one"`));
+  eq(C.normalizeWidget({ type: 'frame', data: { tool: '080', src: 'https://evil.example', url: 'x' } }).data, { tool: '080' }, 'a good id is kept and nothing else is');
+  const two = C.normalizeState({ screens: [{ id: 's', widgets: [
+    { id: 'a', type: 'frame', data: { tool: '024' } }, { id: 'b', type: 'frame', data: { tool: '024' } }, { id: 'c', type: 'frame', data: { tool: '080' } }] }] });
+  eq(two.screens[0].widgets.map((w) => w.data.tool), ['024', '', '080'], 'two frames of one tool on a screen: the second must choose again');
+  const dup = C.readImport(C.exportScreen(two.screens[0], {}));
+  eq(dup.screen.widgets.map((w) => w.data.tool), ['024', '', '080'], 'and an imported file is held to the same list');
+}
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

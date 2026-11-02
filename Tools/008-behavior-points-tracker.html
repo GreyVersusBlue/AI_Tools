@@ -31,6 +31,7 @@
 <script src="../_shared/tool-registry.js"></script>
 <script src="../_shared/restore-kit.js"></script>
 <script src="behavior-points-tracker/teams.js"></script>
+<script src="behavior-points-tracker/term.js"></script>
 <script type="module">
   /* The shared per-student record Class Roster Hub keeps beside np_rosters:
      preferred name and pronunciation to show, and the stable id that lets this
@@ -277,6 +278,9 @@
   .history-entry summary { cursor: pointer; padding: .5rem .7rem; font-size: .83rem; background: var(--card-2); list-style: none; }
   .history-entry summary::-webkit-details-marker { display: none; }
   .history-entry summary b { color: var(--accent); }
+  .term-field { display: flex; align-items: center; gap: .35rem; font-size: .85rem; color: var(--muted); margin-bottom: .6rem; }
+  .term-field input { width: auto; margin: 0; }
+  #termWrap { overflow-x: auto; }
   .history-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
   .history-table th, .history-table td { border-top: 1px solid var(--line); padding: .3rem .6rem; text-align: left; }
   .history-table th { color: var(--muted); font-weight: 600; }
@@ -409,6 +413,24 @@
         <div id="cumulativeWrap"></div>
       </div>
 
+      <div class="card" id="termCard">
+        <div class="card-title"><span>Term &amp; year view</span></div>
+        <div class="hint">Add up archived days over a stretch of the year, for this section or every section. Each section keeps its last 90 archived days. Team points are one running total with no day-by-day record, so they are not in this view.</div>
+        <div class="roster-load-row" style="flex-wrap:wrap;">
+          <select id="termScope" aria-label="Which sections to add up"><option value="this">This section</option><option value="all">Every section</option></select>
+          <label class="term-field">From <input type="date" id="termFrom"></label>
+          <label class="term-field">To <input type="date" id="termTo"></label>
+          <select id="termBy" aria-label="Group the days by"><option value="week">By week</option><option value="month">By month</option></select>
+        </div>
+        <div class="btn-row">
+          <button class="secondary" id="termThisYear" type="button">This school year</button>
+          <button class="secondary" id="termLast30" type="button">Last 30 days</button>
+          <button class="secondary" id="termAll" type="button">All recorded days</button>
+          <button class="secondary" id="termCsvBtn" type="button">Download CSV</button>
+        </div>
+        <div id="termWrap" aria-live="polite"></div>
+      </div>
+
       <div class="card">
         <div class="card-title"><span>Restore from a backup</span></div>
         <div id="toolRestore"></div>
@@ -517,7 +539,8 @@
    'summaryStudent', 'printSummaryBtn', 'summaryArea', 'summaryTitle', 'summarySub', 'summaryBody',
    'teamsCard', 'addTeamBtn', 'teamsEditor', 'teamsNote', 'teamSeed', 'dealTeamsBtn', 'teamAssignWrap',
    'teamAssignSummary', 'teamAssign', 'teamGiveTeam', 'teamGiveAmount', 'teamGiveLabel', 'teamGiveBtn',
-   'teamLogList', 'resetTeamsBtn', 'boardWrap', 'teamBoard', 'teamOnlyBtn', 'teamTiles', 'teamLive'
+   'teamLogList', 'resetTeamsBtn', 'boardWrap', 'teamBoard', 'teamOnlyBtn', 'teamTiles', 'teamLive',
+   'termScope', 'termFrom', 'termTo', 'termBy', 'termThisYear', 'termLast30', 'termAll', 'termCsvBtn', 'termWrap'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var BUILTIN_CHIPS = [
@@ -663,7 +686,7 @@
     renderChips();
     renderBoard();
     renderHistory();
-    renderCumulative();
+    renderCumulative(); renderTerm();
     renderGoals();
     renderTrends();
     renderTeams();
@@ -1385,7 +1408,7 @@
     renderActivity();
     renderTeams();
     renderHistory();
-    renderCumulative();
+    renderCumulative(); renderTerm();
     renderTrends();
     save();
     showMsg('Day archived. Every student is back to 0.', 'info');
@@ -1594,6 +1617,64 @@
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
     els.summaryArea.classList.add('active');
     window.print();
+  });
+
+  // ── Term & year view: archived days added up over a range ───────────────
+  function todayLocalIso() {
+    var d = new Date();
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+  function termSets() {
+    var sets = loadStore().sets;
+    if (state) sets[state.name] = state;
+    return sets;
+  }
+  function termResult() {
+    var sets = termSets();
+    return BPTerm.summarize(sets, {
+      sections: els.termScope.value === 'all' ? null : [state.name],
+      from: els.termFrom.value, to: els.termTo.value, by: els.termBy.value
+    });
+  }
+  function signed(n) { return (n > 0 ? '+' : '') + n; }
+  function renderTerm() {
+    if (!els.termWrap || !state) return;
+    var r = termResult();
+    var all = els.termScope.value === 'all';
+    if (!r.days) {
+      els.termWrap.innerHTML = '<p class="empty-hint">' + (r.from || r.to ? 'No archived days fall in that range.' : 'Archive at least one day and the term view appears here.') + '</p>';
+      return;
+    }
+    var html = '<p class="p-sub" style="margin:.4rem 0;">' + r.days + ' archived day' + (r.days === 1 ? '' : 's') + ', ' +
+      r.studentCount + ' student' + (r.studentCount === 1 ? '' : 's') + ', ' + signed(r.points) + ' points' +
+      (r.undated ? ' (' + r.undated + ' day' + (r.undated === 1 ? '' : 's') + ' with no readable date counted in the total, not in a ' + (r.by === 'month' ? 'month' : 'week') + ')' : '') + '.</p>';
+    html += '<table class="history-table"><thead><tr><th>' + (r.by === 'month' ? 'Month' : 'Week') + '</th><th>Days</th><th>Points</th><th>+</th><th>&minus;</th></tr></thead><tbody>' +
+      r.buckets.map(function (b) {
+        return '<tr><td>' + escapeHtml(b.label) + '</td><td>' + b.days + '</td><td>' + signed(b.points) + '</td><td>' + b.pos + '</td><td>' + b.neg + '</td></tr>';
+      }).join('') + '</tbody></table>';
+    html += '<table class="history-table" style="margin-top:.8rem;"><thead><tr><th>Student</th>' + (all ? '<th>Section</th>' : '') +
+      '<th>Days</th><th>Points</th><th>+</th><th>&minus;</th><th>Target met</th></tr></thead><tbody>' +
+      r.students.map(function (s) {
+        return '<tr><td>' + escapeHtml(s.name) + '</td>' + (all ? '<td>' + escapeHtml(s.section) + '</td>' : '') +
+          '<td>' + s.days + '</td><td>' + signed(s.points) + '</td><td>' + s.pos + '</td><td>' + s.neg + '</td>' +
+          '<td>' + (s.goalDays ? s.met + ' of ' + s.goalDays : '') + '</td></tr>';
+      }).join('') + '</tbody></table>';
+    els.termWrap.innerHTML = html;
+  }
+  function setTermRange(from, to) { els.termFrom.value = from; els.termTo.value = to; renderTerm(); }
+  ['termScope', 'termFrom', 'termTo', 'termBy'].forEach(function (id) { els[id].addEventListener('change', renderTerm); });
+  els.termThisYear.addEventListener('click', function () { var y = BPTerm.schoolYear(todayLocalIso()); setTermRange(y.from, y.to); });
+  els.termLast30.addEventListener('click', function () { var t = todayLocalIso(); setTermRange(BPTerm.lastDays(t, 30), t); });
+  els.termAll.addEventListener('click', function () { setTermRange('', ''); });
+  els.termCsvBtn.addEventListener('click', function () {
+    var r = termResult();
+    if (!r.days) { showMsg('Nothing in that range to download.', 'info'); return; }
+    var all = els.termScope.value === 'all';
+    var rows = [['Student'].concat(all ? ['Section'] : [], ['Days', 'Points', 'Positive taps', 'Negative taps', 'Target days met', 'Days with a target'])];
+    r.students.forEach(function (s) {
+      rows.push([s.name].concat(all ? [s.section] : [], [s.days, s.points, s.pos, s.neg, s.met, s.goalDays]));
+    });
+    ExportKit.download(ExportKit.toCsv(rows), (all ? 'every-section' : state.name || 'behavior-points').replace(/[\\/:*?"<>|]+/g, '-') + '-term.csv', 'text/csv;charset=utf-8');
   });
 
   // ── Cumulative totals across every archived day ──────────────────────────
@@ -2012,7 +2093,7 @@
     if (moved) {
       refreshDependentViews();
       renderHistory();
-      renderCumulative();
+      renderCumulative(); renderTerm();
       showMsg(moved + ' student' + (moved === 1 ? '' : 's') +
         ' renamed in Class Roster Hub — their points and history came with them.', 'info');
     }

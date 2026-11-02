@@ -32,6 +32,7 @@
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/grouping.js"></script>
 <script src="../_shared/undo.js"></script>
+<script src="novel-study-circles-manager/nsc-assess.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -155,6 +156,18 @@
   .meeting-entry summary b { color: var(--accent); }
   .meeting-entry .meeting-body { padding: .7rem .9rem 1rem; }
   .meeting-entry .del-meeting { width: auto; margin: .6rem 0 0; }
+  .assess { margin-top: .9rem; }
+  .assess h4 { margin: 0 0 .2rem; font-size: .92rem; }
+  .assess .hint { margin: 0 0 .4rem; }
+  table.assess-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  table.assess-table th, table.assess-table td { text-align: left; padding: .25rem .4rem; border-bottom: 1px solid var(--line); }
+  table.assess-table th.c, table.assess-table td.c { text-align: center; }
+  .assess-btn { width: 3.2rem; min-height: 2.2rem; margin: 0; padding: .1rem; font-size: 1rem; line-height: 1; background: var(--card-2); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 6px; cursor: pointer; }
+  .assess-btn[data-level="2"] { background: var(--info-bg); border-color: var(--info-line); color: var(--accent-2); font-weight: 700; }
+  .assess-btn[data-level="1"] { background: var(--warn-bg); border-color: var(--warn-line); font-weight: 700; }
+  .assess-btn[data-level="0"] { background: var(--err-bg); border-color: var(--err-line); color: var(--err); font-weight: 700; }
+  .assess-total { white-space: nowrap; color: var(--muted); }
+  .print-only table.assess-table th, .print-only table.assess-table td { border-bottom: 1px solid #999; color: #000; }
 
   #msg { font-size: .82rem; padding: .55rem .75rem; border-radius: 6px; display: none; margin-bottom: .8rem; white-space: pre-line; }
   #msg.show { display: block; background: var(--err-bg); color: var(--err); border: 1px solid var(--err-line); }
@@ -371,6 +384,15 @@
       </div>
 
       <div class="card">
+        <div class="card-title">Discussion Record</div>
+        <p class="hint">Each meeting in Meeting History has a Discussion assessment: tap a box to mark a student <b>Participated</b>, <b>Prepared</b> and <b>Advanced the conversation</b> (yes, some, not yet). This adds them up across the book, kept on this device with the rest of the project.</p>
+        <div id="assessRecord"><p class="empty-hint">No discussion marked yet.</p></div>
+        <div class="btn-row" style="margin-top:.6rem;">
+          <button type="button" class="secondary" id="printAssessBtn">Print discussion record</button>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-title">Vocabulary Log</div>
         <p class="hint">Every word logged with a meeting, grouped by that meeting's chapter checkpoint &mdash; a running glossary for the whole novel study.</p>
         <div id="vocabLog"><p class="empty-hint">No vocabulary logged yet.</p></div>
@@ -399,6 +421,12 @@
   <h2 id="printLogTitle">Full Meeting Log</h2>
   <p class="p-sub" id="printLogSub"></p>
   <div id="printLogMeetings"></div>
+</div>
+
+<div class="print-only" id="printAssessArea">
+  <h2 id="printAssessTitle">Discussion Record</h2>
+  <p class="p-sub" id="printAssessSub"></p>
+  <div id="printAssessBody"></div>
 </div>
 
 <div class="print-only" id="printVocabArea">
@@ -520,7 +548,7 @@
    'meetingDate', 'checkpointInputs', 'meetingVocab', 'logMeetingBtn', 'printBtn', 'printLogBtn', 'resetHistoryBtn', 'historyHint',
    'resultsArea', 'meetingHistory', 'vocabLog', 'printVocabBtn', 'exportVocabBtn', 'exportReviewBoardBtn', 'msg', 'undoRow', 'undoBtn',
    'printArea', 'printTitle', 'printSub', 'printGroups',
-   'printLogArea', 'printLogTitle', 'printLogSub', 'printLogMeetings',
+   'printLogArea', 'printLogTitle', 'printLogSub', 'printLogMeetings', 'assessRecord', 'printAssessBtn', 'printAssessArea', 'printAssessTitle', 'printAssessSub', 'printAssessBody',
    'printVocabArea', 'printVocabTitle', 'printVocabSub', 'printVocabBody',
    'schTotalChapters', 'schUnitLabel', 'schStartDate', 'schEndDate', 'schWeekdays', 'scheduleGenBtn', 'scheduleResult', 'printScheduleBtn',
    'printScheduleArea', 'printScheduleTitle', 'printScheduleSub', 'printScheduleBody',
@@ -724,6 +752,7 @@
       (m.groups || []).forEach(function (g) {
         (g.assignment || []).forEach(function (a) { if (a.name === from) { a.name = to; moved = true; } });
       });
+      if (NscAssess.rename(m, from, to)) moved = true;
     });
     return moved;
   }
@@ -1252,12 +1281,87 @@
   }
 
   // ── Meeting history ──────────────────────────────────────────────────────
+  // ── Discussion assessment (per meeting) and the record across the book ────
+  // Each box cycles blank → yes → some → not yet → blank (NscAssess.next). The page updates the box in place and
+  // saves; nothing is re-drawn, so the open meeting and the focus stay where they were.
+  function assessLabel(name, crit, level) {
+    return name + ', ' + crit.label.toLowerCase() + ': ' + (level === undefined ? 'not marked' : NscAssess.WORDS[level]) + '. Press to change.';
+  }
+  function assessBtnHtml(m, si, name, crit) {
+    var level = NscAssess.levelOf(m, name, crit.key);
+    return '<button type="button" class="assess-btn" data-assess-m="' + escapeHtml(m.id) + '" data-assess-s="' + si + '" data-assess-c="' + crit.key + '"' +
+      (level === undefined ? '' : ' data-level="' + level + '"') + ' aria-label="' + escapeHtml(assessLabel(name, crit, level)).replace(/"/g, '&quot;') + '">' +
+      (level === undefined ? '&middot;' : NscAssess.MARKS[level]) + '</button>';
+  }
+  function assessTotalText(m, name) {
+    var pts = 0, any = 0;
+    NscAssess.CRITERIA.forEach(function (c) { var v = NscAssess.levelOf(m, name, c.key); if (v !== undefined) { pts += v; any++; } });
+    return any ? pts + ' / ' + any * 2 : '';
+  }
+  function assessHtml(m) {
+    var names = NscAssess.studentsOf(m);
+    if (!names.length) return '';
+    return '<div class="assess"><h4>Discussion assessment</h4>' +
+      '<p class="hint">Tap a box to mark it: &#10003; yes, ~ some, &#10007; not yet, then blank again.</p>' +
+      '<div class="table-wrap"><table class="assess-table"><thead><tr><th>Student</th>' +
+      NscAssess.CRITERIA.map(function (c) { return '<th class="c">' + escapeHtml(c.label) + '</th>'; }).join('') + '<th class="c">Points</th></tr></thead><tbody>' +
+      names.map(function (name, si) {
+        return '<tr><td>' + escapeHtml(name) + '</td>' + NscAssess.CRITERIA.map(function (c) { return '<td class="c">' + assessBtnHtml(m, si, name, c) + '</td>'; }).join('') +
+          '<td class="c assess-total" data-assess-total="' + si + '">' + assessTotalText(m, name) + '</td></tr>';
+      }).join('') + '</tbody></table></div></div>';
+  }
+
+  /** The table of totals, for the card and for the printed page. */
+  function assessRecordHtml() {
+    var sum = NscAssess.summary(state.meetings || []);
+    if (!sum.students.length) return '';
+    var head = '<tr><th>Student</th>' + NscAssess.CRITERIA.map(function (c) { return '<th class="c">' + escapeHtml(c.label) + '</th>'; }).join('') + '<th class="c">Points</th></tr>';
+    var body = sum.students.map(function (st) {
+      return '<tr><td>' + escapeHtml(st.name) + '</td>' + NscAssess.CRITERIA.map(function (c) {
+        var x = st.criteria[c.key];
+        var parts = [];
+        if (x.yes) parts.push(x.yes + ' yes');
+        if (x.some) parts.push(x.some + ' some');
+        if (x.no) parts.push(x.no + ' not yet');
+        return '<td class="c">' + (x.assessed ? parts.join(', ') + ' <span class="assess-total">of ' + x.assessed + '</span>' : '&mdash;') + '</td>';
+      }).join('') + '<td class="c">' + st.points + ' / ' + st.possible + '</td></tr>';
+    }).join('');
+    return '<div class="table-wrap"><table class="assess-table"><thead>' + head + '</thead><tbody>' + body + '</tbody></table></div>' +
+      '<p class="hint" style="margin-top:.4rem;">' + sum.meetings + ' meeting' + (sum.meetings === 1 ? '' : 's') + ' assessed. Points: yes 2, some 1, not yet 0, over the boxes marked; a box left blank was not assessed.</p>';
+  }
+  function renderAssessRecord() {
+    var html = assessRecordHtml();
+    els.assessRecord.innerHTML = html || '<p class="empty-hint">No discussion marked yet.</p>';
+  }
+
+  els.meetingHistory.addEventListener('click', function (e) {
+    var btn = e.target.closest('.assess-btn');
+    if (!btn) return;
+    var m = (state.meetings || []).filter(function (x) { return x.id === btn.dataset.assessM; })[0];
+    if (!m) return;
+    var names = NscAssess.studentsOf(m);
+    var name = names[parseInt(btn.dataset.assessS, 10)];
+    var crit = NscAssess.CRITERIA.filter(function (c) { return c.key === btn.dataset.assessC; })[0];
+    if (name === undefined || !crit) return;
+    var level = NscAssess.next(NscAssess.levelOf(m, name, crit.key));
+    if (!NscAssess.set(m, name, crit.key, level)) return;
+    if (level === undefined) { btn.removeAttribute('data-level'); btn.innerHTML = '&middot;'; }
+    else { btn.setAttribute('data-level', String(level)); btn.textContent = NscAssess.MARKS[level]; }
+    btn.setAttribute('aria-label', assessLabel(name, crit, level));
+    var total = btn.closest('tr').querySelector('[data-assess-total]');
+    if (total) total.textContent = assessTotalText(m, name);
+    saveCurrent();
+    renderAssessRecord();
+  });
+
   function renderMeetingHistory() {
     var meetings = state.meetings || [];
     if (!meetings.length) {
       els.meetingHistory.innerHTML = '<p class="empty-hint">No meetings logged yet.</p>';
+      renderAssessRecord();
       return;
     }
+    renderAssessRecord();
     els.meetingHistory.innerHTML = meetings.map(function (m, i) {
       var summaryBits = [escapeHtml(m.date)];
       if (m.together && m.wholeClassCheckpoint) summaryBits.push(escapeHtml(m.wholeClassCheckpoint));
@@ -1277,6 +1381,7 @@
         '<summary><b>' + summaryBits[0] + '</b><span>' + (summaryBits[1] || '') + '</span></summary>' +
         '<div class="meeting-body">' +
         '<div class="table-wrap"><table class="history-table"><thead><tr><th>Group</th><th>Checkpoint</th><th>Roles</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+        assessHtml(m) +
         (m.vocab && m.vocab.length ? '<div style="margin-top:.7rem;">' + vocabListHtml(m.vocab) + '</div>' : '') +
         '<button type="button" class="danger small del-meeting" data-del-meeting="' + m.id + '">Delete this meeting</button>' +
         '</div></details>';
@@ -1359,6 +1464,20 @@
     }).join('');
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
     els.printVocabArea.classList.add('active');
+    window.print();
+  });
+
+  els.printAssessBtn.addEventListener('click', function () {
+    var html = assessRecordHtml();
+    if (!html) { showMsg('Mark some discussion in Meeting History before printing the record.'); return; }
+    els.printAssessTitle.textContent = (state.name ? state.name + ' \u2014 ' : '') + 'Discussion Record';
+    var subBits = [];
+    if (state.bookTitle) subBits.push(state.bookTitle);
+    subBits.push(new Date().toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' }));
+    els.printAssessSub.textContent = subBits.join(' \u00b7 ');
+    els.printAssessBody.innerHTML = html;
+    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
+    els.printAssessArea.classList.add('active');
     window.print();
   });
 

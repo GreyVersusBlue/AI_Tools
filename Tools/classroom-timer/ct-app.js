@@ -6,6 +6,7 @@
 
 import { load, save, loadRunning, saveRunning, clearRunning, MAX_AGENDA_SEGMENTS } from './ct-store.js';
 import * as Sounds from './ct-sounds.js';
+import * as Engine from './ct-engine.js';
 import { initBoard } from './ct-board.js';
 
 const RING_R = 90;
@@ -31,10 +32,9 @@ function effectiveVolume() {
 }
 
 /* _shared/countdown.js's formatter (Path 22 P5), with the display this page
-   has always had: nearest second, zero-padded minutes. 010 and 087 run their
-   whole countdown on that file; this page's phase engine (agenda, round
-   robin, overtime) still keeps its own endAt/remainingAtPause, and moving it
-   onto a Countdown state is a backlog row of its own. */
+   has always had: nearest second, zero-padded minutes. The phase's arithmetic
+   (start, pause, resume, a station or segment change, the tick) runs on the
+   same file through ct-engine.js (Path 22 P13); overtime stays this page's own. */
 function formatTime(ms) {
   return window.Countdown.format(ms, { pad: true, round: 'round' });
 }
@@ -421,9 +421,9 @@ function goToAgendaSegment(nextIndex) {
   phase.segIndex = nextIndex;
   phase.totalMs = getAgendaSegmentMs(seg);
   if (phase.status === 'paused') {
-    phase.remainingAtPause = phase.totalMs;
+    Engine.holdFull(phase);
   } else {
-    phase.endAt = Date.now() + phase.totalMs;
+    Engine.begin(phase, phase.totalMs, Date.now());
   }
   setAgendaCurrent(phase.segments, nextIndex);
   updateSubDisplay(agendaNextText(phase.segments, nextIndex));
@@ -455,16 +455,14 @@ function onPhaseZero() {
   if (mode === 'roundrobin') {
     if (phase.station < phase.stations) {
       phase.station += 1;
-      phase.totalMs = getConfiguredMs('roundrobin');
-      phase.endAt = Date.now() + phase.totalMs;
+      Engine.begin(phase, getConfiguredMs('roundrobin'), Date.now());
       updateSubDisplay(`Station ${phase.station} of ${phase.stations}`);
       syncRunningPersistence();
       return;
     }
     if (phase.loop) {
       phase.station = 1;
-      phase.totalMs = getConfiguredMs('roundrobin');
-      phase.endAt = Date.now() + phase.totalMs;
+      Engine.begin(phase, getConfiguredMs('roundrobin'), Date.now());
       updateSubDisplay(`Station 1 of ${phase.stations}`);
       syncRunningPersistence();
       return;
@@ -519,9 +517,9 @@ function paintOvertime(overMs) {
 function tick() {
   const now = Date.now();
   if (COUNTDOWN_LIKE.has(mode)) {
-    if (phase.overtimeStarted) { paintOvertime(now - phase.endAt); return; }
-    const remaining = phase.endAt - now;
-    if (remaining <= 0) { onPhaseZero(); return; }
+    if (phase.overtimeStarted) { paintOvertime(Engine.over(phase, now, true)); return; }
+    if (Engine.isZero(phase, now)) { onPhaseZero(); return; }
+    const remaining = Engine.remaining(phase, now);
     paint(remaining, phase.totalMs > 0 ? remaining / phase.totalMs : 0);
     updateUrgency(phase.totalMs > 0 ? remaining / phase.totalMs : 1);
     if (mode === 'agenda') updateAgendaBar(phase.totalMs - remaining);
@@ -542,7 +540,7 @@ function onStart() {
   if (mode === 'countdown' || mode === 'transition') {
     phase.totalMs = getConfiguredMs(mode);
     if (phase.totalMs <= 0) return;
-    phase.endAt = Date.now() + phase.totalMs;
+    Engine.begin(phase, phase.totalMs, Date.now());
     if (mode === 'countdown' && prefs.countdown.untilEnabled) {
       updateSubDisplay(`Until ${prefs.countdown.untilTime}`);
     }
@@ -552,7 +550,7 @@ function onStart() {
     phase.station = 1;
     phase.totalMs = getConfiguredMs('roundrobin');
     if (phase.totalMs <= 0) return;
-    phase.endAt = Date.now() + phase.totalMs;
+    Engine.begin(phase, phase.totalMs, Date.now());
     updateSubDisplay(`Station 1 of ${phase.stations}`);
   } else if (mode === 'agenda') {
     const segments = (prefs.agenda.segments || []).map(s => ({ ...s }));
@@ -563,7 +561,7 @@ function onStart() {
     phase.agendaElapsedBase = 0;
     phase.totalMs = getAgendaSegmentMs(segments[0]);
     if (phase.totalMs <= 0) return;
-    phase.endAt = Date.now() + phase.totalMs;
+    Engine.begin(phase, phase.totalMs, Date.now());
     setAgendaCurrent(segments, 0);
     updateSubDisplay(agendaNextText(segments, 0));
     updateAgendaBar(0);
@@ -603,7 +601,7 @@ function onPause() {
   stopTicking();
   releaseWakeLock();
   if (COUNTDOWN_LIKE.has(mode)) {
-    phase.remainingAtPause = phase.endAt - Date.now();
+    Engine.pause(phase, Date.now());
   } else {
     phase.elapsedBase = (phase.elapsedBase || 0) + (Date.now() - phase.startAt);
   }
@@ -614,7 +612,7 @@ function onPause() {
 function onResume() {
   Sounds.unlock();
   if (COUNTDOWN_LIKE.has(mode)) {
-    phase.endAt = Date.now() + phase.remainingAtPause;
+    Engine.resume(phase, Date.now());
   } else {
     phase.startAt = Date.now();
   }
@@ -1102,12 +1100,11 @@ function renderRestoredDisplay() {
   }
   if (COUNTDOWN_LIKE.has(mode) && phase.overtimeStarted) {
     els.subDisplay.classList.add('end-message');
-    if (phase.status === 'running') { paintOvertime(Date.now() - phase.endAt); return; }
-    paintOvertime(-phase.remainingAtPause);
+    paintOvertime(Engine.over(phase, Date.now(), phase.status === 'running'));
     return;
   }
   if (COUNTDOWN_LIKE.has(mode)) {
-    const remaining = phase.status === 'running' ? Math.max(0, phase.endAt - Date.now()) : phase.remainingAtPause;
+    const remaining = phase.status === 'running' ? Engine.remaining(phase, Date.now()) : phase.remainingAtPause;
     paint(remaining, phase.totalMs > 0 ? remaining / phase.totalMs : 0);
     updateUrgency(phase.totalMs > 0 ? remaining / phase.totalMs : 1);
     if (mode === 'roundrobin') updateSubDisplay(`Station ${phase.station} of ${phase.stations}`);

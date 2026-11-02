@@ -346,6 +346,7 @@ export const PAGE_SEEDS = {
         meetings: [{
           id: 'm1', date: '2026-09-30', together: true, wholeClassCheckpoint: 'Through Chapter 6',
           vocab: [{ word: 'ravine', definition: 'deep narrow valley' }],
+          assess: [{ name: 'Aiden Smith', participated: 2, prepared: 1 }, { name: 'Bella Cruz', advanced: 2 }],
           groups: [
             { id: 'g1', label: 'Group 1', checkpoint: '', assignment: [{ name: 'Aiden Smith', role: 'Discussion Director' }, { name: 'Bella Cruz', role: 'Summarizer' }] },
             { id: 'g2', label: 'Group 2', checkpoint: '', assignment: [{ name: 'Carlos Diaz', role: 'Discussion Director' }, { name: 'Dana Lee', role: 'Summarizer' }] },

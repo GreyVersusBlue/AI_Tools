@@ -152,7 +152,7 @@
           namespaces: [
             { ns: 'seating', student: true },
             { ns: 'cam' }, { ns: 'class-screen' }, { ns: 'dbq' }, { ns: 'escape-room' }, { ns: 'fsb' }, { ns: 'htcm' },
-            { ns: 'labels' }, { ns: 'ppg' }, { ns: 'psa' }, { ns: 'rgb' }, { ns: 'scavenger-hunt' }, { ns: 'stviz-trace' }, { ns: 'tlb' },
+            { ns: 'labels' }, { ns: 'ppg' }, { ns: 'psa' }, { ns: 'rgb' }, { ns: 'scavenger-hunt' }, { ns: 'stviz-trace' }, { ns: 'tlb' }, { ns: 'vocab' },
           ] },
       ],
       /* _shared/roster.js writes both of these on a tool's behalf, so a
@@ -428,6 +428,7 @@
            that one is declared on the `shared` row. */
         { k: 'scv_calendar_v1' },
         { k: 'scv_view_cols' },
+        { k: 'scv_week_start' },
       ],
       /* 035's settings, for "Import from the Schedule Visualizer" on the bell
          schedules card (Path 9 P1). Read once on a click, never written. */
@@ -685,6 +686,7 @@
         { k: 'gvb-review-board:__probe' },
         { k: 'gvb-review-board:current' },
         { k: 'gvb-review-board:list' },
+        { k: 'gvb-review-board:projector' },
       ],
       prefixes: [
         { p: 'gvb-review-board:', legacy: true },
@@ -1014,6 +1016,10 @@
       file: 'Tools/040-vocab-flashcard-generator.html',
       category: 'ela',
       share: { param: 'deck' },
+      /* A picture on a card (rank 142) is a Blob in `gvb-media` (declared on the
+         site row above) under the `vocab/` namespace, keyed by the term, downscaled
+         to 480 px. No localStorage key holds one and no list record names one;
+         a share link, a list file and Word Lists carry words only. Teacher content. */
       keys: [
         { k: 'gvb-vocab-flashcards:current' },
         { k: 'gvb-vocab-flashcards:list' },
@@ -1365,6 +1371,7 @@
       ],
       reads: [
         'dbq_packet_v1',
+        'gvb-primary-source:library',    // 028's source library, read-only (the "From the Primary Source Analysis library" list)
       ],
     },
     {
@@ -1386,6 +1393,7 @@
         { k: 'htcm:current' },
         { k: 'htcm:game', rollover: 'ask' },
         { k: 'htcm:list' },
+        { k: 'htcm:themepacks' },   // card theme packs a teacher imported (htcm-theme-packs.js); colours, a frame and fonts, no student data
       ],
       prefixes: [
         { p: 'htcm:', legacy: true },
@@ -1408,6 +1416,7 @@
         { k: 'cedg_current_v1' },
         { k: 'cedg_guide_v1', legacy: true },
         { k: 'cedg_guides_v1' },
+        { k: 'cedg_qsets_v1' },
       ],
       prefixes: [
         { p: 'cedg_guide_v1:' },

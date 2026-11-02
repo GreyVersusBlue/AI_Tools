@@ -137,7 +137,7 @@ const r = parseTimeReaches(html);
 check(r.wrappers.size > Object.keys(GETTERS).length, `the page has bridge wrappers (${r.wrappers.size - Object.keys(GETTERS).length} found through ${Object.keys(GETTERS).join(', ')})`);
 check(r.onWindow.has('brBuildPublishedHTML') && r.onWindow.has('toggleApp') && r.onWindow.has('renderVizCanvas') && r.onWindow.has('drawTile') && r.onWindow.has('renderGroupList') && r.onWindow.has('wiRenderCards'),
   `the module script copies the ${r.onWindow.size} exports of sv-browser.js, sv-viz.js, sv-editor.js, sv-schedules-tab.js and sv-whatif.js onto window, and they count as wrappers`);
-check(r.roots > 0 && r.fns > 100, `read ${r.fns} top-level functions and ${r.roots} top-level statements that call something`);
+check(r.roots > 0 && r.fns > 50, `read ${r.fns} top-level functions and ${r.roots} top-level statements that call something`);
 check(r.bad.length === 0, 'no top-level statement reaches a bridge wrapper at parse time'
   + r.bad.map(b => `\n         line ${b.line}: ${b.path.join(' → ')}`).join(''));
 

@@ -27,6 +27,7 @@
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/a11y.css">
+<link rel="stylesheet" href="../_shared/print-kit.css">
 <style>
   /* On _shared/ink-paper.css's tokens since AI-35, so the page follows the
      teacher's theme like the rest of the site; it used to be dark-only, on
@@ -123,9 +124,23 @@
   @media (max-width: 900px) { .col-right { position: static; } }
 
   #print-area { display: none; }
+  /* The chart sheet (Path 16 P5 step 5): up to six chart snapshots on pages of 1, 2, 4 or 6, printed
+     through the print kit. A direct child of <body>, shown only while body.printing-sheet is set;
+     the screen rule is in a screen query so the preview, which turns screen off, can show it. */
+  @media screen { #chartSheet { display: none; } }
+  #chartSheet .sheet-chart { margin: 0; break-inside: avoid; }
+  #chartSheet .sheet-chart svg { display: block; width: 100%; height: auto; margin: 0 auto; }
+  #chartSheet .sheet-chart figcaption { font-size: 0.8rem; text-align: center; margin-top: 0.2rem; }
+  #chartSheet.per-2 .sheet-chart svg { max-width: 6.1in; }
+  #chartSheet.per-1 .sheet-chart svg { max-width: 9.2in; }
+  #sheet-list { list-style: none; padding: 0; margin: 0.6rem 0 0; }
+  #sheet-list li { display: flex; gap: 0.6rem; align-items: center; justify-content: space-between; padding: 0.3rem 0; border-top: 1px solid var(--border); font-size: 0.85rem; }
+  #sheet-list li button { flex: none; }
   .print-header { font-family: 'Inter', system-ui, sans-serif; color: #16222e; margin-bottom: 0.5rem; font-size: 0.95rem; }
   .print-header .fill-line { display: inline-block; min-width: 8rem; border-bottom: 1px solid #16222e; margin: 0 0.4rem; }
   @media print {
+    body.printing-sheet > *:not(#chartSheet) { display: none !important; }
+    body:not(.printing-sheet) #chartSheet, #sheet-card { display: none !important; }
     body.printing > *:not(#print-area) { display: none !important; }
     body.printing #print-area { display: block; }
     body.printing #print-area svg { width: 100%; height: auto; }
@@ -349,10 +364,36 @@
       </div>
       <div class="hint">Prints just the axes and category labels — no bars, lines, or values — so students can plot the data by hand from a handout of the numbers.</div>
     </div>
+
+    <div class="card" id="sheet-card" style="margin-top:1rem;">
+      <div class="card-title">5 · Chart sheet</div>
+      <p class="hint" style="margin-top:0;">Collect up to 6 charts, change the data or the type between each, and print them together on one page or several.</p>
+      <div class="btn-row" style="margin-top:0.4rem;">
+        <button type="button" class="btn-secondary" id="sheet-add" disabled>Add this chart to the sheet</button>
+      </div>
+      <p class="hint" id="sheet-msg" role="status"></p>
+      <ol id="sheet-list" aria-label="Charts on the sheet"></ol>
+      <div class="control-group" style="margin-top:0.8rem;">
+        <label for="sheet-per">Charts per page</label>
+        <select id="sheet-per">
+          <option value="1">1 (landscape)</option>
+          <option value="2">2</option>
+          <option value="4" selected>4</option>
+          <option value="6">6</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn-secondary" id="sheet-preview" disabled>Preview pages</button>
+        <button type="button" class="btn-primary" id="sheet-print" disabled>Print sheet</button>
+        <button type="button" class="btn-secondary" id="sheet-clear" disabled>Clear the sheet</button>
+      </div>
+      <p class="hint">The sheet lives on this page only; it is not saved or shared when you leave.</p>
+    </div>
   </div>
 
   <div id="print-area"></div>
 </div>
+<section id="chartSheet" class="pk-paper" aria-label="Chart sheet"></section>
 
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
@@ -360,6 +401,7 @@
 <script src="../_shared/share.js"></script>
 <script src="../_shared/chart-svg.js"></script>
 <script src="../_shared/paste-table.js"></script>
+<script src="../_shared/print-kit.js"></script>
 <script src="data-chart-builder/dcb-fit.js"></script>
 <script src="../_shared/sample-data.js"></script>
 <script>
@@ -389,13 +431,15 @@
    'y-axis-label-group', 'y-axis-label', 'show-values', 'sort-row', 'sort-values', 'chart-stage', 'stats-grid', 'filename', 'btn-png', 'btn-svg', 'msg',
    'btn-choose-file', 'file-input', 'dataset-name', 'btn-save-dataset', 'saved-datasets-select',
    'btn-load-dataset', 'btn-delete-dataset', 'btn-undo-delete-dataset', 'grayscale-mode', 'show-error-bars', 'error-bars-config',
-   'btn-print-worksheet', 'print-area', 'shareBtn', 'shareNote'
+   'btn-print-worksheet', 'print-area', 'shareBtn', 'shareNote',
+   'sheet-add', 'sheet-msg', 'sheet-list', 'sheet-per', 'sheet-preview', 'sheet-print', 'sheet-clear', 'chartSheet'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
   function toCamel(id) { return id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); }); }
 
   var table = null;      // { headers: [...], rows: [[...], ...] } — rows are raw strings
   var numericCols = [];  // indices of columns that look numeric
   var lastSvgString = null;
+  var sheetCharts = [];  // the chart sheet's snapshots: { svg, title }, in memory only
   var errorColSelections = {}; // valueColIndex -> errorColumnIndex, reset whenever new data is parsed
 
   // ── Persisted settings (not the pasted data itself — that can contain student data) ─
@@ -996,8 +1040,8 @@
     lastSvgString = null;
     document.getElementById('chart-announce').textContent = text;
   }
-  function enableDownloads() { els.btnPng.disabled = false; els.btnSvg.disabled = false; }
-  function disableDownloads() { els.btnPng.disabled = true; els.btnSvg.disabled = true; }
+  function enableDownloads() { els.btnPng.disabled = false; els.btnSvg.disabled = false; syncSheet(); }
+  function disableDownloads() { els.btnPng.disabled = true; els.btnSvg.disabled = true; syncSheet(); }
 
   function buildCategorySeries() {
     var catCol = parseInt(els.categoryCol.value, 10);
@@ -1154,6 +1198,131 @@
     window.print();
   });
   window.addEventListener('afterprint', function () { document.body.classList.remove('printing'); });
+
+
+  // ── Chart sheet (Path 16 P5 step 5) ──────────────────────────────────────
+  // Snapshots are the chart's SVG string and its title and nothing else, held in memory only, so
+  // there is no storage key and nothing in the share link. The sheet goes through the print kit
+  // as cards (PrintKit.renderCards with a grid of its own), and the Preview button shows it the
+  // way 032's wall calendar does: body.printing-sheet while it is on screen or on paper.
+  var SHEET_MAX = 6;
+  var SHEET_LAYOUTS = {
+    '1': { cols: 1, perPage: 1, orientation: 'landscape' },
+    '2': { cols: 1, perPage: 2, orientation: 'portrait' },
+    '4': { cols: 2, perPage: 4, orientation: 'portrait' },
+    '6': { cols: 2, perPage: 6, orientation: 'portrait' }
+  };
+
+  function sheetMsg(text) { els.sheetMsg.textContent = text; }
+
+  function snapshotTitle(svg) {
+    var m = /<title[^>]*>([^<]*)<\/title>/.exec(svg);
+    var t = m ? m[1].replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&') : '';
+    return (els.chartTitle.value.trim() || t || 'Chart').slice(0, 80);
+  }
+
+  // Parses a snapshot into a node. A string that is not one <svg> is refused, never inserted as markup.
+  function svgNode(svg) {
+    var d = new DOMParser().parseFromString(svg, 'image/svg+xml');
+    var root = d.documentElement;
+    if (!root || root.nodeName !== 'svg' || d.getElementsByTagName('parsererror').length) return null;
+    return document.importNode(root, true);
+  }
+
+  function syncSheet() {
+    var n = sheetCharts.length;
+    els.sheetAdd.disabled = !lastSvgString || n >= SHEET_MAX;
+    els.sheetPreview.disabled = els.sheetPrint.disabled = els.sheetClear.disabled = n === 0;
+    var list = els.sheetList;
+    while (list.firstChild) list.removeChild(list.firstChild);
+    sheetCharts.forEach(function (c, i) {
+      var li = document.createElement('li');
+      var label = document.createElement('span');
+      label.textContent = (i + 1) + '. ' + c.title;
+      var rm = document.createElement('button');
+      rm.type = 'button';
+      rm.className = 'btn-secondary';
+      rm.textContent = 'Remove';
+      rm.setAttribute('aria-label', 'Remove chart ' + (i + 1) + ', ' + c.title + ', from the sheet');
+      rm.addEventListener('click', function () {
+        sheetCharts.splice(i, 1);
+        syncSheet();
+        sheetMsg('Removed. ' + sheetCharts.length + ' of ' + SHEET_MAX + ' on the sheet.');
+        (els.sheetList.querySelector('button') || els.sheetAdd).focus();
+      });
+      li.appendChild(label); li.appendChild(rm);
+      list.appendChild(li);
+    });
+  }
+
+  els.sheetAdd.addEventListener('click', function () {
+    if (!lastSvgString) return;
+    if (sheetCharts.length >= SHEET_MAX) { sheetMsg('The sheet holds ' + SHEET_MAX + ' charts. Remove one to add another.'); return; }
+    sheetCharts.push({ svg: lastSvgString, title: snapshotTitle(lastSvgString) });
+    syncSheet();
+    sheetMsg('Added. ' + sheetCharts.length + ' of ' + SHEET_MAX + ' on the sheet.');
+  });
+  els.sheetClear.addEventListener('click', function () {
+    sheetCharts = [];
+    syncSheet();
+    sheetMsg('The sheet is empty.');
+    els.sheetAdd.focus();
+  });
+
+  // Draws the sheet into #chartSheet and writes the @page for it. Returns false when nothing could be drawn.
+  function buildChartSheet() {
+    var layout = SHEET_LAYOUTS[els.sheetPer.value] || SHEET_LAYOUTS['4'];
+    els.chartSheet.className = 'pk-paper per-' + els.sheetPer.value;
+    var drawn = 0;
+    PrintKit.renderCards(els.chartSheet, sheetCharts, { cols: layout.cols, perPage: layout.perPage }, function (c, i) {
+      var node = svgNode(c.svg);
+      if (!node) return null;
+      // Each chart keeps its own ids, so two snapshots of one chart do not share a <title> id.
+      node.querySelectorAll('[id]').forEach(function (el) {
+        var old = el.id, fresh = 'sh' + i + '-' + old;
+        el.id = fresh;
+        node.querySelectorAll('[aria-labelledby]').forEach(function (r) {
+          r.setAttribute('aria-labelledby', r.getAttribute('aria-labelledby').split(' ').map(function (t) { return t === old ? fresh : t; }).join(' '));
+        });
+      });
+      var fig = document.createElement('figure');
+      fig.className = 'sheet-chart';
+      fig.appendChild(node);
+      var cap = document.createElement('figcaption');
+      cap.textContent = c.title;
+      fig.appendChild(cap);
+      drawn++;
+      return fig;
+    });
+    if (!drawn) return false;
+    PrintKit.setPage({ paper: 'letter', orientation: layout.orientation, margin: '0.5in' });
+    return true;
+  }
+
+  function endChartSheet() {
+    document.body.classList.remove('printing-sheet');
+    var st = document.getElementById('pk-page-style');
+    if (st) st.remove();
+    document.documentElement.style.removeProperty('--pk-page-w');
+    document.documentElement.style.removeProperty('--pk-page-h');
+    document.documentElement.style.removeProperty('--pk-margin');
+    document.documentElement.style.removeProperty('--pk-margin-x');
+  }
+
+  function printChartSheet() {
+    if (!sheetCharts.length || !buildChartSheet()) { sheetMsg('Add a chart to the sheet first.'); return; }
+    document.body.classList.add('printing-sheet');
+    window.print();
+  }
+  els.sheetPrint.addEventListener('click', printChartSheet);
+  els.sheetPreview.addEventListener('click', function (e) {
+    if (!sheetCharts.length || !buildChartSheet()) { sheetMsg('Add a chart to the sheet first.'); return; }
+    document.body.classList.add('printing-sheet');
+    PrintKit.preview({ area: els.chartSheet, trigger: e.currentTarget, title: 'Chart sheet', onClose: endChartSheet, onPrint: printChartSheet });
+  });
+  window.addEventListener('afterprint', endChartSheet);
+  els.sheetPer.addEventListener('change', function () { sheetMsg('Charts per page: ' + els.sheetPer.value + '.'); });
+  syncSheet();
 
   function showMsg(text) { els.msg.textContent = text; els.msg.className = 'error'; }
   function clearMsg() { els.msg.textContent = ''; els.msg.className = ''; }

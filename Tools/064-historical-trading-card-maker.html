@@ -247,6 +247,10 @@
     border: 2px solid var(--line-strong); border-radius: 8px; padding: .45rem .7rem;
   }
   .theme-swatch:hover { border-color: var(--muted); }
+  .pack-box { margin: 0 0 .8rem; }
+  .pack-box summary { cursor: pointer; font-weight: 600; margin-bottom: .4rem; }
+  .pack-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 0 .4rem; }
+  .pack-row .pack-name { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; font-size: .9rem; }
   .theme-swatch.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
 
   /* ---- review game (htcm-game.js) ----
@@ -483,6 +487,17 @@
     <label>Deck theme</label>
     <p class="hint">Applies to every card in the deck. Every theme is built to stay legible on a black-and-white printer.</p>
     <div class="theme-swatches" id="themeSwatches"></div>
+    <details class="pack-box" id="packBox">
+      <summary>Theme packs (more themes from a file)</summary>
+      <p class="hint">A theme pack is a small JSON file of extra card themes &mdash; colours, a frame and a texture this
+        tool already draws, and fonts &mdash; for a unit of your own, like &ldquo;Rome&rdquo;. Its themes join the
+        swatches above and work on the cards, the review game and every export. A pack stays on this device: it is not in
+        a deck, a share link or an export, so a deck opened somewhere without it shows the Classic theme.</p>
+      <div id="packList"></div>
+      <input type="file" id="packFile" accept=".json,application/json" style="display:none;">
+      <button type="button" class="secondary" id="packImportBtn">Import a theme pack</button>
+      <div class="hint" id="packStatus" role="status" aria-live="polite"></div>
+    </details>
     <label for="setNameInput">Set name &amp; numbering</label>
     <p class="hint">Stamps &ldquo;n / total &middot; SET NAME&rdquo; along the bottom of every card front.</p>
     <div style="display:flex; gap:.5rem; align-items:flex-start;">
@@ -538,6 +553,7 @@
 <script src="historical-trading-card-maker/htcm-image.js"></script>
 <script src="historical-trading-card-maker/htcm-frames.js"></script>
 <script src="historical-trading-card-maker/htcm-themes.js"></script>
+<script src="historical-trading-card-maker/htcm-theme-packs.js"></script>
 <script src="historical-trading-card-maker/htcm-photo.js"></script>
 <script src="historical-trading-card-maker/htcm-render.js"></script>
 <script src="historical-trading-card-maker/htcm-game.js"></script>
@@ -555,7 +571,7 @@
   var els = {};
   ['newName', 'newImage', 'newStats', 'newFacts', 'addEntryBtn', 'cancelEditBtn', 'formTitle', 'editImageHint',
    'statWarn', 'entriesWrap', 'entryCount', 'printBtn', 'previewBtn', 'printArea', 'cardSize', 'cardSizeHint', 'saveWarn',
-   'previewStage', 'previewFlipper', 'previewFront', 'previewBack', 'flipBtn', 'themeSwatches', 'newRarity',
+   'previewStage', 'previewFlipper', 'previewFront', 'previewBack', 'flipBtn', 'themeSwatches', 'packList', 'packFile', 'packImportBtn', 'packStatus', 'newRarity',
    'adjustBtn', 'newStars', 'setNameInput', 'numberBtn', 'pngBtn', 'pdfBtn', 'zipBtn',
    'deckSelect', 'newDeckBtn', 'renameDeckBtn', 'deleteDeckBtn',
    'rosterBtn', 'rosterOverlay', 'rosterText', 'rosterAddBtn', 'rosterCancelBtn', 'rosterClassSelect',
@@ -1279,6 +1295,70 @@
         ' aria-pressed="' + sel + '">' + escapeHtml(t.label) + '</button>';
     }).join('');
   }
+  /* ---------- theme packs (htcm-theme-packs.js) ---------- */
+  function say(lines, bad) {
+    els.packStatus.textContent = '';
+    (Array.isArray(lines) ? lines : [lines]).forEach(function (l, i) {
+      var d = document.createElement('div');
+      d.textContent = l;
+      if (bad && i === 0) d.style.fontWeight = '700';
+      els.packStatus.appendChild(d);
+    });
+  }
+  function renderPacks() {
+    var packs = HtcmThemePacks.apply();
+    els.packList.textContent = '';
+    packs.forEach(function (p) {
+      var row = document.createElement('div');
+      row.className = 'pack-row';
+      var name = document.createElement('span');
+      name.className = 'pack-name';
+      name.textContent = p.name + ' \u00b7 ' + p.themes.map(function (t) { return t.label; }).join(', ');
+      var ex = document.createElement('button');
+      ex.type = 'button'; ex.className = 'secondary small'; ex.textContent = 'Export';
+      ex.setAttribute('aria-label', 'Export the theme pack ' + p.name);
+      ex.addEventListener('click', function () {
+        ExportKit.download(HtcmThemePacks.toFile(p), ExportKit.filename(p.name + ' theme pack', 'json'), 'application/json');
+      });
+      var rm = document.createElement('button');
+      rm.type = 'button'; rm.className = 'secondary small'; rm.textContent = 'Remove';
+      rm.setAttribute('aria-label', 'Remove the theme pack ' + p.name);
+      rm.addEventListener('click', function () {
+        if (!confirm('Remove the theme pack \u201c' + p.name + '\u201d? Cards that use its themes show the Classic theme until it is imported again.')) return;
+        HtcmThemePacks.remove(p.name);
+        renderPacks();
+        say('Removed \u201c' + p.name + '\u201d.');
+        refreshAfterThemes();
+      });
+      row.appendChild(name); row.appendChild(ex); row.appendChild(rm);
+      els.packList.appendChild(row);
+    });
+  }
+  function refreshAfterThemes() {
+    renderThemeSwatches();
+    renderEntries();
+    updatePreview();
+  }
+  els.packImportBtn.addEventListener('click', function () { els.packFile.click(); });
+  els.packFile.addEventListener('change', function () {
+    var f = els.packFile.files && els.packFile.files[0];
+    els.packFile.value = '';
+    if (!f) return;
+    if (f.size > 40000) { say('That file is over 40 KB, which is far more than a theme pack needs.', true); return; }
+    f.text().then(function (text) {
+      var obj;
+      try { obj = JSON.parse(text); } catch (e) { say('That file is not JSON, so nothing was imported.', true); return; }
+      var r = HtcmThemePacks.validate(obj);
+      if (!r.ok) { say(['Nothing was imported. ' + r.errors.length + (r.errors.length === 1 ? ' problem:' : ' problems:')].concat(r.errors), true); return; }
+      var inst = HtcmThemePacks.install(r.pack);
+      if (!inst.ok) { say(inst.error, true); return; }
+      renderPacks();
+      say(['Imported \u201c' + r.pack.name + '\u201d' + (inst.replaced ? ' (replacing the pack of the same name)' : '') + ': ' + r.pack.themes.length +
+        (r.pack.themes.length === 1 ? ' theme' : ' themes') + ' added to the swatches.'].concat(r.warnings));
+      refreshAfterThemes();
+    });
+  });
+
   els.themeSwatches.addEventListener('click', function (ev) {
     var key = ev.target.getAttribute('data-theme');
     if (!key) return;
@@ -1830,6 +1910,7 @@
 
   /* ---------- boot ---------- */
   document.body.insertAdjacentHTML('afterbegin', HtcmFrames.defsSvg());
+  renderPacks();   // a pack's themes must be in place before the first card is drawn
   populateRosterClassSelect();
   renderSampleSelect();
   renderTeamInputs();

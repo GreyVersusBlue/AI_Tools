@@ -16,6 +16,9 @@
      ClassScreenCore.exportScreen(s, med) → the .json file's object
      ClassScreenCore.readImport(obj)      → { screen, media } | { error }
      ClassScreenCore.readCommand(msg)     → a phone-remote command, or null
+     ClassScreenCore.readKey(e, where)    → a keyboard shortcut, or null
+     ClassScreenCore.snapRect(r, mode)    → a rect on the snap grid (P11)
+     ClassScreenCore.frameTool(id)        → { id, title, file } of a framable site tool, or null (P12)
 
    Positions are FRACTIONS of the board (0..1), never pixels, so a screen laid
    out on a laptop lands in the same place on a 1080p projector.
@@ -35,7 +38,7 @@
   'use strict';
 
   var TYPES = ['text', 'timer', 'stopwatch', 'clock', 'youtube', 'traffic', 'names', 'dice',
-               'symbols', 'noise', 'draw', 'image', 'qr', 'groups'];
+               'symbols', 'noise', 'draw', 'image', 'qr', 'groups', 'agenda', 'pie', 'sequence', 'bell', 'score', 'wheel', 'frame'];
 
   /* Default size of a new widget, as a fraction of the board. */
   var DEFAULT_SIZE = {
@@ -52,12 +55,42 @@
     draw:      { w: 0.40, h: 0.45 },
     image:     { w: 0.30, h: 0.34 },
     qr:        { w: 0.20, h: 0.36 },
-    groups:    { w: 0.40, h: 0.40 }
+    groups:    { w: 0.40, h: 0.40 },
+    agenda:    { w: 0.30, h: 0.40 },
+    pie:       { w: 0.26, h: 0.46 },
+    sequence:  { w: 0.34, h: 0.42 },
+    bell:      { w: 0.30, h: 0.26 },
+    score:     { w: 0.40, h: 0.40 },
+    wheel:     { w: 0.34, h: 0.50 },
+    frame:     { w: 0.50, h: 0.70 }
   };
 
   var MIN_W = 0.08, MIN_H = 0.08;
+
+  /* Layout comforts (Path 22 P11). Snap lands a widget's top-left corner (or,
+     when resizing, its bottom-right corner) on a grid of 1/40 of the board.
+     A widget's colour is one of these names, painted by the page from tokens;
+     '' (no colour) is never stored, nor is a minimized flag that is off. */
+  var SNAP_STEP = 0.025;
+  var COLORS = ['blue', 'slate', 'warm', 'info'];
   var MAX_SCREENS = 30, MAX_WIDGETS = 40, MAX_TEXT = 5000, MAX_NAME = 60, MAX_URL = 500;
   var MAX_TIMER_S = 24 * 3600;
+  var MAX_AGENDA = 12, MAX_AGENDA_ITEM = 120;
+  var MAX_STEPS = 8, MAX_STEP_LABEL = 30;
+  /* Another site tool shown in a frame (Path 22 P12). The list is fixed and the
+     frame's address is built only from a row of it: the saved widget holds an
+     `id`, never a URL, so nothing a teacher, a file or an older build writes can
+     point the frame anywhere else. Each file is relative to Tools/, same origin. */
+  var FRAME_TOOLS = [
+    { id: '024', title: 'Number Talks', file: '024-number-talks-board.html' },
+    { id: '080', title: 'Virtual Manipulatives', file: '080-virtual-manipulatives-board.html' }
+  ];
+  function frameTool(id) {
+    for (var i = 0; i < FRAME_TOOLS.length; i++) if (FRAME_TOOLS[i].id === id) return { id: id, title: FRAME_TOOLS[i].title, file: FRAME_TOOLS[i].file };
+    return null;
+  }
+  var MAX_WHEEL = 24, MAX_WHEEL_ITEM = 40;
+  var MAX_TEAMS = 8, MAX_TEAM_NAME = 30, MAX_SCORE = 9999;
   var TEXT_SIZES = [1, 1.5, 2, 3, 4, 6];
   var LIGHTS = ['red', 'yellow', 'green'];
 
@@ -179,6 +212,25 @@
     };
   }
 
+  /* A rect moved onto the snap grid. 'move' snaps the top-left corner; 'resize'
+     snaps the bottom-right corner (never below the minimum size). The result is
+     clamped to the board, so a widget that cannot sit on a line stays inside. */
+  function snapTo(v, step) { return Math.round(Math.round(v / step) * step * 1000) / 1000; }
+  function snapRect(r, mode, step) {
+    step = typeof step === 'number' && step > 0 ? step : SNAP_STEP;
+    var x = num(r && r.x, 0, 1, 0), y = num(r && r.y, 0, 1, 0);
+    var w = num(r && r.w, MIN_W, 1, 0.25), h = num(r && r.h, MIN_H, 1, 0.25);
+    if (mode === 'resize') {
+      var right = snapTo(x + w, step), bottom = snapTo(y + h, step);
+      while (right - x < MIN_W - 1e-9) right += step;
+      while (bottom - y < MIN_H - 1e-9) bottom += step;
+      w = right - x; h = bottom - y;
+    } else {
+      x = snapTo(x, step); y = snapTo(y, step);
+    }
+    return clampRect({ x: x, y: y, w: w, h: h });
+  }
+
   /* ---- state ------------------------------------------------------------ */
 
   function newId(prefix) {
@@ -188,7 +240,7 @@
   function defaultData(type) {
     switch (type) {
       case 'text': return { text: '', size: 2 };
-      case 'timer': return { duration: 300, endsAt: 0, remaining: 300, sound: true };
+      case 'timer': case 'pie': return { duration: 300, endsAt: 0, remaining: 300, sound: true };
       case 'stopwatch': return { startedAt: 0, elapsed: 0 };
       case 'clock': return { h24: false, seconds: false, date: true };
       case 'youtube': return { url: '' };
@@ -201,8 +253,116 @@
       case 'image': return { mediaId: '', alt: '', fit: 'contain' };
       case 'qr': return { text: '' };
       case 'groups': return { roster: '', by: 'size', n: 4 };
+      case 'agenda': return { items: [] };
+      case 'frame': return { tool: '' };
+      case 'wheel': return { items: ['Choice 1', 'Choice 2', 'Choice 3', 'Choice 4'] };
+      case 'score': return { teams: [1, 2, 3, 4].map(function (n) { return { name: 'Team ' + n, score: 0 }; }) };
+      case 'sequence': return { steps: DEFAULT_STEPS.map(function (x) { return { label: x.label, sec: x.sec }; }), i: 0, endsAt: 0, remaining: DEFAULT_STEPS[0].sec };
     }
     return {};
+  }
+
+  /* What a timer also does when it runs out (Path 22 P8): flash the board, set
+     the traffic light, tick the next agenda item. null when none is on. The
+     agenda flag is kept even on a page that has no agenda widget yet, so a
+     link set on a later build survives a round trip through this one. */
+  function normalizeLink(l) {
+    if (!isObj(l)) return null;
+    var out = { flash: bool(l.flash, false), light: LIGHTS.indexOf(l.light) !== -1 ? l.light : '', agenda: bool(l.agenda, false) };
+    return out.flash || out.light || out.agenda ? out : null;
+  }
+
+  /* A sequence timer: steps run one after another, each { label, sec }. Typed
+     as "Think 1:00, Pair 2:00, Share 3:00": the last word of each part is its
+     length (the same forms the timer takes), the rest is its name. Parts split
+     on commas, semicolons, new lines and arrows. */
+  var DEFAULT_STEPS = [{ label: 'Think', sec: 60 }, { label: 'Pair', sec: 120 }, { label: 'Share', sec: 180 }];
+  function parseSequence(text) {
+    if (typeof text !== 'string') return { steps: [], error: 'Try Think 1:00, Pair 2:00, Share 3:00.' };
+    var parts = text.split(/[,;\n]|->|→/).map(function (x) { return x.trim(); }).filter(Boolean);
+    var steps = [], error = '';
+    if (!parts.length) error = 'Try Think 1:00, Pair 2:00, Share 3:00.';
+    parts.forEach(function (part, i) {
+      if (error) return;
+      var m = /^(.*\S)\s+(\S+)$/.exec(part);
+      var sec = m ? global.Countdown.parse(m[2]) : null;
+      if (!m || sec === null) { error = 'Step ' + (i + 1) + ' needs a name and a time, like Pair 2:00.'; return; }
+      if (steps.length >= MAX_STEPS) { error = 'A sequence holds at most ' + MAX_STEPS + ' steps.'; return; }
+      steps.push({ label: m[1].slice(0, MAX_STEP_LABEL), sec: sec });
+    });
+    return error ? { steps: [], error: error } : { steps: steps, error: '' };
+  }
+  function formatSequence(steps) {
+    return (steps || []).map(function (x) { return x.label + ' ' + global.Countdown.format(x.sec * 1000); }).join(', ');
+  }
+  function normalizeSteps(list) {
+    var out = [];
+    (Array.isArray(list) ? list : []).forEach(function (x) {
+      if (out.length >= MAX_STEPS || !isObj(x)) return;
+      var label = str(x.label, MAX_STEP_LABEL, '').trim();
+      var sec = typeof x.sec === 'number' && x.sec >= 0.5 ? Math.round(num(x.sec, 1, MAX_TIMER_S, 0)) : 0;
+      if (label && sec > 0) out.push({ label: label, sec: sec });
+    });
+    return out.length ? out : DEFAULT_STEPS.map(function (x) { return { label: x.label, sec: x.sec }; });
+  }
+
+  /* A spinner wheel: up to MAX_WHEEL typed entries, one per segment. */
+  function normalizeWheelItems(list, fallback) {
+    if (!Array.isArray(list)) return fallback;
+    var out = [];
+    list.forEach(function (x) {
+      if (out.length >= MAX_WHEEL) return;
+      var t = str(x, MAX_WHEEL_ITEM, '').trim();
+      if (t) out.push(t);
+    });
+    return out;
+  }
+
+  /* Where a spin lands. The wheel turns clockwise under a pointer at the top;
+     segment i spans [i, i+1) * 360/n degrees measured clockwise from the top.
+     `cur` is the wheel's accumulated rotation in degrees, `rng` returns [0, 1).
+     The result always turns the wheel forward by at least `turns` full
+     turns and stops inside the chosen segment (never on an edge). The caller
+     keeps `angle` as the new rotation. */
+  function spinTo(n, cur, rng, turns) {
+    n = Math.max(1, Math.floor(n));
+    var index = Math.min(n - 1, Math.floor(rng() * n));
+    var seg = 360 / n, within = (0.1 + 0.8 * rng()) * seg;      // 10%..90% of the segment
+    var want = (360 - (index * seg + within)) % 360;            // rotation (mod 360) that puts the stop under the pointer
+    var have = ((cur % 360) + 360) % 360;
+    var angle = cur + (turns || 5) * 360 + ((want - have) % 360 + 360) % 360;
+    return { index: index, angle: angle };
+  }
+  /* The segment under the pointer at a rotation: spinTo's inverse. */
+  function wheelAt(n, angle) {
+    var a = ((-angle % 360) + 360) % 360;
+    return Math.min(n - 1, Math.floor(a / (360 / n)));
+  }
+
+  /* A team scoreboard: up to MAX_TEAMS teams, each { name, score }. A team is a
+     name the teacher types ("Team 1", "Table 3"), never a student; scores are
+     whole numbers in either direction. Nothing here is student-facing: it is
+     for the projector only. An empty list is a real state (all removed). */
+  function normalizeTeams(list, fallback) {
+    if (!Array.isArray(list)) return fallback;
+    var out = [];
+    list.forEach(function (t) {
+      if (out.length >= MAX_TEAMS || !isObj(t)) return;
+      var name = str(t.name, MAX_TEAM_NAME, '').trim() || 'Team ' + (out.length + 1);
+      out.push({ name: name, score: Math.round(num(t.score, -MAX_SCORE, MAX_SCORE, 0)) });
+    });
+    return out;
+  }
+
+  /* An agenda: up to MAX_AGENDA lines, each { t, done }. A blank line is dropped. */
+  function normalizeAgenda(list) {
+    var out = [];
+    (Array.isArray(list) ? list : []).forEach(function (it) {
+      if (out.length >= MAX_AGENDA || !isObj(it)) return;
+      var t = str(it.t, MAX_AGENDA_ITEM, '').trim();
+      if (t) out.push({ t: t, done: bool(it.done, false) });
+    });
+    return out;
   }
 
   function normalizeData(type, d) {
@@ -211,14 +371,17 @@
     switch (type) {
       case 'text':
         return { text: str(d.text, MAX_TEXT, ''), size: TEXT_SIZES.indexOf(d.size) !== -1 ? d.size : dd.size };
-      case 'timer': {
+      case 'timer': case 'pie': {
         var duration = Math.round(num(d.duration, 1, MAX_TIMER_S, dd.duration));
-        return {
+        var t = {
           duration: duration,
           endsAt: num(d.endsAt, 0, 8.64e15, 0),
           remaining: num(d.remaining, 0, MAX_TIMER_S, duration),
           sound: bool(d.sound, true)
         };
+        var link = normalizeLink(d.link);
+        if (link) t.link = link;            // present only once a link is on, so an older save is unchanged
+        return t;
       }
       case 'stopwatch':
         return { startedAt: num(d.startedAt, 0, 8.64e15, 0), elapsed: num(d.elapsed, 0, 8.64e15, 0) };
@@ -263,6 +426,22 @@
           by: d.by === 'count' ? 'count' : 'size',
           n: Math.round(num(d.n, 2, 12, dd.n))
         };
+      case 'agenda':
+        return { items: normalizeAgenda(d.items) };
+      case 'frame':
+        return { tool: typeof d.tool === 'string' && frameTool(d.tool) ? d.tool : '' };
+      case 'wheel':
+        return { items: normalizeWheelItems(d.items, dd.items) };
+      case 'score':
+        return { teams: normalizeTeams(d.teams, dd.teams) };
+      case 'sequence': {
+        var steps = normalizeSteps(d.steps);
+        var at = Math.min(steps.length - 1, Math.max(0, Math.round(num(d.i, 0, MAX_STEPS, 0))));
+        var q = { steps: steps, i: at, endsAt: num(d.endsAt, 0, 8.64e15, 0), remaining: num(d.remaining, 0, MAX_TIMER_S, steps[at].sec) };
+        var ql = normalizeLink(d.link);
+        if (ql) q.link = ql;
+        return q;
+      }
     }
     return dd;
   }
@@ -320,13 +499,17 @@
   function normalizeWidget(w) {
     if (!isObj(w) || TYPES.indexOf(w.type) === -1) return null;
     var r = clampRect(w);
-    return {
+    var out = {
       id: typeof w.id === 'string' && /^[\w-]{1,40}$/.test(w.id) ? w.id : newId('w'),
       type: w.type,
       x: r.x, y: r.y, w: r.w, h: r.h,
       z: Math.round(num(w.z, 1, 10000, 1)),
       data: normalizeData(w.type, w.data)
     };
+    /* Only once used, so a board that never used them is byte-for-byte what it was. */
+    if (w.min === true) out.min = true;
+    if (COLORS.indexOf(w.color) !== -1) out.color = w.color;
+    return out;
   }
 
   function blankScreen(name) {
@@ -345,6 +528,13 @@
       if (seen[n.id]) n.id = newId('w');
       seen[n.id] = true;
       widgets.push(n);
+    });
+    /* One frame per site tool on a screen: two live copies of one tool would write
+       the same saved keys over each other, so a second one is asked to choose again. */
+    var framed = {};
+    widgets.forEach(function (w) {
+      if (w.type !== 'frame' || !w.data.tool) return;
+      if (framed[w.data.tool]) w.data.tool = ''; else framed[w.data.tool] = true;
     });
     return {
       id: typeof s.id === 'string' && /^[\w-]{1,40}$/.test(s.id) ? s.id : newId('s'),
@@ -371,7 +561,11 @@
     }
     if (!screens.length) screens.push(blankScreen('Screen 1'));
     var current = isObj(raw) && typeof raw.current === 'string' && seen[raw.current] ? raw.current : screens[0].id;
-    return { current: current, follow: isObj(raw) ? bool(raw.follow, false) : false, screens: screens };
+    var out = { current: current, follow: isObj(raw) ? bool(raw.follow, false) : false, screens: screens };
+    /* Page-wide comforts, kept only while on (P11). */
+    if (isObj(raw) && raw.snap === true) out.snap = true;
+    if (isObj(raw) && raw.projector === true) out.projector = true;
+    return out;
   }
 
   /* Where a new widget goes: the first free spot in reading order (top-left
@@ -457,6 +651,18 @@
       if (p.s > mins && !next) next = p;
     });
     return { current: current, next: next };
+  }
+
+  /* How long until the bell, for the bell countdown widget. `mins` is minutes
+     since midnight (fractions allowed). Inside a period it is the time until
+     that period ends; between periods, the time until the next one starts;
+     after the last, none. Seconds are rounded up, so it never reads 0:00 with
+     time left. Reads the same rows as periodAt and writes nothing. */
+  function untilBell(list, mins) {
+    var at = periodAt(list, mins);
+    if (at.current) return { kind: 'ends', label: at.current.label, secs: Math.max(0, Math.ceil((at.current.e - mins) * 60 - 1e-6)) };
+    if (at.next) return { kind: 'starts', label: at.next.label, secs: Math.max(0, Math.ceil((at.next.s - mins) * 60 - 1e-6)) };
+    return { kind: 'none', label: '', secs: 0 };
   }
 
   function screenForPeriod(state, periodId) {
@@ -596,13 +802,40 @@
     return null;
   }
 
+  /* ---- keyboard and clicker shortcuts (Path 22 P7) ------------------------ */
+
+  /* Which shortcut, if any, a keydown is. `e` is the event's key, repeat and
+     modifier flags; `where` says what had focus: `typing` (a field that
+     swallows keys: an input, a text box, a select, an editable region) and
+     `control` (a button, link or summary, which Space already presses). Nothing
+     fires while someone types, or with Ctrl, Cmd or Alt held (the browser's own
+     shortcuts), or on a held key. A presentation clicker sends Right and Left,
+     and PageDown and PageUp. */
+  function readKey(e, where) {
+    if (!isObj(e) || typeof e.key !== 'string') return null;
+    where = isObj(where) ? where : {};
+    if (where.typing || e.altKey) return null;
+    /* Ctrl+Z (Cmd+Z) is undo; every other Ctrl or Cmd chord stays the browser's. */
+    if (e.ctrlKey || e.metaKey) return (e.key === 'z' || e.key === 'Z') && !e.shiftKey && !e.repeat ? { act: 'undo' } : null;
+    switch (e.key) {
+      case '?': return { act: 'help' };
+      case ' ': return e.repeat || where.control || e.shiftKey ? null : { act: 'timer' };
+      case 'n': case 'N': return e.repeat ? null : { act: 'pick' };
+      case 'ArrowRight': case 'PageDown': return e.shiftKey ? null : { act: 'next' };
+      case 'ArrowLeft': case 'PageUp': return e.shiftKey ? null : { act: 'prev' };
+    }
+    return null;
+  }
+
   var ClassScreenCore = {
     TYPES: TYPES,
     readCommand: readCommand,
+    readKey: readKey,
     TEMPLATES: TEMPLATES.map(function (t) { return { id: t.id, name: t.name }; }),
     fromTemplate: fromTemplate,
     readPeriods: readPeriods,
     periodAt: periodAt,
+    untilBell: untilBell,
     minutesOf: minutesOf,
     screenForPeriod: screenForPeriod,
     exportScreen: exportScreen,
@@ -624,11 +857,28 @@
     MIN_H: MIN_H,
     MAX_SCREENS: MAX_SCREENS,
     MAX_WIDGETS: MAX_WIDGETS,
+    MAX_AGENDA: MAX_AGENDA,
+    MAX_AGENDA_ITEM: MAX_AGENDA_ITEM,
+    MAX_STEPS: MAX_STEPS,
+    MAX_WHEEL: MAX_WHEEL,
+    MAX_WHEEL_ITEM: MAX_WHEEL_ITEM,
+    FRAME_TOOLS: FRAME_TOOLS.map(function (t) { return frameTool(t.id); }),
+    frameTool: frameTool,
+    spinTo: spinTo,
+    wheelAt: wheelAt,
+    MAX_TEAMS: MAX_TEAMS,
+    MAX_TEAM_NAME: MAX_TEAM_NAME,
+    MAX_SCORE: MAX_SCORE,
+    parseSequence: parseSequence,
+    formatSequence: formatSequence,
     parseYouTube: parseYouTube,
     embedUrl: embedUrl,
     formatClock: formatClock,
     parseDuration: parseDuration,
     clampRect: clampRect,
+    snapRect: snapRect,
+    SNAP_STEP: SNAP_STEP,
+    COLORS: COLORS,
     defaultData: defaultData,
     normalizeWidget: normalizeWidget,
     normalizeState: normalizeState,

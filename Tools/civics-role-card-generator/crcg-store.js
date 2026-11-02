@@ -20,7 +20,8 @@
                    names, extra },
        rubric:   { levels: [String x4], criteria: [{ id, name, top }] },
        reflection: { title, prompts: [{ id, text }] },
-       print:    { agenda, cards, caseFiles, ballots, rubric, reflections } }
+       print:    { agenda, cards, caseFiles, ballots, rubric, reflections },
+       roster? }                               // optional: the class list last assigned from
 
    repair() runs on every load and fills defaults for every field, so later
    rounds can add fields without a v3 bump. Two deliberate choices about the
@@ -137,7 +138,7 @@
 
   function repairDoc(doc) {
     doc = (doc && typeof doc === 'object') ? doc : {};
-    return {
+    var out = {
       v: 2,
       title: str(doc.title),
       roles: (Array.isArray(doc.roles) ? doc.roles : []).map(repairRole).filter(Boolean),
@@ -147,6 +148,14 @@
       reflection: repairReflection(doc.reflection),
       print: repairPrint(doc.print)
     };
+    /* The name of the class list this simulation was last assigned from, so a
+       debate and a mock trial each reopen for their own period. Optional all
+       the way down: it exists only once an assignment has been made, and a
+       simulation that never had one is byte for byte what it was. It is a
+       list's name, never a student's. */
+    var roster = str(doc.roster).trim().slice(0, 120);
+    if (roster) out.roster = roster;
+    return out;
   }
 
   function readJson(key) {
