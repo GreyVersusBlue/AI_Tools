@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v558';
+const CACHE_VERSION = 'v559';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -501,6 +501,7 @@ const PRECACHE_URLS = [
   "Tools/schedule-visualizer/sv-snapshots.js",
   "Tools/schedule-visualizer/sv-storage.js",
   "Tools/schedule-visualizer/sv-autosave.js",
+  "Tools/schedule-visualizer/sv-apply.js",
   "Tools/schedule-visualizer/sv-browser.js",
   "Tools/schedule-visualizer/sv-check.js",
   "Tools/schedule-visualizer/sv-checks-view.js",

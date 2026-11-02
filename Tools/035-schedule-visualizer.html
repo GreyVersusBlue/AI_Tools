@@ -98,6 +98,9 @@
     import * as SVAutosave from './schedule-visualizer/sv-autosave.js';
     window.SVAutosave = SVAutosave;
     Object.assign(window, SVAutosave);
+    import * as SVApply from './schedule-visualizer/sv-apply.js';
+    window.SVApply = SVApply;
+    Object.assign(window, SVApply);
     import * as SVAccess from './schedule-visualizer/sv-access.js';
     window.SVAccess = SVAccess;
     import * as SVSafety from './schedule-visualizer/sv-safety.js';
@@ -3096,76 +3099,6 @@ function portableTraceImage(t) {
   if (!t) return null;
   const src = traceImageSrc(t.dataUrl);
   return src ? { ...t, dataUrl: src } : null;
-}
-
-/**
- * Apply a deserialized blueprint object to the application state and re-render.
- * Returns true on success, throws on validation failure.
- */
-function applyBlueprintData(data) {
-  validateBlueprintData(data); // throws if invalid
-  migrateBlueprintToFloors(data); // normalize old/new into floors[] shape
-
-  // Reset transient UI state.
-  AppState.ui.selectedCell  = null;
-  AppState.ui.moveSource    = null;
-  AppState.ui.isPairingMode = false;
-  AppState.ui.pairingSource = null;
-  AppState.ui.editorTarget  = null;
-
-  // Rebuild every floor object from its serialized cells array.
-  const floors = svModel().floorsFromData(data);
-
-  AppState.blueprint.floors          = floors;
-  AppState.blueprint.crossFloorPairs = JSON.parse(JSON.stringify(data.crossFloorPairs || []));
-  AppState.blueprint.activeFloorIdx  = Math.min(data.activeFloorIdx || 0, floors.length - 1);
-  syncLegacyMirror(getActiveFloorData());
-  invalidatePathfindingGraph();
-
-  // Re-sync the heat-exclude id counter across ALL floors so new zones don't collide.
-  let maxCounter = 0;
-  for (const f of floors) {
-    for (const z of (f.heatExcludeZones || [])) {
-      const n = parseInt((z.id || '').replace('hz_', ''), 10);
-      if (!isNaN(n) && n > maxCounter) maxCounter = n;
-    }
-  }
-  _heatExcludeIdCounter = maxCounter + 1;
-
-  // Restore relevant settings (grid dimensions + cell size)
-  if (data.settings) {
-    if (data.settings.gridSize)   AppState.settings.gridSize   = data.settings.gridSize;
-    if (data.settings.gridCols)   AppState.settings.gridCols   = data.settings.gridCols;
-    if (data.settings.gridRows)   AppState.settings.gridRows   = data.settings.gridRows;
-    // R59: restore bell schedule + subjects when the blueprint file carries them.
-    if (data.settings.bellSchedule) AppState.settings.bellSchedule = data.settings.bellSchedule;
-    if (Array.isArray(data.settings.subjects)) AppState.settings.subjects = data.settings.subjects;
-    normalizeSettings(AppState.settings);
-  }
-
-  // Re-render the editor canvas to the active floor's dimensions.
-  if (canvas) {
-    const af = getActiveFloorData();
-    const cellSize = AppState.settings.gridSize;
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width  = af.gridCols * cellSize * dpr;
-    canvas.height = af.gridRows * cellSize * dpr;
-    ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    applyZoom();
-    renderCanvas();
-  }
-
-  updateTileStats();
-  updateStatusBar();
-  showRightPanel('empty');
-  rebuildRoomRegistry();
-  if (typeof FloorManager !== 'undefined') FloorManager.renderTabs();
-  if (typeof sizeVizCanvas === 'function') sizeVizCanvas();
-  if (typeof clearHistory === 'function') clearHistory();
-  adoptTraceImages();   // Path 4 P4: read stored trace images, store arriving ones
-
-  return true;
 }
 
 /* ==============================================

@@ -52,7 +52,8 @@ shapes:
   `sv-settings-editors.js` (the Settings tab's bell schedule editor, with "From the School Calendar", and the subjects editor; rank 140),
   `sv-snapshots.js` (the Settings tab's named project snapshots: four user slots and one auto slot under `STVIZ_SNAPSHOT_<n>`; rank 140),
   `sv-storage.js` (the storage-headroom warning and the "could NOT be saved" banner; rank 140),
-  `sv-autosave.js` (the autosave debounce, the write to localStorage, the Saved indicator and the load with its quarantine copy; `applyBlueprintData` stays on the page; rank 140),
+  `sv-autosave.js` (the autosave debounce, the write to localStorage, the Saved indicator and the load with its quarantine copy; rank 140),
+  `sv-apply.js` (`applyBlueprintData`: a deserialized plan onto the page, canvas and room registry; rank 140),
   `sv-safety.js` (the evacuation cards, one per room, the lockdown maps, one
   per floor, and the door signs, per teacher, through the print kit; Path 11 P4),
   `sv-checks-view.js` (the Schedules tab's checks banner, the group cards' and
