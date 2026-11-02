@@ -49,7 +49,7 @@ ok(pub.plan.items.find(e => e.kind === 'data').escaped === true, "PUBLISHED_DATA
 ok(assemble(pub, { school: '</script><b>' }).includes('"school":"\\u003c/script>\\u003cb>"'),
   'assemble() escapes < in the data as the page does');
 const c = s => real.fork.filter(f => f.state === s).length;
-ok(c('same') === 21 && c('forked') === 12 && c('absent') === 18, `034: 21 same, 12 forked, 18 absent (got ${c('same')}/${c('forked')}/${c('absent')})`);
+ok(c('same') === 24 && c('forked') === 15 && c('absent') === 12, `034: 24 same, 15 forked, 12 absent (got ${c('same')}/${c('forked')}/${c('absent')})`);
 const script = assemble(pub, {});
 ok(script.startsWith("'use strict';\n"), 'the assembled script is strict');
 const free = freeNames(script);
