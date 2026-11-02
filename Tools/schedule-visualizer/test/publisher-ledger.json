@@ -21,7 +21,10 @@
     "brDeptInk",
     "brTDept",
     "brDShort",
-    "brOrderOf"
+    "brOrderOf",
+    "brDirGraph",
+    "brDirRoute",
+    "brDirSteps"
   ],
   "forked": {
     "brBuildOpts": "034's name list also serves its compare and sub-coverage tabs.",
@@ -35,7 +38,10 @@
     "brGeoFloorSVG": "034's floor drawing takes opts.crop to show the region near a room; it escapes with brEscHtml.",
     "brMiniMapHTML": "Only the escaper differs: 034 calls its own brEscHtml where 035 publishes escHtml.",
     "brGroupMapHTML": "Only the escaper differs: 034 calls its own brEscHtml where 035 publishes escHtml.",
-    "brCheckStaleness": "034 reads PUBLISHED_DATA.publishedOn defensively, without 035's typeof guard."
+    "brCheckStaleness": "034 reads PUBLISHED_DATA.publishedOn defensively, without 035's typeof guard.",
+    "brRenderDirections": "Only the escaper differs: 034 calls its own brEscHtml where 035 publishes escHtml (rank 139, 034's Directions tab).",
+    "brShowRoute": "Only the escaper differs: 034 calls its own brEscHtml where 035 publishes escHtml (rank 139, 034's Directions tab).",
+    "brDirMapsHTML": "The escaper (brEscHtml for escHtml), and the scrolling map is a focusable labelled group so the keyboard can scroll it (rank 139)."
   },
   "absent": {
     "escHtml": "034 has its own brEscHtml.",
@@ -45,12 +51,6 @@
     "brUseSchedule": "Path 11 P6 increment 1: swaps the schedule showing; 034 shows only its own.",
     "brPickScheduleFile": "Path 11 P6 increment 1: the Open a newer schedule button; 034 has none.",
     "brOpenScheduleFile": "Path 11 P6 increment 1: the file input's handler; 034 has none.",
-    "brDirGraph": "Path 11 P6 increment 2: the walk a published copy routes its Directions tab on; 034 has no directions.",
-    "brDirRoute": "Path 11 P6 increment 2: the route between two rooms, on brDirGraph; 034 has no directions.",
-    "brDirSteps": "Path 11 P6 increment 2: a route's moves in sv-routes.js routeSteps()'s words; 034 has no directions.",
-    "brRenderDirections": "Path 11 P6 increment 2: the Directions tab; 034 has no such tab.",
-    "brShowRoute": "Path 11 P6 increment 2: the Directions tab's room lists' handler; 034 has no such tab.",
-    "brDirMapsHTML": "Path 11 P6 increment 2: the floor maps with the route drawn on them; 034 has no directions.",
     "brCoverRows": "Path 11 P6 increment 3: the sub plan's rows, who is on Planning each mod; 034's Substitute Plan is its own (brSubCoverageHTML).",
     "brCoverText": "Path 11 P6 increment 3: the sub plan as plain text for an email; 034 copies nothing.",
     "brRenderCover": "Path 11 P6 increment 3: the Sub Plan tab; 034's Substitute Plan tab is its own (brSubHTML).",
