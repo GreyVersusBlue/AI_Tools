@@ -332,10 +332,17 @@ for (let i = 0; i < 30; i++) {
 }
 ok(seen.some(t => /<img src=x onerror/.test(t)), 'the projector shows the img cell as text');
 eq(await page.evaluate(() => document.querySelectorAll('.display-card img, .display-card svg, .display-card b').length), 0, 'and builds no element from it');
+// The worksheet draws up to 20 problems at random from every enabled problem, built-ins included, so the
+// pasted row holding "onerror" was in it only about three times in four. Turn the built-ins off in the bank
+// (the Disable buttons) so the draw is the three rows pasted above, all of them, every time.
+await page.click('[data-stage="bank"]');
+await page.evaluate(() => { let b; while ((b = document.querySelector('#bankList .bank-row:not(.disabled) [data-toggle]'))) b.click(); });
+eq(await page.evaluate(() => document.querySelectorAll('#bankList .bank-row:not(.disabled)').length), 3, 'only the three pasted rows are left enabled for the worksheet');
 await page.click('[data-stage="sheet"]');
 await page.fill('#sheetCount', '20');
 await page.click('#buildSheetBtn');
 const sheetHtml = await page.innerHTML('#printArea');
+eq(await page.evaluate(() => document.querySelectorAll('#sheetProblems .problem').length), 3, 'the worksheet holds all three pasted rows');
 ok(sheetHtml.indexOf('<img') === -1 && sheetHtml.indexOf('<script') === -1 && sheetHtml.indexOf('onerror') > -1, 'the worksheet and key carry the text, not an element');
 d10 = await dom();
 eq(d10.pwned, 0, 'still nothing ran after the projector and the worksheet');

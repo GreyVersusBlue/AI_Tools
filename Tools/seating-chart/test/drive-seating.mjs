@@ -357,7 +357,16 @@ async function buildChart(page) {
   ok(/not a valid/i.test(afterJunk.status), `and says so out loud (${afterJunk.status.slice(-60)})`);
 
   /* --------------------------------------------- a corrupt localStorage -- */
-  await page.evaluate(() => localStorage.setItem('seating-chart-v1', '{"sections":'));
+  // The store is corrupted by an init script, so it is already corrupt when the
+  // reloaded document starts. Writing it from the old page raced that page's own
+  // autosave: a flush still pending from the import above (1.2 s timer) landed
+  // 29 ms after the write on a loaded runner and put the 28-student chart back,
+  // so the reloaded page honestly "Reloaded 3 sections" and the check read "28".
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('corruptedOnce')) return;
+    sessionStorage.setItem('corruptedOnce', '1');
+    localStorage.setItem('seating-chart-v1', '{"sections":');
+  });
   await page.reload({ waitUntil: 'load' });
   await settle(page, 500);
   const afterBadStore = await page.evaluate(() => ({

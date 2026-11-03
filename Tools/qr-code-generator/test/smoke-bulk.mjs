@@ -342,7 +342,7 @@ console.log('016 — batch codes from a spreadsheet');
     await page.fill('#bulk-text', NEEDS);
     await page.click('#btn-bulk-check');
     const v = await a11yScan(page, { impact: 'serious' });
-    eq(v.length, 0, 'axe: no serious or critical violation with the result list showing: ' + JSON.stringify(v.map(x => x.id)));
+    eq(v.length, 0, 'axe: no serious or critical violation with the result list showing: ' + JSON.stringify(v.map(x => ({ id: x.id, nodes: x.nodes }))));
     await page.focus('#bulk-text');
     const seen = [];
     for (let i = 0; i < 5; i++) { await page.keyboard.press('Tab'); seen.push(await page.evaluate(() => document.activeElement.id)); }

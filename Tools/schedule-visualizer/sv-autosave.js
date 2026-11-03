@@ -2,7 +2,7 @@
 // localStorage and the "Saved 3:04:05 PM" indicator. Moved out of the page's classic script as a
 // view module, the way sv-storage.js is (rank 140, the fourth and fifth increments): behaviour,
 // ids and wording are unchanged. The load, with the quarantine copy of an unreadable save, is here
-// too (rank 140, the sixth increment); applyBlueprintData() and validateBlueprintData() stay on the
+// too (rank 140, the sixth increment); applyBlueprintData() is sv-apply.js since the seventh; validateBlueprintData() stays on the
 // page. The write reaches the page's serializeBlueprint(), BLUEPRINT_KEY,
 // rebuildRoomRegistry() and adoptTraceImages() by bare name, at call time. The module owns two
 // pieces of state, the debounce timer and the time of the last save; the page sets the second

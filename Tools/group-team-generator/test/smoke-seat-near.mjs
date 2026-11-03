@@ -106,9 +106,20 @@ console.log('Group / Team Generator — seat groups near each other');
   ok(first < classMean / 1.8, `on, first shuffle: students in a group sit well under the class's own distance apart (${first.toFixed(2)} against ${classMean.toFixed(2)})`);
   // Twelve shuffles in a row: not repeating the last partners comes before seating, so the groups loosen,
   // but they stay nearer than with it off.
-  const o = await open({ 'seating-chart-v1': chart('Period 3') });
-  const off = meanIn(await shuffle(o, 12));
-  await o.context().close();
+  // One twelve-shuffle session is random: measured over 30 sessions, on has a mean of 2.23 and a standard
+  // deviation of 0.06, off 2.60 and 0.12 (the class's own is 2.58), so the gap of 0.37 between single sessions
+  // has a deviation of about 0.13 and "nearer by 0.15" failed about one run in twenty (2.27 against 2.41 on
+  // 2026-10-29 and 2026-11-02). Pooling 8 fresh sessions each side makes the deviation 0.13/sqrt(8) = 0.046,
+  // so the same 0.15 bound is 4.8 deviations from the 0.37 the tool delivers, about one run in a million.
+  // No seed: the sessions stay random, and the bound is not moved.
+  const SESSIONS = 8;
+  const offRuns = [];
+  for (let k = 0; k < SESSIONS; k++) {
+    const o = await open({ 'seating-chart-v1': chart('Period 3') });
+    offRuns.push(...await shuffle(o, 12));
+    await o.context().close();
+  }
+  const off = meanIn(offRuns);
   ok(Math.abs(off - classMean) < 0.6, `off: a group is as spread as the class (${off.toFixed(2)} against ${classMean.toFixed(2)})`);
   const p = await open({ 'seating-chart-v1': chart('Period 3') });
   await p.check('#seat-near-check'); await settle(p, 150);
@@ -116,8 +127,16 @@ console.log('Group / Team Generator — seat groups near each other');
   const on = await shuffle(p, 12);
   ok(on.every(placedAll), 'twelve shuffles: every one places all 12 students once');
   ok(on.every(gs => gs.length === 3 && gs.every(g => g.length === 4)), 'twelve shuffles: groups of four');
-  const onMean = meanIn(on);
-  ok(onMean < off - 0.15, `on, twelve in a row: nearer than off (${onMean.toFixed(2)} against ${off.toFixed(2)})`);
+  const onRuns = [...on];
+  for (let k = 1; k < SESSIONS; k++) {
+    const q = await open({ 'seating-chart-v1': chart('Period 3') });
+    await q.check('#seat-near-check'); await settle(q, 150);
+    onRuns.push(...await shuffle(q, 12));
+    await q.context().close();
+  }
+  ok(onRuns.every(placedAll), `${SESSIONS} sessions of twelve shuffles: every one places all 12 students once`);
+  const onMean = meanIn(onRuns);
+  ok(onMean < off - 0.15, `on, twelve in a row, ${SESSIONS} sessions: nearer than off (${onMean.toFixed(2)} against ${off.toFixed(2)})`);
   ok(/sit about [\d.]+ desks? apart/.test(await explain(p)), 'the explanation gives the distance');
   // 3. a keep-apart pair on neighbouring desks.
   const a = NAMES.find((_, i) => DESK_OF[i] === 0), b = NAMES.find((_, i) => DESK_OF[i] === 1);
