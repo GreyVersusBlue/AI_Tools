@@ -532,6 +532,7 @@
     "conference-signup/test/core.test.mjs",
     "conference-signup/test/worker.test.mjs",
     "conference-signup/test/smoke-flow.mjs",
+    "conference-signup/test/smoke-workerd.mjs",
     "Tools/packet-builder/test/sections.test.mjs",
     "Tools/packet-builder/test/providers.test.mjs",
     "Tools/packet-builder/test/smoke-packet-builder.mjs",

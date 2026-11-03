@@ -5,7 +5,8 @@
   "description": "Dev-only test tooling for the East Middle Staff Toolkit. The site itself is static, has no build step, and is never served from node_modules — see CLAUDE.md. After cloning: npm ci && npx playwright install chromium",
   "scripts": {
     "test": "node Tools/board-check/run-suites.mjs",
-    "test:conference-signup": "node conference-signup/test/core.test.mjs && node conference-signup/test/worker.test.mjs && node conference-signup/test/smoke-flow.mjs",
+    "test:conference-workerd": "node conference-signup/test/smoke-workerd.mjs",
+    "test:conference-signup": "node conference-signup/test/core.test.mjs && node conference-signup/test/worker.test.mjs && node conference-signup/test/smoke-flow.mjs && node conference-signup/test/smoke-workerd.mjs",
     "test:name-picker": "node Tools/name-picker/test/smoke.mjs && node Tools/name-picker/test/drive-weighting.mjs",
     "test:name-picker-share": "node Tools/name-picker/test/smoke-share.mjs",
     "test:name-picker-themes": "node Tools/name-picker/test/parity-themes.mjs",

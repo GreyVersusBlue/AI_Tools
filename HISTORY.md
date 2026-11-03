@@ -9,6 +9,21 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-31: conference sign-up Worker run under workerd (rank 161, 2026-11-03, no page changed, no version bump)
+
+`conference-signup/test/smoke-workerd.mjs` (`npm run test:conference-workerd`, ports 8676 and 8677, 38 assertions, about
+12 s) starts `wrangler dev --local` (wrangler 4.157.0) on `conference-signup/worker/wrangler.toml` with a throwaway
+`--persist-to` and a made-up `ADMIN_PIN` passed by `--var`, and stops it by killing the process group. It checks the
+bundle (32 teachers through the `with { type: 'json' }` import), CORS and the origin refusals, the 400 and 413 limits, the
+PIN (none, wrong, a spoofed `x-room-admin`, right), a booking that survives stopping and restarting on the same storage
+(the `v1` SQLite migration and `ctx.storage`), the ten-wrong-PIN lock-out, the 503 with no `ADMIN_PIN`, and the six-character
+code from `crypto.getRandomValues`. It passed the first time: the runtime exposed no bug, so the Worker did not change.
+Decision: wrangler is **not** a devDependency (the repo keeps dependencies empty and a lockfile change could not be made
+here); the suite prints `SKIP` and exits 0 when `wrangler` is missing, which is what GitHub's runner will do, and
+`REQUIRE_WRANGLER=1` turns that into a failure. Reverse it by adding wrangler to devDependencies and setting that variable in CI.
+Not verified: CI's skip path was run only by hand with `PATH` stripped; the local explorer and `cf-connecting-ip` as Cloudflare's
+edge sets it (the suite sets the header itself); nothing was deployed and no login was used.
+
 ## AI-34: five suites that failed on GitHub's runner and passed on huginn (2026-11-02, no page changed, no version bump)
 
 Scope: the CI failures on the 2026-10-29 to 2026-11-02 landings. Each fix is its own commit, test code only; `CACHE_VERSION` did not move.
