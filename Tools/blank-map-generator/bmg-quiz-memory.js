@@ -24,7 +24,7 @@ export function empty() { return { __v: VERSION, projects: {} }; }
 /** The identity of a place across rounds, or null for a label with no text. */
 export function keyOf(text) {
   const k = String(text == null ? '' : text).normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase();
-  return k ? k.slice(0, MAX_TEXT) : null;
+  return k ? k.slice(0, MAX_TEXT).trimEnd() : null; // trimmed again after the cut, so a key is its own key (AI-63)
 }
 
 const count = v => (Number.isInteger(v) && v > 0 ? Math.min(v, MAX_COUNT) : 0);
