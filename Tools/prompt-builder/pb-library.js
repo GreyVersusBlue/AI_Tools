@@ -8,9 +8,9 @@
 
    Entries written for the library keep their topic, grade and texts as {{placeholders}},
    so loading one hands the teacher a blank to fill, not last unit's example, and nothing in
-   any entry names a student. THE WORDING OF THE NEW ENTRIES (feedback, reading level,
-   accommodation ideas, family translation, difficult conversation) HAS NOT BEEN READ BY A
-   TEACHER: HISTORY lists them for Devon to strike or rewrite here. */
+   any entry names a student. The wording of the five entries added with the library
+   (feedback, reading level, accommodation ideas, family translation, difficult conversation)
+   was read and kept by Devon on 2026-11-03. */
 (function (root) {
   'use strict';
 

@@ -9,6 +9,37 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-31 (answers): Devon's answers of 2026-11-03 closed (bookkeeping, 2026-11-03, `CACHE_VERSION` v562)
+
+Source: `DEVON-ANSWERS-2026-11-03.md` in the Selector's folder (Devon's open-questions form of 2026-11-03, 80 of 80 answered,
+binding; full wording in `DEVON-QUESTIONS-2026-11-03.json`). 73 kept the default (the file's summary says 74; its log has 73
+lines marked so); four are work for other rows (86-1 and 86-2, rank 86; P5-route, rank 37; L4, rank 56) and three are the
+reviews below. No feature work.
+
+- **Three reviews kept, flags removed (the content is unchanged).** 043-letter: the bold "draft that no one but its author
+  has read" note is gone from 043's Trip packet card, and the `letterPrintHtml()` comment says the wording was kept.
+  029-prompts: `Tools/prompt-builder/pb-library.js`'s header no longer says the five library entries were never read (the
+  page itself never flagged them). 086-corpus: nothing in `086-wiki-race.html` flagged the CORPUS as unchecked, so no code
+  changed; this entry is the record that Devon read and kept it.
+- **Questions closed, default kept (ids, as on the form):** 053-1; 43-1, 43-2; 151-1, 080-2; P3-1 to P3-5 and P11X-P4-1 to
+  P4-4 (Path 11 P3, P4); 034-rep, 034-words, P6-1 to P6-5 (Path 11 P6); B1 to B5 (Path 9 P1); P5-1 to P5-3 (Path 3 P5);
+  66 to 69 (Path 12); P13B-P4-1 to P4-4, P4-5, D-1 to D-3 (Path 13 P4 and the display); P4-a to P4-c, P5-menu, P5-seat,
+  P5-redo, P5-003 (Path 14; 003's undo stays listed on rank 37); P18-1, P18-Q5 (Path 18); S1, I4, G4, G5, G1, I1, I2, L1,
+  G6, S2, I5 (Path 19 P3); 117, 149, 062-2, 150, 65, 60, TB-print; and the workers' own calls 050, 027, 021, 064 and
+  043-tags, each confirmed.
+- **Ranked rows deleted, nothing left to build:** 36 (Path 14 P4; its only open items were a-c), 43 (Path 16 P4's triage
+  lists and persistence question), 117 (008's per-day team record), 149 (062's timed bee; buzz-in stays a deferred,
+  student-facing item in 062's section), 150 (064's flag library; the fill-in mode stays deferred in 064's section) and
+  151 (080's combining and pattern blocks). Rewritten: 51 (minutes or points closed), 56 (only L4 left), 60 (only the slice
+  sheet's print preview left), 65 (the people-content tools get no sample). Not touched, as the batch assigned them to
+  other workers: rank 86's row, rank 37's live-mode route text, and Path 19 P3's L4. Ranks not renumbered.
+- **Found and fixed:** the numbers table's Tier 1 cell said "95 ranked rows, ranks to 164"; there were 38 rows before this
+  change and 32 after it, the last being 144.
+- **Not verified:** whether any Tier 2 note outside the sections the form cited still words one of these as open (I closed
+  each at the line the form named, found by its text, and the cross-references to the deleted ranks I could find with grep).
+
+---
+
 ## AI-31: 002 project teams (rank 111, 2026-11-03, `CACHE_VERSION` v561)
 
 Devon had answered all six project-team questions on 2026-10-07 (`DEVON-ANSWERS-2026-10-07.md` 4.1 to 4.6, the second table, binding). BACKLOG's
