@@ -828,7 +828,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 136 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
 | 138 | The A/B cycle's anchor date shows the other letter when the anchor is a school day after the calendar's first school day (`scv-weeks.js`, `ANCHOR_QUIRK`; fixing it flips every letter of such a saved calendar, so it is a decision, not a quiet fix); cycle labels beyond A and B (needs a field in `scv_calendar_v1`, which 010 reads raw); Year-grid badges and the page-per-week print shipped v292, the "Week starts on" setting (Sunday, Monday or Saturday for the month, year and wall grids; its own key `scv_week_start`, the one-week print stays Monday to Friday) v555 | 032 | ¼ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
 | 140 | 035 what is left: the page's inline script is still ~2,750 lines (the onboarding and presentation glue, the recovery manager's glue; the bell and subjects editors went to `sv-settings-editors.js` at v543, the snapshot manager to `sv-snapshots.js` at v550, the storage-headroom warning to `sv-storage.js` at v554, the whole autosave path (debounce, write, Saved indicator, load with its quarantine copy) to `sv-autosave.js` at v556-v558 and `applyBlueprintData` to `sv-apply.js` at v559), so the next increment is the recovery manager's glue on the page (`sv-recovery.js` holds the ring; read how the page reaches it first) or the onboarding block. Accessibility routing (Path 11 P3) is built; what is left of it is accessibility-aware *evacuation* routing (a wheelchair user's route out: step-free and no elevator), which turns on P3's Devon question about what counts as an exit, so it stays out | 035 | ½ | | [035 School Layout Visualizer](#035--school-layout-visualizer) |
-| 143 | A second language beyond Spanish (needs a translation a person has checked), including for the new parent letter; the phone/projector trip-day view | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
+| 143 | A second language beyond Spanish (needs a translation a person has checked), including for the new parent letter | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
 | 144 | 044 what is left of references by name: the plan saying *which* section the Sub Binder prints. 045's choice is built and saved (v549); 044 reads no key of 045 and the Sub Binder's included-sections object is its own, so the line would need a packet provider or a registry `reads` entry, a Path 10 call | 044 | ¼ | | [044 Sub Plan Builder](#044--sub-plan-builder) |
 
 ## How to work this list
@@ -6749,7 +6749,7 @@ day; the cross-week, cross-period view teachers actually want does not.
   reloads; the fold is on the page's in-memory overflow and the invariant the smoke holds is rollup + last 500 = every pick.
   Not done, on purpose: no reader uses `view()` yet (P3); the ids come from the sidecar the page already loads, so a name
   with no id is keyed on its name until P3 reads it through `view()`.
-- **P3 — Equity dashboard. Built (AI-23, 2026-10-29, v456-v457); nothing left in it (the seat-join `unmatched` fix landed in `np-seat-equity.js`, AI-36, v570).** Who hasn't been called on in three weeks, distribution
+- **P3 — Equity dashboard. Built (AI-23, 2026-10-29, v456-v457); nothing left in it (the seat-join `unmatched` fix landed in `np-seat-equity.js`, AI-36, v571).** Who hasn't been called on in three weeks, distribution
   by seat position, per period and across periods, printed as a one-page artifact.
   A "Data" front door with an erase button, matching the site's privacy posture.
   **Design (AI-23, 2026-10-29; written before any code, read against 007 at v455).** *What exists.* The Equity tab
@@ -6778,7 +6778,7 @@ day; the cross-week, cross-period view teachers actually want does not.
   button to the Data tab, where the erase buttons already are, and a "Clear pick history" shortcut that is the
   existing button's own handler (one erase, so nothing hidden is left). *Stored: nothing.* No key, no setting (the
   period and window are page variables), no student fact; `np-seat-equity.js` and `np-equity.js` are untouched and the
-  `unmatched` fix stays with the seat join (it reads names; moving it to ids is its own change, not in P3; done since, AI-36, v570). *Defaults
+  `unmatched` fix stays with the seat join (it reads names; moving it to ids is its own change, not in P3; done since, AI-36, v571). *Defaults
   taken, none of them Devon's open questions:* three weeks is the "quiet" line; Monday starts a week; eight weeks is
   the opening window.
   **As built (v456-v457).** As designed. `np-dashboard.js` (pure: `weekStart`, `weekList`, `build`, `compare`, `chartData`, `lines`; held by
@@ -6796,7 +6796,7 @@ day; the cross-week, cross-period view teachers actually want does not.
   student stored under a name key before an id existed is matched on both keys (the counts add), because P2 never rewrites stored keys.
   *Defaults taken, none of them Devon's open questions:* periods are the saved rosters (a student on two counts in both; "All periods"
   counts them once); three weeks is the quiet line; eight weeks opens; the period and window are page variables, nothing is stored.
-  Since AI-36 (2026-11-04, v570) `np-seat-equity.js` joins a seat to its equity row by the Class Roster Hub id first (`joinCallRates(...,
+  Since AI-36 (2026-11-04, v571) `np-seat-equity.js` joins a seat to its equity row by the Class Roster Hub id first (`joinCallRates(...,
   idOf, rosterName)`, the page's `lookupId` over the sidecar, both sides resolved against the picker's roster) and by the loose name only
   when the ids do not meet, so a preferred or respelled name on the chart joins and `unmatched` lists only seats that match neither; with
   no `idOf` it is the old name join, and the original fixture joins identically (`test:name-picker`'s smoke.mjs). Nothing stored changed.
@@ -12810,18 +12810,21 @@ enough that the result doesn't look like a form.
   (the trip leader and each chaperone with phone and group size, four write-in lines for the school office, venue, bus and nearest
   hospital, the emergency instructions; nothing about any student's health, no parent numbers), **name tags** (first name and last
   initial only, the group's chaperone, the trip leader's phone; eight to a page) and a **day schedule** (a new `schedule` field in
-  the trip's record, one stop to a line, a leading time in its own column; with none, the leave and return times). **The letter's
-  wording is an unreviewed draft** and the card says so; **name tags show a last initial, not a surname, on a call made here that
-  Devon may reverse.** No new storage key (`schedule` rides the trip's record and its share link like the other fields).
+  the trip's record, one stop to a line, a leading time in its own column; with none, the leave and return times). The letter's
+  wording was flagged as an unreviewed draft until Devon read it and kept it (2026-11-03; the flag went in v562); name tags show a
+  last initial, not a surname, which he also kept. No new storage key (`schedule` rides the trip's record and its share link like the other fields).
   `smoke-packet.mjs` (port 8666, 55 assertions); not printed on paper. Left: a letter in a second language (needs a checked
-  translation), the phone/projector view.
+  translation).
 - **Partly done — 2026-11-01 (AI-31, v548, rank 143). Trip-day headcount checklist.** "Print headcount checklist" (with a
   Preview): one page per chaperone with students, one for anyone with none, a row per student with three tick boxes (left
   school, arrived, back), a Slip column from the collection tracker and a count line; no new data stored
-  (`smoke-headcount.mjs`, port 8663; not printed on paper). Left: the phone/projector view.
-- **Skipped — deferred.** **Trip-day mode.** A projector/phone view: the headcount, the groups, the
-  schedule, the "who's on the bus" checklist, and emergency numbers — usable
-  while standing in a parking lot.
+  (`smoke-headcount.mjs`, port 8663; not printed on paper). The screen half is the trip-day view, below.
+- **Done — 2026-11-03 (AI-49, v570, rank 143). Trip-day mode.** A "Trip-day view" button in the Chaperones card opens a read-only,
+  large-type overlay: the trip, the day schedule, the trip leader's and chaperones' numbers as `tel:` links, and each group (and the
+  unassigned) as first name and last initial with a "no slip" mark and three tick boxes (left school, arrived, back) counted per
+  group. It reads the open trip and writes nothing: the ticks are in memory for the visit (closing the view keeps them, a reload
+  clears them). **Full screen** puts it on the board through `Stage.mount`. `smoke-trip-day.mjs` (port 8687, with 13 mutants); not
+  tried on a real phone or projector.
 - **Skipped — deferred.** **Multi-section trips.** A grade-level trip spans several teachers'
   rosters; merging them and splitting into buses/groups is currently manual.
 - **Skipped — deferred.** **Year-over-year reuse that actually works** (P14). "Same trip as last year,

@@ -9,10 +9,10 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## AI-36: 007's seat equity joins by student id, not name (2026-11-04, `CACHE_VERSION` v570)
+## AI-36: 007's seat equity joins by student id, not name (2026-11-04, `CACHE_VERSION` v571)
 
 Source: audit entry AI-36 (the Selector's `BACKLOG-AUDIT-2026-11-04.md`, split from AI-23), the gap BACKLOG's Path 15 P2 "Not done" and P3
-notes named. No ranked row.
+notes named. No ranked row. (The commit says v570; AI-49 took v570 on `main` first, so this is v571.)
 
 - `np-seat-equity.js`'s `joinCallRates(positions, equityRows, idOf, rosterName)` now joins a seat to an equity row by the student's Class
   Roster Hub id first and by the loose name only when no id joins them. `idOf` is the same `(name, rosterName) => id | null` np-dashboard.js
@@ -29,6 +29,32 @@ notes named. No ranked row.
   six of the new cases fail. Nothing stored changed (no key, no `np_daily`/history format), and the phone remote is untouched.
 - Not verified: no browser suite renders the seat section of the Equity tab. A scratch page check (seeded chart, sidecar and history)
   was run once by hand; it is not committed.
+
+## AI-49: 043's trip-day view (rank 143, 2026-11-03, `CACHE_VERSION` v570)
+
+(My commit says v567; AI-58 (+AI-59), AI-47 and AI-56 took v567 to v569 on `main` first, so the merges moved mine to v570.)
+
+The last screen piece of 043's trip packet, the "Trip-day mode" BACKLOG had deferred since the first round. The draft flag on the parent
+letter, the entry's first half, was already gone (AI-31 (answers), 357854b, v562), so this session built only the view.
+
+- **What it is.** A **Trip-day view** button under the headcount buttons in the Chaperones card opens a fixed overlay (`#tripDay`, a
+  dialog) in large type: the trip's name, place and day; the day schedule (`scheduleRows()`, the same reader as the printed schedule, and the
+  leave and return times when there is none); the trip leader's and each chaperone's number as a `tel:` link, as on the emergency sheet; the
+  emergency instructions; and each chaperone's group, then "No chaperone yet", with each student as first name and last initial (`tagName()`,
+  the name tags' rule), a "no slip" mark from the collection tracker and three tick boxes, left school, arrived and back, with a count line per
+  group. **Full screen** puts the overlay on stage with `Stage.mount` (no hotkey, so typing F in the editor does nothing); in full screen the
+  groups lay out side by side and the type is larger. Close and Escape put it away and give focus back.
+- **Nothing is stored.** The view reads `state` and never calls `save()`; the ticks are a page variable keyed by trip and student, so closing
+  and reopening keeps them and a reload clears them, as the printed headcount sheet keeps nothing. No new key, so no registry row. The
+  overlay is built from elements and `textContent` only (no new markup sink).
+- **What I decided.** Where the button lives (the Chaperones card, not the toolbar, so the phone toolbar is untouched); that the "no slip"
+  mark is shown (it is the headcount sheet's Slip column, and a teacher at the bus wants it); that a chaperone with no phone says "no number".
+  No print rule of its own: `print-area.css` already takes everything but `#printArea` off the paper, and the mutant that deleted a rule
+  for it survived, so the rule was dead and went.
+- **Tests.** `test:permission-slip-trip-day` (`smoke-trip-day.mjs`, port 8687): contents, ticks and storage (byte-for-byte before and after,
+  and after a reload), Stage in and out, focus, Escape, print media, a hostile student and chaperone name, an empty trip, axe on the overlay
+  in light and dark, no sideways scroll at 360 px, names at least 16 px and 44 px tick targets, and 13 mutants each caught by its scenario.
+  Not tried on a real phone or a projector.
 
 ## AI-56 (+AI-61): 037's item analysis reads a "Max", a numbered header and a stray word right; 007's theme packs each keep their own id (2026-11-03, `CACHE_VERSION` v569)
 
