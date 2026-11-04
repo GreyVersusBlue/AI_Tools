@@ -9,6 +9,45 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-22: a point (008) and a hall pass (001) from 005's live mode (rank 37, Path 14 P5, 2026-11-03, `CACHE_VERSION` v562)
+
+Devon answered P5-route on 2026-11-03 (`~/projects/DEVON-ANSWERS-2026-11-03.md`, binding): 005's live mode writes 008's and 001's storage
+directly on the same device, the way 003 writes 037's. In the same answers he kept P5-menu ("No, a tap marks absent only"), P5-seat (stays and
+dims), P5-redo (no buttons) and P5-003 (003's undo listed, not built).
+
+- **The call, mine, reversible: a switch, not a menu.** The two answers pull apart (a tap gives a point, and a tap only marks absent), so I took the
+  most conservative reading that does both: a **"Tap marks: Absent / A point (Behavior & Points) / A hall pass"** radio group in a bar that rides
+  into the stage beside the chart with the exit button (`Stage.mount`'s `hud`), reached by Tab and moved by the arrow keys, with a visible status
+  line (`#liveStatus`, `role="status"`) and an Undo button. **Absent is the default and is put back every time live mode starts**, so a tap at rest
+  does exactly what it did in v377, and no menu ever opens on a tap. To reverse it: a different control (say, a long press) is a change to `liveTap()`
+  and the bar in 005, nothing else; the writes are in one pure module.
+- **The writes.** `Tools/seating-chart/seating-handoff.mjs` (pure; `awardPoint`, `undoPoint`, `startPass`, `undoPass`) takes the stored string and
+  returns the string to store, and the page does the one `getItem`/`setItem`, with the literal keys at each call so `check:registry` reads them.
+  A point is what 008's default +1 chip gives (`delta` 1, `tagLabel` "Manual", category Other, the student's team for today included, as `applyTap()`
+  and `BPTeams.award()`); a pass is 001's `signOutStudent()` with the section's armed destination (Restroom, 001's first default, on a section with
+  none). The class is the one pointed at the chart section (008's `seatingSectionId`), then the one with the section's name, then the one following
+  the roster of that name. **Refused, nothing written, each with a sentence:** a store that does not parse or has a shape it does not know (a
+  `version`, `v` or `schema` field, which neither tool writes today, reads as a newer tool); a store with classes but none that matches (no stray
+  copy is made); a student the class does not list; a student marked absent today; and, for a pass, a student already out, someone else out under
+  "one out at a time", a weekly budget used up (counted as 001 counts it, from Sunday), or a name on 001's approval list (001 asks there; a projected
+  chart should not). **A store with no classes at all** gets one, named after the section and holding its students, as 003 makes 037's first
+  assignment.
+- **Undo** is 005's own stack: the snapshot pushed carries what was written (`__liveHandoff`), and `undo()` takes it back with 008's `undoLogEntry()`
+  arithmetic or 001's sign-out undo, then drops the field. A point archived or undone in 008, or a pass signed back in on 001, is not undone from
+  here, and the status says so. Ctrl+Z works on stage as it does off it.
+- **008 fix found on the way.** 008's activity feed said "Nothing logged yet today" on every load whatever the log held, until the next tap, so a
+  point given from the chart (or any point from an earlier visit) had no Undo button in 008 until then. `applyStateToForm()` now calls
+  `renderActivity()`.
+- **Suites.** `test:seating-handoff` (pure, 54) and `test:seating-live-handoff` (port 8682, the batch's assignment for this session): both writes, 008
+  and 001 opened afterwards and showing them, old and missing and newer data, the refusals, Undo by button and by Ctrl+Z, the switch's default and
+  reset, the keyboard. Six mutants of the module each failed the pure suite.
+- **Not done, recorded.** 005's row in `_shared/tool-registry.js` should say `writes: ['behavior-points-tracker-sections', 'hall-pass-log-sections']`
+  (it is documentation there: `check:registry` passes, since both keys have an owner); this session ran in parallel with others and was told not to
+  touch `_shared/`, so it is on rank 37. 008 and 001 do not reload their own key on a `storage` event, so a copy of either open in another tab keeps
+  its old class and its next save writes over the chart's point or pass; the status tells the teacher to reload it, and nothing else handles it.
+- **Not verified.** No teacher has used it on a projector or a touch panel; no real tablet; the bar's layout on a phone-width stage was not looked at.
+
+
 ## AI-31: 002 project teams (rank 111, 2026-11-03, `CACHE_VERSION` v561)
 
 Devon had answered all six project-team questions on 2026-10-07 (`DEVON-ANSWERS-2026-10-07.md` 4.1 to 4.6, the second table, binding). BACKLOG's
