@@ -247,6 +247,7 @@
     "Tools/schedule-visualizer/test/smoke-storage-headroom.mjs",
     "Tools/schedule-visualizer/test/smoke-autosave.mjs",
     "Tools/schedule-visualizer/test/smoke-apply.mjs",
+    "Tools/schedule-visualizer/test/smoke-recovery-ui.mjs",
     "Tools/school-calendar/test/plan.test.mjs",
     "Tools/school-calendar/test/smoke-plan.mjs",
     "Tools/school-calendar/test/smoke-plan-units.mjs",
