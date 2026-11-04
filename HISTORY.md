@@ -9,6 +9,30 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-49: 043's trip-day view (rank 143, 2026-11-03, `CACHE_VERSION` v567)
+
+The last screen piece of 043's trip packet, the "Trip-day mode" BACKLOG had deferred since the first round. The draft flag on the parent
+letter, the entry's first half, was already gone (AI-31 (answers), 357854b, v562), so this session built only the view.
+
+- **What it is.** A **Trip-day view** button under the headcount buttons in the Chaperones card opens a fixed overlay (`#tripDay`, a
+  dialog) in large type: the trip's name, place and day; the day schedule (`scheduleRows()`, the same reader as the printed schedule, and the
+  leave and return times when there is none); the trip leader's and each chaperone's number as a `tel:` link, as on the emergency sheet; the
+  emergency instructions; and each chaperone's group, then "No chaperone yet", with each student as first name and last initial (`tagName()`,
+  the name tags' rule), a "no slip" mark from the collection tracker and three tick boxes, left school, arrived and back, with a count line per
+  group. **Full screen** puts the overlay on stage with `Stage.mount` (no hotkey, so typing F in the editor does nothing); in full screen the
+  groups lay out side by side and the type is larger. Close and Escape put it away and give focus back.
+- **Nothing is stored.** The view reads `state` and never calls `save()`; the ticks are a page variable keyed by trip and student, so closing
+  and reopening keeps them and a reload clears them, as the printed headcount sheet keeps nothing. No new key, so no registry row. The
+  overlay is built from elements and `textContent` only (no new markup sink).
+- **What I decided.** Where the button lives (the Chaperones card, not the toolbar, so the phone toolbar is untouched); that the "no slip"
+  mark is shown (it is the headcount sheet's Slip column, and a teacher at the bus wants it); that a chaperone with no phone says "no number".
+  No print rule of its own: `print-area.css` already takes everything but `#printArea` off the paper, and the mutant that deleted a rule
+  for it survived, so the rule was dead and went.
+- **Tests.** `test:permission-slip-trip-day` (`smoke-trip-day.mjs`, port 8687): contents, ticks and storage (byte-for-byte before and after,
+  and after a reload), Stage in and out, focus, Escape, print media, a hostile student and chaperone name, an empty trip, axe on the overlay
+  in light and dark, no sideways scroll at 360 px, names at least 16 px and 44 px tick targets, and 13 mutants each caught by its scenario.
+  Not tried on a real phone or a projector.
+
 ## AI-31: 053's ready-made Review Game Board (rank 86, 2026-11-03, `CACHE_VERSION` v566)
 
 (My commits say v562; v562 to v565 were taken on `main` first, by AI-31 (answers), AI-53, AI-55 and AI-22 (route), so the merges moved mine to v566.)
