@@ -1281,7 +1281,22 @@ const KEPT = 'Kept Local Copy';
 
 const server = await serve(PORT);
 const browser = await launch();
+/* The pages of the section running now. Each section ends with retire(),
+   which files every page's errors and offsite requests in `ledger` and closes
+   its context: kept open to the end, ~200 contexts peaked above 5.8 GB and
+   were OOM-killed on a 3.5 GB worker (AI-64). The copy is taken before the
+   close, so what a close itself aborts is not mistaken for a finding, and
+   section 9 reads the ledger, so no page's error goes unseen. */
 const pages = [];
+const ledger = [];
+let opened = 0;
+const retire = async () => {
+  while (pages.length) {
+    const [name, p] = pages.shift();
+    ledger.push([name, p.__errs.slice(), p.__blocked.slice()]);
+    await p.context().close().catch(() => {});
+  }
+};
 
 /** Opens the sheet, clicks Copy link with a stubbed clipboard, and closes it —
     the sheet is a real modal and leaving it open makes the next click miss. */
@@ -1365,7 +1380,7 @@ const seed = (page, pairs) => page.addInitScript((entries) => {
 /** A page seeded with `pairs`, opened at `url`. */
 const openSeeded = async (label, url, pairs) => {
   const page = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-  pages.push([label, page]);
+  opened++; pages.push([label, page]);
   await seed(page, pairs);
   await page.goto(url, { waitUntil: 'load' });
   await settle(page, 800);
@@ -1376,6 +1391,24 @@ const openSeeded = async (label, url, pairs) => {
     would have. */
 const openWith = async (t, url) =>
   openSeeded(t.n, url || (BASE + '/Tools/' + t.file), seedFor(t, t.state, t.docName));
+
+/* ── the ledger keeps an error after its page is closed ─────────────────── */
+/* A page that throws, then is retired as every section's pages are: if
+   retire() ever dropped or emptied what it records, this fails, where the
+   check in section 9 would simply have nothing left to complain about. */
+const CANARY = 'ledger-canary';
+{
+  const canary = await prepPage(browser, BASE, { width: 800, height: 600 });
+  opened++; pages.push([CANARY, canary]);
+  await canary.goto(BASE + '/Tools/' + TOOLS[0].file, { waitUntil: 'load' });
+  await canary.evaluate(() => { setTimeout(() => { throw new Error('ledger canary'); }); });
+  await settle(canary, 200);
+  await retire();
+  const row = ledger.find(r => r[0] === CANARY);
+  ok(row && row[1].some(e => /ledger canary/.test(e)),
+    'a page error is still on record after its page is closed: ' + JSON.stringify(row && row[1]));
+  ok(canary.isClosed(), 'and the page really was closed');
+}
 
 for (const t of TOOLS) {
   console.log(`\n${t.n} — ${t.file}`);
@@ -1400,7 +1433,7 @@ for (const t of TOOLS) {
 
   /* ── 4. it opens on an untouched device ───────────────────────────────── */
   const fresh = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-  pages.push([t.n + '-fresh', fresh]);
+  opened++; pages.push([t.n + '-fresh', fresh]);
   await fresh.goto(url, { waitUntil: 'load' });
   await settle(fresh, 700);
   eq(await t.arrived(fresh), t.arrivedWant, `${t.n}: an untouched device opens the shared work`);
@@ -1419,7 +1452,7 @@ for (const t of TOOLS) {
     ok(local !== JSON.stringify(t.state), `${t.n}: the local variant really differs from the shared one`);
 
     const mine = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-    pages.push([t.n + '-declines', mine]);
+    opened++; pages.push([t.n + '-declines', mine]);
     const asked = [];
     mine.on('dialog', async d => { asked.push(d.message()); await d.dismiss(); });
     await seed(mine, [[t.key, local]]);
@@ -1440,7 +1473,7 @@ for (const t of TOOLS) {
     eq(await t.arrived(mine), KEPT, `${t.n}: and still shows the local copy`);
 
     const yes = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-    pages.push([t.n + '-accepts', yes]);
+    opened++; pages.push([t.n + '-accepts', yes]);
     yes.on('dialog', async d => { await d.accept(); });
     await seed(yes, [[t.key, local]]);
     await yes.goto(url, { waitUntil: 'load' });
@@ -1461,7 +1494,7 @@ for (const t of TOOLS) {
       `${t.n}: the local variant really differs from the shared one`);
 
     const mine = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-    pages.push([t.n + '-beside', mine]);
+    opened++; pages.push([t.n + '-beside', mine]);
     const asked = [];
     mine.on('dialog', async d => { asked.push(d.message()); await d.dismiss(); });
     await seed(mine, seedFor(t, local, t.docName));
@@ -1532,7 +1565,7 @@ for (const t of TOOLS) {
        route, so it merges, it does not ask, and what must be asserted is that
        the rows already on the device are all still there afterwards. */
     const mine = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-    pages.push([t.n + '-merges', mine]);
+    opened++; pages.push([t.n + '-merges', mine]);
     const asked = [];
     mine.on('dialog', async d => { asked.push(d.message()); await d.dismiss(); });
     await seed(mine, [[t.key, JSON.stringify(t.mergeLocal)], ...(t.extraSeed || [])]);
@@ -1647,7 +1680,7 @@ for (const t of TOOLS) {
 
   /* ── 8. a mangled link fails in words ─────────────────────────────────── */
   const broken = await prepPage(browser, BASE, { width: 1200, height: 900 });
-  pages.push([t.n + '-broken', broken]);
+  opened++; pages.push([t.n + '-broken', broken]);
   await broken.goto(`${PAGE_URL}?${t.param}=not-base64-%%%`, { waitUntil: 'load' });
   await settle(broken, 700);
   ok(/could not be read/.test(await broken.textContent('#shareNote')),
@@ -1655,6 +1688,7 @@ for (const t of TOOLS) {
     JSON.stringify(await broken.textContent('#shareNote')));
   eq(new URL(broken.url()).searchParams.get(t.param), null,
     `${t.n}: and is cleared even though it was unusable, so a refresh does not repeat the failure`);
+  await retire();
 }
 
 /* ── 038: the chart travels WITH its data, and only that one ────────────── */
@@ -1673,7 +1707,7 @@ console.log('\n038 — 038-data-chart-builder.html (a chart, with the data in th
   const DATA = 'Condition\tReaction <b>Time</b> (s)\tSpread\nCold\t45\t3\nWarm\t31\t2\nHot\t22\t2';
 
   const sender = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-  pages.push(['038', sender]);
+  opened++; pages.push(['038', sender]);
   await seed(sender, [['data-chart-builder-datasets', LIBRARY]]);
   await sender.goto(PAGE_URL, { waitUntil: 'load' });
   await settle(sender, 600);
@@ -1713,7 +1747,7 @@ console.log('\n038 — 038-data-chart-builder.html (a chart, with the data in th
   }
 
   const receiver = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-  pages.push(['038-receiver', receiver]);
+  opened++; pages.push(['038-receiver', receiver]);
   const asked = [];
   receiver.on('dialog', async d => { asked.push(d.message()); await d.dismiss(); });
   await seed(receiver, [['data-chart-builder-datasets', LIBRARY], ['data-chart-builder-settings', SETTINGS]]);
@@ -1754,11 +1788,12 @@ console.log('\n038 — 038-data-chart-builder.html (a chart, with the data in th
   await settle(sender, 200);
 
   const broken = await prepPage(browser, BASE, { width: 1200, height: 900 });
-  pages.push(['038-broken', broken]);
+  opened++; pages.push(['038-broken', broken]);
   await broken.goto(`${PAGE_URL}?chart=not-base64-%%%`, { waitUntil: 'load' });
   await settle(broken, 700);
   ok(/could not be read/.test(await broken.textContent('#shareNote')),
     '038: a mangled link says so: ' + JSON.stringify(await broken.textContent('#shareNote')));
+  await retire();
 }
 
 /* ── 016: a Wi-Fi code never travels, and a full list loses nothing ─────── */
@@ -1789,6 +1824,7 @@ console.log('\n016 — 016-qr-code-generator.html (Wi-Fi codes, and a full Recen
   ok(/left out 1 because/.test(await full.textContent('#shareNote')),
     '016: the note says one code would not fit, and why: ' + JSON.stringify(await full.textContent('#shareNote')));
   ok(list.every(r => !/^WIFI:/i.test(r.text)), '016: and the crafted Wi-Fi code was not filed');
+  await retire();
 }
 
 /* ── 029: an arriving preset is text in every attribute it reaches ─────── */
@@ -1800,14 +1836,14 @@ console.log('\n029 — 029-prompt-builder.html (an arriving preset in an attribu
 {
   const PAGE_URL = BASE + '/Tools/029-prompt-builder.html';
   const maker = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-  pages.push(['029-maker', maker]);
+  opened++; pages.push(['029-maker', maker]);
   await maker.goto(PAGE_URL, { waitUntil: 'load' });
   await settle(maker, 400);
   const evil = await maker.evaluate(() => window.StateLink.encodeState({ presets: [{
     name: 'x" onmouseover="window.__pwned=1',
     data: { toolType: 'a lesson plan', topic: '{{a" autofocus onfocus="window.__pwned=2}}', dyn: {} } }] }));
   const victim = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-  pages.push(['029-victim', victim]);
+  opened++; pages.push(['029-victim', victim]);
   await victim.goto(PAGE_URL + '?presets=' + evil, { waitUntil: 'load' });
   await settle(victim, 800);
   ok(/Added 1 from a shared/.test(await victim.textContent('#shareNote')),
@@ -1822,6 +1858,7 @@ console.log('\n029 — 029-prompt-builder.html (an arriving preset in an attribu
   eq(await victim.evaluate(() => window.__pwned === undefined), true, '029: and nothing ran');
   eq(await victim.$eval('#customPresetRow [data-custom-i]', b => b.textContent), 'x" onmouseover="window.__pwned=1',
     '029: the name is shown as the text it is');
+  await retire();
 }
 
 /* ── 046: an arriving shading key's colour is a colour, or it is dropped ── */
@@ -1834,7 +1871,7 @@ console.log('\n046 — 046-blank-map-generator.html (an arriving shading key)');
 {
   const PAGE_URL = BASE + '/Tools/046-blank-map-generator.html';
   const maker = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-  pages.push(['046-maker', maker]);
+  opened++; pages.push(['046-maker', maker]);
   await maker.goto(PAGE_URL + '?map=x', { waitUntil: 'load' });
   await settle(maker, 400);
   const evil = await maker.evaluate(() => window.StateLink.encodeState({
@@ -1846,7 +1883,7 @@ console.log('\n046 — 046-blank-map-generator.html (an arriving shading key)');
     ] },
   }));
   const victim = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-  pages.push(['046-victim', victim]);
+  opened++; pages.push(['046-victim', victim]);
   await victim.goto(PAGE_URL + '?map=' + evil, { waitUntil: 'load' });
   await settle(victim, 800);
   ok(/Loaded a shared map project/.test(await victim.textContent('#shareNote')),
@@ -1857,6 +1894,7 @@ console.log('\n046 — 046-blank-map-generator.html (an arriving shading key)');
   });
   eq(JSON.stringify(rows), JSON.stringify(['#eff3ff']), '046: the real colour is kept and the one carrying markup is dropped');
   eq(await victim.evaluate(() => window.__pwned === undefined), true, '046: and nothing ran');
+  await retire();
 }
 
 /* ── 081: the generator, where the SEED is the payload ──────────────────── */
@@ -1864,7 +1902,7 @@ console.log('\n081 — 081-word-problem-warmup-generator.html (a seed, not probl
 {
   const PAGE_URL = BASE + '/Tools/081-word-problem-warmup-generator.html';
   const sender = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-  pages.push(['081', sender]);
+  opened++; pages.push(['081', sender]);
   await sender.goto(PAGE_URL, { waitUntil: 'load' });
   await settle(sender, 600);
 
@@ -1898,7 +1936,7 @@ console.log('\n081 — 081-word-problem-warmup-generator.html (a seed, not probl
 
   /* Nothing here is authored, so arrival must NOT stop to ask. */
   const receiver = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-  pages.push(['081-receiver', receiver]);
+  opened++; pages.push(['081-receiver', receiver]);
   const asked081 = [];
   receiver.on('dialog', async d => { asked081.push(d.message()); await d.dismiss(); });
   await receiver.goto(url, { waitUntil: 'load' });
@@ -1933,7 +1971,7 @@ console.log('\n081 — 081-word-problem-warmup-generator.html (a seed, not probl
 
   /* An empty tool has nothing to share and says so instead of opening. */
   const blank = await prepPage(browser, BASE, { width: 1200, height: 900 });
-  pages.push(['081-blank', blank]);
+  opened++; pages.push(['081-blank', blank]);
   await blank.addInitScript(() => {
     /* Every operation unticked in storage, so boot's generate() bails before a
        seed exists — the one state in which this tool has nothing to share. */
@@ -1950,11 +1988,12 @@ console.log('\n081 — 081-word-problem-warmup-generator.html (a seed, not probl
     '081: and the note says what to do: ' + JSON.stringify(await blank.textContent('#shareNote')));
 
   const broken = await prepPage(browser, BASE, { width: 1200, height: 900 });
-  pages.push(['081-broken', broken]);
+  opened++; pages.push(['081-broken', broken]);
   await broken.goto(PAGE_URL + '?warmup=not-base64-%%%', { waitUntil: 'load' });
   await settle(broken, 700);
   ok(/could not be read/.test(await broken.textContent('#shareNote')),
     '081: a mangled link says so rather than opening blank');
+  await retire();
 }
 
 /* ── 066: the arriving field that is written with innerHTML ─────────────── */
@@ -1974,13 +2013,13 @@ console.log('\n066 — an arriving field is escaped before it is written as HTML
     }],
   };
   const page = await prepPage(browser, BASE, { width: 1200, height: 900 });
-  pages.push(['066-hostile', page]);
+  opened++; pages.push(['066-hostile', page]);
   await page.goto(BASE + '/Tools/066-math-find-the-mistake-generator.html', { waitUntil: 'load' });
   await settle(page, 500);
   const url = await page.evaluate(st => location.origin + location.pathname + '?' +
     'mistakes=' + encodeURIComponent(window.StateLink.encodeState(st)), hostile);
   const victim = await prepPage(browser, BASE, { width: 1200, height: 900 });
-  pages.push(['066-hostile-receiver', victim]);
+  opened++; pages.push(['066-hostile-receiver', victim]);
   await victim.goto(url, { waitUntil: 'load' });
   await settle(victim, 800);
 
@@ -2013,6 +2052,7 @@ console.log('\n066 — an arriving field is escaped before it is written as HTML
      (await victim.textContent('#displayWork')).indexOf('÷') !== -1,
     '066: and a character entity still renders as its character: ' +
     JSON.stringify(await victim.textContent('#displayWork')));
+  await retire();
 }
 
 /* ── 062: the arriving map question is DRAWN, not carried ───────────────── */
@@ -2026,14 +2066,14 @@ console.log('\n062 — an arriving map question is drawn from the receiving devi
 {
   const shared = { questions: [{ category: 'maps', area: 'europe', q: 'Which country is shaded on this map?', a: 'Portugal', map: { dataset: 'world', region: 'Portugal', context: 'europe' } }] };
   const sender = await prepPage(browser, BASE, { width: 1200, height: 900 });
-  pages.push(['062-map-sender', sender]);
+  opened++; pages.push(['062-map-sender', sender]);
   await sender.goto(BASE + '/Tools/062-geography-bee-quiz-generator.html', { waitUntil: 'load' });
   await settle(sender, 700);
   const url = await sender.evaluate(st => location.origin + location.pathname + '?' +
     'quiz=' + encodeURIComponent(window.StateLink.encodeState(st)), shared);
 
   const receiver = await prepPage(browser, BASE, { width: 1200, height: 900 });
-  pages.push(['062-map-receiver', receiver]);
+  opened++; pages.push(['062-map-receiver', receiver]);
   await receiver.goto(url, { waitUntil: 'load' });
   await settle(receiver, 900);
 
@@ -2048,6 +2088,7 @@ console.log('\n062 — an arriving map question is drawn from the receiving devi
   });
   eq(drawn, 'data:image/png; sized',
     '062: the receiving device draws the shared region from its own map data: ' + JSON.stringify(drawn));
+  await retire();
 }
 
 /* ── 067: the recipe travels, the patterns do not ───────────────────────── */
@@ -2062,7 +2103,7 @@ console.log('\n067 — 067-music-sightreading-generator.html (a recipe, not patt
 {
   const PAGE_URL = BASE + '/Tools/067-music-sightreading-generator.html';
   const sender = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-  pages.push(['067', sender]);
+  opened++; pages.push(['067', sender]);
   await sender.goto(PAGE_URL, { waitUntil: 'load' });
   await settle(sender, 600);
 
@@ -2097,7 +2138,7 @@ console.log('\n067 — 067-music-sightreading-generator.html (a recipe, not patt
     '067: and no pattern is in the payload at all — there is no seed to regenerate one from');
 
   const receiver = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-  pages.push(['067-receiver', receiver]);
+  opened++; pages.push(['067-receiver', receiver]);
   const asked = [];
   receiver.on('dialog', async d => { asked.push(d.message()); await d.dismiss(); });
   await receiver.addInitScript(() => {
@@ -2137,11 +2178,12 @@ console.log('\n067 — 067-music-sightreading-generator.html (a recipe, not patt
   await settle(sender, 200);
 
   const broken = await prepPage(browser, BASE, { width: 1200, height: 900 });
-  pages.push(['067-broken', broken]);
+  opened++; pages.push(['067-broken', broken]);
   await broken.goto(PAGE_URL + '?warmup=not-base64-%%%', { waitUntil: 'load' });
   await settle(broken, 700);
   ok(/could not be read/.test(await broken.textContent('#shareNote')),
     '067: a mangled link says so rather than opening blank');
+  await retire();
 }
 
 /* ── 061: the second generator, where the SEED is the payload ───────────── */
@@ -2154,7 +2196,7 @@ console.log('\n061 — 061-fraction-decimal-percent-drill-generator.html (a seed
 {
   const PAGE_URL = BASE + '/Tools/061-fraction-decimal-percent-drill-generator.html';
   const sender = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-  pages.push(['061', sender]);
+  opened++; pages.push(['061', sender]);
   await sender.goto(PAGE_URL, { waitUntil: 'load' });
   await settle(sender, 600);
 
@@ -2193,7 +2235,7 @@ console.log('\n061 — 061-fraction-decimal-percent-drill-generator.html (a seed
   ok(JSON.stringify(payload).length < 120, '061: the whole worksheet is under 120 bytes of link');
 
   const receiver = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-  pages.push(['061-receiver', receiver]);
+  opened++; pages.push(['061-receiver', receiver]);
   const asked = [];
   receiver.on('dialog', async d => { asked.push(d.message()); await d.dismiss(); });
   await receiver.goto(url, { waitUntil: 'load' });
@@ -2214,7 +2256,7 @@ console.log('\n061 — 061-fraction-decimal-percent-drill-generator.html (a seed
      show a different worksheet from the one it was sent — on a device whose
      stored settings say "lock" as much as on one that does not. */
   const locked = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-  pages.push(['061-locked', locked]);
+  opened++; pages.push(['061-locked', locked]);
   await seed(locked, [['fdp_settings_v1', JSON.stringify(
     { difficulty: 'easy', givenForm: 'fraction', rowCount: 30, lockSeed: true, seed: 12345 })]]);
   await locked.goto(url, { waitUntil: 'load' });
@@ -2240,20 +2282,24 @@ console.log('\n061 — 061-fraction-decimal-percent-drill-generator.html (a seed
   await settle(sender, 200);
 
   const broken = await prepPage(browser, BASE, { width: 1200, height: 900 });
-  pages.push(['061-broken', broken]);
+  opened++; pages.push(['061-broken', broken]);
   await broken.goto(PAGE_URL + '?drill=not-base64-%%%', { waitUntil: 'load' });
   await settle(broken, 700);
   ok(/could not be read/.test(await broken.textContent('#shareNote')),
     '061: a mangled link says so rather than opening blank');
   ok((await broken.textContent('#worksheetTable')).length > 20,
     '061: and the tool still generated its own sheet underneath it');
+  await retire();
 }
 
 /* ── 9. no console noise, nowhere ───────────────────────────────────────── */
 console.log('');
-for (const [name, p] of pages) {
-  eq(p.__errs.length, 0, `no page/console errors (${name}): ` + JSON.stringify(p.__errs.slice(0, 3)));
-  eq(p.__blocked.length, 0, `nothing left the site (${name}): ` + JSON.stringify(p.__blocked.slice(0, 3)));
+await retire();
+eq(ledger.length, opened, `every page the suite opened reached the error check (${ledger.length} of ${opened})`);
+for (const [name, errs, blocked] of ledger) {
+  if (name === CANARY) continue;
+  eq(errs.length, 0, `no page/console errors (${name}): ` + JSON.stringify(errs.slice(0, 3)));
+  eq(blocked.length, 0, `nothing left the site (${name}): ` + JSON.stringify(blocked.slice(0, 3)));
 }
 
 await browser.close();
