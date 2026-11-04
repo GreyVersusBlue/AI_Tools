@@ -494,8 +494,13 @@ files must be added there too.
   was never committed to this repo** (verified with `git log --all` in Round
   1c) — the blocks are hand-maintained until it is rebuilt from a real spec.
   They have already drifted into two generations (an older greyversusblue.com
-  branding with a guild-board og:image, a newer AsPerMyLessonPlan.com branding
-  with no image) plus one hybrid; 41 tools have no block at all.
+  branding, a newer AsPerMyLessonPlan.com branding) plus one hybrid; 50 tools
+  have no block at all. Since AI-43 (v584) every block names the one social
+  card, `assets/og/toolbook.png` on www.aspermylessonplan.com, and the four
+  `v*-*.html` direction pages name their own; the cards are made by
+  `node Tools/board-check/make-og.mjs` (deterministic, the vendored Barlow, an
+  indexed PNG under 120 KB, not precached), and `check-social.mjs` fails a page
+  whose og:image or twitter:image names a file not in `assets/og/`.
   `node Tools/board-check/check-social.mjs` (read-only, rewrites nothing)
   validates internal consistency and prints the drift — run it before and
   after touching any head section. Rebuilding the generator means first

@@ -9,6 +9,52 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-43: social card v1, so shared links stop showing a blank card (2026-11-04, `CACHE_VERSION` v584)
+
+Devon, 2026-10-03: "make new art, do not drop the tags." Until now `assets/og/` did not exist: `index.html` and 019 named
+`toolbook.png` there, 11 tool pages named `greyversusblue.com/assets/og/guild-board.png`, 28 declared `summary_large_image`
+with no image, and the four direction pages (`v1-inbox.html` to `v4-riso.html`) carried a TODO. Every shared link was a blank card.
+
+- **The generator:** `node Tools/board-check/make-og.mjs` (ASSET-WISHLIST.md section 4's plan, no generated art). One layout,
+  1200×630: paper background, a short `--accent-2` rule, the headline in vendored Barlow 700, the site name in Barlow 500 and
+  `--accent`, the landing hero `classroom-2x-light.webp` on the right, and an `--accent` strip along the bottom edge. Nothing else
+  is on a card. Five cards: `toolbook.png` ("Classroom tools that run in your browser", AsPerMyLessonPlan.com) and `inbox`, `plan`,
+  `board`, `handout` for the four direction pages ("Classroom tools, sorted like your inbox" / "written up like a sub plan" /
+  "posted on the bell board" / "printed like a handout", each with that page's own site name, As Per My Lesson Plan).
+  **The artwork is mine and plain; Devon may replace any headline (the `CARDS` list) or the whole card** (wishlist item 2.4,
+  the Blender key art, is the upgrade and still needs his go).
+- **Size:** Chromium's PNG of a card is about 195 KB, over the ~120 KB budget. The script re-encodes it as an 8-bit indexed PNG
+  (median cut to 256 colours, no dither, `node:zlib` level 9, the route `Tools/blender-art/art_common.py` takes for its flat
+  art), about 80 KB each, with no difference I could see beside the original. Two runs wrote byte-identical files (sha256);
+  the script refuses to write a card if a Barlow face or the hero did not load, or the headline runs past three lines.
+  Determinism is per Chromium build: a different Playwright may move pixels.
+- **The tags (45 pages):** 28 imageless blocks gained the five-tag image group pointing at
+  `https://www.aspermylessonplan.com/assets/og/toolbook.png`; `index.html`'s and 019's alt now describes the card (the old one
+  described a gradebook table that never existed); the four direction pages replace the TODO with `og:image`, width, height,
+  alt and `twitter:image` on `https://aspermylessonplan.com/assets/og/<name>.png`, their own og:url's host (both hosts answer 200).
+- **The 11 greyversusblue pages (002, 004, 005, 007, 011, 016, 018, 034, 035, 036, 038), decided here:** the entry said match
+  each page's og:url domain, or use toolbook.png if the card cannot be served there. `curl -I` on
+  `https://greyversusblue.com/Tools/007-Name%20Picker.html` and `/manifest.json` both answer **404**, while the same path on
+  www.aspermylessonplan.com answers 200: greyversusblue.com does not serve this tree, so its `guild-board.png` could never load.
+  They now name toolbook.png on www.aspermylessonplan.com, with the new alt. **Their og:url, og:site_name and titles still say
+  greyversusblue**: which branding is right is Devon's (BACKLOG Path 11 question 3) and was not guessed into the tree.
+- **The guard:** `check-social.mjs` now reads every root page and every tool page, block or not, and fails an `og:image` or
+  `twitter:image` that does not name a file directly under `/assets/og/` that is in the tree (`ogImageProblems()`, exported; the
+  run moved into `main()`). Moving `board.png` aside made it fail both of `v3-bellboard.html`'s tags; on the tree it passes with
+  45 pages naming a card. New suite `npm run test:check-social` (pure Node, 13 assertions: the old guild-board and empty-folder
+  states fail, attribute order, nested paths and non-card images, then the real tree). Its `attr()` now anchors the attribute name
+  on whitespace.
+- **Not precached, on purpose** (wishlist 7.4): the cards are named only in `<meta content>`, which `check:precache` does not
+  read and no visitor's browser fetches. The bump to v584 is for the 45 precached pages whose heads changed.
+- **Checks:** `check:social`, `check:precache --base origin/main` (v573 to v584 covers the 102 files changed since the merge-base),
+  `check:adoption --check`, `check:registry`, `check:tests`, `check:dedupe`, `check:entities`, `check:hidden-flex`,
+  `check:print-clip`, `check:docs-commands`, `check:inline-sinks`, `check:art`, `check:publisher`, `check:index`, `lint`,
+  `offline:build` (4 s) and `offline:verify` (11/11 entry points, 22 s), and the suites listed in the commit.
+- **Not verified:** no card has been seen through a real link preview (Slack, iMessage, Facebook's debugger); that needs the cards
+  on the live site first. CLAUDE.md said 41 tools had no social block; `check:social` counts 50, and the sentence now says 50.
+
+---
+
 ## AI-51: 035 the welcome and Help dialogs move to sv-onboarding.js (rank 140, 2026-11-04, `CACHE_VERSION` v583)
 
 Ninth increment, one piece: `initOnboardingAndHelp()` (the welcome dialog that opens 350 ms after a first load until it is dismissed, the Help dialog behind the header's Help button, and the backdrop and Escape dismissal of both) and `ONBOARDING_KEY` (`stviz_onboarded`, which nothing else read) are `Tools/schedule-visualizer/sv-onboarding.js`, a view module like the others; the body is the page's, line for line, with `export` on the function. The key stays module-private (it was a classic-script `const`, never a `window` property, and the suite checks it is not exported). **`openModal()` and `closeModal()` stayed on the page**, with `_lastFocusedBeforeModal` and the "ROUND 11 — ONBOARDING & HELP MODALS" comment: the row said "the helpers only it uses", and these are used by the trace-image and hand-off dialogs on the page and by `sv-editor.js`'s corridor-label dialog; the module reaches them by bare name at call time, as `sv-apply.js` reaches the page. **How it is reached:** the module script imports it after `sv-recovery-ui.js` and copies the export onto `window`; module scripts run before `DOMContentLoaded`, which is when the page's `init()` runs and calls `initOnboardingAndHelp()` by bare name, as it always did. No wording or markup changed: the dialogs' HTML is untouched. `smoke-onboarding.mjs` (`test:layout-onboarding`, port 8701, 37 assertions) holds it: the export is on `window` and is the page's; a first visit opens the welcome by itself, focus goes into it, nothing is recorded while it is open, and a press inside it or a key other than Escape leaves it open; Start, the X, the backdrop and Escape each close it and record the key; the next visit does not open it; the Help button opens Help, and its X, Got it, the backdrop and Escape each close it, focus returns to the Help button, and none of them records the key. **The same 36 behaviour assertions (all but the module check) pass on the page before the move**, run from a scratch worktree of the previous `main`. Mutants caught, all fourteen: dismissal not recording, the dialog shown every time, the key misspelled on read, Start not recording, a dead X, the backdrop's `e.target` test dropped (a press inside closes it), the backdrop not recording, Escape ignored, every key closing, closing Help recording the key, and a dead Help button, Help X, Got it and auto-open. (The first draft missed "every key closes": its other-key press came after the dialog was shut; it now comes while it is open.) **What I got wrong in the first draft:** I expected focus to land on Start (the `.modal-btn.primary`), but `querySelector('.modal-btn.primary, button, [tabindex]')` returns the first match in document order, which is the X; the suite now pins that, the page's behaviour as it is. Every suite in `Tools/schedule-visualizer/test/` passes unchanged, among them the Northwind golden and `size.test.mjs`. Page 256,755 to 255,201 bytes (ledger lowered, module recorded at 3,129); the inline script is now about 1,900 lines. **Still on the page and next:** the presentation glue (`initPresentationMode()`).
