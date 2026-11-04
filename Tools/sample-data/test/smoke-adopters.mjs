@@ -2,7 +2,7 @@
 //
 //   node Tools/sample-data/test/smoke-adopters.mjs        (port 8623)
 //
-// For 059, 072, 049, 043, 042, 082, 038 and 084, each loading _shared/sample-data.js:
+// For 059, 072, 049, 043, 042, 082, 038, 084, 019 and 030, each loading _shared/sample-data.js:
 //   1. on a clean device the bar shows its Load button, and just opening the page stores nothing
 //      the tool did not already store (the page's own keys are the same before and after a reload
 //      without a press);
@@ -14,6 +14,7 @@
 //   6. the bar is not on paper (print media hides it).
 // This proves the wiring, NOT that a teacher finds the sample useful. Exits 1 on any failure.
 import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
+/* global ReviewBoardSample -- 030's rgb-sample.js, read inside page.evaluate() */
 
 const PORT = 8623;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -67,6 +68,23 @@ const TOOLS = [
     blank: async (p) => await p.inputValue('#questionInput') === '' && await p.inputValue('#sourceInput') === '',
     filled: async (p) => (await p.inputValue('#questionInput')).length > 10 && (await p.inputValue('#dateInput')) === 'Friday, period 3',
     type: async (p) => p.fill('#questionInput', 'Typed over it') },
+  { id: '019', file: '019-escape-room-builder.html', key: 'escape-room-builder:rooms',
+    seed: JSON.stringify({ v: 1, data: { current: 'Mine', sets: { Mine: { name: 'Mine', roomId: 'abc123', storyIntro: '',
+      stations: [{ clue: 'My own clue', answers: 'mine', hint: '', next: null, image: '', type: 'text' }] } } } }),
+    blank: async (p) => (await p.locator('.station-card').count()) === 1 && await p.inputValue('.station-card .f-clue') === '' &&
+      await p.inputValue('#storyIntro') === '',
+    filled: async (p) => (await p.locator('.station-card').count()) === 5 && (await p.inputValue('#setName')).startsWith('Sample room') &&
+      (await p.inputValue('#storyIntro')).length > 40,
+    type: async (p) => p.fill('.station-card .f-hint', 'My own hint') },
+  { id: '030', file: '030-review-game-board.html', key: 'gvb-review-board:list',
+    seed: { 'gvb-review-board:list': '["Mine"]', 'gvb-review-board:current': 'Mine',
+      'gvb-review-board:data:Mine': JSON.stringify({ name: 'Mine', categories: [{ name: 'Mine', clues: [{ points: 100, question: 'My own question?', answer: 'Mine', used: false }] }],
+        teams: [{ name: 'Team 1', score: 0 }, { name: 'Team 2', score: 0 }] }) },
+    blank: async (p) => await p.inputValue('#boardName') === '' && (await p.locator('#categoriesEditor .category-block').count()) === 1 &&
+      await p.inputValue('#categoriesEditor .cat-name-input') === '',
+    filled: async (p) => (await p.inputValue('#boardName')).startsWith('Sample board') &&
+      (await p.locator('#categoriesEditor .category-block').count()) === 3 && (await p.locator('#categoriesEditor .clue-row').count()) === 15,
+    type: async (p) => p.fill('#categoriesEditor .clue-answer >> nth=0', 'Typed over it') },
 ];
 
 const server = await serve(PORT);
@@ -82,7 +100,13 @@ const open = async (t, seed, hook) => {
 };
 const vis = (p, sel) => p.locator(sel).first().isVisible();
 const LOAD = '.sample-bar button:first-child', CLEAR = '.sample-bar button:last-child', NOTE = '.sample-bar [role=status]';
-const store = (p) => p.evaluate(() => JSON.stringify(Object.keys(localStorage).sort().map(k => [k, k.indexOf('theme') >= 0 || k.indexOf('a11y') >= 0 ? '' : localStorage.getItem(k)])));
+// Values are compared with their object keys sorted: 019 writes a new room's station with its id last and
+// rewrites it id-first on the next load, the same record in another key order (not a change of content).
+const store = (p) => p.evaluate(() => {
+  const canon = (v) => Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.keys(v).sort().reduce((o, k) => { o[k] = canon(v[k]); return o; }, {}) : v;
+  const val = (k) => { const raw = localStorage.getItem(k); try { return JSON.stringify(canon(JSON.parse(raw))); } catch (e) { return raw; } };
+  return JSON.stringify(Object.keys(localStorage).sort().map(k => [k, k.indexOf('theme') >= 0 || k.indexOf('a11y') >= 0 ? '' : val(k)]));
+});
 
 try {
   for (const t of TOOLS) {
@@ -129,6 +153,58 @@ try {
     await p.reload(); await settle(p, 300);
     ok(!(await vis(p, '.sample-bar')), '072: no bar once a diagram has a title');
     eq(await p.inputValue('#storyTitle'), 'My own story', '072: and the title is still there');
+    await p.context().close();
+  }
+  // 019: the page's own checks pass on the sample, and the test run finishes it
+  {
+    const t = TOOLS.find((x) => x.id === '019');
+    const p = await open(t);
+    await p.click(LOAD); await settle(p, 600);
+    eq(await p.textContent('#previewNote'), '5 stations ready.', '019: the page counts five playable stations');
+    eq(await p.locator('#cards-preview canvas').count(), 5, '019: a code is drawn for each');
+    eq((await p.textContent('#msg')).trim(), '', '019: no warning (no code over budget, no missing picture)');
+    ok(!(await p.isDisabled('#printCodesBtn')) && !(await p.isDisabled('#printAnswersBtn')) && !(await p.isDisabled('#printPacketBtn')) &&
+      !(await p.isDisabled('#testRunBtn')), '019: every print button and the test run are on');
+    eq(await p.locator('.digit-warn:visible').count(), 0, '019: no digit-length warning');
+    const rooms = await p.evaluate(() => JSON.parse(localStorage.getItem('escape-room-builder:rooms')));
+    const sets = (rooms.data || rooms).sets;
+    eq(Object.keys(sets), [await p.inputValue('#setName')], '019: the blank room was renamed, not a second room made');
+    // walk it: the test run uses the students' payload and matcher
+    await p.click('#testRunBtn'); await settle(p, 200);
+    for (const a of ['0.75', '20', 'check the lamp room', 'evaporation', 'lamp']) {
+      await p.fill('#trAnswer', a);
+      await p.keyboard.press('Enter'); await settle(p, 700);
+    }
+    eq(await p.textContent('#testRunStep'), 'Finished', '019: the test run reaches the end with the sample\'s answers');
+    eq(await p.locator('#testRunBody .tr-trace li').count(), 5, '019: by way of all five stations');
+    ok(await p.locator('#testRunBody .tr-ok').count() === 1, '019: and says every station is reachable');
+    await p.keyboard.press('Escape'); await settle(p, 200);
+    // Clear gives the room its old name back
+    await p.click(CLEAR); await settle(p, 300);
+    eq(await p.inputValue('#setName'), 'New Escape Room', '019: Clear gives the room its old name back');
+    const after = await p.evaluate(() => JSON.parse(localStorage.getItem('escape-room-builder:rooms')));
+    eq(Object.keys((after.data || after).sets), ['New Escape Room'], '019: and leaves one room');
+    await p.context().close();
+  }
+  // 030: nothing stored until Save board; Save stores the sample as it is
+  {
+    const t = TOOLS.find((x) => x.id === '030');
+    const p = await open(t);
+    const before = await store(p);
+    await p.click(LOAD); await settle(p, 300);
+    eq(await store(p), before, '030: a press stores nothing');
+    const want = await p.evaluate(() => ReviewBoardSample.categories());
+    const name = await p.evaluate(() => ReviewBoardSample.name);
+    await p.click('#buildFromManualBtn'); await settle(p, 400);
+    ok(!(await vis(p, '.sample-bar')), '030: Save board ends the sample');
+    eq(await p.locator('#boardCols button.cell:not(.blank)').count(), 15, '030: the board shows fifteen clues');
+    const saved = await p.evaluate((n) => JSON.parse(localStorage.getItem('gvb-review-board:data:' + n)), name);
+    const strip = (cats) => cats.map((c) => ({ name: c.name, clues: c.clues.map((cl) => ({ points: cl.points, question: cl.question, answer: cl.answer })) }));
+    eq(strip(saved.categories), want, '030: the stored board is the sample, every clue in order');
+    eq(saved.teams.map((x) => x.name), ['Team 1', 'Team 2'], '030: with the page\'s default teams');
+    await p.reload(); await settle(p, 400);
+    ok(!(await vis(p, '.sample-bar')), '030: after a reload the saved board holds the device, so no bar');
+    eq(await p.textContent('#boardTitle'), name, '030: and the board opens');
     await p.context().close();
   }
 } finally {

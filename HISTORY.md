@@ -9,6 +9,46 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-30: first-run samples for 019 and 030, the last two P15 adopters (2026-11-04, `CACHE_VERSION` v585)
+
+The v489 survey skipped 019 (Escape Room Builder) and 030 (Review Game Board) because each validates and chains what a
+teacher types, so a sample needs a design of its own and a test per rule. Both now have a **Load a sample** bar from
+`_shared/sample-data.js`, and the content lives in a file of its own so a pure suite can hold it to the rules.
+
+- **019, "Sample room: The Lighthouse Log"** (`Tools/escape-room-builder/er-sample.js`): five invented stations, one of
+  each puzzle type (text with a numeric tolerance, a 2-digit lock with an attempt limit, a shift-3 Caesar cipher with a
+  hint that costs 5), four letters L-A-M-P collected toward the last station, whose answer is "lamp", and "End here" on
+  the last. Offered only while the room on screen is blank (no clue, answer, secret message, hint, picture or intro). A
+  press fills **that** room and renames it through the name box's own handler, so the blank room is renamed and no
+  second room is made; Clear puts one blank station and the old name back. The page saves as it goes, and the bar says
+  so. `npm run test:er-sample` (pure Node, 15 checks) reads the room as the page does (`Stations.read`) and plays it as
+  lock.html does (`playPayload`, `EscapeRoomMatch.checkAnswer`, `nextOf`): R1 every station playable, R2 each answer
+  accepted as a student would type it and a wrong one refused, R3 one digit-code length, R4 a real shift, R5 the chain
+  reaches all five in order and ends, R6 the letters spell the last answer, R7 every printed code inside
+  `Stations.budget` at Q, R8 named as a sample with no picture, R9 a save and reload play the same room; a mutant per
+  rule must be caught by that rule.
+- **030, "Sample board: Earth Science Review"** (`Tools/review-game-board/rgb-sample.js`): three categories of five,
+  100-500. Offered only on a device with no saved board, while the editor is open on a new board and blank. A press
+  fills the editor and **stores nothing** until Save board (the bar says so), and the saved board has the page's default
+  "Team 1"/"Team 2", no names. `npm run test:rgb-sample` (pure Node, 15 checks): R1 names and five full clues per
+  category, R2 unique category names (the bank's "pull into board" finds by name), R3 unique questions per category
+  (Save keys a played clue by category and question), R4 whole rising points on one ladder, R5 no field with space at
+  either end (`readManualEditor()` trims, so a padded sample would save as something else), R6 named as a sample, no
+  picture, audio or team; a mutant per rule.
+- **The browser half** is two rows and two blocks in `Tools/sample-data/test/smoke-adopters.mjs` (`test:sample-data`,
+  now 138 checks over ten pages): the shared six checks for each, then 019 shows "5 stations ready.", draws five codes,
+  warns nothing, enables every print button, and its own **Test run** walks the sample to "Finished" through all five
+  stations with "every station is reachable"; and 030's press leaves storage unchanged, Save board stores exactly the
+  sample's fifteen clues in order, and after a reload the saved board holds the device, so the bar is gone. A
+  hand mutant (019's code changed to 21 in `er-sample.js`) made the test run stop at Station 2 and three checks fail.
+
+**Found, not fixed:** 019 writes a new room's blank station with its `id` last and rewrites it id-first on the next load
+(`loadSetByName` compares `JSON.stringify` before and after), so a first reload changes the stored string with no change of
+content. The suite's "opening twice stores nothing" check now compares values with keys sorted, and says why; the extra
+write is harmless and I left it. **Not verified:** a teacher reading either sample, a printed sheet of either, and a real
+phone scanning the sample room's codes (the budget check is arithmetic, and `smoke-station-qr.mjs` decodes codes in
+general, not these).
+
 ## AI-34: the offline zip is built and opened in CI on main (2026-11-04, CI only, no `CACHE_VERSION` bump)
 
 The standing decision "should CI also run `offline:build` + `offline:verify`?" had a default since 2026-10-21 (yes, on

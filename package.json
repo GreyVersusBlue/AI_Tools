@@ -435,6 +435,8 @@
     "test:speak": "node Tools/speak/test/speak.test.mjs",
     "test:speak-adopters": "node Tools/speak/test/smoke-adopters.mjs",
     "test:sample-data": "node Tools/sample-data/test/smoke-adopters.mjs",
+    "test:er-sample": "node Tools/escape-room-builder/test/er-sample.test.mjs",
+    "test:rgb-sample": "node Tools/review-game-board/test/rgb-sample.test.mjs",
     "test:label-pron": "node Tools/classroom-label-maker/test/smoke-pron.mjs",
     "test:vocab-study": "node Tools/vocab-flashcard-generator/test/smoke-study.mjs",
     "test:vocab-pictures-logic": "node Tools/vocab-flashcard-generator/test/pictures-logic.test.mjs",
