@@ -147,11 +147,13 @@
           /* Every namespace a tool keeps in it (MediaDB.store/images({ ns })).
              `student: true` is cleared by the year rollover, whole: Seating
              Chart's photos are the only student images on the site.
+             (`bmg-geo` is 046's dropped boundary files, GeoJSON rather than an
+             image, kept here so a backup has them: bmg-geo-store.js.)
              registry-shape.test.mjs fails on a namespace in the tree that is
              not listed here. ToolRegistry.mediaNamespaces(). */
           namespaces: [
             { ns: 'seating', student: true },
-            { ns: 'cam' }, { ns: 'class-screen' }, { ns: 'dbq' }, { ns: 'escape-room' }, { ns: 'fsb' }, { ns: 'htcm' },
+            { ns: 'bmg-geo' }, { ns: 'cam' }, { ns: 'class-screen' }, { ns: 'dbq' }, { ns: 'escape-room' }, { ns: 'fsb' }, { ns: 'htcm' },
             { ns: 'labels' }, { ns: 'ppg' }, { ns: 'psa' }, { ns: 'rgb' }, { ns: 'scavenger-hunt' }, { ns: 'stviz-trace' }, { ns: 'tlb' }, { ns: 'vocab' },
           ] },
       ],
