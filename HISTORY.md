@@ -9,7 +9,9 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## AI-41: 046's time-slices sheet in the print preview (rank 60, 2026-11-04, `CACHE_VERSION` v571)
+## AI-41: 046's time-slices sheet in the print preview (rank 60, 2026-11-04, `CACHE_VERSION` v572)
+
+(My commit says v571; AI-36 took v571 on `main` first, so the merge moved mine to v572.)
 
 Path 20 P4's last open piece (rank 60; the way back from Timeline Builder was closed, not built, Devon, 2026-11-03). The
 row said the kit's `preview()` did not cover 046's canvas export; it does, once the canvas is a picture in `#printArea`.
@@ -38,6 +40,27 @@ row said the kit's `preview()` did not cover 046's canvas export; it does, once 
   custom page, light and dark, the preview's count against Chromium's PDF, axe, a phone); the suite gained two flags,
   `printBlock` (046 keeps its own `@media print`) and `clears` (its sheet is emptied on close and held by `rest`).
 - **Not verified.** Paper: nothing was printed. A real print dialog's own preview of the custom-size page was not looked at.
+
+## AI-36: 007's seat equity joins by student id, not name (2026-11-04, `CACHE_VERSION` v571)
+
+Source: audit entry AI-36 (the Selector's `BACKLOG-AUDIT-2026-11-04.md`, split from AI-23), the gap BACKLOG's Path 15 P2 "Not done" and P3
+notes named. No ranked row. (The commit says v570; AI-49 took v570 on `main` first, so this is v571.)
+
+- `np-seat-equity.js`'s `joinCallRates(positions, equityRows, idOf, rosterName)` now joins a seat to an equity row by the student's Class
+  Roster Hub id first and by the loose name only when no id joins them. `idOf` is the same `(name, rosterName) => id | null` np-dashboard.js
+  and np-rollup.js already take; the page passes `lookupId(rosterIds, n, r || currentRosterName)`, the dashboard's own. `seatEquityReport`
+  takes `idOf` as a fourth argument and passes it through. A seated "Bobby Chen" now joins a roster "Robert Chen" when the sidecar gives both
+  one id, and `unmatched` lists only seats that match no id and no name.
+- *Call taken:* both sides are resolved against the picker's roster name, not the chart section's name. The section was picked to be this
+  roster, and resolving both sides the same way means two "Sam"s in two classes cannot resolve differently on each side. A seat with an
+  id that no row carries falls back to the name, so a row whose spelling matched before still matches. Two rows with one id: the first wins,
+  the rule the name map already had.
+- The summary's "could not be matched by name" says "by roster id or name" now, since that is what failed.
+- Held by `test:name-picker` (smoke.mjs, 331 cases, 14 new): a preferred name and a respelled name join by id through the real `lookupId`
+  over a real sidecar; without `idOf` the old join; the original nine-seat fixture joins identically either way. With the id step reverted
+  six of the new cases fail. Nothing stored changed (no key, no `np_daily`/history format), and the phone remote is untouched.
+- Not verified: no browser suite renders the seat section of the Equity tab. A scratch page check (seeded chart, sidecar and history)
+  was run once by hand; it is not committed.
 
 ## AI-49: 043's trip-day view (rank 143, 2026-11-03, `CACHE_VERSION` v570)
 

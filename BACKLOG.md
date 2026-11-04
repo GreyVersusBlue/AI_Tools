@@ -87,7 +87,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
-- **AI-41 (v571), rank 60 (Path 20 P4, what was left) DELETED, gap not renumbered: Path 20 P4 is whole.** 046's Time slices card has "Preview the slices" in front of "Print the slices": both put the sheet in a new `#printArea` as one `<img>`, and the kit's preview shows it on Letter (exact for the Letter shape; widescreen and custom are fitted and the title names their own page). `_shared/` unchanged; `test:blank-map-slices-smoke` and `test:preview-adopters` (046 entry) hold it.
+- **AI-41 (v572), rank 60 (Path 20 P4, what was left) DELETED, gap not renumbered: Path 20 P4 is whole.** 046's Time slices card has "Preview the slices" in front of "Print the slices": both put the sheet in a new `#printArea` as one `<img>`, and the kit's preview shows it on Letter (exact for the Letter shape; widescreen and custom are fitted and the title names their own page). `_shared/` unchanged; `test:blank-map-slices-smoke` and `test:preview-adopters` (046 entry) hold it.
 - **AI-47 (v568), rank 96 rewritten to the reference pitch half: 067's click track.** The tempo field ("♪ = 92") now drives a Web Audio click on the rhythm tab: Play/Stop, an optional one-measure count-in (saved in `msrg_settings_v1`, no new key), the first beat of each measure higher and louder, numbered beat circles and "Measure 2 of 4, beat 3" in text, the playing measure outlined, reduced motion respected; 30-240 bpm with a sentence when clamped, nothing played (and said) when the field has no number; stops on a new pattern, tempo or time-signature change, the other tab, a hidden page. `MsrgAudio` in `Tools/music-sightreading-generator/msrg-audio.js`. Suites `test:music-metronome` (pure, 18 mutants) and `test:music-metronome-smoke` (8688, assigned for this batch). **Nobody has listened to it.** Print unchanged.
 - **AI-22 (v565), rank 37 rewritten: a point (008) and a hall pass (001) from 005's live mode** (Devon's P5-route, 2026-11-03). A "Tap marks: Absent / A point / A hall pass" switch rides into the stage beside the chart, back on Absent every time live mode starts (his P5-menu kept: no menu on a tap); 005 writes 008's and 001's storage on this device (`seating-chart/seating-handoff.mjs`, refusing unknown or newer data, a student not on the class, a second pass), and Undo / Ctrl+Z take each back through 005's undo stack. `test:seating-handoff` (pure) and `test:seating-live-handoff` (port 8682, assigned for this batch). The switch is my reading of his two answers together, reversible (`HISTORY.md`). Left on rank 37: 003's undo (listed, not built), and 005's registry row's `writes` line (a `_shared/` edit this parallel session could not make).
 - **AI-55 (v564), review H3 and M7 fixed on 019's monitor; no ranked row.** A device's `station` and `total` are numbers or the message is refused (`ErBoard.readMessage`; a station of markup reached the roster's `innerHTML`); Reset keeps the start in the kept record; a record kept in the last two hours is carried over a reload; the pairing box asks **Who is connecting?** so a team that dropped picks up its own row and sheet. `lock.html` unchanged. Suite `test:er-monitor-hostile` (8684), **next free suite port: 8685.**
@@ -6749,7 +6749,7 @@ day; the cross-week, cross-period view teachers actually want does not.
   reloads; the fold is on the page's in-memory overflow and the invariant the smoke holds is rollup + last 500 = every pick.
   Not done, on purpose: no reader uses `view()` yet (P3); the ids come from the sidecar the page already loads, so a name
   with no id is keyed on its name until P3 reads it through `view()`.
-- **P3 — Equity dashboard. Built (AI-23, 2026-10-29, v456-v457); nothing left in it except the seat-join `unmatched` fix, which stays with `np-seat-equity.js`.** Who hasn't been called on in three weeks, distribution
+- **P3 — Equity dashboard. Built (AI-23, 2026-10-29, v456-v457); nothing left in it (the seat-join `unmatched` fix landed in `np-seat-equity.js`, AI-36, v571).** Who hasn't been called on in three weeks, distribution
   by seat position, per period and across periods, printed as a one-page artifact.
   A "Data" front door with an erase button, matching the site's privacy posture.
   **Design (AI-23, 2026-10-29; written before any code, read against 007 at v455).** *What exists.* The Equity tab
@@ -6778,7 +6778,7 @@ day; the cross-week, cross-period view teachers actually want does not.
   button to the Data tab, where the erase buttons already are, and a "Clear pick history" shortcut that is the
   existing button's own handler (one erase, so nothing hidden is left). *Stored: nothing.* No key, no setting (the
   period and window are page variables), no student fact; `np-seat-equity.js` and `np-equity.js` are untouched and the
-  `unmatched` fix stays with the seat join (it reads names; moving it to ids is its own change, not in P3). *Defaults
+  `unmatched` fix stays with the seat join (it reads names; moving it to ids is its own change, not in P3; done since, AI-36, v571). *Defaults
   taken, none of them Devon's open questions:* three weeks is the "quiet" line; Monday starts a week; eight weeks is
   the opening window.
   **As built (v456-v457).** As designed. `np-dashboard.js` (pure: `weekStart`, `weekList`, `build`, `compare`, `chartData`, `lines`; held by
@@ -6796,7 +6796,10 @@ day; the cross-week, cross-period view teachers actually want does not.
   student stored under a name key before an id existed is matched on both keys (the counts add), because P2 never rewrites stored keys.
   *Defaults taken, none of them Devon's open questions:* periods are the saved rosters (a student on two counts in both; "All periods"
   counts them once); three weeks is the quiet line; eight weeks opens; the period and window are page variables, nothing is stored.
-  Not done: `np-seat-equity.js` still joins by name, so its `unmatched` count is unchanged; moving the seat join to ids is its own change.
+  Since AI-36 (2026-11-04, v571) `np-seat-equity.js` joins a seat to its equity row by the Class Roster Hub id first (`joinCallRates(...,
+  idOf, rosterName)`, the page's `lookupId` over the sidecar, both sides resolved against the picker's roster) and by the loose name only
+  when the ids do not meet, so a preferred or respelled name on the chart joins and `unmatched` lists only seats that match neither; with
+  no `idOf` it is the old name join, and the original fixture joins identically (`test:name-picker`'s smoke.mjs). Nothing stored changed.
 - **P4 — Question-attached picks. Built (AI-23, 2026-10-29, v458); nothing left in it.** A pick is `{student, question}` when a prompt
   bank is loaded (Exit Ticket, Number Talks, the question bank of Path 12), logged
   together.
@@ -8582,7 +8585,7 @@ runtime, the one content fetch that leaves the browser.
     (062 and 015 call it). **P3 is built.** Not verified: a real Chromebook's frame time, 2x devicePixelRatio drawing (suites run at 1x), a screen
     reader reading the status line, anything on paper. Finding: an empty project asks Wikimedia for a default search at page load (an existing request,
     blocked in the suites); Devon's 2026-10-07 answer says nothing fetches until he asks, so that request is P5's to remove.
-- **P4 — Time slices for annotations. Built, v433 (AI-28, 2026-10-29), as designed below; the print preview of the sheet followed in v571 (AI-41), and the way back from 015 was closed, not built (Devon, 2026-11-03).** Per-slice labels/lines/regions with a
+- **P4 — Time slices for annotations. Built, v433 (AI-28, 2026-10-29), as designed below; the print preview of the sheet followed in v572 (AI-41), and the way back from 015 was closed, not built (Devon, 2026-11-03).** Per-slice labels/lines/regions with a
   scrubber; small-multiple print; a two-way, selective handoff with 015 (send
   selected labels *and* markers; come back from a timeline into a map project).
   *Design (AI-28, 2026-10-29, written before the build; there was none).*
@@ -8637,7 +8640,7 @@ runtime, the one content fetch that leaves the browser.
   - *Tests.* `test:blank-map-quiz-memory` (pure Node, 20 mutants), `test:blank-map-quiz-memory-smoke` (port 8592). Not decided and not built:
     sharing the history between devices; a per-student view (would make it student data).
 
-**Where Path 20 stands (2026-10-29, v434).** P1 to P5 are built. What is left is one row: rank 59 (the curriculum gazetteer, only if a second tool wants it). The slice sheet is in the print preview since v571 (AI-41); the way back from Timeline Builder was closed, not built, Devon, 2026-11-03. Nothing else here waits on anyone.
+**Where Path 20 stands (2026-10-29, v434).** P1 to P5 are built. What is left is one row: rank 59 (the curriculum gazetteer, only if a second tool wants it). The slice sheet is in the print preview since v572 (AI-41); the way back from Timeline Builder was closed, not built, Devon, 2026-11-03. Nothing else here waits on anyone.
 
 **Model.** Fable for P3; Opus otherwise.
 
@@ -13027,7 +13030,7 @@ where. New quick wins surfaced by future rounds go here.
   one set of bands and one key) shipped 2026-08-14, and the annotation half shipped
   in Path 20 P4 (v433, `bmg-slices.js`, the Time slices card: each slice has its own
   labels, markers, regions, lines and key, a slider, and a printed or PDF sheet of
-  one panel per slice), previewed through the print kit since v571 (AI-41). The way
+  one panel per slice), previewed through the print kit since v572 (AI-41). The way
   back from Timeline Builder is closed, not built.
 - **Vector base maps — done.** Nine built-in base maps render offline from vendored
   Natural Earth GeoJSON and calibrate themselves; **choropleth** (2026-08-13) and

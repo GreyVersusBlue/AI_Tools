@@ -24,7 +24,7 @@ import {
   weightedChoice, fairnessWeights
 } from "../np-pick.js";
 import { report, overdue, summaryLine, daysBetween, shiftDay, dayKey } from "../np-equity.js";
-import { DETAILS_KEY, loadDetails, parseDetails, lookupDetail, displayName } from "../np-details.js";
+import { DETAILS_KEY, loadDetails, parseDetails, lookupDetail, displayName, parseIds, lookupId } from "../np-details.js";
 import {
   SEATING_KEY, looseKey, parseSeatingState, loadSeatingState, pickSection,
   derivePositions, joinCallRates, byRow, byRegion, seatEquityReport, seatSummaryLine
@@ -1024,6 +1024,64 @@ console.log("name-picker smoke\n");
   const oneRowReport = seatEquityReport({ sections: [oneRowSection] }, "Solo", [{ name: "Aiden Alvarez", count: 3, lifetime: 3, daysSince: 0 }]);
   assert(oneRowReport.byRow.length === 1, "one desk is one row");
   assert(!/is called/.test(seatSummaryLine(oneRowReport)), "with only one row there is nothing to compare it to");
+
+  // AI-36: the seat join goes by Class Roster Hub id first, then by name.
+  // The chart seats a student under his preferred name, the picker's roster
+  // has his legal name, and the sidecar gives both the same id (the homeroom
+  // roster lists him as Bobby). A respelled name the same way. The real
+  // lookupId over a real sidecar is the idOf, as on the page.
+  const sidecar = parseIds(JSON.stringify({ rosters: {
+    "Period 3": { students: [
+      { id: "stu-chen", name: "Robert Chen" }, { id: "stu-nguyen", name: "Thao Nguyen" },
+      { id: "stu-alv", name: "Aiden Alvarez" } ] },
+    "Homeroom": { students: [
+      { id: "stu-chen", name: "Bobby Chen" }, { id: "stu-nguyen", name: "Thao Nguyen-Tran" },
+      { id: "stu-other", name: "Sam Ortiz" } ] }
+  } }));
+  const idOf = (n, r) => lookupId(sidecar, n, r);
+  const nickStudents = [
+    { id: "a", name: "Bobby Chen" },        // preferred name on the chart
+    { id: "b", name: "Thao Nguyen-Tran" },  // respelled on the chart
+    { id: "c", name: "Aiden Alvarez" },     // same on both: the name join, as before
+    { id: "d", name: "Sam Ortiz" },         // has an id, but no row has it and no row has his name
+    { id: "e", name: "Isabel Ibarra" }      // no id anywhere, no row
+  ];
+  const nickSection = { id: "sec9", name: "Period 3", students: nickStudents,
+    desks: nickStudents.map((s, i) => ({ id: "k" + i, x: 40 + 128 * i, y: 110 })),
+    assign: Object.fromEntries(nickStudents.map((s, i) => ["k" + i, s.id])) };
+  const nickRows = [
+    { name: "Robert Chen", count: 4, lifetime: 9, daysSince: 1 },
+    { name: "Thao Nguyen", count: 2, lifetime: 5, daysSince: 2 },
+    { name: "Aiden Alvarez", count: 3, lifetime: 3, daysSince: 0 }
+  ];
+  const nickPos = derivePositions(nickSection);
+  const byIdJoin = joinCallRates(nickPos, nickRows, idOf, "Period 3");
+  const chen = byIdJoin.matched.find(m => m.name === "Bobby Chen");
+  assert(chen && chen.count === 4 && chen.matchedName === "Robert Chen",
+         "a seat under a preferred name joins the legal-name row through the shared roster id");
+  const thao = byIdJoin.matched.find(m => m.name === "Thao Nguyen-Tran");
+  assert(thao && thao.count === 2 && thao.matchedName === "Thao Nguyen", "a respelled name joins by id too");
+  assert(byIdJoin.matched.some(m => m.name === "Aiden Alvarez" && m.count === 3), "an identical name still joins");
+  assert(byIdJoin.unmatched.join(",") === "Sam Ortiz,Isabel Ibarra",
+         "unmatched lists only seats that match no id and no name, in seat order");
+  const nameOnly = joinCallRates(nickPos, nickRows);
+  assert(nameOnly.matched.length === 1 && nameOnly.unmatched.length === 4,
+         "without idOf the join is the name join alone, exactly as before ids");
+  assert(JSON.stringify(joinCallRates(positions, equityRows, idOf, "Period 3")) === JSON.stringify(joinCallRates(positions, equityRows)),
+         "the original nine-seat fixture joins identically with idOf (Aiden by id, the rest by name)");
+  // An id on the seat that no row carries falls back to the name, so a row
+  // typed loosely but with a different (or no) id still joins as it did.
+  const strayIdOf = n => (looseKey(n) === "aiden alvarez" ? "stu-seat-only" : null);
+  assert(joinCallRates(nickPos, nickRows, strayIdOf).matched.some(m => m.name === "Aiden Alvarez"),
+         "a seat id that no row has falls back to the name join");
+  // Two rows that resolve to one id: the first wins, the same rule as the name map.
+  const twoRows = [{ name: "Robert Chen", count: 4, lifetime: 9, daysSince: 1 }, { name: "Bobby Chen", count: 7, lifetime: 7, daysSince: 0 }];
+  assert(joinCallRates(nickPos, twoRows, idOf, "Period 3").matched.find(m => m.name === "Bobby Chen").count === 4,
+         "two rows with one id: the first row is the one the seat joins, as two loose-equal names already were");
+  const nickRep = seatEquityReport({ sections: [nickSection] }, "Period 3", nickRows, idOf);
+  assert(nickRep.seated === 5 && nickRep.matched === 3 && nickRep.unmatched.length === 2, "seatEquityReport passes idOf through");
+  assert(/3 of 5 seated students matched/.test(seatSummaryLine(nickRep)) && /2 seated students could not be matched by roster id or name/.test(seatSummaryLine(nickRep)),
+         "the summary counts the id matches and says what the unmatched seats failed to match");
 }
 
 console.log(`\nname-picker: ${pass} passed, ${fail} failed`);
