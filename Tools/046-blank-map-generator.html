@@ -1457,12 +1457,22 @@ let quizMemory = QuizMemory.load();
 const roundMarks = new Map(); // label id -> 'got' | 'missed', this round
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
+// save() is false when the browser refuses (storage full or blocked): say so, or marks stop being kept unseen (AI-63).
+const QUIZ_NOTE = el('quizMemoryNote').textContent;
+function saveQuizMemory() {
+  const stored = QuizMemory.save(quizMemory);
+  el('quizMemoryNote').textContent = stored ? QUIZ_NOTE
+    : 'This browser could not keep these marks (its storage is full or blocked): they count until this page is closed, then they are lost. Backup & Restore (009) shows what is using the space.';
+  if (!stored) el('quizMemory').open = true;
+  return stored;
+}
+
 function markCurrent(result) {
   const cur = labelLayer.getCurrentQuizLabel();
   if (!cur) return;
   quizMemory = QuizMemory.record(quizMemory, store.getActiveId(), cur.text, result, todayStr(), roundMarks.get(cur.id) || null);
   roundMarks.set(cur.id, result);
-  QuizMemory.save(quizMemory);
+  saveQuizMemory();
 }
 
 function renderQuizMemory() {
@@ -1493,7 +1503,7 @@ function setQuizModeEnabled(on) {
     const live = store.listProjects().map(p => p.id);
     const fresh = QuizMemory.load();
     quizMemory = QuizMemory.prune(fresh, live);
-    if (Object.keys(quizMemory.projects).length !== Object.keys(fresh.projects).length) QuizMemory.save(quizMemory);
+    if (Object.keys(quizMemory.projects).length !== Object.keys(fresh.projects).length) saveQuizMemory();
   }
   if (!on) {
     el('quizBigText').checked = false;
@@ -1519,7 +1529,7 @@ el('btnQuizReveal').addEventListener('click', () => labelLayer.revealNext(
 el('btnQuizForget').addEventListener('click', () => {
   if (!confirm('Forget the quiz history this browser keeps for this map project? Other maps are not touched.')) return;
   quizMemory = QuizMemory.forget(quizMemory, store.getActiveId());
-  QuizMemory.save(quizMemory);
+  saveQuizMemory();
   renderQuizBar(labelLayer.getQuizProgress());
 });
 el('btnQuizRevealAll').addEventListener('click', () => labelLayer.revealAll());

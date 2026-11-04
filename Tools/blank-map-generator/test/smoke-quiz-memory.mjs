@@ -7,7 +7,7 @@
 // is what asks, and it does.
 // Memory half: marking the place the class is answering records it in `bmg_quiz_memory_v1` for this map project; the
 // same button twice counts once and the other replaces it; nothing is recorded before a place is revealed; the
-// tally still counts presses as it always did; the history survives a reload, reads in the list, is not in the
+// tally still counts presses as it always did; a save the browser refuses is said so on the page; the history survives a reload, reads in the list, is not in the
 // project's own data, steers "Missed ones first", and "Forget" clears this map's and only this map's.
 
 import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
@@ -135,6 +135,26 @@ await page.click('#btnQuizForget');
 eq(await mem(), null, 'forgetting clears this map and the key goes with the last one');
 ok((await page.textContent('#quizMemorySummary')).includes('none yet'), 'the box says none yet');
 ok(await page.isDisabled('#btnQuizForget'), 'and Forget is disabled with nothing to forget');
+
+// AI-63 (review L8): a mark the browser refuses to store (storage full or blocked) is said so, not dropped silently
+const note0 = await page.textContent('#quizMemoryNote');
+await page.evaluate(() => {
+  const real = Storage.prototype.setItem;
+  window.__realSetItem = real;
+  Storage.prototype.setItem = function (k, v) { if (k === 'bmg_quiz_memory_v1') throw new DOMException('full', 'QuotaExceededError'); return real.call(this, k, v); };
+});
+await page.click('#btnQuizNewRound');
+await page.evaluate(() => { document.getElementById('quizMemory').open = false; });
+await node('Elbe').click();
+await page.click('#btnQuizMissed');
+const refused = await page.textContent('#quizMemoryNote');
+ok(/could not keep|not kept/i.test(refused) && refused !== note0, 'a refused save says the marks are not being kept: ' + refused);
+ok(await page.evaluate(() => document.getElementById('quizMemory').open), 'and opens the box so it is seen');
+ok((await page.textContent('#quizMemorySummary')).includes('(1)'), 'the mark still counts for this visit');
+await page.evaluate(() => { Storage.prototype.setItem = window.__realSetItem; });
+await page.click('#btnQuizGot');
+eq(await page.textContent('#quizMemoryNote'), note0, 'the next save that works puts the note back');
+ok(!!(await entry('elbe')), 'and the place is stored');
 
 const real = errors.filter(e => !/Failed to load resource|net::ERR/.test(e));
 ok(real.length === 0, 'no console errors: ' + JSON.stringify(real));
