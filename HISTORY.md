@@ -38,7 +38,9 @@ own "difficulty tiers" idea); and 053 keeps its categories by broad region, as b
 - **Tests.** `test:trivia-board-logic` (pure Node: tiers, the pinned board, `spread()`, hidden and own questions, the file's shape; five breaks of
   `ctcg-board.js` on purpose, each caught) and `test:trivia-board` (port 8679, 21 assertions: the preview, the file equal to `build()` of the
   page, storage untouched, a hidden built-in and a markup question of one's own, everything hidden, axe on the tab, and 030's real Import JSON
-  taking the file: title, the three categories, the fifteen clues word for word at their points, two teams, fifteen cells).
+  taking the file: title, the three categories, the fifteen clues word for word at their points, two teams, fifteen cells). Two breaks of the page on purpose were each caught by it: the preview's question written with `innerHTML`, and the board built
+  with the hidden built-ins in. Also green: `trivia-bank-file`, `handoffs.test`, `question-bank.test`, `seed-sets`, `send-to`, `share-rollout`,
+  `test:theme` (both), `test:a11y -- --only 053`, `sw-tiers`, and every guard.
 - **Not verified.** No teacher has used the tab or played the board; the tiers are unreviewed; no file was opened on another device. The suite's
   first run once ended with "Target page, context or browser has been closed" at the 030 step; the next runs were green and I did not find a cause.
 
