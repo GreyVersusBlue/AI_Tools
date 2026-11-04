@@ -9,6 +9,22 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-34: the offline zip is built and opened in CI on main (2026-11-04, CI only, no `CACHE_VERSION` bump)
+
+The standing decision "should CI also run `offline:build` + `offline:verify`?" had a default since 2026-10-21 (yes, on
+`main` only, not on pull requests) and nobody had wired it. `.github/workflows/ci.yml` now has a fourth job, `offline`,
+guarded by `if: github.event_name == 'push' && github.ref == 'refs/heads/main'`: checkout with full history, `npm ci`,
+the suite shards' Playwright cache and Chromium steps (same key), then `npm run offline:build` and `npm run offline:verify`.
+The `guards` job and the six-way `suites` matrix are unchanged. The aggregate job keeps its name `test`; it now also needs
+`offline` and passes on its `success` or `skipped`, so a pull request (where the job is skipped) is judged exactly as
+before, and a red offline check on main turns `test` red.
+
+**Time it adds:** measured on huginn, `offline:build` 3.8 s and `offline:verify` 22.3 s (581 files staged, a 7.7 MB zip,
+11 entry points opened from `file://`). On a runner the job also pays its own setup (checkout, `npm ci`, the browser
+cache), and it runs beside the shards, not after them, so the wall clock of a main run should not grow. **Not verified:**
+the job has not run on GitHub yet; the first push to `main` after this lands is its first run. It is never exercised by
+a pull request, so a break in it shows only on main.
+
 ## AI-52: BACKLOG tidy, stale per-tool rows and the header cut back (2026-11-04, docs only, no `CACHE_VERSION` bump)
 
 The audit's entry named ranks 110, 113, 138, 43, 60, 65, 117, 149, 150 and 151. Read against the tree:

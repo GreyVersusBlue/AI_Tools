@@ -342,6 +342,9 @@ files must be added there too.
   `node Tools/board-check/suite-durations.mjs <job logs>` (its header has the
   `gh api` line). A suite must not depend on another suite having run first:
   shards run on different machines, which `--changed` already assumed.
+  Since 2026-11-04 a fourth job, `offline`, runs `npm run offline:build` and
+  `npm run offline:verify` on a push to `main` only (Devon's default, not on
+  pull requests); `test` needs it and reads its `skipped` on a PR as a pass.
 - A known-red assertion goes in `suites.json`'s `expectedFailures` with its exact
   text and a reason — **never** by loosening the assertion. The runner prints
   every expected failure on every run, still goes red if the same suite fails a

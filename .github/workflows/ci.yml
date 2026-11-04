@@ -33,7 +33,10 @@
 #             (Tools/board-check/shard-suites.mjs has the method). Every
 #             selected suite runs in exactly one shard; each job's log prints
 #             the whole plan at its top. A shard with nothing to run passes.
-#   test    — green only if `guards` and every shard were. It keeps the old
+#   offline — (since 2026-11-04, push to main only) offline:build and
+#             offline:verify, the file:// zip a teacher hands a peer.
+#   test    — green only if `guards` and every shard were (and `offline`,
+#             when it ran). It keeps the old
 #             job's name, so "the test check" still means everything; the
 #             repo had no branch protection or ruleset naming a check on
 #             2026-10-26, so nothing outside this file had to change.
@@ -294,12 +297,68 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # The offline zip (AI-34, 2026-11-04; Devon's default of 2026-10-21: on main
+  # only, not on pull requests). offline:build stages the file://-safe copy and
+  # zips it; offline:verify unzips it outside the repo and opens 11 entry points
+  # from a real file:// URL in headless Chromium. About half a minute on huginn
+  # (4 s + 22 s), plus this job's setup. A push to main is the only event that
+  # runs it, so a pull request never waits on it; `test` below treats its
+  # `skipped` as a pass and only a real failure as red.
+  offline:
+    if: "github.event_name == 'push' && github.ref == 'refs/heads/main'"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # make-offline-copy.mjs stages from `git ls-files` and compares
+          # `git status` before and after; full history, as the other jobs.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dev dependencies
+        run: npm ci
+
+      # The same browser cache as the suite shards (same key, so a shard's
+      # download serves this job too).
+      - name: Resolve Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('./node_modules/playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Chromium system dependencies
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: 'Offline copy: build the zip'
+        run: npm run offline:build
+
+      - name: 'Offline copy: open it from file://'
+        run: npm run offline:verify
+
   # The one check that means "all green". `!cancelled()` rather than the
   # default, so it runs and goes red when a shard or the guards failed (the
   # default would skip it, and a skipped check reads as neither); not
   # `always()`, for the cancel-in-progress reason the guards' comment gives.
+  # `offline` runs on a push to main only; on a pull request it is `skipped`,
+  # which passes here.
   test:
-    needs: [guards, suites]
+    needs: [guards, suites, offline]
     if: '!cancelled()'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -308,5 +367,7 @@ jobs:
         run: |
           echo "guards: ${{ needs.guards.result }}"
           echo "suites: ${{ needs.suites.result }}"
+          echo "offline: ${{ needs.offline.result }}"
           test "${{ needs.guards.result }}" = success
           test "${{ needs.suites.result }}" = success
+          case "${{ needs.offline.result }}" in success|skipped) ;; *) exit 1 ;; esac
