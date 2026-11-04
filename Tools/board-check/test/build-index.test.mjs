@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { render, renderRow } from '../build-index.mjs';
+import { render, renderRow, renderCategory } from '../build-index.mjs';
 
 const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const html = fs.readFileSync(path.join(site, 'index.html'), 'utf8');
@@ -27,8 +27,9 @@ for (const r of rows) {
   ok(!r.icon || /^t\d{3}$/.test(r.icon), 'icon id: ' + r.tool);
 }
 for (const c of data.categories) {
-  const m = html.match(new RegExp('data-cat="' + c.key + '"[\\s\\S]*?<span class="cat-count">(\\d+) tools</span>'));
+  const m = html.match(new RegExp('data-cat="' + c.key + '"[\\s\\S]*?<span class="cat-count">(\\d+) tools?</span>'));
   ok(m && +m[1] === c.rows.length, 'category count is the row count: ' + c.key);
+  ok(m && m[0].endsWith(c.rows.length === 1 ? ' tool</span>' : ' tools</span>'), 'category count is singular for one tool (AI-63, L13): ' + c.key);
   const inBlock = html.match(new RegExp('<details class="cat" data-cat="' + c.key + '"[\\s\\S]*?</details>'))[0];
   ok((inBlock.match(/<a class="row ink"/g) || []).length === c.rows.length, 'rows in the page block: ' + c.key);
 }
@@ -44,6 +45,11 @@ ok(render(html, copy) !== html, 'mutant: a changed pitch changes the render');
 const copy2 = JSON.parse(JSON.stringify(data));
 copy2.categories[1].rows.pop();
 ok(render(html, copy2) !== html, 'mutant: a removed row changes the render');
+// one row reads "1 tool", any other count "N tools" (AI-63, L13: Platform-Wide said "1 tools")
+const one = { key: 'x', title: 'X', rows: [rows[0]] };
+ok(renderCategory(one).includes('<span class="cat-count">1 tool</span>'), 'a one-row category says "1 tool"');
+ok(renderCategory({ ...one, rows: [rows[0], rows[1]] }).includes('<span class="cat-count">2 tools</span>'), 'a two-row category says "2 tools"');
+ok(renderCategory({ ...one, rows: [] }).includes('<span class="cat-count">0 tools</span>'), 'an empty category says "0 tools"');
 ok(renderRow(rows[0]).includes('data-tool="' + rows[0].tool + '"'), 'renderRow carries the slug');
 console.log(`build-index: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

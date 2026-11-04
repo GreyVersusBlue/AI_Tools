@@ -57,7 +57,7 @@ export function renderCategory(c) {
   return `    <details class="cat" data-cat="${c.key}"${c.open ? ' open' : ''}>\n` +
     `    <summary class="section-head ink"${style}>\n${CARET}` +
     `      <h2>${c.title}</h2>\n` +
-    `      <span class="cat-count">${c.rows.length} tools</span>\n` +
+    `      <span class="cat-count">${c.rows.length} tool${c.rows.length === 1 ? '' : 's'}</span>\n` +
     `    </summary>\n\n` +
     c.rows.map(renderRow).join('\n') +
     `    </details>\n`;
