@@ -11,7 +11,9 @@
 // serialize returns null and breaks nothing; pagehide captures as 'leaving' and clears the session
 // marker; the five-minute timer captures only when something changed; an unreadable save with an
 // empty ring gets the banner with no Restore button, and Dismiss hides it; a point that cannot be
-// read says so; the Settings list's Restore asks first, does nothing on Cancel and restores on OK;
+// read says so and captures nothing; the Settings list's Restore asks first, does nothing on Cancel
+// and restores on OK; with a full ring of three, the oldest restores too (AI-66: restore() used to
+// capture first, which trimmed the point it was about to read);
 // formatRecoveryTime() gives a time today and a date before that. Exits 1 on any failure.
 
 /* global applyFullProject, roomRegistry -- 035's globals, read inside page.evaluate() */
@@ -97,10 +99,12 @@ const toasts = await page.evaluate(() => {
   window.__toasts = [];
   const real = window.showToast;
   window.showToast = function (m, t) { window.__toasts.push([t, m]); return real.apply(this, arguments); };
-  return window.RecoveryManager.restore('no-such-point').then(r => [r, window.__toasts.slice()]);
+  return window.SVRecovery.listPointHeaders().then(ps => window.RecoveryManager.restore('no-such-point')
+    .then(r => window.SVRecovery.listPointHeaders().then(qs => [r, window.__toasts.slice(), ps.map(p => p.id), qs.map(q => q.id)])));
 });
 eq(toasts[0], false, 'restoring a missing point returns false');
 ok(toasts[1].some(([t, m]) => t === 'error' && /could not be read/.test(m)), 'and says the point could not be read');
+eq(toasts[3], toasts[2], 'and captures nothing (the ring\'s ids are unchanged), since nothing was replaced (AI-66)');
 await page.evaluate(() => { applyFullProject({ blueprint: { floors: [{ id: 'floor_0', label: 'Floor 1', gridCols: 5, gridRows: 5, cells: [] }], crossFloorPairs: [] }, groups: [] }); });
 await settle(page, 300);
 eq(await page.evaluate(() => roomRegistry.length), 0, 'the plan on screen is now empty');
@@ -119,6 +123,41 @@ await pressRestore(page);
 ok(await until(page, (n) => roomRegistry.length === n, rooms), 'OK restores the point: the rooms are back');
 ok(await page.evaluate(() => window.__toasts.some(([t, m]) => t === 'success' && /^Recovered the project from /.test(m))), 'and says so');
 ok((await points(page)).some(p => p.reason === 'before restore'), 'the project being replaced was captured first');
+
+console.log('5b. a full ring: restoring the oldest of three points (AI-66)');
+// The ring holds MAX_POINTS (3). restore() takes a forced 'before restore' capture, which trims the
+// ring; before AI-66 it captured first and read second, so the oldest point was evicted before it
+// was read and the teacher was told it "could not be read". The oldest is the fixture, the two
+// newer ones an empty plan, so the room count says which one came back.
+const emptyPlan = { blueprint: { floors: [{ id: 'floor_0', label: 'Floor 1', gridCols: 5, gridRows: 5, cells: [] }], crossFloorPairs: [] }, groups: [] };
+await page.evaluate(() => window.SVRecovery.clearPoints());
+await page.evaluate((p) => { applyFullProject(p); }, fixtureProject());
+await settle(page, 300);
+await page.evaluate(() => window.RecoveryManager.capture('oldest', true));
+await page.evaluate((p) => { applyFullProject(p); }, emptyPlan);
+await settle(page, 300);
+await page.evaluate(() => window.RecoveryManager.capture('middle', true));
+await page.evaluate(() => window.RecoveryManager.capture('newest', true));
+const ring = await points(page);
+eq([ring.length, ring.map(p => p.reason), ring[2] && ring[2].rooms], [3, ['newest', 'middle', 'oldest'], rooms], 'three points, newest first, the oldest the fixture');
+eq(await page.evaluate(() => roomRegistry.length), 0, 'the plan on screen is empty');
+await page.evaluate(() => window.RecoveryManager.renderList());
+await settle(page, 300);
+const nButtons = await page.evaluate(() => document.querySelectorAll('#recovery-list [data-recovery-restore]').length);
+eq(nButtons, 3, 'the Settings list has a Restore button for each');
+await page.evaluate(() => { window.__toasts = []; window.__answer = true; });
+await page.evaluate(() => { const bs = document.querySelectorAll('#recovery-list [data-recovery-restore]'); bs[bs.length - 1].click(); });
+ok(await until(page, (n) => roomRegistry.length === n, rooms), 'restoring the oldest brings its rooms back');
+const t5b = await page.evaluate(() => window.__toasts.slice());
+ok(t5b.some(([t, m]) => t === 'success' && /^Recovered the project from /.test(m)), 'and says so');
+ok(!t5b.some(([t, m]) => t === 'error'), 'with no "could not be read" error: ' + JSON.stringify(t5b));
+const after = await points(page);
+eq([after.length, after[0] && after[0].reason, after[0] && after[0].rooms], [3, 'before restore', 0], 'the replaced (empty) project is the newest point, so the restore can be undone');
+// the middle point still restores, as it always did
+await page.evaluate(() => { window.__toasts = []; });
+await page.evaluate((id) => window.RecoveryManager.restore(id), after[2].id);
+ok(await until(page, () => roomRegistry.length === 0), 'restoring the (now) oldest point, the empty plan, still works');
+ok(await page.evaluate(() => window.__toasts.some(([t, m]) => t === 'success')), 'and says so');
 
 console.log('6. formatRecoveryTime');
 const fmt = await page.evaluate(() => {

@@ -9,6 +9,32 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-66: 035 restores the oldest of three recovery points (found by AI-50, 2026-11-04, `CACHE_VERSION` v582)
+
+AI-50's found-not-fixed. With the ring full (`MAX_POINTS`, 3), pressing Restore on the *oldest* point in the Settings list
+told the teacher "That recovery point could not be read." and changed nothing. **The cause was the UI glue, not the store:**
+`RecoveryManager.restore()` in `sv-recovery-ui.js` took its forced `before restore` capture first and read the point second,
+and `sv-recovery.js`'s `putPoint()` trims the ring to three, oldest first, so the capture deleted the very point it was about
+to read. `sv-recovery.js` and `sv-snapshots.js`/`sv-storage.js` are untouched.
+
+- **The fix:** `restore()` reads the point, then captures, then applies. The point is in memory when the ring drops it.
+  Restoring the newest or the middle point does what it always did (the capture trims the oldest, which is not the one being
+  read), and the banner's Restore, which always offers the newest, is unchanged.
+- **One small behaviour change, decided here:** a point that cannot be read (missing id) no longer takes the `before restore`
+  capture, since nothing is replaced; before, it captured anyway and so trimmed another point for nothing. Reverse it by moving
+  the capture back above the `!point` check in `restore()`.
+- **What the ring holds after restoring the oldest:** the `before restore` point (the project that was replaced) and the two
+  newer ones. The restored point itself is gone from the ring, which is unavoidable with three slots and a forced capture; it is
+  now the live project, which the autosave and the next capture keep. Keeping it as well would mean a fourth slot or skipping
+  the undo capture, and neither was this row's to decide.
+- **Suite:** `smoke-recovery-ui.mjs` (`test:layout-recovery-ui`) gains section 5b, which fills the ring with three points (the
+  fixture oldest, two empty plans), presses the list's last Restore and asserts the rooms come back with a success toast and no
+  error, the replaced project is now the newest point, and the then-oldest point restores too; section 5 now also asserts that
+  an unreadable point leaves the ring's ids alone. Against the old `restore()` it fails 5 assertions (the four of 5b and the ids
+  check); with the fix 41/0. `smoke-recovery`, `smoke-snapshots`, `smoke-autosave`, `smoke-apply` and `size.test` (ledger's
+  record of the module 10,282 to 10,956 bytes) pass unchanged. **Not verified:** nothing beyond Chromium headless; no teacher
+  has restored a point on a real machine.
+
 ## AI-65: the Industry pages read under a school accent (AI-57 follow-up, 2026-11-04, `CACHE_VERSION` v581)
 
 AI-57's found-not-fixed: the five pages on `_shared/theme.css` (005, 011, 029, 031, 036) put literal white, and

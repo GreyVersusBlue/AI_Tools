@@ -2,7 +2,8 @@
 // recovery ring in sv-recovery.js (when to capture a point, the crash and unreadable-save banner,
 // restore, and the Settings tab's recovery list). Moved out of the page's classic script as a view
 // module (rank 140, the eighth increment): the body is unchanged, line for line, apart from the
-// `export`s. sv-recovery.js stays the storage half (IndexedDB, the session flag) and knows nothing
+// `export`s, and one fix since (AI-66: restore() reads the point before its forced capture, so the
+// oldest of three can be restored). sv-recovery.js stays the storage half (IndexedDB, the session flag) and knows nothing
 // of the page; this file reaches the ring through `window.SVRecovery`, as it always did, and
 // reaches the page's functions and `let`s by bare name at call time, as sv-apply.js does.
 //
@@ -152,13 +153,24 @@ export const RecoveryManager = {
    * Restores a recovery point over the current project. Captures the state
    * being replaced first (forced), so "restore" is itself undoable — the
    * whole point of this feature is that nothing disappears silently.
+   *
+   * The point is read BEFORE that capture (AI-66): the ring holds MAX_POINTS, so the capture
+   * trims the oldest point, and when that is the one being restored it used to be gone by the
+   * time it was read ("could not be read"). Read first, it is in memory when the ring drops it.
+   * A point that cannot be read now captures nothing, since nothing is replaced (it used to
+   * capture anyway, and so trim another point for no reason).
    */
   restore(id) {
     const api = this.api;
     if (!api) return Promise.resolve(false);
-    return this.capture('before restore', true)
-      .then(() => api.getPoint(id))
-      .then(point => {
+    let point;
+    return api.getPoint(id)
+      .then(p => {
+        point = p;
+        if (!point || !point.data) return null;
+        return this.capture('before restore', true);
+      })
+      .then(() => {
         if (!point || !point.data) { showToast('That recovery point could not be read.', 'error'); return false; }
         try {
           const res = applyFullProject(point.data);
