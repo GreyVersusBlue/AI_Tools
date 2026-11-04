@@ -262,6 +262,8 @@
     "test:music-warmup": "node Tools/music-sightreading-generator/test/smoke-glyph-fallback.mjs",
     "test:music-metronome": "node Tools/music-sightreading-generator/test/metronome.test.mjs",
     "test:music-metronome-smoke": "node Tools/music-sightreading-generator/test/smoke-metronome.mjs",
+    "test:music-pitch": "node Tools/music-sightreading-generator/test/pitch.test.mjs",
+    "test:music-pitch-smoke": "node Tools/music-sightreading-generator/test/smoke-pitch.mjs",
     "test:art-portfolio": "node Tools/art-portfolio-label-maker/test/smoke-reference-sheet.mjs",
     "test:art-portfolio-bulk-photos": "node Tools/art-portfolio-label-maker/test/smoke-bulk-photos.mjs",
     "test:book-tasting-import": "node Tools/book-tasting-menu-generator/test/smoke-import.mjs",

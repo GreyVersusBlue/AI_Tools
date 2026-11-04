@@ -9,9 +9,71 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## AI-50: 035 the recovery manager moves to sv-recovery-ui.js (rank 140, 2026-11-04, v578)
+## AI-50: 035 the recovery manager moves to sv-recovery-ui.js (rank 140, 2026-11-04, v579)
 
 Eighth increment, one piece: `RecoveryManager` (when to take a recovery point, the crash and unreadable-save banner, restore, the Settings tab's recovery list), `formatRecoveryTime()` and `RECOVERY_INTERVAL_MS` are `Tools/schedule-visualizer/sv-recovery-ui.js`, a view module like the others; the body is the page's, line for line, with `export` on the three declarations and the page's `window.RecoveryManager = RecoveryManager` line dropped, since the module script now copies the exports onto `window` (beside a `window.SVRecoveryUI`). `sv-recovery.js` stays the storage half (the IndexedDB ring and the session flag) and was not touched. **How the page reaches it, read before moving:** the ring is a module that sets `window.SVRecovery` and fires `sv-recovery-ready`, and the page's `init()` calls `RecoveryManager.init()` at once if the ring is there and on that event if not. The new module is imported in the same module script, after the ring and before the event fires, so `RecoveryManager` is on `window` exactly when `SVRecovery` is (one failed import fails the whole script, so the two cannot come apart). The four callers are unchanged: `init()` and the two capture calls before an import and before clearing the saved blueprint reach it by bare name through `window`, and `sv-autosave.js` already called `window.RecoveryManager.markDirty()` behind a guard. The module reads `serializeFullProject`, `applyFullProject`, `roomRegistry`, `AppState`, `getBlueprintLoadStatus`, `escHtml` and `showToast` by bare name at call time, as `sv-apply.js` does. `smoke-recovery-ui.mjs` (`test:layout-recovery-ui`, port 8697, 31 assertions) holds the moved wiring: the exports are on window and `api` is the ring; `init()` ran (session marker set, timer started, Settings list drawn); an unforced capture writes nothing until `markDirty()`, clears the flag, and a second capture while one is under way is refused; a capture whose serializer throws returns null and leaves the guard open; `pagehide` captures as `leaving` and clears the session marker; under Playwright's clock, five minutes with nothing changed take no point, a change four minutes in takes none yet and one at five minutes is taken; an unreadable save with an empty ring gets the banner with Dismiss and no Restore, and Dismiss hides it; a missing point says it could not be read; the list's Restore asks, does nothing on Cancel, and on OK captures the current project first and brings the rooms back; `formatRecoveryTime` gives a time today and a date before. Mutants caught, all thirteen: `markDirty()` a no-op, the dirty check dropped, the one-at-a-time guard dropped, `pagehide` not clearing the marker, `pagehide` not capturing, the interval at four minutes, `init()` not drawing the list, the banner's Restore always shown, the list's `confirm()` ignored, restore without the capture first, `formatRecoveryTime` never giving the time alone, the serializer's `catch` rethrowing (the suite crashes rather than failing an assertion, which still fails it) and Dismiss doing nothing. The existing suites that cover the rest of the claim, every suite in `Tools/schedule-visualizer/test/`, among them `smoke-recovery.mjs`, `smoke-autosave.mjs`, `smoke-apply.mjs`, `smoke-snapshots.mjs`, `smoke-trace-image.mjs`, `smoke-publish-baseline.mjs` (the Northwind golden) and `size.test.mjs`, pass unchanged. Page 265,430 to 256,755 bytes (ledger lowered, module recorded at 10,282); the inline script is now about 1,950 lines. **Found, not changed (the row said not to change what recovery does):** **restoring the oldest of three points from the Settings list fails.** `restore()` takes a forced `before restore` capture first, the ring holds three, so that capture evicts the oldest point, which is the one being restored, and the teacher is told "That recovery point could not be read." Reproduced on this branch with a three-point ring (`restore()` returned false with that toast); the lines are the page's unchanged, so it is as old as the ring. The fix is a small behaviour change (read the point before capturing, or trim after the restore) and belongs to its own row: it is recorded in rank 140's text for a later session. **Still on the page and next:** the onboarding block (`initOnboardingAndHelp()`, AI-51) and the presentation glue.
+
+## AI-48: 067's reference pitch and note play-through (rank 96, the other half, 2026-11-04, `CACHE_VERSION` v578)
+
+The second half of rank 96 (AI-47 built the click track, v568). Devon's word was for the metronome; this half is the row's
+other item and, like it, ships unheard.
+
+- **The module.** Added to `Tools/music-sightreading-generator/msrg-audio.js`, after the metronome so AI-47's mutant texts
+  still match first. The staff-position formula moved here: `notePosition(note, clef)` is diatonic number (octave * 7 + letter)
+  less the clef's bottom line (E4 treble, G2 bass), and the page's drawing now calls it, so a note cannot be drawn on one line
+  and sounded at another. `positionNote` is its inverse, `noteFrequency` is equal temperament on A4 = 440 (MIDI 69),
+  `positionFrequency` the two together. `referenceNote(range, notes)` picks the reference. `createNotePlayer({ ctx, freqs, bpm,
+  noteDuration, onNote, onEnd })` is the click track's look-ahead scheduler for a finite list: note k at `start + k * 60/bpm` on
+  the audio clock, `onNote` only once a note's time has come, `onEnd` once after the last note is over, `stop()` silencing what is
+  in the graph. A tone is a triangle wave, 85% of a beat, a 20 ms attack and a decay to silence. Same `audioContext()`, so the two
+  tabs share one context.
+- **The page.** On the sight-reading display card: **Play reference pitch**, **Play the notes** (`aria-pressed`) and **Stop**
+  (disabled at rest), "Note 3 of 12: E4" beside them (`aria-hidden`, as the beat text is) and a polite status line. The notes are
+  the ones on screen (not a locked print pattern), even quarter notes at the Rhythm tab's tempo field, clamped to 30-240 with a
+  sentence; a field with no number plays nothing and says where to type one. The sounding notehead is filled with the accent and
+  ringed: no movement at all, so reduced motion has nothing to remove. It stops at the end, on Stop, a second press, a new pattern
+  (so on a clef, range or count change too), the Rhythm tab, a hidden page and `pagehide`; either button cuts the other off. The
+  tempo label now reads "Tempo (printed, and used by the click track and the sight-reading play-through)" (`smoke-metronome.mjs`'s
+  assertion updated to match).
+- **What I decided.** The reference pitch is **the lowest C in the chosen range** (the notes are all naturals, so C is do), and the
+  pattern's first note when the range holds no C (D4-B4, say); the status says which and why. Held 1.5 s (`TONE.refDur`). One
+  button for each and a separate Stop, rather than AI-47's single toggle, because two things can be playing. No scale run: the row
+  said "pitch and scale play-through" in its source and "play the notes" in the audit; the notes are what a student checks against.
+  Cheap to reverse: `referenceNote` is one function.
+- **Print is unchanged.** A scratch run on `main` and on this branch (seeded `Math.random`, eight states over both clefs, names on,
+  24 notes, a locked pattern) hashed the printed area, its caption and the on-screen staff, and a print-media screenshot: identical.
+  `audit-print --check --only 067` passes.
+- **Tests.** `test:music-pitch` (pure Node: known frequencies in both clefs, all 35 naturals C2-B6 rising with exact octaves, position
+  and inverse on every note, the reference rule, and the player on a fake context and hand-turned timer; 25 mutants, every one caught).
+  `test:music-pitch-smoke` (port 8696, 51 checks: each tone checked against the pitch of the line its notehead is DRAWN on, read off
+  the SVG and worked out in the suite independently, in both clefs; the stop triggers; the shared context; print; axe on the tab
+  mid-play in light and dark). Sounding every note one step high in the page turned the smoke red on both clef checks.
+- **What went wrong.** I ran `run-suites.mjs --changed --base main --dry-run` expecting a listing; there is no `--dry-run`, and since the
+  diff touches `package.json` the selection was everything. It ran, outside the suites lock, for about ten minutes (about 06:58-07:08 ET)
+  before I stopped it; nothing was left running. A suite another worker ran in that window may have collided on a port.
+- **Not verified.** Nobody has heard it (Huginn has no speakers in the loop): whether a triangle at 0.3 gain is pleasant and loud
+  enough on a classroom speaker, whether 85% of a beat reads as separate notes at 30 and at 240, and whether C2 (65 Hz) is audible on
+  a laptop at all are for a person with ears. Safari untried.
+
+## AI-64: the share-rollout suite closes each section's pages (review test section, 2026-11-04, no `CACHE_VERSION` bump)
+
+The 2026-11-04 review (`~/projects/AI_Tools-REVIEW-2026-11-04.md`, test section): `Tools/share/test/smoke-share-rollout.mjs`
+kept every page it opens (about seven per tool, each in its own browser context) in `pages[]` until section 9's console-noise check, and was
+OOM-killed on Huginn under 3.5 GB and 5.8 GB caps (it passes in CI, which has the memory). Reproduced first: main's copy under a
+3.5 GB cgroup (`systemd-run --user --scope -p MemoryMax=3584M -p MemorySwapMax=0`) was OOM-killed at tool 048 with a 3.5 GB peak.
+
+- **`retire()`** ends every section (the per-tool loop and the ten single-tool blocks): each open page's `__errs` and
+  `__blocked` are copied into `ledger` and its context is closed. The copy is taken before the close, so a request the close
+  aborts is not reported as a finding. Section 9 reads `ledger`, and first asserts that every page the suite opened reached it.
+- **A canary** opens one page, throws in it, retires it, and asserts the error is still on record and the page is closed, so a
+  `retire()` that dropped what it records fails instead of leaving section 9 nothing to complain about. Shown failing by a
+  mutant that records empty lists.
+- **Measured** under the same 3.5 GB cap: 1583 passed, 0 failed, a whole-tree cgroup `memory.peak` of 478 MiB and no OOM event
+  (`/usr/bin/time -v`'s 188 MB maximum RSS is the largest single process only, so the cgroup figure is the one to quote). A
+  deliberate `console.error` in 052's fresh page, closed long before section 9, failed it as
+  `no page/console errors (052-fresh)`.
+- **Not verified:** CI has not run it yet; the suite's wall time (about 4:40 here) was not compared with
+  `suite-durations.json`.
 
 ## AI-60: German separable verbs take their own auxiliary, and an unlisted one is split (review M5, 2026-11-04, `CACHE_VERSION` v577)
 

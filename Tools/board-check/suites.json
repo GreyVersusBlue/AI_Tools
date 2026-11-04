@@ -283,6 +283,8 @@
     "Tools/music-sightreading-generator/test/smoke-glyph-fallback.mjs",
     "Tools/music-sightreading-generator/test/metronome.test.mjs",
     "Tools/music-sightreading-generator/test/smoke-metronome.mjs",
+    "Tools/music-sightreading-generator/test/pitch.test.mjs",
+    "Tools/music-sightreading-generator/test/smoke-pitch.mjs",
     "Tools/virtual-manipulatives-board/test/smoke-snap-grid.mjs",
     "Tools/virtual-manipulatives-board/test/smoke-rendered-pieces.mjs",
     "Tools/virtual-manipulatives-board/test/smoke-families-export.mjs",
