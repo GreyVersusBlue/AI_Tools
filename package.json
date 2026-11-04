@@ -238,6 +238,7 @@
     "test:layout-autosave": "node Tools/schedule-visualizer/test/smoke-autosave.mjs",
     "test:layout-apply": "node Tools/schedule-visualizer/test/smoke-apply.mjs",
     "test:layout-recovery-ui": "node Tools/schedule-visualizer/test/smoke-recovery-ui.mjs",
+    "test:layout-onboarding": "node Tools/schedule-visualizer/test/smoke-onboarding.mjs",
     "test:image-to-pdf": "node Tools/image-to-pdf/test/smoke.mjs && node Tools/image-to-pdf/test/smoke-enhance.mjs && node Tools/image-to-pdf/test/smoke-portfolio.mjs",
     "test:manipulatives": "node Tools/virtual-manipulatives-board/test/smoke-boards.mjs && node Tools/virtual-manipulatives-board/test/smoke-snap-grid.mjs && node Tools/virtual-manipulatives-board/test/smoke-rendered-pieces.mjs",
     "test:manipulatives-families": "node Tools/virtual-manipulatives-board/test/smoke-families-export.mjs",

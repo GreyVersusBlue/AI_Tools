@@ -119,6 +119,9 @@
     import * as SVRecoveryUI from './schedule-visualizer/sv-recovery-ui.js';
     window.SVRecoveryUI = SVRecoveryUI;
     Object.assign(window, SVRecoveryUI);
+    import * as SVOnboarding from './schedule-visualizer/sv-onboarding.js';
+    window.SVOnboarding = SVOnboarding;
+    Object.assign(window, SVOnboarding);
     window.dispatchEvent(new Event('sv-recovery-ready'));
   </script>
   <link rel="stylesheet" href="schedule-visualizer/sv.css">
@@ -4098,7 +4101,6 @@ let _vizPulseCells = [];       // [{x,y,color}] top-3 cells to pulse
 /* ==============================================
    ROUND 11 — ONBOARDING & HELP MODALS
 =============================================== */
-const ONBOARDING_KEY = 'stviz_onboarded';
 let _lastFocusedBeforeModal = null;
 
 function openModal(id) {
@@ -4120,54 +4122,9 @@ function closeModal(id) {
   }
 }
 
-function initOnboardingAndHelp() {
-  // Onboarding — shown on first load unless the user dismissed it.
-  let onboarded = false;
-  try { onboarded = localStorage.getItem(ONBOARDING_KEY) === '1'; } catch { onboarded = false; }
-  if (!onboarded) {
-    setTimeout(() => openModal('onboarding-modal'), 350);
-  }
-
-  const persistDismiss = () => {
-    // The welcome dialog only auto-shows on first load, so any dismissal
-    // records it. The checkbox is an explicit reassurance for the user.
-    try { localStorage.setItem(ONBOARDING_KEY, '1'); } catch {}
-  };
-
-  document.getElementById('onboarding-start')?.addEventListener('click', () => {
-    persistDismiss(); closeModal('onboarding-modal');
-  });
-  document.getElementById('onboarding-x')?.addEventListener('click', () => {
-    persistDismiss(); closeModal('onboarding-modal');
-  });
-
-  // Help — opened from the header button, available any time.
-  document.getElementById('btn-open-help')?.addEventListener('click', () => openModal('help-modal'));
-  document.getElementById('help-x')?.addEventListener('click', () => closeModal('help-modal'));
-  document.getElementById('help-done')?.addEventListener('click', () => closeModal('help-modal'));
-
-  // Dismiss on overlay backdrop click + Escape key.
-  ['onboarding-modal', 'help-modal'].forEach(id => {
-    const overlay = document.getElementById(id);
-    if (!overlay) return;
-    overlay.addEventListener('mousedown', (e) => {
-      if (e.target === overlay) {
-        if (id === 'onboarding-modal') persistDismiss();
-        closeModal(id);
-      }
-    });
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
-    ['onboarding-modal', 'help-modal'].forEach(id => {
-      const overlay = document.getElementById(id);
-      if (overlay && overlay.classList.contains('open')) {
-        if (id === 'onboarding-modal') persistDismiss();
-        closeModal(id);
-      }
-    });
-  });
-}
+/* initOnboardingAndHelp() (the welcome dialog shown on first load, the Help
+   dialog, and their backdrop and Escape dismissal) is schedule-visualizer/sv-onboarding.js
+   (rank 140), on window through the module script; openModal/closeModal stay here. */
 
 /* ==============================================
    ROUND 11 — FULL PROJECT EXPORT / IMPORT
