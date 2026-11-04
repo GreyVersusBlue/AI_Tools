@@ -37,24 +37,34 @@ export function isValidIso(dateISO) {
 }
 
 /* --- the A/B letters ---------------------------------------------------------
-   The rule the month grid has always followed: the letter alternates on every
-   school day (a weekday not tagged with a "No school" type, by the pacing module's
-   predicate), skipping weekends and no-school days without advancing. The walk covers the
-   calendar's own range, widened to take in the anchor date when that lies outside it.
+   The letter alternates on every school day (a weekday not tagged with a "No school" type,
+   by the pacing module's predicate), skipping weekends and no-school days without
+   advancing. The walk covers the calendar's own range, widened to take in the anchor date
+   when that lies outside it.
 
-   One property of the rule is kept on purpose, because a calendar saved before this file
-   existed prints by it: the walk is lined up on the first day of that range from the count
-   of school days strictly between it and the anchor. When the range's first day is itself a
-   school day and the anchor falls LATER, that lines the cycle up one step off, so the anchor
-   date shows the opposite of the letter the teacher gave it. test/smoke-weeks-core.mjs pins
-   that by name (ANCHOR_QUIRK), BACKLOG says what fixing it would change, and nothing here
-   "improves" it. */
+   The anchor date takes the anchor letter, and every school day after it alternates from it
+   (Devon, 2026-10-07: "you should be able to set any particular day as A or B, and then all
+   FOLLOWING days should follow the a/b pattern"). An anchor that is not a school day gives
+   its letter to the first school day after it. Until v570 the walk was lined up from the
+   count of school days strictly BETWEEN the range's first day and the anchor, which put the
+   anchor one step off whenever that first day was itself a school day (ANCHOR_QUIRK, pinned
+   by test/smoke-weeks-core.mjs until it was fixed); counting from the first day inclusive is
+   the fix. _shared/school-day.js has the same rule, and its suite holds the two together.
+
+   Days BEFORE the anchor: Devon did not say. They keep the alternation, run backward from
+   the anchor, as they always had (question AI-46-1, the default). LETTERS_BEFORE_ANCHOR is
+   the one switch for the other answer ("no letter before the date"): set it false here AND
+   in school-day.js; the walk still steps over those days, so the letters after the anchor
+   do not move. */
+
+const LETTERS_BEFORE_ANCHOR = true;
 
 function eligible(cal, dateISO) { return isTeachableDay(dateISO, cal.days, cal.dayTypes); }
 
-function countEligibleStrictlyBetween(cal, aISO, bISO) {
+/** School days in [aISO, bISO): from a, counted, up to b, not counted. */
+function countEligibleFromUntil(cal, aISO, bISO) {
   let n = 0;
-  for (let ms = isoToMs(aISO) + DAY_MS, end = isoToMs(bISO); ms < end; ms += DAY_MS) {
+  for (let ms = isoToMs(aISO), end = isoToMs(bISO); ms < end; ms += DAY_MS) {
     if (eligible(cal, msToIso(ms))) n++;
   }
   return n;
@@ -67,21 +77,17 @@ export function abLetters(cal) {
   if (!ac || !ac.enabled || !ac.anchorDate) return map;
   const anchorISO = ac.anchorDate;
   const anchorLetter = ac.anchorLetter === "B" ? "B" : "A";
+  const other = anchorLetter === "A" ? "B" : "A";
   const lo = anchorISO < cal.meta.start ? anchorISO : cal.meta.start;
   const hi = anchorISO > cal.meta.end ? anchorISO : cal.meta.end;
   if (lo > hi) return map;
 
-  let letter;
-  if (lo === anchorISO) {
-    letter = anchorLetter;
-  } else {
-    const between = lo < anchorISO ? countEligibleStrictlyBetween(cal, lo, anchorISO) : countEligibleStrictlyBetween(cal, anchorISO, lo);
-    letter = (between % 2 === 0) ? anchorLetter : (anchorLetter === "A" ? "B" : "A");
-  }
+  // every school day from lo up to the anchor steps the letter once; lo is never after it
+  let letter = countEligibleFromUntil(cal, lo, anchorISO) % 2 === 0 ? anchorLetter : other;
   for (let ms = isoToMs(lo), end = isoToMs(hi); ms <= end; ms += DAY_MS) {
     const dateISO = msToIso(ms);
     if (eligible(cal, dateISO)) {
-      map[dateISO] = letter;
+      if (LETTERS_BEFORE_ANCHOR || dateISO >= anchorISO) map[dateISO] = letter;
       letter = letter === "A" ? "B" : "A";
     }
   }

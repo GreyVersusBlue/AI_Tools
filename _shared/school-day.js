@@ -47,8 +47,8 @@
 
    THE A/B LETTER is abLetters() below, the same rule as abLetters() in
    Tools/school-calendar/scv-weeks.js (an ES module this classic script cannot
-   import): it alternates on every school day and slides over a closure (Devon,
-   2026-10-07). The suite holds the two to the same letters. Whether the rule
+   import): the anchor date takes the anchor letter, and it alternates from there on
+   every school day and slides over a closure (Devon, 2026-10-07). The suite holds the two to the same letters. Whether the rule
    lives here alone is P3's call, when classic-script consumers arrive.
 
    GRADING PERIODS come from the calendar's own tags: a day tagged with a type
@@ -146,16 +146,25 @@
     return !typesOn(cal, iso).some(function (t) { return t.noSchool; });
   }
 
-  function countSchoolDaysStrictlyBetween(cal, a, b) {
+  /** School days in [a, b): from a, counted, up to b, not counted. */
+  function countSchoolDaysFromUntil(cal, a, b) {
     var n = 0;
-    for (var ms = isoToMs(a) + DAY_MS, end = isoToMs(b); ms < end; ms += DAY_MS) {
+    for (var ms = isoToMs(a), end = isoToMs(b); ms < end; ms += DAY_MS) {
       if (isSchoolDay(cal, msToIso(ms))) n++;
     }
     return n;
   }
 
+  /* Days before the anchor keep the alternation, run backward from it (question AI-46-1, the
+     default). The one switch for "no letter before the date" is this and its twin in
+     scv-weeks.js: set both false. */
+  var LETTERS_BEFORE_ANCHOR = true;
+
   /** { 'YYYY-MM-DD': 'A'|'B' } for every school day from the earlier of meta.start and the
-      anchor to the later of meta.end and the anchor; {} when the cycle is off. */
+      anchor to the later of meta.end and the anchor; {} when the cycle is off. The anchor
+      date takes the anchor letter (a non-school anchor gives it to the next school day), and
+      the days after it alternate from there (Devon, 2026-10-07; the off-by-one before v570
+      is ANCHOR_QUIRK in HISTORY). */
   function abLetters(cal) {
     var map = {};
     var ac = cal && cal.abCycle;
@@ -166,13 +175,11 @@
     var lo = anchor < cal.meta.start ? anchor : cal.meta.start;
     var hi = anchor > cal.meta.end ? anchor : cal.meta.end;
     if (lo > hi) return map;
-    var letter;
-    if (lo === anchor) letter = anchorLetter;
-    else letter = countSchoolDaysStrictlyBetween(cal, lo, anchor) % 2 === 0 ? anchorLetter : other;
+    var letter = countSchoolDaysFromUntil(cal, lo, anchor) % 2 === 0 ? anchorLetter : other;
     for (var ms = isoToMs(lo), end = isoToMs(hi); ms <= end; ms += DAY_MS) {
       var iso = msToIso(ms);
       if (isSchoolDay(cal, iso)) {
-        map[iso] = letter;
+        if (LETTERS_BEFORE_ANCHOR || iso >= anchor) map[iso] = letter;
         letter = letter === 'A' ? 'B' : 'A';
       }
     }
