@@ -17,14 +17,14 @@
 <meta property="og:url" content="https://greyversusblue.com/Tools/035-schedule-visualizer.html">
 <meta property="og:title" content="School Layout Visualizer — greyversusblue">
 <meta property="og:description" content="A hyperlinked map of teachers, rooms, and clusters.">
-<meta property="og:image" content="https://greyversusblue.com/assets/og/guild-board.png">
+<meta property="og:image" content="https://www.aspermylessonplan.com/assets/og/toolbook.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="A tavern notice board headed 'The Guild Board of greyversusblue'.">
+<meta property="og:image:alt" content="The headline 'Classroom tools that run in your browser' and the name AsPerMyLessonPlan.com beside a drawing of an empty classroom.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="School Layout Visualizer — greyversusblue">
 <meta name="twitter:description" content="A hyperlinked map of teachers, rooms, and clusters.">
-<meta name="twitter:image" content="https://greyversusblue.com/assets/og/guild-board.png">
+<meta name="twitter:image" content="https://www.aspermylessonplan.com/assets/og/toolbook.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%233B2A1A'/%3E%3Ccircle cx='16' cy='16' r='10' fill='%237E2A20'/%3E%3Ccircle cx='13' cy='13' r='3.5' fill='%23A8443A'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
   <!-- Fonts are vendored under schedule/, jsPDF under _shared/vendor/. This
@@ -116,6 +116,12 @@
     window.SVReports = SVReports;
     import * as SVRecovery from './schedule-visualizer/sv-recovery.js';
     window.SVRecovery = SVRecovery;
+    import * as SVRecoveryUI from './schedule-visualizer/sv-recovery-ui.js';
+    window.SVRecoveryUI = SVRecoveryUI;
+    Object.assign(window, SVRecoveryUI);
+    import * as SVOnboarding from './schedule-visualizer/sv-onboarding.js';
+    window.SVOnboarding = SVOnboarding;
+    Object.assign(window, SVOnboarding);
     window.dispatchEvent(new Event('sv-recovery-ready'));
   </script>
   <link rel="stylesheet" href="schedule-visualizer/sv.css">
@@ -4095,7 +4101,6 @@ let _vizPulseCells = [];       // [{x,y,color}] top-3 cells to pulse
 /* ==============================================
    ROUND 11 — ONBOARDING & HELP MODALS
 =============================================== */
-const ONBOARDING_KEY = 'stviz_onboarded';
 let _lastFocusedBeforeModal = null;
 
 function openModal(id) {
@@ -4117,54 +4122,9 @@ function closeModal(id) {
   }
 }
 
-function initOnboardingAndHelp() {
-  // Onboarding — shown on first load unless the user dismissed it.
-  let onboarded = false;
-  try { onboarded = localStorage.getItem(ONBOARDING_KEY) === '1'; } catch { onboarded = false; }
-  if (!onboarded) {
-    setTimeout(() => openModal('onboarding-modal'), 350);
-  }
-
-  const persistDismiss = () => {
-    // The welcome dialog only auto-shows on first load, so any dismissal
-    // records it. The checkbox is an explicit reassurance for the user.
-    try { localStorage.setItem(ONBOARDING_KEY, '1'); } catch {}
-  };
-
-  document.getElementById('onboarding-start')?.addEventListener('click', () => {
-    persistDismiss(); closeModal('onboarding-modal');
-  });
-  document.getElementById('onboarding-x')?.addEventListener('click', () => {
-    persistDismiss(); closeModal('onboarding-modal');
-  });
-
-  // Help — opened from the header button, available any time.
-  document.getElementById('btn-open-help')?.addEventListener('click', () => openModal('help-modal'));
-  document.getElementById('help-x')?.addEventListener('click', () => closeModal('help-modal'));
-  document.getElementById('help-done')?.addEventListener('click', () => closeModal('help-modal'));
-
-  // Dismiss on overlay backdrop click + Escape key.
-  ['onboarding-modal', 'help-modal'].forEach(id => {
-    const overlay = document.getElementById(id);
-    if (!overlay) return;
-    overlay.addEventListener('mousedown', (e) => {
-      if (e.target === overlay) {
-        if (id === 'onboarding-modal') persistDismiss();
-        closeModal(id);
-      }
-    });
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
-    ['onboarding-modal', 'help-modal'].forEach(id => {
-      const overlay = document.getElementById(id);
-      if (overlay && overlay.classList.contains('open')) {
-        if (id === 'onboarding-modal') persistDismiss();
-        closeModal(id);
-      }
-    });
-  });
-}
+/* initOnboardingAndHelp() (the welcome dialog shown on first load, the Help
+   dialog, and their backdrop and Escape dismissal) is schedule-visualizer/sv-onboarding.js
+   (rank 140), on window through the module script; openModal/closeModal stay here. */
 
 /* ==============================================
    ROUND 11 — FULL PROJECT EXPORT / IMPORT
@@ -4439,211 +4399,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 /* R39 project snapshots (save, list, restore, delete, the Settings list): schedule-visualizer/sv-snapshots.js */
 
-/* ==============================================
-   AUTOMATIC RECOVERY POINTS (crash recovery)
-
-   The blueprint autosave answers "I closed the tab". This answers the rest:
-   an autosaved payload that comes back unreadable, a quota failure that meant
-   the last stretch of work never landed, a destructive action, or a browser
-   that simply died. sv-recovery.js keeps three generations of the FULL
-   project (blueprint + groups + settings + what-if) in IndexedDB — deliberately
-   not localStorage, where a traced floor plan times three would compete with
-   the live autosave for the same ~5MB (P12).
-
-   Capture points: every RECOVERY_INTERVAL_MS while there have been changes,
-   on pagehide, and immediately before an import replaces everything.
-=============================================== */
-const RECOVERY_INTERVAL_MS = 5 * 60 * 1000;
-
-const RecoveryManager = {
-  _dirty: false,
-  _timer: null,
-  _capturing: false,
-  _prevSession: null,
-
-  /** True once sv-recovery.js has been evaluated (it's a deferred module). */
-  get api() { return window.SVRecovery || null; },
-
-  init() {
-    const api = this.api;
-    if (!api) return;                       // module blocked — live autosave is untouched
-    this._prevSession = api.markSessionOpen();
-
-    // pagehide covers tab close, navigation and (on mobile) the app being
-    // backgrounded; visibilitychange catches the switch-away that often
-    // precedes a machine going to sleep and never waking as the same session.
-    window.addEventListener('pagehide', () => {
-      this.capture('leaving');
-      api.markSessionClosed();
-    });
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') this.capture('leaving');
-    });
-
-    this._timer = setInterval(() => this.capture('periodic'), RECOVERY_INTERVAL_MS);
-
-    this.renderList();
-    this.offerIfNeeded();
-  },
-
-  /** Called from the autosave funnel, so "changed" means exactly what it does
-   *  for the blueprint autosave. */
-  markDirty() { this._dirty = true; },
-
-  /**
-   * Writes one recovery point. `force` skips the dirty check (used before a
-   * destructive action, where the point is the whole reason for capturing).
-   */
-  capture(reason, force) {
-    const api = this.api;
-    if (!api) return Promise.resolve(null);
-    if (!force && !this._dirty) return Promise.resolve(null);
-    if (this._capturing) return Promise.resolve(null);
-    let payload;
-    // Portable: a recovery point is the copy of last resort, so it carries the
-    // trace images themselves rather than references into another store.
-    try { payload = serializeFullProject({ portable: true }); }
-    catch (e) { return Promise.resolve(null); }   // never let this break an edit
-    this._capturing = true;
-    this._dirty = false;
-    return api.putPoint(payload, {
-      reason: reason || 'periodic',
-      rooms: roomRegistry.length,
-      groups: AppState.schedules.groups.length,
-      floors: (AppState.blueprint.floors && AppState.blueprint.floors.length) || 1,
-    }).then(rec => {
-      this._capturing = false;
-      if (rec) this.renderList();
-      return rec;
-    }).catch(() => { this._capturing = false; return null; });
-  },
-
-  /**
-   * Decides whether to put a recovery offer in front of the teacher, and says
-   * plainly which of the two reasons it is. Anything else stays quiet — the
-   * recovery list in Settings is always there for a deliberate rollback.
-   */
-  offerIfNeeded() {
-    const api = this.api;
-    if (!api) return;
-    const crashed = !!this._prevSession;
-    const corrupt = getBlueprintLoadStatus() === 'corrupt';
-    if (!crashed && !corrupt) return;
-    api.listPointHeaders().then(points => {
-      if (!points.length) {
-        if (corrupt) {
-          this.showBanner('The layout saved in this browser could not be read, and there is no recovery point to fall back on. ' +
-            'The unreadable copy has been set aside rather than overwritten. Import your last exported project file if you have one.', null);
-        }
-        return;
-      }
-      const newest = points[0];
-      const when = formatRecoveryTime(newest.savedAt);
-      this.showBanner(corrupt
-        ? 'The layout saved in this browser could not be read. A recovery point from ' + when +
-          ' is available (' + newest.rooms + ' room' + (newest.rooms !== 1 ? 's' : '') + ', ' +
-          newest.groups + ' group' + (newest.groups !== 1 ? 's' : '') + ').'
-        : 'This project wasn’t closed cleanly last time. If anything looks missing, a recovery point from ' + when +
-          ' is available (' + newest.rooms + ' room' + (newest.rooms !== 1 ? 's' : '') + ', ' +
-          newest.groups + ' group' + (newest.groups !== 1 ? 's' : '') + ').',
-        newest.id);
-    });
-  },
-
-  showBanner(message, restoreId) {
-    let el = document.getElementById('stviz-recovery-offer');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'stviz-recovery-offer';
-      el.setAttribute('role', 'alert');
-      document.body.appendChild(el);
-    }
-    el.className = 'stviz-recovery-banner';
-    el.innerHTML = '<span>' + escHtml(message) + '</span><span class="banner-actions">' +
-      (restoreId ? '<button type="button" class="primary" id="stviz-recovery-restore">Restore it</button>' : '') +
-      '<button type="button" id="stviz-recovery-dismiss">Dismiss</button></span>';
-    el.style.display = 'flex';
-    const dismiss = () => { el.style.display = 'none'; };
-    document.getElementById('stviz-recovery-dismiss').addEventListener('click', dismiss);
-    if (restoreId) {
-      document.getElementById('stviz-recovery-restore').addEventListener('click', () => {
-        this.restore(restoreId).then(ok => { if (ok) dismiss(); });
-      });
-    }
-  },
-
-  /**
-   * Restores a recovery point over the current project. Captures the state
-   * being replaced first (forced), so "restore" is itself undoable — the
-   * whole point of this feature is that nothing disappears silently.
-   */
-  restore(id) {
-    const api = this.api;
-    if (!api) return Promise.resolve(false);
-    return this.capture('before restore', true)
-      .then(() => api.getPoint(id))
-      .then(point => {
-        if (!point || !point.data) { showToast('That recovery point could not be read.', 'error'); return false; }
-        try {
-          const res = applyFullProject(point.data);
-          showToast('Recovered the project from ' + formatRecoveryTime(point.savedAt) +
-            ' (' + res.rooms + ' room' + (res.rooms !== 1 ? 's' : '') + ', ' +
-            res.groups + ' group' + (res.groups !== 1 ? 's' : '') + ').', 'success');
-          this.renderList();
-          return true;
-        } catch (e) {
-          showToast('Recovery failed: ' + e.message, 'error');
-          return false;
-        }
-      });
-  },
-
-  renderList() {
-    const listEl = document.getElementById('recovery-list');
-    if (!listEl) return;
-    const api = this.api;
-    if (!api) {
-      listEl.innerHTML = '<div class="recovery-empty">Recovery points are unavailable in this browser.</div>';
-      return;
-    }
-    api.listPointHeaders().then(points => {
-      if (!points.length) {
-        listEl.innerHTML = '<div class="recovery-empty">No recovery points yet — the first one is taken a few minutes into editing.</div>';
-        return;
-      }
-      listEl.innerHTML = points.map(p => `<div class="snapshot-item auto">
-        <span class="snapshot-item-icon">
-          <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 3 3 9 9 9"/></svg>
-        </span>
-        <div class="snapshot-item-info">
-          <div class="snapshot-item-name">${escHtml(formatRecoveryTime(p.savedAt))} · ${escHtml(p.reason)}</div>
-          <div class="snapshot-item-ts">${p.rooms} room${p.rooms !== 1 ? 's' : ''} · ${p.groups} group${p.groups !== 1 ? 's' : ''} · ${(p.sizeBytes / 1024).toFixed(1)} KB</div>
-        </div>
-        <div class="snapshot-item-actions">
-          <button class="snapshot-action-btn restore" data-recovery-restore="${escHtml(p.id)}">Restore</button>
-        </div>
-      </div>`).join('');
-      listEl.querySelectorAll('[data-recovery-restore]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (!confirm('Restore this recovery point? The project as it stands now is captured as a recovery point first, so this can be undone.')) return;
-          this.restore(btn.dataset.recoveryRestore);
-        });
-      });
-    });
-  },
-};
-
-window.RecoveryManager = RecoveryManager;
-
-function formatRecoveryTime(iso) {
-  try {
-    const d = new Date(iso);
-    const today = new Date();
-    const sameDay = d.toDateString() === today.toDateString();
-    const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-    return sameDay ? time : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + time;
-  } catch (e) { return String(iso); }
-}
+/* Automatic recovery points (when to capture, the crash and unreadable-save banner, restore, the Settings list): schedule-visualizer/sv-recovery-ui.js */
 
 /* ==============================================
    R58 — PRESENTATION MODE (Option P1)

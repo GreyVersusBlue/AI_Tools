@@ -123,6 +123,9 @@
   .metro-where { font-weight: 700; font-size: .9rem; min-width: 8.5rem; }
   .metro-status { flex-basis: 100%; margin: 0; font-size: .85rem; color: var(--muted); }
   .measure.now-playing { outline: 3px solid var(--ink); outline-offset: 4px; }
+  /* The note being sounded: filled with the accent and ringed, a change of fill and
+     stroke, never a movement, so reduced motion has nothing to take away. */
+  #pitchDisplay ellipse.note-now { fill: var(--accent); stroke: currentColor; stroke-width: 2.5; }
   @media (prefers-reduced-motion: reduce) {
     .metro-beat { transition: none; }
     .metro-beat.on { transform: none; }
@@ -182,7 +185,7 @@
           </select>
         </div>
         <div>
-          <label for="tempo">Tempo (printed, and used by the click track)</label>
+          <label for="tempo">Tempo (printed, and used by the click track and the sight-reading play-through)</label>
           <input type="text" id="tempo" value="&#9834; = 92">
         </div>
       </div>
@@ -272,6 +275,13 @@
     <div class="display-card">
       <p class="display-note" id="pitchNote">Sing or play through each note left to right.</p>
       <label class="check-row lock-row"><input type="checkbox" id="lockPitchToggle"> Lock this pattern for printing (new patterns keep displaying on screen, but printing uses the locked one)</label>
+      <div class="metro" id="pitchAudioBox">
+        <button type="button" class="secondary" id="refPitchBtn">Play reference pitch</button>
+        <button type="button" class="secondary" id="playNotesBtn" aria-pressed="false">&#9654; Play the notes</button>
+        <button type="button" class="secondary" id="pitchStopBtn" disabled>&#9632; Stop</button>
+        <span class="metro-where" id="pitchWhere" aria-hidden="true"></span>
+        <p class="metro-status" id="pitchAudioStatus" role="status" aria-live="polite">The reference pitch is C, home for these notes (or the first note, when the range has no C). Play the notes sounds them in order, one a beat, at the tempo on the Rhythm Warm-Up tab. Nothing plays until you press a button.</p>
+      </div>
       <div id="pitchDisplay"></div>
     </div>
   </div>
@@ -305,7 +315,8 @@
    'lockRhythmToggle', 'lockPitchToggle',
    'bigModeToggle', 'bigModeWrap', 'bigMeasureDisplay', 'bigModeCounter', 'prevMeasureBtn', 'nextMeasureBtn',
    'notationMode', 'glyphNotice', 'shareBtn', 'shareNote',
-   'metroBtn', 'countInToggle', 'metroBeats', 'metroWhere', 'metroStatus'
+   'metroBtn', 'countInToggle', 'metroBeats', 'metroWhere', 'metroStatus',
+   'refPitchBtn', 'playNotesBtn', 'pitchStopBtn', 'pitchWhere', 'pitchAudioStatus'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var mode = 'rhythm';
@@ -392,6 +403,7 @@
     els.rhythmPanel.style.display = m === 'rhythm' ? '' : 'none';
     els.pitchPanel.style.display = m === 'pitch' ? '' : 'none';
     if (m !== 'rhythm') stopClickTrack('Stopped: the rhythm tab was closed.');
+    if (m !== 'pitch') stopPitchAudio('Stopped: the sight-reading tab was closed.');
     saveSettings();
   }
 
@@ -651,9 +663,9 @@
     else startClickTrack();
   });
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) stopClickTrack('Stopped: the page was hidden.');
+    if (document.hidden) { stopClickTrack('Stopped: the page was hidden.'); stopPitchAudio('Stopped: the page was hidden.'); }
   });
-  window.addEventListener('pagehide', function () { stopClickTrack(''); });
+  window.addEventListener('pagehide', function () { stopClickTrack(''); stopPitchAudio(''); });
 
   /* ---------------- Lock pattern for printing ---------------- */
   els.lockRhythmToggle.addEventListener('change', function () {
@@ -701,9 +713,9 @@
   });
 
   /* ---------------- Sight-reading generation ---------------- */
-  var LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-  var DIATONIC_INDEX = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 };
-  var CLEF_ANCHOR = { treble: 4 * 7 + DIATONIC_INDEX.E, bass: 2 * 7 + DIATONIC_INDEX.G };
+  /* The staff-position formula is msrg-audio.js's notePosition (AI-48), so the
+     note drawn on a line and the pitch "Play the notes" sounds for it are one sum. */
+  var LETTERS = MsrgAudio.LETTERS;
   var CLEF_GLYPH = { treble: '&#119070;', bass: '&#119074;' };
 
   function allNoteOptions() {
@@ -713,8 +725,7 @@
     }
     return list;
   }
-  function overallDiatonic(note) { return note.octave * 7 + DIATONIC_INDEX[note.letter]; }
-  function notePosition(note, clef) { return overallDiatonic(note) - CLEF_ANCHOR[clef]; }
+  function notePosition(note, clef) { return MsrgAudio.notePosition(note, clef); }
   function noteLabel(note) { return note.letter + note.octave; }
 
   function populateNoteSelects() {
@@ -763,6 +774,7 @@
     var pool = poolBetween(els.minNote.value, els.maxNote.value, clef);
     if (!pool.length) pool = [parseNoteLabel(els.minNote.value)];
     var count = parseInt(els.numNotes.value, 10);
+    stopPitchAudio('Stopped: a new pattern was made. Press a button to hear it.');
     pitchNotes = [];
     var prevLabel = null;
     for (var i = 0; i < count; i++) {
@@ -861,7 +873,102 @@
   els.numNotes.addEventListener('change', generatePitches);
   els.minNote.addEventListener('change', generatePitches);
   els.maxNote.addEventListener('change', generatePitches);
-  els.showNames.addEventListener('change', function () { renderPitches(els.pitchDisplay, els.clefSelect.value); saveSettings(); });
+  els.showNames.addEventListener('change', function () { renderPitches(els.pitchDisplay, els.clefSelect.value); markNote(pitchNow); saveSettings(); });
+
+  /* ---------------- Reference pitch and play-through (AI-48) ----------------
+     msrg-audio.js schedules the tones on the audio clock, in the AudioContext the
+     click track uses, made inside a button's click. Each note's pitch comes from
+     its staff position (positionFrequency of notePosition), the sum the drawing
+     uses. Even quarter notes at the Rhythm tab's tempo: no rhythm, no accidentals.
+     It stops on Stop, a new pattern (and so on a clef, range or count change), the
+     Rhythm tab and a hidden page; the two buttons never play at once. */
+  var pitchPlayer = null;
+  var pitchNow = -1;
+
+  function setPitchStatus(text) { els.pitchAudioStatus.textContent = text; }
+
+  function markNote(index) {
+    pitchNow = index;
+    var heads = els.pitchDisplay.querySelectorAll('ellipse');
+    for (var i = 0; i < heads.length; i++) heads[i].classList.toggle('note-now', i === index);
+  }
+
+  function showPitchStopped() {
+    els.playNotesBtn.setAttribute('aria-pressed', 'false');
+    els.pitchStopBtn.disabled = true;
+    els.pitchWhere.textContent = '';
+    markNote(-1);
+  }
+
+  function stopPitchAudio(why) {
+    if (!pitchPlayer || !pitchPlayer.running()) return;
+    pitchPlayer.stop();
+    pitchPlayer = null;
+    showPitchStopped();
+    if (why) setPitchStatus(why);
+  }
+
+  function pitchContext() {
+    var ctx = MsrgAudio.audioContext(window);
+    if (!ctx) setPitchStatus('This browser cannot play sound, so the reference pitch and play-through are not available here.');
+    return ctx;
+  }
+
+  function playReference() {
+    stopPitchAudio('');
+    var clef = els.clefSelect.value;
+    var ref = MsrgAudio.referenceNote(poolBetween(els.minNote.value, els.maxNote.value, clef), pitchNotes);
+    if (!ref) { setPitchStatus('Nothing to play: there is no pattern yet.'); return; }
+    var ctx = pitchContext();
+    if (!ctx) return;
+    var label = noteLabel(ref.note);
+    pitchPlayer = MsrgAudio.createNotePlayer({
+      ctx: ctx, bpm: 60, noteDuration: MsrgAudio.TONE.refDur,
+      freqs: [MsrgAudio.positionFrequency(notePosition(ref.note, clef), clef)],
+      onEnd: function () { pitchPlayer = null; showPitchStopped(); setPitchStatus('Played the reference pitch, ' + label + '.'); }
+    });
+    pitchPlayer.start();
+    els.pitchStopBtn.disabled = false;
+    setPitchStatus(ref.tonic
+      ? 'Playing ' + label + ', the reference pitch: C is home (do) for these notes, which are all naturals.'
+      : 'Playing ' + label + ', the first note: the range ' + els.minNote.value + '–' + els.maxNote.value + ' has no C in it.');
+  }
+
+  function playNotes() {
+    stopPitchAudio('');
+    if (!pitchNotes.length) { setPitchStatus('Nothing to play: there is no pattern yet.'); return; }
+    var tempo = MsrgAudio.parseTempo(els.tempo.value);
+    if (!tempo) {
+      setPitchStatus('Nothing to play: the tempo field on the Rhythm Warm-Up tab has no number in it. Type a number of beats a minute there, such as 92.');
+      return;
+    }
+    var ctx = pitchContext();
+    if (!ctx) return;
+    var clef = els.clefSelect.value;
+    var notes = pitchNotes.slice();
+    pitchPlayer = MsrgAudio.createNotePlayer({
+      ctx: ctx, bpm: tempo.bpm,
+      freqs: notes.map(function (n) { return MsrgAudio.positionFrequency(notePosition(n, clef), clef); }),
+      onNote: function (info) {
+        els.pitchWhere.textContent = 'Note ' + (info.index + 1) + ' of ' + info.count + ': ' + noteLabel(notes[info.index]);
+        markNote(info.index);
+      },
+      onEnd: function () { pitchPlayer = null; showPitchStopped(); setPitchStatus('Played all ' + notes.length + ' notes.'); }
+    });
+    pitchPlayer.start();
+    els.playNotesBtn.setAttribute('aria-pressed', 'true');
+    els.pitchStopBtn.disabled = false;
+    var said = 'Playing the ' + notes.length + ' notes in order, one a beat at ' + tempo.bpm + ' beats a minute (the tempo on the Rhythm Warm-Up tab).';
+    if (tempo.clamped) said = 'The tempo field says ' + tempo.asked + '; play-through goes from ' + MsrgAudio.BPM_MIN + ' to ' + MsrgAudio.BPM_MAX + '. ' + said;
+    setPitchStatus(said);
+  }
+
+  els.refPitchBtn.addEventListener('click', playReference);
+  els.playNotesBtn.addEventListener('click', function () {
+    if (pitchPlayer && pitchPlayer.running() && els.playNotesBtn.getAttribute('aria-pressed') === 'true') stopPitchAudio('Stopped.');
+    else playNotes();
+  });
+  els.pitchStopBtn.addEventListener('click', function () { stopPitchAudio('Stopped.'); });
 
   /* ---------------- Print ---------------- */
   els.printBtn.addEventListener('click', function () {

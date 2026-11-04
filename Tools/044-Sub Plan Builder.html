@@ -174,7 +174,9 @@
     font-size: 0.95rem;
     padding: 10px 18px;
   }
-  button.primary:hover { background: var(--accent-dark); }
+  /* --accent-2, not --accent-dark: the school accent sets accent-2 and the
+     button text to suit each other, and has no say over --accent-dark (AI-57). */
+  button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
 
   .toggle-row { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
   .toggle-row input[type=checkbox] { width: auto; margin: 0; }

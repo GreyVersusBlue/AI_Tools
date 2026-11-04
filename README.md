@@ -8,6 +8,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 
 ## Tools
 
+<!-- tools-table:start (generated from Tools/board-check/index-rows.json; edit the data, then run npm run build:index) -->
 | Tool | File | What it does |
 |---|---|---|
 | East Middle Schedule Browser | `Tools/034-schedule-browser.html` | This year's actual A/B schedule, searchable by teacher, room, or period. Published from the School Layout Visualizer, below. |
@@ -100,6 +101,8 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Parent Communication Template Generator | `Tools/085-parent-communication-templates.html` | Fill in the blanks on ready-made letters — positive notes, missing-work notices, conference requests, and more — then copy, print, or email one, or batch-fill the same letter for a whole roster at once. |
 | Wiki Race | `Tools/086-wiki-race.html` | Classroom Wikipedia race: one seed phrase gives the whole class the identical start→target matchup, with a live timer, click count, breadcrumb path, and verifiable finish codes. Fully self-contained single file; Wikipedia races need internet, or play with no network on 66 short articles written for the tool. |
 | Class Screen | `Tools/087-class-screen.html` | A projector board built from widgets you drag and resize: timer, stopwatch, clock, text boxes, YouTube videos, a traffic light, work symbols, a noise meter (the microphone never leaves the page), a drawing pad, pictures (kept in IndexedDB), QR codes, dice, and a name picker and group maker on the shared roster. Each screen has its own background, can be linked to a bell period from Command Center (the board switches when the period starts), and can be exported to a file and imported elsewhere; six starter screens. A phone can run the board over a direct WebRTC link (`Tools/class-screen/remote.html`, paired by QR code, no server). Saves one named screen per class; everything but YouTube works offline. |
+
+<!-- tools-table:end -->
 
 ## Using these
 

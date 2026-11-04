@@ -12,9 +12,14 @@
 <meta property="og:url" content="https://www.aspermylessonplan.com/Tools/013-lab-safety-contract-tracker.html">
 <meta property="og:title" content="Lab Safety Contract Tracker — AsPerMyLessonPlan.com">
 <meta property="og:description" content="Track which students have turned in a signed lab safety contract, mark them off with one click as slips come in, and print a report of who's still missing one before lab day.">
+<meta property="og:image" content="https://www.aspermylessonplan.com/assets/og/toolbook.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The headline 'Classroom tools that run in your browser' and the name AsPerMyLessonPlan.com beside a drawing of an empty classroom.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Lab Safety Contract Tracker — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Track which students have turned in a signed lab safety contract, mark them off with one click as slips come in, and print a report of who's still missing one before lab day.">
+<meta name="twitter:image" content="https://www.aspermylessonplan.com/assets/og/toolbook.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='9' y='7' width='14' height='19' rx='2' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Crect x='13' y='5' width='6' height='3' rx='1' fill='%232A6DB0'/%3E%3Cpath d='M12.5 17l3 3 5-6' fill='none' stroke='%23C43A2F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
      opting in here keeps a11y.js from putting its CSS-filter invert on top.
@@ -88,7 +93,7 @@
   button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
   button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
   button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: var(--accent-ink); }
+  button.danger:hover { background: var(--err); color: var(--status-ink); }
   button.small { width: auto; padding: .35rem .7rem; font-size: .78rem; margin-bottom: 0; }
   button:disabled { opacity: .4; cursor: not-allowed; }
 
@@ -116,7 +121,7 @@
     background: var(--card); border: 1px solid var(--line-strong); color: var(--muted);
     width: 1.9rem; height: 1.9rem; flex-shrink: 0; border-radius: 5px; font-size: .82rem; padding: 0; cursor: pointer;
   }
-  .doc-remove-btn:hover { background: var(--err); color: var(--accent-ink); border-color: var(--err); }
+  .doc-remove-btn:hover { background: var(--err); color: var(--status-ink); border-color: var(--err); }
   .doc-fee { flex: 0 0 6.5rem; width: 6.5rem; margin-bottom: 0 !important; }
   .doc-body { min-height: unset; font-family: inherit; font-size: .82rem; margin-bottom: 1.1rem; }
 
@@ -135,9 +140,9 @@
     background: var(--card); color: var(--muted); border: 1.5px solid var(--line-strong);
   }
   .status-toggle:hover { border-color: var(--accent-2); color: var(--ink); }
-  .status-toggle.is-signed { background: var(--good); border-color: var(--good); color: var(--accent-ink); }
+  .status-toggle.is-signed { background: var(--good); border-color: var(--good); color: var(--status-ink); }
   .status-toggle.is-signed:hover { background: var(--good-2); border-color: var(--good-2); }
-  .status-toggle.is-paid { background: var(--paid); border-color: var(--paid); color: var(--accent-ink); }
+  .status-toggle.is-paid { background: var(--paid); border-color: var(--paid); color: var(--status-ink); }
   .status-toggle.is-paid:hover { background: var(--paid-2); border-color: var(--paid-2); }
   .s-date { width: auto; flex-shrink: 0; max-width: 9.5rem; margin-bottom: 0; font-size: .82rem; padding: .4rem .5rem; }
   .s-note { flex: 1 1 180px; min-width: 140px; margin-bottom: 0; font-size: .82rem; padding: .4rem .55rem; }

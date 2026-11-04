@@ -223,6 +223,21 @@ function suite(label, src) {
     [['perro', 'hound', '', '', []], ['nueva', 'new', '', '', []], ['casa', 'home', 'Mi casa', 'f', ['u4']]], 'putPairs changes term and definition only: an example, gender and tags stay with their term');
   ok(q.WL.putPairs('No such', '  \n') === null && !q.WL.names().includes('No such'), 'a blank text makes no list');
   ok(q.WL.putPairs('Made', 'a: b') && q.WL.names().includes('Made'), 'a text with words makes the list');
+  // AI-54 (review H1): a blank 039 set never empties a list, and a term with a colon, which 039's text
+  // cannot hold, is never deleted by a write from it.
+  const hb = mk();
+  hb.WL.put('Unit 3', [T('casa', { definition: 'house', gender: 'f' }), T('perro', { definition: 'dog' }), T('luz', { definition: 'light' })], 1);
+  const hbWrites = hb.st.writes.length;
+  eq(hb.WL.putPairs('Unit 3', '', 2) && hb.WL.putPairs('Unit 3', ' \n \n', 3) && hb.WL.get('Unit 3').words.map(x => [x.term, x.gender]),
+    [['casa', 'f'], ['perro', ''], ['luz', '']], 'a blank text leaves an existing list\'s words alone');
+  ok(hb.st.writes.length === hbWrites && hb.WL.get('Unit 3').updatedAt === 1, 'and writes nothing');
+  const hc = mk();
+  hc.WL.put('Times', [T('10:00 a.m.', { definition: 'ten in the morning', tags: ['t'] }), T('casa', { definition: 'house' }), T('noon'), T('ratio 2:1', { definition: 'two to one' })], 1);
+  hc.WL.putPairs('Times', hc.WL.toPairs(hc.WL.get('Times').words), 2);
+  eq(hc.WL.get('Times').words.map(x => [x.term, x.definition, x.tags]),
+    [['10:00 a.m.', 'ten in the morning', ['t']], ['casa', 'house', []], ['noon', '', []], ['ratio 2:1', 'two to one', []]], 'a toPairs round trip keeps a term with a colon, in its place');
+  hc.WL.putPairs('Times', 'casa: home\nnueva: new', 3);
+  eq(hc.WL.get('Times').words.map(x => x.term), ['10:00 a.m.', 'casa', 'nueva', 'ratio 2:1'], 'an edit from 039 changes the words it can hold and keeps the colon terms');
   const drillBlob = (vocabText, extra = {}) => JSON.stringify({ name: 'x', mode: 'vocab', vocabText, persons: [], conjugations: [], ...extra });
   const oldDrill = {
     'gvb-vocab-conj:list': JSON.stringify(['Drill A', 'Drill B', 'Conj only', 'Broken', 'Unit 4']),
@@ -327,6 +342,8 @@ const mutants = [
   ['the CSV apostrophe stays', s => s.replace("function unguard(s) { return /^'[=+\\-@]/.test(s) ? s.slice(1) : s; }", "function unguard(s) { return s; }")],
   ['a header needs one name', s => s.replace("hits >= 2", "hits >= 1")],
   ['put keeps duplicates of ids', s => s.replace("if (seen[w.id]) w.id = '';", "")],
+  ['putPairs empties a list from a blank text', s => s.replace("if (!pairs.length) return l ? JSON.parse(JSON.stringify(l)) : null;", "if (!l && !pairs.length) return null;")],
+  ['putPairs drops a colon term', s => s.replace("if (str(w.term).indexOf(':') !== -1) kept.push([i, w]);", "")],
   ['putPairs blanks the example', s => s.replace("reconcile(l ? l.words : [], pairs, ['term', 'definition'])", "reconcile(l ? l.words : [], pairs)")],
   ['importLegacyDrill forgets its names', s => s.replace("s.legacyDrill.push(name); touched = true;", "touched = true;")],
   ['fromPairs drops a bare word', s => s.replace("out.push({ term: trimmed, definition: '' }); return;", "return;")],

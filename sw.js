@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v573';
+const CACHE_VERSION = 'v585';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -363,6 +363,7 @@ const PRECACHE_URLS = [
   "Tools/019-escape-room-builder.html",
   "Tools/escape-room-builder/er-board.js",
   "Tools/escape-room-builder/er-image.js",
+  "Tools/escape-room-builder/er-sample.js",
   "Tools/escape-room-builder/lock.html",
   "Tools/escape-room-builder/monitor.html",
   "Tools/023-exit-ticket-generator.html",
@@ -490,6 +491,7 @@ const PRECACHE_URLS = [
   "Tools/review-game-board/rgb-audio-db.js",
   "Tools/review-game-board/rgb-bank-editor.js",
   "Tools/review-game-board/rgb-play.js",
+  "Tools/review-game-board/rgb-sample.js",
   "Tools/review-game-board/rgb-bank-store.js",
   "Tools/review-game-board/rgb-image.js",
   "Tools/review-game-board/rgb-store.js",
@@ -515,8 +517,10 @@ const PRECACHE_URLS = [
   "Tools/schedule-visualizer/sv-graph.js",
   "Tools/schedule-visualizer/sv-handoff.js",
   "Tools/schedule-visualizer/sv-model.js",
+  "Tools/schedule-visualizer/sv-onboarding.js",
   "Tools/schedule-visualizer/sv-playback.js",
   "Tools/schedule-visualizer/sv-recovery.js",
+  "Tools/schedule-visualizer/sv-recovery-ui.js",
   "Tools/schedule-visualizer/sv-reports.js",
   "Tools/schedule-visualizer/sv-routes.js",
   "Tools/schedule-visualizer/sv-safety.js",

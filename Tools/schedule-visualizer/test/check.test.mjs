@@ -150,8 +150,14 @@ const say = (f) => C.sentence(f, { labels: LABELS });
   check(kinds(run(gs), 'teacher-moves').length === 0, 'with a bell and no walk handed in, teacher-moves says nothing');
   const flat = bell().map((e, i, all) => ({ start: e.start, end: all[i + 1] ? all[i + 1].start : e.end }));
   const z = kinds(run(gs, { settings: { bellSchedule: { A: flat, B: null } }, walk: () => 30 }), 'teacher-moves');
-  check(z.length === 1 && z[0].window === undefined && C.passingSec(settings({ bellSchedule: { A: flat, B: null } }), 'A', 0) === null,
+  check(C.passingSec(settings({ bellSchedule: { A: flat, B: null } }), 'A', 0) === null,
     'back-to-back bell times are no passing time set, not a 0-minute one');
+  // AI-63 (review L4): with bell times typed back to back, a teacher's move is not flagged, as a group's
+  // walk is not (passing-too-short); it used to be, saying "no bell times are set", which was false.
+  check(z.length === 0, 'back-to-back bell times: teacher-moves says nothing, as passing-too-short does');
+  const half = bell().map((e, i) => i === 0 ? { start: e.start, end: '' } : e);
+  const hz = kinds(run(gs, { settings: { bellSchedule: { A: half, B: null } }, walk: () => 30 }), 'teacher-moves');
+  check(hz.length === 1 && say(hz[0]).endsWith(', and no bell times are set.'), 'a bell with the first end left blank is still "no bell times are set"');
 }
 
 /* passing-too-short, from the lab's numbers. */

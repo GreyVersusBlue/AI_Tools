@@ -449,8 +449,8 @@ function suite(win) {
   cells('la', 'vereri', 'present', 'vereor | verēris | verētur | verēmur | verēminī | verentur');
   cells('la', 'mori', 'present', 'morior | moreris | moritur | morimur | moriminī | moriuntur');
   cells('la', 'sequi', 'future', 'sequar | sequēris | sequētur | sequēmur | sequēminī | sequentur');
-  eq(forms('la', 'loqui', 'perfect'), Array(6).fill(''), 'la a deponent perfect is not built, so it is empty');
-  eq(C.conjugate('la', 'loqui', 'perfect').notes.map((n) => n.kind), Array(6).fill('defective'), 'la a deponent perfect says none');
+  eq(forms('la', 'loqui', 'present-subjunctive'), Array(6).fill(''), 'la a deponent subjunctive is not built, so it is empty');
+  eq(C.conjugate('la', 'loqui', 'present-subjunctive').notes.map((n) => n.kind), Array(6).fill('defective'), 'la a deponent subjunctive says none');
   eq(forms('la', 'amare', 'present')[0], 'amō', 'la a deponent record does not touch an active verb');
   eq(C.conjugate('es', 'hablar', 'present', { slots: [0, 2] }).forms, ['hablo', '', 'habla', '', '', ''], 'opts.slots');
 
@@ -680,7 +680,42 @@ function suite(win) {
   cells('de', 'ankommen', 'preterite', 'kam an | kamst an | kam an | kamen an | kamt an | kamen an');
   eq(forms('de', 'ankommen', 'perfect'), compose(DE_AUX.sein, 'angekommen'), 'de ankommen perfect (sein)');
   cells('de', 'aufstehen', 'present', 'stehe auf | stehst auf | steht auf | stehen auf | steht auf | stehen auf');
-  eq(forms('de', 'aufstehen', 'perfect'), compose(DE_AUX.haben, 'aufgestanden'), 'de aufstehen perfect');
+  eq(forms('de', 'aufstehen', 'perfect'), compose(DE_AUX.sein, 'aufgestanden'), 'de aufstehen perfect (sein, though stehen takes haben)');
+  // AI-60 (review M5): a separable verb's own auxiliary, and an unlisted verb with a known prefix split off its base
+  eq(forms('de', 'aufstehen', 'pluperfect')[0], 'war aufgestanden', 'de aufstehen pluperfect (sein)');
+  eq(forms('de', 'einschlafen', 'perfect'), compose(DE_AUX.sein, 'eingeschlafen'), 'de einschlafen perfect (sein, though schlafen takes haben)');
+  cells('de', 'einschlafen', 'present', 'schlafe ein | schläfst ein | schläft ein | schlafen ein | schlaft ein | schlafen ein');
+  eq(forms('de', 'stehen', 'perfect')[0], 'habe gestanden', 'de stehen itself still takes haben');
+  eq(forms('de', 'schlafen', 'perfect')[0], 'habe geschlafen', 'de schlafen itself still takes haben');
+  eq(C.lookup('de', 'aufstehen').auxiliary, 'sein', 'de lookup gives aufstehen its own auxiliary');
+  eq(forms('de', C.merge(C.lookup('de', 'aufstehen'), { forms: {} }), 'perfect')[0], 'bin aufgestanden', 'de a teacher record merged over aufstehen keeps sein');
+  eq(forms('de', C.merge(C.lookup('de', 'aufstehen'), { auxiliary: 'haben' }), 'perfect')[0], 'habe aufgestanden', 'de a teacher\'s own auxiliary on a separable verb wins');
+  eq(forms('de', 'sich umziehen', 'perfect')[0], 'habe mich umgezogen', 'de a reflexive separable verb keeps haben');
+  eq(forms('de', 'umziehen', 'perfect')[0], 'bin umgezogen', 'de umziehen (to move house) takes sein');
+  cells('de', 'aufwachen', 'present', 'wache auf | wachst auf | wacht auf | wachen auf | wacht auf | wachen auf');
+  cells('de', 'aufwachen', 'perfect', 'bin aufgewacht | bist aufgewacht | ist aufgewacht | sind aufgewacht | seid aufgewacht | sind aufgewacht');
+  eq(C.conjugate('de', 'aufwachen', 'present').known, true, 'de aufwachen is known through wachen');
+  cells('de', 'abtrocknen', 'present', 'trockne ab | trocknest ab | trocknet ab | trocknen ab | trocknet ab | trocknen ab');
+  eq(forms('de', 'abtrocknen', 'perfect')[0], 'habe abgetrocknet', 'de an unlisted separable verb: the prefix before ge-');
+  eq(C.conjugate('de', 'abtrocknen', 'present').infinitive, 'abtrocknen', 'de an unlisted separable verb names the whole infinitive');
+  eq(C.conjugate('de', 'abtrocknen', 'present').known, false, 'de an unlisted separable verb is still unchecked');
+  eq(kinds('de', 'abtrocknen', 'present'), Array(6).fill('assumed'), 'de an unlisted separable verb is assumed');
+  eq(forms('de', 'abtrocknen', 'future')[0], 'werde abtrocknen', 'de unlisted separable future keeps the infinitive whole');
+  cells('de', 'einsteigen', 'present', 'steige ein | steigst ein | steigt ein | steigen ein | steigt ein | steigen ein');
+  eq(forms('de', 'einsteigen', 'perfect')[0], 'bin eingestiegen', 'de einsteigen perfect (steigen is strong, sein)');
+  eq(forms('de', 'einsteigen', 'preterite')[0], 'stieg ein', 'de einsteigen preterite');
+  eq(forms('de', 'einatmen', 'perfect')[0], 'habe eingeatmet', 'de unlisted separable on a vowel-initial base');
+  cells('de', 'ausprobieren', 'present', 'probiere aus | probierst aus | probiert aus | probieren aus | probiert aus | probieren aus');
+  eq(forms('de', 'ausprobieren', 'perfect')[0], 'habe ausprobiert', 'de ausprobieren: probieren is a listed -ieren verb');
+  eq(forms('de', 'mitbringen', 'perfect')[0], 'habe mitgebracht', 'de mitbringen unchanged');
+  // a word that only looks prefixed is not split: no vowel left in the base's stem, a listed exception, um-/wieder-, -ieren
+  eq(forms('de', 'zupfen', 'present')[0], 'zupfe', 'de zupfen is not zu- + pfen');
+  eq(forms('de', 'angeln', 'present')[0], 'angle', 'de angeln is not an- + geln');
+  eq(forms('de', 'hindern', 'present')[0], 'hindere', 'de hindern is not hin- + dern');
+  eq(forms('de', 'einigen', 'present')[0], 'einige', 'de einigen is not ein- + igen');
+  eq(forms('de', 'umarmen', 'present')[0], 'umarme', 'de umarmen is not split (um- is not guessed)');
+  eq(forms('de', 'analysieren', 'present')[0], 'analysiere', 'de analysieren is not an- + alysieren');
+  eq(forms('de', 'annoncieren', 'present')[0], 'annonciere', 'de annoncieren is not an- + noncieren');
   cells('de', 'ansehen', 'present', 'sehe an | siehst an | sieht an | sehen an | seht an | sehen an');
   eq(forms('de', 'einkaufen', 'perfect')[0], 'habe eingekauft', 'de einkaufen perfect');
   eq(forms('de', 'zurückkommen', 'perfect')[2], 'ist zurückgekommen', 'de zurückkommen perfect');
@@ -977,7 +1012,25 @@ function suite(win) {
   for (const v of ['esse', 'ire', 'posse', 'velle', 'stare', 'loqui', 'conari', 'mori', 'sequi', 'ambulare', 'venire', 'discere']) {
     for (const t of ['perfect-passive', 'pluperfect-passive', 'future-perfect-passive']) eq(forms('la', v, t).filter(Boolean), [], `la ${v} ${t}: none (no personal passive, or a deponent: Devon's L4)`);
   }
-  eq(forms('la', 'loqui', 'perfect'), sx('', '', '', '', '', ''), 'la loqui: the deponent perfect is still not built (Devon\'s L4)');
+  // Latin: the deponent perfect system is the participle and sum (Devon's L4, 2026-11-03), agreeing as the perfect passive does
+  cmd('la', 'loqui', 'perfect', sx('locūtus sum', 'locūtus es', 'locūtus est', 'locūtī sumus', 'locūtī estis', 'locūtī sunt'));
+  cmd('la', 'loqui', 'pluperfect', sx('locūtus eram', 'locūtus erās', 'locūtus erat', 'locūtī erāmus', 'locūtī erātis', 'locūtī erant'));
+  cmd('la', 'loqui', 'future-perfect', sx('locūtus erō', 'locūtus eris', 'locūtus erit', 'locūtī erimus', 'locūtī eritis', 'locūtī erunt'));
+  cmd('la', 'sequi', 'perfect', sx('secūtus sum', 'secūtus es', 'secūtus est', 'secūtī sumus', 'secūtī estis', 'secūtī sunt'));
+  cmd('la', 'conari', 'perfect', sx('cōnātus sum', 'cōnātus es', 'cōnātus est', 'cōnātī sumus', 'cōnātī estis', 'cōnātī sunt'));
+  cmd('la', 'vereri', 'pluperfect', sx('veritus eram', 'veritus erās', 'veritus erat', 'veritī erāmus', 'veritī erātis', 'veritī erant'));
+  cmd('la', 'mori', 'perfect', sx('mortuus sum', 'mortuus es', 'mortuus est', 'mortuī sumus', 'mortuī estis', 'mortuī sunt'), '(-uus keeps its u: mortuī)');
+  cmd('la', 'pati', 'future-perfect', sx('passus erō', 'passus eris', 'passus erit', 'passī erimus', 'passī eritis', 'passī erunt'));
+  const DEP_PPP = { loqui: 'locūtus', sequi: 'secūtus', uti: 'ūsus', nasci: 'nātus', proficisci: 'profectus', conari: 'cōnātus', hortari: 'hortātus',
+    mirari: 'mīrātus', arbitrari: 'arbitrātus', vereri: 'veritus', mori: 'mortuus', pati: 'passus', progredi: 'progressus' };
+  for (const v of Object.keys(DEP_PPP)) {
+    eq(forms('la', v, 'perfect')[0], DEP_PPP[v] + ' sum', `la ${v}: the deponent perfect is its participle and sum`);
+    eq(C.lookup('la', v).ppp, DEP_PPP[v], `la ${v}: the deponent's participle is typed on its record`);
+  }
+  eq(C.conjugate('la', 'loqui', 'perfect').notes.map((n) => n.kind), Array(6).fill('irregular'), 'la a deponent perfect is noted as a lexical participle, not a rule');
+  eq(forms('la', { infinitive: 'hortari', 'class': 'a', stem: 'hort', deponent: true }, 'perfect'), Array(6).fill(''), 'la a deponent with no typed participle is left empty, not guessed from its class');
+  eq(forms('la', C.merge(C.lookup('la', 'loqui'), { infinitive: 'loqui', ppp: 'loquūtus' }), 'perfect')[3], 'loquūtī sumus', 'la a teacher\'s participle replaces the pack\'s');
+  eq(forms('la', 'regere', 'perfect')[0], 'rēxī', 'la an active verb keeps its own perfect');
   // Latin: the imperative
   const imp = (a, b) => sx('', a, '', '', b, '');
   cmd('la', 'amare', 'imperative', imp('amā', 'amāte'));
@@ -1174,8 +1227,8 @@ const BROKEN = [
   ['Latin sim', '_shared/conjugate-la.js', "pr('sim sīs sit", "pr('sum sīs sit"],
   ['Latin ferre passive', '_shared/conjugate-la.js', "pr('feror ferris fertur", "pr('feror ferēris fertur"],
   ['Latin deponents are active', '_shared/conjugate.js', "if (rec.deponent && tdef.deponentAs)", "if (false)"],
-  ['Latin loquor is a 1st conjugation verb', '_shared/conjugate-la.js', "dep('loqui', 'c', 'loqu')", "dep('loqui', 'a', 'loqu')"],
-  ['Latin a deponent perfect is guessed', '_shared/conjugate-la.js', "function dep(inf, cls, stem) { return rec(inf, { 'class': cls, stem: stem, deponent: true, defective: { tenses: NOT_BUILT } }); }", "function dep(inf, cls, stem) { return rec(inf, { 'class': cls, stem: stem, deponent: true }); }"],
+  ['Latin loquor is a 1st conjugation verb', '_shared/conjugate-la.js', "dep('loqui', 'c', 'loqu',", "dep('loqui', 'a', 'loqu',"],
+  ['Latin a deponent subjunctive and passive are guessed', '_shared/conjugate-la.js', "function dep(inf, cls, stem, ppp) { return rec(inf, { 'class': cls, stem: stem, ppp: ppp, deponent: true, defective: { tenses: NOT_BUILT } }); }", "function dep(inf, cls, stem, ppp) { return rec(inf, { 'class': cls, stem: stem, ppp: ppp, deponent: true }); }"],
   ['German bellen gets no ge-', '_shared/conjugate-de.js', "var NOT_PREFIXED = ['beugen', 'beichten', 'entern'];", "var NOT_PREFIXED = [];"],
   ['German beißen is weak', '_shared/conjugate-de.js', "strong('beißen', 'biss', 'gebissen');", "rec('beißen', {});"],
   ['German entgegen- is not a prefix', '_shared/conjugate-de.js', "'auseinander', 'entgegen', ", "'auseinander', "],
@@ -1217,6 +1270,14 @@ const BROKEN = [
   ['la the perfect passive participle has no macron', '_shared/conjugate-la.js', "if (ctx.cls === 'a') return ctx.stem + 'ātus';", "if (ctx.cls === 'a') return ctx.stem + 'atus';"],
   ['la the perfect passive plural is amātus', '_shared/conjugate-la.js', "agreementPlural: [/us$/, 'ī'],", "agreementPlural: [/us$/, 'us'],"],
   ['la the participle goes after sum', '_shared/conjugate.js', "cd.partFirst ? part + ' ' + ac.forms[0] : ac.forms[0] + ' ' + part", "ac.forms[0] + ' ' + part"],
+  ['la a deponent perfect is the perfect stem', '_shared/conjugate-la.js', "kind: 'simple', deponentAs: 'perfect-passive', strongEndings", "kind: 'simple', strongEndings"],
+  ['la a deponent pluperfect is the perfect stem', '_shared/conjugate-la.js', "deponentAs: 'pluperfect-passive', ", ""],
+  ['la a deponent future perfect is the perfect stem', '_shared/conjugate-la.js', "deponentAs: 'future-perfect-passive', ", ""],
+  ['la a deponent future perfect uses the present of sum', '_shared/conjugate-la.js', "deponentAs: 'future-perfect-passive', ", "deponentAs: 'perfect-passive', "],
+  ['la a deponent participle is guessed from its class', '_shared/conjugate-la.js', "if (rec.deponent) return '';", ""],
+  ['la locūtus is loquūtus', '_shared/conjugate-la.js', "dep('loqui', 'c', 'loqu', 'locūtus')", "dep('loqui', 'c', 'loqu', 'loquūtus')"],
+  ['la mortuus is mortus', '_shared/conjugate-la.js', "'mor', 'mortuus')", "'mor', 'mortus')"],
+  ['la a deponent perfect is not built', '_shared/conjugate-la.js', "var NOT_BUILT = ['present-subjunctive',", "var NOT_BUILT = ['perfect', 'pluperfect', 'future-perfect', 'present-subjunctive',"],
   ['la a deponent has a perfect passive', '_shared/conjugate-la.js', "'future-passive'].concat(PERFPASS);\n  function dep", "'future-passive'];\n  function dep"],
   ['la dūc is dūce', '_shared/conjugate-la.js', "R.ducere.forms = { imperative: { 1: 'dūc' } };", ""],
   ['la a deponent imperative is active', '_shared/conjugate-la.js', "deponentEndings: {", "deponentEndingsX: {"],

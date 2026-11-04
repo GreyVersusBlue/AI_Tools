@@ -45,6 +45,12 @@ for (const t of T.builtins()) ok(/^(--t-[a-z-]+:[^;{}<>"]+;)+$/.test(T.vars(t)),
 eq(T.list([{ key: 'elegant', label: 'Dupe' }, { key: 'mine', label: 'Mine' }, 7, null]).map(t => t.key).join(), 'playful,varsity,elegant,modern,ribbon,mine', 'a custom key that repeats a built-in is dropped, junk is skipped');
 eq(T.list(new Array(30).fill(0).map((_, i) => ({ key: 'k' + i }))).length, 5 + T.MAX_CUSTOM, 'custom templates are capped');
 eq(T.slug('  Spring Fling! '), 'spring-fling', 'a name makes a key');
+// AI-63 (review L9): a name with no a-z letters in it made the key "template", so 春 and 秋 overwrote each other.
+ok(T.slug('春') !== T.slug('秋'), 'two non-Latin names make two keys: ' + T.slug('春') + ' / ' + T.slug('秋'));
+eq(T.slug('春'), T.slug(' 春 '), 'and the same one twice makes the same key');
+ok(T.slug('Été 2026') !== T.slug('Ôté 2026'), 'accented names that strip to the same letters differ too');
+for (const n of ['春', '秋', 'Été 2026', 'x'.repeat(60) + 'é', 'Ünïcödé Spring Fling Award Template'])
+  ok(T.clean({ key: 'my-' + T.slug(n) }) !== null, 'its key is a valid template key: ' + n + ' -> my-' + T.slug(n));
 eq(T.find(T.list([]), 'ribbon').seal.seal, 'gold', 'Ribbon still suggests its gold seal');
 
 /* ── page ──────────────────────────────────────────────────────────────── */
@@ -128,6 +134,22 @@ ok(/"key":"my-spring-fling"/.test(stored) && !/cert|<|url\(/.test(stored), 'what
 await page.evaluate(() => { window.print = () => {}; });
 const printed = await page.evaluate(() => { const b = document.getElementById('printBtn'); b.click(); const c = document.querySelector('#printArea .cert'); return c ? c.getAttribute('style') : ''; });
 ok(/--t-ink:#2f6b2f/.test(printed), 'the print area certificate carries the template: ' + printed.slice(0, 80));
+
+// AI-63 (review L9): two non-Latin names are two templates, and saving one again replaces it
+const snap = await page.evaluate(() => JSON.stringify(Object.assign({}, localStorage)));
+for (const n of ['春', '秋', '春']) { await page.fill('#tplName', n); await page.click('#tplSave'); await settle(page, 200); }
+eq(await page.$$eval('#themeSwatches .swatch, #themeSwatches > *', e => e.length), 8, '春 and 秋 are two templates, and 春 saved again is still one');
+const two = JSON.parse(await page.evaluate(() => localStorage.getItem('gvb-certificate-maker:templates'))).templates.map(t => t.label);
+eq(two.join(), 'Spring Fling,秋,春', 'both are stored by name');
+// an older save of a name keeps its key when saved again (a pre-AI-63 'my-template' for 春 is not duplicated)
+await page.evaluate(() => { const v = JSON.parse(localStorage.getItem('gvb-certificate-maker:templates')); v.templates = v.templates.filter(t => t.label !== '春'); v.templates.push({ key: 'my-template', label: '春', font: 'georgia', color: '#123456', bg: '#ffffff' }); localStorage.setItem('gvb-certificate-maker:templates', JSON.stringify(v)); });
+await page.reload({ waitUntil: 'load' }); await settle(page, 300);
+await page.click('#tplMaker summary');
+await page.fill('#tplName', '春'); await page.click('#tplSave'); await settle(page, 200);
+const keys = JSON.parse(await page.evaluate(() => localStorage.getItem('gvb-certificate-maker:templates'))).templates.map(t => t.key);
+ok(keys.filter(k => k === 'my-template').length === 1 && keys.length === 3, 'saving 春 again replaces its older my-template: ' + keys.join());
+// put the page back as the rest of this suite expects it: Spring Fling only, and chosen
+await page.evaluate(src => { localStorage.clear(); const o = JSON.parse(src); for (const k of Object.keys(o)) localStorage.setItem(k, o[k]); }, snap);
 
 // Reload: still there, still chosen.
 await page.reload({ waitUntil: 'load' }); await settle(page, 300);

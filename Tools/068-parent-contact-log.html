@@ -66,7 +66,7 @@
   button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
   button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
   button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: var(--accent-ink); }
+  button.danger:hover { background: var(--err); color: var(--status-ink); }
   button.small { padding: .25rem .55rem; font-size: .78rem; }
   button.full { width: 100%; }
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
@@ -95,7 +95,7 @@
 
   .toast {
     position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
-    background: var(--ok); color: var(--accent-ink); font-weight: 600; font-size: .88rem;
+    background: var(--ok); color: var(--status-ink); font-weight: 600; font-size: .88rem;
     padding: .6rem 1.1rem; border-radius: 999px; box-shadow: 0 6px 18px rgba(0,0,0,.18);
     opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease; z-index: 50;
   }

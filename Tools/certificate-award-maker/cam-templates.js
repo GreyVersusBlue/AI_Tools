@@ -89,9 +89,18 @@
 
   function builtins() { return BUILTIN.map(clean); }
 
+  /* slug(label): the key part of a teacher's template name. A name with any letter or digit outside a-z0-9
+     (春, Été) also gets a short hash of the whole name, so two such names cannot share a key and overwrite
+     each other (AI-63; both used to be "template"); a plain a-z name is unchanged. At most 30 characters. */
   function slug(label) {
-    var s = String(label || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30);
-    return s || 'template';
+    var name = String(label || '').normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
+    var s = name.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    if (!/[^a-z0-9\s\p{P}\p{S}]/u.test(name)) return s.slice(0, 30) || 'template';   // as before, so a saved name keeps its key
+    var h = 0x811c9dc5;
+    for (var i = 0; i < name.length; i++) { h ^= name.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    var tag = ('000000' + h.toString(36)).slice(-7);
+    s = s.slice(0, 22).replace(/-+$/, '');
+    return (s ? s + '-' : 't-') + tag;
   }
 
   /* list(custom): the built-ins, then the teacher's, in order; a custom key that repeats an earlier one is dropped. */

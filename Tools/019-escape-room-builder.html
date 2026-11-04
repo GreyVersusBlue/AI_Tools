@@ -15,7 +15,7 @@
 <meta property="og:image" content="https://www.aspermylessonplan.com/assets/og/toolbook.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="A gradebook-style table of classroom tools headed 'AsPerMyLessonPlan.com'.">
+<meta property="og:image:alt" content="The headline 'Classroom tools that run in your browser' and the name AsPerMyLessonPlan.com beside a drawing of an empty classroom.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Digital Escape Room / Puzzle Lock Builder — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Chain QR-code puzzle stations into a linear or branching escape-room activity, each correct answer unlocking the next clue — print the codes and an answer key.">
@@ -40,6 +40,8 @@
 <script src="../_shared/stations-bank.js"></script>
 <script src="../_shared/media-db.js"></script>
 <script src="escape-room-builder/er-image.js"></script>
+<script src="../_shared/sample-data.js"></script>
+<script src="escape-room-builder/er-sample.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -96,7 +98,7 @@
     width: 1.7rem; height: 1.7rem; border-radius: 5px; font-size: .82rem; padding: 0; cursor: pointer; line-height: 1;
   }
   .icon-btn:hover { background: var(--card-2); color: var(--ink); }
-  .icon-btn.danger:hover { background: var(--err); color: var(--accent-ink); border-color: var(--err); }
+  .icon-btn.danger:hover { background: var(--err); color: var(--status-ink); border-color: var(--err); }
   .field-row { margin-bottom: 0; }
   .field-row label { font-size: .74rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
   .field-row textarea, .field-row input, .field-row select { margin-bottom: .6rem; }
@@ -120,7 +122,7 @@
   button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
   button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
   button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: var(--accent-ink); }
+  button.danger:hover { background: var(--err); color: var(--status-ink); }
   button:disabled { opacity: .4; cursor: not-allowed; }
 
   .btn-row { display: flex; gap: .6rem; margin-top: .7rem; flex-wrap: wrap; }
@@ -1646,6 +1648,46 @@
       ['catch'](function () { imagesSettled = true; });
   }
   settleImages().then(function () { window.__escapeImagesSettled = true; });
+
+  /* ---------- sample (P15, _shared/sample-data.js; the room is er-sample.js) ----------
+     Offered only while the room on screen is blank: no station has a clue, an answer, a secret
+     message, a hint or a picture, and there is no story intro. A press puts the sample stations
+     into that room and renames it to the sample's name (through the name box's own handler, so the
+     blank room is renamed, never a second room made); Clear puts one blank station back and the old
+     name. The page saves as it goes, so the sample is a saved room until it is cleared. */
+  function stationBlank(s) {
+    return !['clue', 'answers', 'cipherPlain', 'hint', 'image'].some(function (k) { return String(s[k] || '').trim(); });
+  }
+  var sampleWasNamed = '';
+  function renameRoom(name) {
+    if (!name || name === state.name) return;
+    Stations.ensureIds(state);
+    els.setName.value = name;
+    els.setName.dispatchEvent(new Event('change'));
+  }
+  if (window.SampleData && window.ErSample) SampleData.mount({
+    before: els.setName.closest('.card'),
+    label: 'Load a sample room',
+    what: 'This page saves as you go, so it is a saved room until you clear it.',
+    isEmpty: function () {
+      return !!state && state.stations.every(stationBlank) && !String(state.storyIntro || '').trim();
+    },
+    snapshot: function () { return JSON.stringify([state && state.name, state && state.storyIntro, state && state.stations]); },
+    fill: function () {
+      sampleWasNamed = state.name;
+      state.stations = ErSample.stations();
+      state.storyIntro = ErSample.storyIntro;
+      renameRoom(uniqueRoomName(ErSample.name));
+      applyStateToForm(); save(); scheduleRender();
+    },
+    clear: function () {
+      state.stations = [];
+      ensureAtLeastOneStation();
+      state.storyIntro = '';
+      renameRoom(uniqueRoomName(sampleWasNamed || 'New Escape Room'));
+      applyStateToForm(); save(); scheduleRender();
+    }
+  });
 
 })();
 </script>

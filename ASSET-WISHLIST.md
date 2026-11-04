@@ -317,14 +317,13 @@ Silent. Duration 8 seconds, 16:9, 24 fps.
 
 ## 4. Don't generate
 
-- **The social card, version 1.** `index.html` and `Tools/019-escape-room-builder.html` name
-  `assets/og/toolbook.png`; the folder does not exist. Eleven more pages point at
-  `greyversusblue.com/assets/og/guild-board.png`, on another domain, and 28 declare
-  `summary_large_image` with no image at all (`npm run check:social` prints this). Every
-  shared link to the site is a blank card today. Fix it in code first: a Playwright script
-  in the style of `Tools/board-check/make-manifest-screenshots.mjs` that lays the headline
-  beside the existing `classroom-2x-light.webp` and screenshots 1200×630. Zero credits,
-  on-brand by construction. Item 2.4 is the upgrade, not the fix.
+- **The social card, version 1.** Built in code (AI-43, v584):
+  `Tools/board-check/make-og.mjs` lays the headline and the site name beside the existing
+  `classroom-2x-light.webp` on the ink-and-paper palette and screenshots 1200×630 into
+  `assets/og/` (`toolbook.png`, and `inbox`, `plan`, `board`, `handout` for the four
+  direction pages), about 80 KB each. Every page that names a card now names one that is in
+  the tree, and `npm run check:social` fails one that does not. Item 2.4 is the upgrade,
+  not the fix.
 - **Tool icons, favicons, the app mark, shortcut icons.** They are `currentColor` line SVGs
   exported from meshes; `check:art` fails an icon with a fill or a literal colour, and the
   sprite is a derived build. A raster icon cannot follow the theme and cannot pass.
@@ -435,8 +434,8 @@ the style does not wander between days. Expect two or three attempts per keeper.
 **Veo verdict.** One clip, optional, and only for the README. Every other video idea in
 section 3's table should be a still or code. If credits are tight, spend none on Veo.
 
-**Before session 1, with no credits:** build the code-only social card (section 4) and get
-your one-line authorization for the student-facing items into `HISTORY.md`.
+**Before session 1, with no credits:** the code-only social card (section 4) is built
+(AI-43); get your one-line authorization for the student-facing items into `HISTORY.md`.
 
 ---
 
@@ -516,16 +515,18 @@ entry is the derived sprite. The change:
 
 ### 7.4 Social card and key art
 
-- Version 1 (no credits): a new script beside `make-manifest-screenshots.mjs` writes
-  `assets/og/toolbook.png` (1200×630, PNG, aim under 300 KB). It is **not** added to
+- Version 1 (no credits, built in AI-43): `Tools/board-check/make-og.mjs`, beside
+  `make-manifest-screenshots.mjs`, writes `assets/og/toolbook.png` (1200×630, an indexed
+  PNG of about 80 KB) and the four direction-page cards. It is **not** added to
   `PRECACHE_URLS`: it is named only in a `<meta content>`, which `check:precache` does not
   read, and no visitor's browser should download it. `assets/og/` is outside `check:art`'s
   two guarded folders.
 - Version 2: the same script composites `assets/og/keyart-2k.png` instead of the hero.
   Update `og:image:alt` in `index.html` and 019 to describe what the card now shows.
-- The 11 pages on the old `greyversusblue.com` image and the 28 with no image: pointing
-  them all at the one card is a branding decision `CLAUDE.md` says not to guess into the
-  tree. It is yours; when made, it is a mechanical edit that `npm run check:social` checks.
+- The 11 pages on the old `greyversusblue.com` image and the 28 with no image all name
+  `toolbook.png` since AI-43 (greyversusblue.com answers 404 for this tree, so the old
+  image could never load). Their og:url and og:site_name are unchanged: which branding is
+  right is still yours.
 - `README.md`: the key art at the top as a normal Markdown image. The GitHub social
   preview is uploaded by hand in the repository settings.
 

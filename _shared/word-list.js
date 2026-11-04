@@ -54,7 +54,8 @@
    "word: translation" (a line with no colon is a word with no translation).
    fromPairs / toPairs are that format; putPairs(name, text) writes it through to the
    hub changing ONLY term and definition, so a list 040 gave an example, a gender or
-   tags keeps them; importLegacyDrill() takes 039's own keys ('gvb-vocab-conj:list',
+   tags keeps them (a blank text writes nothing, and a term with a colon, which the
+   format cannot hold, is never deleted by it); importLegacyDrill() takes 039's own keys ('gvb-vocab-conj:list',
    'gvb-vocab-conj:data:<name>', read, never written) over once per set name, recorded
    in `legacyDrill`, and skips a set that has no vocabulary (a conjugation-only set).  */
 (function (root) {
@@ -241,7 +242,7 @@
 
   /* Words -> 039's vocabText: "term: definition", or the bare term when there is no definition.
      A term holding a colon cannot be written in that format (039 would read it as term and
-     definition) and is left out. */
+     definition) and is left out; putPairs keeps such a word in the list for that reason. */
   function toPairs(words) {
     return (words || []).map(function (w) {
       var t = str(w.term).replace(/[\r\n]+/g, ' '), d = str(w.definition).replace(/[\r\n]+/g, ' ');
@@ -519,12 +520,21 @@
   }
 
   /* 039's write-through: the vocabulary text becomes the list `name`'s terms and definitions in
-     order; a word's other fields, id and tags stay with its term. Writes nothing for a blank text
-     when there is no such list yet. */
+     order; a word's other fields, id and tags stay with its term. A blank text writes nothing, ever:
+     it makes no list, and it never empties one (a new or conjugation-only 039 set has no vocabulary,
+     and a list of its name is 040's to empty; AI-54). A word whose term holds a colon cannot be in
+     039's text (toPairs leaves it out, fromPairs splits at the colon), so a text never deletes it:
+     it stays at its place in the list. */
   function putPairs(name, text, now) {
     var l = get(name), pairs = fromPairs(text);
-    if (!l && !pairs.length) return null;
-    return put(name, reconcile(l ? l.words : [], pairs, ['term', 'definition']), now);
+    if (!pairs.length) return l ? JSON.parse(JSON.stringify(l)) : null;
+    var kept = [];
+    (l ? l.words : []).forEach(function (w, i) {
+      if (str(w.term).indexOf(':') !== -1) kept.push([i, w]);
+    });
+    var words = reconcile(l ? l.words : [], pairs, ['term', 'definition']);
+    kept.forEach(function (k) { words.splice(Math.min(k[0], words.length), 0, k[1]); });
+    return put(name, words, now);
   }
 
   function remove(name) {

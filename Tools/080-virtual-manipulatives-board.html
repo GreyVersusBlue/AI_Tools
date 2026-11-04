@@ -96,12 +96,12 @@
   .fraction-tile { display: flex; }
   .fraction-tile .seg { display: flex; align-items: center; justify-content: center; }
   /* The fraction's name on its shaded part, so the tile says what it is
-     without anyone counting segments; --accent-ink over the rendered orange
+     without anyone counting segments; --status-ink over the rendered orange
      is measured at 4.5:1 or better in renders.json. */
-  .fraction-tile .lbl { font-size: 10px; font-weight: 700; color: var(--accent-ink); letter-spacing: -.02em; }
+  .fraction-tile .lbl { font-size: 10px; font-weight: 700; color: var(--status-ink); letter-spacing: -.02em; }
   .algebra-tile { display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .8rem; }
   .algebra-tile.pos { color: var(--ink); }
-  .algebra-tile.neg { color: var(--accent-ink); }
+  .algebra-tile.neg { color: var(--status-ink); }
   .piece .roll { position: absolute; top: -8px; right: 32px; width: 18px; height: 18px; border-radius: 50%; background: var(--card); border: 1px solid var(--line-strong); color: var(--ink); font-size: 11px; line-height: 16px; text-align: center; cursor: pointer; display: none; z-index: 2; }
   .piece:hover .roll { display: block; }
 

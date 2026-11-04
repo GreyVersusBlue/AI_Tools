@@ -12,9 +12,14 @@
 <meta property="og:url" content="https://www.aspermylessonplan.com/Tools/032-School%20Calendar%20Visualizer.html">
 <meta property="og:title" content="School Calendar Visualizer — AsPerMyLessonPlan.com">
 <meta property="og:description" content="Build a full-year school calendar once — holidays, half days, workdays, grading periods — and reuse the template every year.">
+<meta property="og:image" content="https://www.aspermylessonplan.com/assets/og/toolbook.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The headline 'Classroom tools that run in your browser' and the name AsPerMyLessonPlan.com beside a drawing of an empty classroom.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="School Calendar Visualizer — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Build a full-year school calendar once — holidays, half days, workdays, grading periods — and reuse the template every year.">
+<meta name="twitter:image" content="https://www.aspermylessonplan.com/assets/og/toolbook.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='6' y='6' width='20' height='20' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cline x1='6' y1='13' x2='26' y2='13' stroke='%231f3550' stroke-width='2'/%3E%3Ccircle cx='11' cy='19' r='2' fill='%23a3372b'/%3E%3Ccircle cx='16' cy='19' r='2' fill='%23c98a1f'/%3E%3C/svg%3E">
 <!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
      opting in here keeps a11y.js from putting its CSS-filter invert on top.
@@ -36,16 +41,17 @@
 <script src="../_shared/school-day.js"></script>
 <script src="../_shared/print-kit.js"></script>
 <style>
-  /* Path 5 P3. --ok is the "on pace" green, --accent-deep the darker navy a
-     primary button goes to on hover (in dark the accent is already light, so
-     it brightens instead), --warn-ink the amber a bump note is written in. */
+  /* Path 5 P3. --ok is the "on pace" green, --warn-ink the amber a bump note is
+     written in. A primary button's hover is --accent-2, which the school accent
+     sets along with its text colour (AI-57: a navy of our own here was dark
+     text on navy with a gold school). */
   :root {
-    --ok: #2e6b3e; --accent-deep: #16283f; --warn-ink: #8a5a00;
+    --ok: #2e6b3e; --warn-ink: #8a5a00;
     --info-bg: #eef4f8;
     --warn-bg: #fff3d6; --warn-line: #e0c27a;
   }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
-    --ok: #63c08e; --accent-deep: var(--accent-2); --warn-ink: #eac077;
+    --ok: #63c08e; --warn-ink: #eac077;
     --info-bg: #1b2a35;
     --warn-bg: #332711; --warn-line: #5e4a20;
   }
@@ -76,7 +82,7 @@
   }
   button:hover { background: var(--card-2); }
   button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
-  button.primary:hover { background: var(--accent-deep); }
+  button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
   button.danger { color: var(--err); }
   button.small { padding: 4px 9px; font-size: 0.76rem; }
   input[type=text], input[type=date], input[type=color], select, textarea {
@@ -271,7 +277,7 @@
   .day.empty:hover { background: var(--paper); }
   .day .num { font-weight: 600; color: var(--muted); }
   .day.selected { outline: 2px solid var(--accent-2); outline-offset: -2px; }
-  .day.today .num { display: inline-block; background: var(--accent-2); color: var(--accent-ink); border-radius: 50%; width: 1.3em; height: 1.3em; line-height: 1.3em; text-align: center; }
+  .day.today .num { display: inline-block; background: var(--accent-2); color: var(--accent-2-ink); border-radius: 50%; width: 1.3em; height: 1.3em; line-height: 1.3em; text-align: center; }
   .yday.today { outline: 1.5px solid var(--accent-2); outline-offset: -1.5px; }
   .chips { display: flex; gap: 2px; flex-wrap: wrap; margin: 2px 0; }
   .chip { width: 13px; height: 13px; border-radius: 3px; border: 1px solid rgba(0,0,0,.35); }

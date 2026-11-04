@@ -12,14 +12,14 @@
 <meta property="og:url" content="https://greyversusblue.com/Tools/005-Seating%20Chart%20Generator.html">
 <meta property="og:title" content="Seating Chart Generator — greyversusblue">
 <meta property="og:description" content="Build custom classroom seating charts.">
-<meta property="og:image" content="https://greyversusblue.com/assets/og/guild-board.png">
+<meta property="og:image" content="https://www.aspermylessonplan.com/assets/og/toolbook.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="A tavern notice board headed 'The Guild Board of greyversusblue'.">
+<meta property="og:image:alt" content="The headline 'Classroom tools that run in your browser' and the name AsPerMyLessonPlan.com beside a drawing of an empty classroom.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Seating Chart Generator — greyversusblue">
 <meta name="twitter:description" content="Build custom classroom seating charts.">
-<meta name="twitter:image" content="https://greyversusblue.com/assets/og/guild-board.png">
+<meta name="twitter:image" content="https://www.aspermylessonplan.com/assets/og/toolbook.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%233B2A1A'/%3E%3Ccircle cx='16' cy='16' r='10' fill='%237E2A20'/%3E%3Ccircle cx='13' cy='13' r='3.5' fill='%23A8443A'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
@@ -127,8 +127,10 @@
   .btn:active{transform:translateY(1px);}
   .btn.ghost{background:var(--card); color:var(--blue); border-color:var(--line);}
   .btn.ghost:hover{background:color-mix(in srgb, var(--ink) 6%, transparent); border-color:var(--blue-soft);}
-  .btn.teal{background:var(--teal); border-color:var(--teal);}
-  .btn.teal:hover{background:var(--teal-deep); border-color:var(--teal-deep);}
+  /* --blue is step 800, dark on the dark card (1.3 to 1 stock); the dark theme's accent text is --teal (AI-65). */
+  :root[data-theme="dark"]:not(.a11y-filter-dark) .btn.ghost{color:var(--teal);}
+  .btn.teal{background:var(--teal); border-color:var(--teal); color:var(--color-accent-ink);}
+  .btn.teal:hover{background:var(--teal-deep); border-color:var(--teal-deep); color:#fff;}
   .btn.sm{padding:5px 9px; font-size:12.5px;}
   .btn.danger{background:var(--card);color:var(--warn);border-color:color-mix(in srgb, var(--warn) 35%, transparent);}
   .btn.danger:hover{background:var(--color-danger-bg);}
@@ -235,7 +237,9 @@
      layout on a desktop; they exist for the phone rules below. */
   .toolbar .tb-more, .toolbar .tb-primary{display:contents;}
   .toolbar .tb-toggle{display:none;}
-  .status{font-size:12.5px; opacity:0.8; margin-left:2px;}
+  /* The fade is the line's own text colour, not opacity: opacity also faded the accent words below, and a school
+     colour's step 800 that reads on white at full strength did not at 80% (gold, 3.3 to 1; AI-65). */
+  .status{font-size:12.5px; color:color-mix(in srgb, var(--ink) 80%, transparent); margin-left:2px;}
   .status b{color:var(--blue);}
   .status .bad{color:var(--warn); font-weight:600;}
   .status .good{color:var(--teal-deep); font-weight:600;}
@@ -1205,7 +1209,7 @@ function markNode(m, movable){
 /** Pull the corner: the change is measured along the mark's own width and height, so a turned mark resizes the way it looks. */
 let sizingMark = null;
 function markGripDown(ev, id, node, grip){
-  if (ev.button !== 0 || state.mirror) return;
+  if (ev.button !== 0 || state.mirror || liveOn) return;
   const r = roomOfActive(), m = r && r.marks.find(x => x.id === id); if (!m) return;
   sizingMark = { id, el: node, m, x0: ev.clientX, y0: ev.clientY, w: m.w, h: m.h, moved: false };
   grip.setPointerCapture(ev.pointerId);
@@ -1247,7 +1251,7 @@ function turnMark(id){
 function focusMark(id){ const n = document.querySelector(`.room-mark[data-mark-id="${id}"]`); if (n) n.focus(); }
 let movingMark = null;
 function markPointerDown(ev, id, node){
-  if (ev.button !== 0 || state.mirror) return;   // mirrored: the same screen-to-room guard the desks have
+  if (ev.button !== 0 || state.mirror || liveOn) return;   // mirrored: the same screen-to-room guard the desks have
   const r = roomOfActive(), m = r && r.marks.find(x => x.id === id); if (!m) return;
   const floorRect = el('floor').getBoundingClientRect();
   movingMark = { id, el: node, m, dx: ev.clientX - (floorRect.left + m.x * scale), dy: ev.clientY - (floorRect.top + m.y * scale), floorRect, moved: false };
@@ -1940,7 +1944,7 @@ function renderFloor(){
   const s = sec();
   const total = s.desks.length;
   const rm = roomOfActive();
-  if (rm) rm.marks.forEach(m => layer.appendChild(markNode(m, !state.mirror)));
+  if (rm) rm.marks.forEach(m => layer.appendChild(markNode(m, !state.mirror && !liveOn)));   // on stage a mark is not an edit target (AI-63, L1)
   s.desks.forEach((d, i) => {
     const sid = s.assign[d.id];
     const st = sid ? studentById(sid) : null;
@@ -2095,8 +2099,14 @@ document.addEventListener('pointerup', () => {
 ============================================================ */
 let liveOn = false;
 const liveLocal = new Set();   // 005 student ids with no roster id, absent this session
+/* A roster id is found by name, so two students with one name in this period would share one absence:
+   such a name gets none, and each seat is marked for the live session only (AI-63, review L2). */
+function liveSameName(st){
+  const k = Roster.normKey(st.name);
+  return sec().students.filter(x => Roster.normKey(x.name) === k).length > 1;
+}
 function liveRosterId(st){
-  try { return Roster.idFor(Roster.idIndex(), st.name, sec().name); } catch(e){ return null; }
+  try { return liveSameName(st) ? null : Roster.idFor(Roster.idIndex(), st.name, sec().name); } catch(e){ return null; }
 }
 function readFlags(){
   try { return StudentFlags.read(window.localStorage); } catch(e){ return StudentFlags.empty(); }
@@ -2119,7 +2129,9 @@ function liveTap(deskId){
     if (now) liveLocal.add(st.id); else liveLocal.delete(st.id);
   }
   renderFloor();
-  liveSay(st.name + (now ? ' marked absent today' : ' marked present') + (id ? '.' : ' for this live session only (not on a saved roster).'), 'good');
+  const why = (() => { try { return liveSameName(st); } catch(e){ return false; } })()
+    ? ' (another student in this period has the same name).' : ' (not on a saved roster).';
+  liveSay(st.name + (now ? ' marked absent today' : ' marked present') + (id ? '.' : ' for this live session only' + why), 'good');
   refocusSeat(deskId);
 }
 function refocusSeat(deskId){

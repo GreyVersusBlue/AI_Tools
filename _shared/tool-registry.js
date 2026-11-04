@@ -147,11 +147,13 @@
           /* Every namespace a tool keeps in it (MediaDB.store/images({ ns })).
              `student: true` is cleared by the year rollover, whole: Seating
              Chart's photos are the only student images on the site.
+             (`bmg-geo` is 046's dropped boundary files, GeoJSON rather than an
+             image, kept here so a backup has them: bmg-geo-store.js.)
              registry-shape.test.mjs fails on a namespace in the tree that is
              not listed here. ToolRegistry.mediaNamespaces(). */
           namespaces: [
             { ns: 'seating', student: true },
-            { ns: 'cam' }, { ns: 'class-screen' }, { ns: 'dbq' }, { ns: 'escape-room' }, { ns: 'fsb' }, { ns: 'htcm' },
+            { ns: 'bmg-geo' }, { ns: 'cam' }, { ns: 'class-screen' }, { ns: 'dbq' }, { ns: 'escape-room' }, { ns: 'fsb' }, { ns: 'htcm' },
             { ns: 'labels' }, { ns: 'ppg' }, { ns: 'psa' }, { ns: 'rgb' }, { ns: 'scavenger-hunt' }, { ns: 'stviz-trace' }, { ns: 'tlb' }, { ns: 'vocab' },
           ] },
       ],
@@ -211,6 +213,16 @@
          which the tool deletes on its next load. */
       keys: [
         { k: 'seating-chart-v1', student: true, rollover: 'reduce' },
+      ],
+      /* Live mode (Path 14 P5): a tap marks a student absent today in the
+         flags sidecar (_shared/student-flags.js, by roster id), or, with the
+         tap switch on Point or Pass, writes one point into 008's sections or
+         starts a pass in 001's (seating-chart/seating-handoff.mjs). Each key
+         stays its owner's; check:registry's HANDOFF check holds this list. */
+      writes: [
+        'behavior-points-tracker-sections',
+        'crh_flags_v1',
+        'hall-pass-log-sections',
       ],
       reads: [
         'np_rosters',

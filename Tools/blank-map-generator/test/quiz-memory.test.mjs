@@ -21,6 +21,12 @@ function suite(M) {
   t(M.keyOf('  New   York ') === 'new york' && M.keyOf('NEW YORK') === 'new york', 'a place is the same whatever its capitals and spacing');
   t(M.keyOf('') === null && M.keyOf('   ') === null && M.keyOf(null) === null, 'a label with no text has no identity');
   t(M.keyOf('x'.repeat(200)).length === 80, 'a very long name is cut at 80');
+  // AI-63 (review L7): a long name whose 80th character is a space kept that space in its key, and normalize()
+  // (which checks k === keyOf(k)) dropped the place's history on the next load.
+  const spaced = 'a'.repeat(79) + ' bcd';
+  t(M.keyOf(spaced) === 'a'.repeat(79) && M.keyOf(M.keyOf(spaced)) === M.keyOf(spaced), 'a name cut at a space has no trailing space, and its key is its own key');
+  const kept = M.normalize(JSON.parse(j(M.record(M.empty(), 'p1', spaced, 'missed', '2026-10-01'))));
+  t(M.weakList(kept, 'p1').length === 1, 'a name cut at a space keeps its history through a reload');
 
   let m = M.empty();
   m = M.record(m, 'p1', 'Nile', 'missed', '2026-10-01');
@@ -89,7 +95,8 @@ function suite(M) {
 const MUTANTS = [
   ['capitals make a different place', ".toLowerCase();\n  return k", ";\n  return k"],
   ['spacing makes a different place', ".replace(/\\s+/g, ' ')", ""],
-  ['a name is not cut', 'k.slice(0, MAX_TEXT) : null', 'k : null'],
+  ['a name is not cut', 'k.slice(0, MAX_TEXT).trimEnd() : null', 'k : null'],
+  ['a cut name keeps a trailing space', 'k.slice(0, MAX_TEXT).trimEnd() : null', 'k.slice(0, MAX_TEXT) : null'],
   ['the same mark twice counts twice', 'if (prev === result) return mem;', ''],
   ['a replaced got is not taken back', "if (prev === 'got') e.got = Math.max(0, e.got - 1);", ''],
   ['a replaced miss is not taken back', "if (prev === 'missed') e.missed = Math.max(0, e.missed - 1);", ''],

@@ -12,9 +12,14 @@
 <meta property="og:url" content="https://www.aspermylessonplan.com/Tools/030-review-game-board.html">
 <meta property="og:title" content="Quiz / Review Game Board — AsPerMyLessonPlan.com">
 <meta property="og:description" content="A Jeopardy-style review game board for the projector — type in questions or import them from a spreadsheet.">
+<meta property="og:image" content="https://www.aspermylessonplan.com/assets/og/toolbook.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The headline 'Classroom tools that run in your browser' and the name AsPerMyLessonPlan.com beside a drawing of an empty classroom.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Quiz / Review Game Board — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="A Jeopardy-style review game board for the projector — type in questions or import them from a spreadsheet.">
+<meta name="twitter:image" content="https://www.aspermylessonplan.com/assets/og/toolbook.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231a1a3a'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='18' font-weight='700' text-anchor='middle' fill='%23f0c419'%3E%24%3C/text%3E%3C/svg%3E">
 <!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
      opting in here keeps a11y.js from putting its CSS-filter invert on top.
@@ -47,6 +52,8 @@
 <script src="review-game-board/rgb-bank-editor.js"></script>
 <script src="../_shared/media-db.js"></script>
 <script src="review-game-board/rgb-image.js"></script>
+<script src="../_shared/sample-data.js"></script>
+<script src="review-game-board/rgb-sample.js"></script>
 <script type="module">
   // rgb-audio-db.js is an ES module, which evaluates AFTER the classic
   // inline <script> further down (module scripts are deferred to after the
@@ -128,7 +135,7 @@
   button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
   button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
   button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: var(--accent-ink); }
+  button.danger:hover { background: var(--err); color: var(--status-ink); }
   button.small { padding: .3rem .6rem; font-size: .82rem; border-radius: 5px; }
 
   .tabs { display: flex; gap: .4rem; margin-bottom: 1rem; }
@@ -264,7 +271,7 @@
      columns already share this row with the question and answer. */
   .clue-audio-cell { display: flex; flex-direction: column; align-items: center; gap: .25rem; width: 5rem; }
   .clue-audio-cell button { padding: .3rem .4rem; font-size: .72rem; width: 100%; }
-  .clue-audio-cell button.recording { background: var(--err); border-color: var(--err); }
+  .clue-audio-cell button.recording { background: var(--err); border-color: var(--err); color: var(--status-ink); }
   .clue-audio-size { font-size: .65rem; color: var(--muted); }
 
   /* Projected clue image — capped by height so a tall portrait source can't
@@ -4689,6 +4696,43 @@
   renderStorageLine();
   receiveSharedQuestions();
   settleImages().then(function () { window.__clueImagesSettled = true; });
+
+  /* ---------- sample (P15, _shared/sample-data.js; the board is rgb-sample.js) ----------
+     Offered only on a device with no saved board, while the editor is open on a new board and
+     every field in it is blank. A press fills the editor; nothing is stored until Save board, as
+     with anything typed there. Clear gives back the blank editor. Saving it, or any edit, ends it. */
+  function editorFields() {
+    return Array.prototype.slice.call(els.categoriesEditor.querySelectorAll('input, textarea'))
+      .filter(function (n) { return n.type !== 'file'; });
+  }
+  function editorPictures() {
+    return Array.prototype.slice.call(els.categoriesEditor.querySelectorAll('.clue-row'))
+      .some(function (row) { return !!(row.__clueImage || row.__clueAudioId); });
+  }
+  if (window.SampleData && window.ReviewBoardSample) SampleData.mount({
+    before: els.setupCard,
+    label: 'Load a sample board',
+    what: 'Nothing is saved until you press Save board.',
+    isEmpty: function () {
+      return !ReviewBoardStore.listBoards().length && !editingBoard && els.setupCard.style.display !== 'none' &&
+        !els.boardName.value.trim() && !editorPictures() &&
+        editorFields().every(function (n) { return !String(n.value).trim(); });
+    },
+    snapshot: function () {
+      return JSON.stringify([ReviewBoardStore.listBoards().length, els.setupCard.style.display, els.boardName.value,
+        editorFields().map(function (n) { return n.value; }), editorPictures()]);
+    },
+    fill: function () {
+      els.boardName.value = ReviewBoardSample.name;
+      els.categoriesEditor.innerHTML = '';
+      ReviewBoardSample.categories().forEach(function (c) { addCategoryBlock(c.name, c.clues); });
+    },
+    clear: function () {
+      els.boardName.value = '';
+      els.categoriesEditor.innerHTML = '';
+      addCategoryBlock();
+    }
+  });
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

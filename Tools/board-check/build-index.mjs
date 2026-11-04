@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-// build-index.mjs — writes (or checks) the tool rows of index.html from index-rows.json (AI-30, rank 70).
+// build-index.mjs — writes (or checks) the tool rows of index.html, and README.md's tools table, from
+// index-rows.json (AI-30, rank 70; the README half AI-44).
 //
 //   node Tools/board-check/build-index.mjs            rewrite index.html's category blocks and the two
-//                                                     page-wide counts ("N records", "N files")
-//   node Tools/board-check/build-index.mjs --check    exit 1 if index.html is not what the data renders
+//                                                     page-wide counts ("N records", "N files"), and the
+//                                                     README table between its two marker comments
+//   node Tools/board-check/build-index.mjs --check    exit 1 if either file is not what the data renders
 //                                                     (npm run check:index; runs in CI)
 //
 // index.html stays a plain static page: the rows are committed HTML, so the page works from file://,
@@ -18,6 +20,12 @@
 // name, pitch, comment (raw HTML text: write &amp; and &rsquo; as the page does), chips (the three
 // visible tag spans), grade, gradeTitle, scribble (the grade circle's path), and optionally pin (when
 // the pin button's name differs from `name`) and icon (a sprite id like "t007").
+//
+// README.md's "Tool | File | What it does" table (AI-44) is rendered from the same rows: `readme` is the
+// row's "What it does" cell (Markdown, written as README writes it; it is not the landing page's pitch),
+// the Tool cell is `name` with its HTML entities turned into characters unless `readmeName` says otherwise,
+// and the File cell is the decoded `href`. The table's order is the top-level `readmeOrder` list of slugs,
+// which must name every row exactly once. Only the lines between README_START and README_END are written.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,6 +34,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const SITE = path.join(here, '..', '..');
 const INDEX = path.join(SITE, 'index.html');
 const DATA = path.join(here, 'index-rows.json');
+const README = path.join(SITE, 'README.md');
 
 const CARET = '      <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>\n';
 const STAR = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>';
@@ -57,7 +66,7 @@ export function renderCategory(c) {
   return `    <details class="cat" data-cat="${c.key}"${c.open ? ' open' : ''}>\n` +
     `    <summary class="section-head ink"${style}>\n${CARET}` +
     `      <h2>${c.title}</h2>\n` +
-    `      <span class="cat-count">${c.rows.length} tools</span>\n` +
+    `      <span class="cat-count">${c.rows.length} tool${c.rows.length === 1 ? '' : 's'}</span>\n` +
     `    </summary>\n\n` +
     c.rows.map(renderRow).join('\n') +
     `    </details>\n`;
@@ -75,21 +84,67 @@ export function render(html, data) {
   return out;
 }
 
+export const README_START = '<!-- tools-table:start (generated from Tools/board-check/index-rows.json; edit the data, then run npm run build:index) -->';
+export const README_END = '<!-- tools-table:end -->';
+const ENTITIES = { amp: '&', rarr: '→', ndash: '–', mdash: '—', ldquo: '“', rdquo: '”', lsquo: '‘', rsquo: '’' };
+export function decodeEntities(s) {
+  return s.replace(/&(\w+);/g, (m, n) => {
+    if (!(n in ENTITIES)) throw new Error('build-index: no README spelling for &' + n + '; in "' + s + '" (add it to ENTITIES or give the row a readmeName)');
+    return ENTITIES[n];
+  });
+}
+
+export function renderReadmeTable(data) {
+  const rows = data.categories.flatMap(c => c.rows);
+  const bySlug = new Map(rows.map(r => [r.tool, r]));
+  const order = data.readmeOrder || [];
+  const missing = rows.filter(r => !order.includes(r.tool)).map(r => r.tool);
+  const unknown = order.filter(t => !bySlug.has(t));
+  const twice = order.filter((t, i) => order.indexOf(t) !== i);
+  if (missing.length || unknown.length || twice.length) {
+    throw new Error('build-index: readmeOrder must name every row once' +
+      (missing.length ? '; missing: ' + missing.join(', ') : '') +
+      (unknown.length ? '; not a row: ' + unknown.join(', ') : '') +
+      (twice.length ? '; twice: ' + twice.join(', ') : ''));
+  }
+  const noText = order.filter(t => !bySlug.get(t).readme);
+  if (noText.length) throw new Error('build-index: a row with no "readme" text: ' + noText.join(', '));
+  return '| Tool | File | What it does |\n|---|---|---|\n' + order.map(t => {
+    const r = bySlug.get(t);
+    return `| ${r.readmeName || decodeEntities(r.name)} | \`${decodeURIComponent(r.href)}\` | ${r.readme} |\n`;
+  }).join('');
+}
+
+export function renderReadme(md, data) {
+  const a = md.indexOf(README_START), b = md.indexOf(README_END);
+  if (a < 0 || b < a || md.indexOf(README_START, a + 1) >= 0) throw new Error('build-index: README.md needs one ' + README_START + ' … ' + README_END + ' pair');
+  return md.slice(0, a) + README_START + '\n' + renderReadmeTable(data) + '\n' + md.slice(b);
+}
+
+const firstDiff = (a, b) => { let i = 0; while (i < a.length && a[i] === b[i]) i++; return b.slice(0, i).split('\n').length; };
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const data = JSON.parse(fs.readFileSync(DATA, 'utf8'));
   const html = fs.readFileSync(INDEX, 'utf8');
   const out = render(html, data);
+  const md = fs.readFileSync(README, 'utf8');
+  const mdOut = renderReadme(md, data);
   const total = data.categories.reduce((n, c) => n + c.rows.length, 0);
   if (process.argv.includes('--check')) {
+    let bad = false;
     if (out !== html) {
-      let i = 0; while (i < out.length && out[i] === html[i]) i++;
-      const line = html.slice(0, i).split('\n').length;
-      console.log(`check-index: FAIL — index.html differs from what index-rows.json renders (first difference near line ${line}). Edit the data and run: node Tools/board-check/build-index.mjs`);
-      process.exit(1);
+      console.log(`check-index: FAIL — index.html differs from what index-rows.json renders (first difference near line ${firstDiff(out, html)}). Edit the data and run: node Tools/board-check/build-index.mjs`);
+      bad = true;
     }
-    console.log(`check-index: OK — index.html is exactly what index-rows.json renders (${data.categories.length} categories, ${total} rows).`);
+    if (mdOut !== md) {
+      console.log(`check-index: FAIL — README.md's tools table differs from what index-rows.json renders (first difference near line ${firstDiff(mdOut, md)}). Edit the data and run: node Tools/board-check/build-index.mjs`);
+      bad = true;
+    }
+    if (bad) process.exit(1);
+    console.log(`check-index: OK — index.html and README.md's tools table are exactly what index-rows.json renders (${data.categories.length} categories, ${total} rows).`);
   } else {
     if (out !== html) fs.writeFileSync(INDEX, out);
-    console.log(`build-index: ${out !== html ? 'rewrote' : 'no change to'} index.html (${data.categories.length} categories, ${total} rows).`);
+    if (mdOut !== md) fs.writeFileSync(README, mdOut);
+    console.log(`build-index: ${out !== html ? 'rewrote' : 'no change to'} index.html, ${mdOut !== md ? 'rewrote' : 'no change to'} README.md's table (${data.categories.length} categories, ${total} rows).`);
   }
 }

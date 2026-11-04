@@ -99,6 +99,9 @@
   var BRAND_STOCK = '#1f3550';          // ink-paper.css's --accent-light
   var BRAND_PAPER = ['#fafaf8', '#ffffff']; // what an accent is read on, light theme
   var BRAND_DARK_PAPER = '#14171c';     // ink-paper.css's dark --paper
+  var BRAND_DARK_SURFACES = [BRAND_DARK_PAPER, '#1d2229', '#262c34', '#1b2a35']; // --paper, --card, --card-2, --info-bg
+  var BRAND_INDUSTRY_DARK_INK = '#101720'; // --color-accent-ink on theme.css's dark fills (300-500)
+  var BRAND_INDUSTRY_DARK_SURFACE = '#2a2e33'; // a shade over theme.css's dark --color-surface (#23272c), where 400 is link text
   var STEP_NAMES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900];
   var STEP_RAMP = [0.96, 0.92, 0.85, 0.76, 0.66, 0.56, 0.49, 0.42, 0.34, 0.26];
   var brand = null;                     // { accent, accent2 } or null; accent2 '' = derive
@@ -140,27 +143,59 @@
   }
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-  /** The second colour when the teacher has not chosen one: a step lighter, or darker for a light accent. */
+  /** The second colour when the teacher has not chosen one: a step lighter, or darker for a light accent.
+   *  A button's text stays the same colour when its hover turns it accent-2, so if that step would take
+   *  the button text under 4.5 to 1, the step goes the other way (AI-57: orange #ff8200 stepped to 3.75). */
   function deriveAccent2(accent) {
-    var c = hexToHsl(accent);
-    return hslToHex(c[0], c[1] * 0.9, clamp(c[2] + (c[2] < 0.5 ? 0.14 : -0.14), 0.08, 0.92));
+    var c = hexToHsl(accent), dir = c[2] < 0.5 ? 1 : -1, ink = inkOn(accent);
+    var step = function (d) { return hslToHex(c[0], c[1] * 0.9, clamp(c[2] + d * 0.14, 0.08, 0.92)); };
+    var first = step(dir);
+    if (contrast(first, ink) >= 4.5) return first;
+    var other = step(-dir);
+    return contrast(other, ink) > contrast(first, ink) ? other : first;
   }
-  /** The accent made readable on the dark paper: lifted until it clears 4.5:1, never darkened. */
+  /** The accent made readable on the dark paper and the surfaces on it (card, card-2, the info tint,
+   *  ink-paper.css's dark values): lifted until it clears 4.5:1 on all of them, never darkened. It was
+   *  measured against the paper alone until AI-57, which left a forest green 3.7 to 1 on a note. */
   function liftForDark(hex) {
     var c = hexToHsl(hex), l = c[2], out = hex;
-    while (contrast(out, BRAND_DARK_PAPER) < 4.5 && l < 0.95) { l += 0.02; out = hslToHex(c[0], c[1], l); }
+    var worst = function (h) { return Math.min.apply(null, BRAND_DARK_SURFACES.map(function (p) { return contrast(h, p); })); };
+    while (worst(out) < 4.5 && l < 0.95) { l += 0.02; out = hslToHex(c[0], c[1], l); }
     return out;
   }
   function inkOn(hex) { return contrast(hex, '#ffffff') >= contrast(hex, '#101720') ? '#ffffff' : '#101720'; }
+  /** The one ink that reads best on every fill in the list: --accent-ink is drawn on the accent and,
+   *  through every tool's `button:hover { background: var(--accent-2) }`, on accent-2 too (AI-57). */
+  function inkOnAll(list) {
+    var w = Math.min.apply(null, list.map(function (h) { return contrast(h, '#ffffff'); }));
+    var d = Math.min.apply(null, list.map(function (h) { return contrast(h, '#101720'); }));
+    return w >= d ? '#ffffff' : '#101720';
+  }
 
-  /** The Industry tools' ten-step scale, approximated round the chosen colour (no second palette file). */
+  /** The Industry tools' ten-step scale, approximated round the chosen colour (no second palette file).
+   *  AI-65: the scale is made to read where the Industry pages draw on it. 700-900 are button and badge
+   *  fills under literal white (`.btn-primary`, 005's buttons) and 800 is also the text on a 100 tag and
+   *  900 the fill under 200 in dark, so those three are darkened until white and their tag reach 4.5 to 1
+   *  (stock white on a gold 800 was 1.5); 900 is also the dark ghost hover under 400. 300-500 are theme.css's dark-theme fills under
+   *  --color-accent-ink, which the brand sets dark there, and 400 is the dark link colour on the
+   *  surface, so they are lifted until they read under that ink and on that surface.
+   *  600 stays the chosen colour; --color-accent-ink in light is the ink that reads on it (inkOn). */
   function steps(prefix, hex) {
-    var c = hexToHsl(hex), css = '';
+    var c = hexToHsl(hex), v = [], css = '';
     for (var i = 0; i < STEP_NAMES.length; i++) {
       var tint = i < 3 ? 0.6 : 1;
-      var v = STEP_NAMES[i] === 600 ? hex : hslToHex(c[0], c[1] * tint, clamp(STEP_RAMP[i] + (c[2] - 0.49) * 0.5, 0.05, 0.97));
-      css += '--color-' + prefix + '-' + STEP_NAMES[i] + ':' + v + ';';
+      v.push(STEP_NAMES[i] === 600 ? hex : hslToHex(c[0], c[1] * tint, clamp(STEP_RAMP[i] + (c[2] - 0.49) * 0.5, 0.05, 0.97)));
     }
+    var on = function (i, list) { return Math.min.apply(null, list.map(function (x) { return contrast(v[i], x); })); };
+    var move = function (i, d, list) {
+      var h = hexToHsl(v[i]), l = h[2];
+      while (on(i, list) < 4.5 && l > 0.02 && l < 0.98) { l += d; v[i] = hslToHex(h[0], h[1], l); }
+    };
+    move(7, -0.02, ['#ffffff']);
+    move(8, -0.02, ['#ffffff', v[1]]);
+    for (var k = 3; k <= 5; k++) move(k, 0.02, [BRAND_INDUSTRY_DARK_INK, BRAND_INDUSTRY_DARK_SURFACE]);
+    move(9, -0.02, ['#ffffff', v[2], v[4]]); // and 400, the dark accent text on theme.css's dark ghost hover
+    for (var j = 0; j < STEP_NAMES.length; j++) css += '--color-' + prefix + '-' + STEP_NAMES[j] + ':' + v[j] + ';';
     return css;
   }
 
@@ -181,9 +216,19 @@
   function brandCss(b) {
     var a2 = b.accent2 || deriveAccent2(b.accent);
     var da = liftForDark(b.accent), da2 = liftForDark(a2);
-    return '@media screen{html:root:root{--accent:' + b.accent + ';--accent-2:' + a2 + ';--accent-ink:' + inkOn(b.accent) + ';' +
-      steps('accent', b.accent) + steps('accent-2', a2) + '}' +
-      'html:root[data-theme="dark"]:not(.a11y-filter-dark){--accent:' + da + ';--accent-2:' + da2 + ';--accent-ink:' + inkOn(da) + '}}';
+    // The Industry pages (theme.css): --color-accent-ink is the text on --color-accent, which is
+    // step 600 (the chosen colour) in light and 400 in dark, and on theme.css's dark buttons (AI-65).
+    // AI-57: only the inks on the two brand fills follow the brand. --status-ink
+    // (text on --err, --good, --warn...) is never set here: those fills do not
+    // change, and a gold school made that text 2.7 to 1 when it shared --accent-ink.
+    // --accent-ink has to read on accent-2 as well, since a button's hover turns it
+    // accent-2 without changing its text; --accent-2-ink is for a fill that is only ever accent-2.
+    return '@media screen{html:root:root{--accent:' + b.accent + ';--accent-2:' + a2 +
+      ';--accent-ink:' + inkOnAll([b.accent, a2]) + ';--accent-2-ink:' + inkOn(a2) + ';' +
+      steps('accent', b.accent) + steps('accent-2', a2) + '--color-accent-ink:' + inkOn(b.accent) + '}' +
+      'html:root[data-theme="dark"]:not(.a11y-filter-dark){--accent:' + da + ';--accent-2:' + da2 +
+      ';--accent-ink:' + inkOnAll([da, da2]) + ';--accent-2-ink:' + inkOn(da2) +
+      ';--color-accent-ink:' + BRAND_INDUSTRY_DARK_INK + '}}';
   }
 
   function applyBrand() {
@@ -556,10 +601,22 @@
     brandAccent2In.disabled = brandAuto.checked;
     brandResetBtn.disabled = !b;
     var ratio = window.Brand.contrast(accent);
-    brandWarnEl.textContent = b && ratio < 4.5
+    var warn = b && ratio < 4.5
       ? 'Heads up: ' + accent + ' is a pale choice on a white page (contrast ' + ratio.toFixed(1) +
         ' to 1; 4.5 to 1 is easy to read). Links and buttons in it may be hard to read. You can still keep it.'
       : '';
+    // AI-57: a mid-tone fill reads poorly with white and with dark text alike.
+    if (b) {
+      var fills = [[b.accent, 'first'], [b.accent2, 'second']], ink = inkOnAll([b.accent, b.accent2]);
+      for (var i = 0; i < fills.length; i++) {
+        var on = contrast(fills[i][0], ink);
+        if (on < 4.5) {
+          warn += (warn ? ' ' : 'Heads up: ') + 'Button text on the ' + fills[i][1] + ' colour, ' + fills[i][0] +
+            ', is ' + on.toFixed(1) + ' to 1 (4.5 to 1 is easy to read). Buttons use one text colour on both school colours, so pick two that are both light or both dark.';
+        }
+      }
+    }
+    brandWarnEl.textContent = warn;
   }
 
   function init() {

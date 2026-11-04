@@ -22,6 +22,11 @@
   --color-caution-bg: oklch(93% 0.05 45);
   --color-danger: oklch(50% 0.16 25);
   --color-danger-bg: oklch(94% 0.03 25);
+  /* The text on a --color-accent fill (step 600 in light, 400 in dark) and on the dark theme's
+     buttons below. Stock it is the page colour, as the tools wrote it; a school accent re-picks it
+     to read on the chosen colour (_shared/a11y.js, AI-65). The deep steps keep literal white: the
+     brand darkens 700-900 until white reads on them. */
+  --color-accent-ink: var(--color-bg);
 }
 
 /* Printing is always on paper, whatever the screen is doing, so the dark
@@ -49,7 +54,10 @@
   --color-danger: oklch(70% 0.15 25);
   --color-danger-bg: oklch(30% 0.06 25);
 }
-:root[data-theme="dark"]:not(.a11y-filter-dark) .btn-primary { background: var(--color-accent-500); color: var(--color-neutral-900); }
+:root[data-theme="dark"]:not(.a11y-filter-dark) .btn-primary { background: var(--color-accent-500); color: var(--color-accent-ink); }
+/* The Industry sheet's ghost hover is the light 100 tint, which put the dark theme's light accent text on a
+   light patch (2.3 to 1 stock, 1.3 under a gold school); the deep 900 step is the dark theme's tint (AI-65). */
+:root[data-theme="dark"]:not(.a11y-filter-dark) .btn-ghost:hover:not(:disabled) { background: var(--color-accent-900); }
 :root[data-theme="dark"]:not(.a11y-filter-dark) .btn-primary:hover { background: var(--color-accent-400); }
 :root[data-theme="dark"]:not(.a11y-filter-dark) .btn-primary:active { background: var(--color-accent-300); }
 :root[data-theme="dark"]:not(.a11y-filter-dark) .tag-accent { background: var(--color-accent-900); color: var(--color-accent-200); }

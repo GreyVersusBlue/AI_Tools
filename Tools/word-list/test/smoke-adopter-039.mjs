@@ -8,6 +8,8 @@
 //   2. a set 039 saved before the hub is a list too, and 039's own keys are not written by the migration;
 //   3. typing vocabulary writes through to the list of that name by term and definition only: a list's
 //      example, gender and tags (given in 040's hub) stay;
+//   3b. (AI-54) New set or Import set with a list's name never empties or replaces that list, and a term
+//      with a colon, which 039's text cannot hold, survives an edit here and is left out of an import;
 //   4. nothing about the page's own behaviour moved: the preview, the set and the page's errors;
 //   5. the import row is clean under axe.
 // The comma-with-quotes difference between 040's reader and the 40-line copy 039 used to carry is the
@@ -82,6 +84,48 @@ ok(!!l1, 'the list of that name is still in the hub (current set was ' + current
 // 039 saves on the actions that call Store.save; the vocabulary text is saved with the set
 ok(l1 && l1.words.length >= 3, 'the list has the words');
 eq(l1 && l1.words.filter(w => w.term === 'casa').map(w => [w.definition, w.example, w.gender, w.tags]), [['home', 'Mi casa', 'f', ['u1']]], 'definition follows the edit; example, gender and tags stay with the term');
+
+/* ── 3b. AI-54 (review H1): a new or shared set never empties a list ──── */
+console.log('039 — New set, Import set and a colon term leave a list\'s words alone');
+await page.evaluate(() => {
+  const s = JSON.parse(localStorage.getItem('gvb-word-lists'));
+  s.data.lists.push({ id: 'l90', name: 'Unit 3', createdAt: 1, updatedAt: 1, words: [
+    { id: 'w901', term: 'casa', definition: 'house', gender: 'f', tags: ['u3'] },
+    { id: 'w902', term: '10:00 a.m.', definition: 'ten in the morning' },
+    { id: 'w903', term: 'perro', definition: 'dog' }] });
+  s.data.lists.push({ id: 'l91', name: 'Unit 5', createdAt: 1, updatedAt: 1, words: [{ id: 'w911', term: 'sol', definition: 'sun', tags: ['u5'] }] });
+  localStorage.setItem('gvb-word-lists', JSON.stringify(s));
+});
+const unit3 = async () => { const l = (await hub()).lists.find(x => x.name === 'Unit 3'); return l ? l.words.map(w => [w.term, w.definition, w.gender || '', w.tags || []]) : null; };
+const UNIT3 = [['casa', 'house', 'f', ['u3']], ['10:00 a.m.', 'ten in the morning', '', []], ['perro', 'dog', '', []]];
+page.removeAllListeners('dialog');
+const dialogs = [];
+page.on('dialog', d => { dialogs.push(d.message()); d.type() === 'prompt' ? d.accept('Unit 3') : d.accept(); });
+await page.click('#newSetBtn'); await settle(page, 200);
+eq(await unit3(), UNIT3, 'New set with a list\'s name leaves the list\'s words, gender, tags and colon term alone');
+eq(await page.inputValue('#vocabInput'), 'casa: house\nperro: dog', 'and the new set opens with the list\'s words (a colon term cannot be shown in 039\'s text)');
+await page.fill('#vocabInput', 'casa: home\nperro: dog\ngato: cat');
+await page.evaluate(() => document.getElementById('vocabInput').dispatchEvent(new Event('input', { bubbles: true })));
+await settle(page, 100);
+eq(await unit3(), [['casa', 'home', 'f', ['u3']], ['10:00 a.m.', 'ten in the morning', '', []], ['perro', 'dog', '', []], ['gato', 'cat', '', []]],
+  'an edit in 039 writes term and definition through and keeps the colon term in its place');
+await page.selectOption('#flashSetSelect', 'Unit 3');
+await page.fill('#vocabInput', '');
+await page.evaluate(() => document.getElementById('vocabInput').dispatchEvent(new Event('input', { bubbles: true })));
+await page.click('#importFlashBtn'); await settle(page, 200);
+eq(await page.inputValue('#vocabInput'), 'casa: home\nperro: dog\ngato: cat', 'importing a list leaves out the colon term, which 039 would read as another word');
+ok(/colon/.test(dialogs[dialogs.length - 1] || ''), 'and says so: ' + JSON.stringify(dialogs[dialogs.length - 1]));
+eq((await unit3()).map(w => w[0]), ['casa', '10:00 a.m.', 'perro', 'gato'], 'the blanked text and the import made no word "10" and deleted none');
+// 'Unit 5' is a list only (039 has no set of that name), which is the case adoptSet missed
+const unit5 = async () => (await hub()).lists.find(l => l.name === 'Unit 5')?.words.map(w => [w.term, w.definition, w.tags]);
+await page.setInputFiles('#importSetFile', { name: 'unit5.json', mimeType: 'application/json',
+  buffer: Buffer.from(JSON.stringify({ name: 'Unit 5', mode: 'vocab', vocabText: 'pájaro: bird', persons: ['yo'], conjugations: [] })) });
+await settle(page, 300);
+eq(await unit5(), [['sol', 'sun', ['u5']]], 'a shared set named like a list does not touch the list');
+const shared = await page.inputValue('#setName');
+eq([shared, (await hub()).lists.find(l => l.name === shared)?.words.map(w => w.term)], ['Unit 5 (shared)', ['pájaro']], 'it is filed under a name of its own, as a list of its own');
+page.removeAllListeners('dialog');
+page.on('dialog', d => d.accept());
 
 /* ── 4 and 5. errors, axe ─────────────────────────────────────────────── */
 const scan = await a11yScan(page, { include: ['#importFlashRow'] });

@@ -407,21 +407,37 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
   eq(R.rolloverRule('np_history'), 'delete', '10: an unmarked student key is deleted');
 
   /* The namespaces in the tree: MediaDB.store/images({ ns: '…' }), or a
-     file's `NS = '…'` when it passes { ns: NS }, or EscapeRoomImage.forNamespace('…', tool). */
+     file's `NAME = '…'` when it passes { ns: NAME }, or EscapeRoomImage.forNamespace('…', tool). */
   const found = new Set();
+  const unresolved = [], seenDynamic = new Set();
+  // The two { ns: name } sites whose name is not a constant, each with where its namespaces are found instead.
+  const NS_DYNAMIC = {
+    'Tools/009-backup-restore.html: ns': "the rollover's media.clear(ns), handed br-rollover.js's student namespaces, which the last check below holds",
+    'Tools/escape-room-builder/er-image.js: NS': "create(NS, TOOL)'s parameter; its callers are the create( and forNamespace( rules below",
+  };
   const walk = dir => {
     for (const d of fs.readdirSync(path.join(SITE, dir), { withFileTypes: true })) {
       const rel = path.join(dir, d.name);
-      if (d.isDirectory()) { if (!/^(node_modules|test|vendor|\.git)$/.test(d.name)) walk(rel); continue; }
+      if (d.isDirectory()) { if (!/^(node_modules|test|vendor|\..*)$/.test(d.name)) walk(rel); continue; }   // a dot folder is untracked build output
       if (!/\.(js|mjs|html)$/.test(d.name)) continue;
       const src = fs.readFileSync(path.join(SITE, rel), 'utf8');
       for (const m of src.matchAll(/MediaDB\.(?:store|images)\(\{\s*ns:\s*'([a-z0-9-]+)'/g)) found.add(m[1]);
       for (const m of src.matchAll(/EscapeRoomImage\s*=\s*create\(\s*'([a-z0-9-]+)'/g)) found.add(m[1]);   // 019's own default store, which er-image.js builds at load
       for (const m of src.matchAll(/\.forNamespace\(\s*'([a-z0-9-]+)'/g)) found.add(m[1]);   // er-image.js's per-tool store (018's pictures)
-      if (/MediaDB\.(?:store|images)\(\{\s*ns:\s*NS\b/.test(src)) for (const m of src.matchAll(/\bNS\s*=\s*'([a-z0-9-]+)'/g)) found.add(m[1]);
+      // { ns: <NAME> }: the namespace is that constant's literal in the same file (NS, GEO_NS…). A name the
+      // file never assigns a literal is reported, so a namespace cannot hide behind one (AI-63, review L6).
+      for (const m of src.matchAll(/MediaDB\.(?:store|images)\(\{\s*ns:\s*([A-Za-z_$][\w$]*)(?![\w$.])/g)) {
+        const lit = [...src.matchAll(new RegExp('\\b' + m[1] + "\\s*=\\s*'([a-z0-9-]+)'", 'g'))].map(x => x[1]);
+        if (lit.length) lit.forEach(n => found.add(n));
+        else if (NS_DYNAMIC[rel + ': ' + m[1]]) seenDynamic.add(rel + ': ' + m[1]);
+        else unresolved.push(rel + ': ns: ' + m[1]);
+      }
     }
   };
   walk('Tools'); walk('_shared');
+  eq(unresolved, [], '10: every { ns: NAME } in the tree resolves to a literal in its file');
+  eq(Object.keys(NS_DYNAMIC).filter(k => !seenDynamic.has(k)), [], '10: every NS_DYNAMIC site is still in the tree');
+  ok(found.has('bmg-geo'), "10: the scan sees 046's boundary files ({ ns: GEO_NS }), which it once missed");
   const declared = R.mediaNamespaces().map(n => n.ns);
   eq([...found].filter(n => !declared.includes(n)).sort(), [], '10: every gvb-media namespace a tool uses is declared');
   eq(declared.filter(n => !found.has(n)).sort(), [], '10: every declared namespace is used');

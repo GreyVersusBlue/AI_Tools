@@ -18,10 +18,12 @@ every edit. The deduplication work that established them is summarised in
   WebRTC pairing). Extend this; never invent a parallel shared location.
 - `sw.js` — the hand-maintained service worker that precaches the whole site.
 - `index.html` + `README.md` — the landing page and tools table; both must be
-  updated when a tool is added. **index.html's tool rows are generated**
-  (AI-30): add the tool to `Tools/board-check/index-rows.json`, run
-  `npm run build:index`, and let `npm run check:index` hold the two together;
-  the category and page-wide counts are counted, never typed.
+  updated when a tool is added. **index.html's tool rows and README.md's tools
+  table are both generated** (AI-30, AI-44): add the tool to
+  `Tools/board-check/index-rows.json` (its `readme` text and its slug in
+  `readmeOrder` too), run `npm run build:index`, and let `npm run check:index`
+  hold all three together; the category and page-wide counts are counted, never
+  typed. Never edit the README table between its marker comments by hand.
 
 ## Vendored third-party libraries
 
@@ -248,7 +250,13 @@ copy of the boilerplate:
   `gvb-brand:settings.v1`, applied as a screen-only `<style id="gvb-brand-style">` before first paint, so no key
   means no element and no change. A page with a palette of its own sets `window.BRAND_OPT_OUT = true` before the
   script (007 does); never set `--accent` on `<html>` yourself and never add a logo (Devon, 2026-10-21). Read it
-  through `window.Brand`. `npm run test:brand`.
+  through `window.Brand`. The brand re-picks `--accent-ink` (text on `--accent`, and on `--accent-2` under a hover) and
+  `--accent-2-ink` (text on a fill that is only ever accent-2); text on any other fill (`--err`, `--good`, `--warn`, a
+  tool's `--danger`) is `var(--status-ink)`, which it never touches (AI-57, v576). On the five `theme.css` pages the brand
+  darkens the Industry steps 700-900 until literal white reads on them, keeps 600 the school colour, and re-picks
+  `--color-accent-ink` (text on `--color-accent`; theme.css's token, stock `--color-bg`); write that, not `--color-bg`, on
+  an accent fill there (AI-65, v581). `npm run test:brand`, whose sweep reads every text-on-fill rule, a literal text colour
+  included, off 92 pages and fails a pair a brand takes under 4.5:1.
 - `<script src="../_shared/sw-register.js" defer></script>` — service-worker
   registration, the update bar, the deferred precache pass, and (since v180) the
   request for persistent storage. It exists and is precached; link it rather than
@@ -336,6 +344,9 @@ files must be added there too.
   `node Tools/board-check/suite-durations.mjs <job logs>` (its header has the
   `gh api` line). A suite must not depend on another suite having run first:
   shards run on different machines, which `--changed` already assumed.
+  Since 2026-11-04 a fourth job, `offline`, runs `npm run offline:build` and
+  `npm run offline:verify` on a push to `main` only (Devon's default, not on
+  pull requests); `test` needs it and reads its `skipped` on a PR as a pass.
 - A known-red assertion goes in `suites.json`'s `expectedFailures` with its exact
   text and a reason — **never** by loosening the assertion. The runner prints
   every expected failure on every run, still goes red if the same suite fails a
@@ -488,8 +499,13 @@ files must be added there too.
   was never committed to this repo** (verified with `git log --all` in Round
   1c) — the blocks are hand-maintained until it is rebuilt from a real spec.
   They have already drifted into two generations (an older greyversusblue.com
-  branding with a guild-board og:image, a newer AsPerMyLessonPlan.com branding
-  with no image) plus one hybrid; 41 tools have no block at all.
+  branding, a newer AsPerMyLessonPlan.com branding) plus one hybrid; 50 tools
+  have no block at all. Since AI-43 (v584) every block names the one social
+  card, `assets/og/toolbook.png` on www.aspermylessonplan.com, and the four
+  `v*-*.html` direction pages name their own; the cards are made by
+  `node Tools/board-check/make-og.mjs` (deterministic, the vendored Barlow, an
+  indexed PNG under 120 KB, not precached), and `check-social.mjs` fails a page
+  whose og:image or twitter:image names a file not in `assets/og/`.
   `node Tools/board-check/check-social.mjs` (read-only, rewrites nothing)
   validates internal consistency and prints the drift — run it before and
   after touching any head section. Rebuilding the generator means first
@@ -709,8 +725,9 @@ files must be added there too.
   load-bearing. Add a new theme at the end.
 - **A flag on a student is `_shared/student-flags.js`** (`StudentFlags`, Path 3 P5, v305): a fixed set,
   *absent today* (a local date, true only that day) and *do not cold call*, in `crh_flags_v1` by the stable id
-  from `crh_students_v1`, never in that sidecar's records (they are rebuilt in ten places). Only 006 writes it;
-  a tool that honours it reads `StudentFlags.read()` and finds the id with `lookupId()`, as 007 does. No share
+  from `crh_students_v1`, never in that sidecar's records (they are rebuilt in ten places). 006 writes it, and
+  since v377 005's live mode writes *absent today* too (by roster id, never for a name two students share; it is
+  in 005's registry `writes`, which check:registry's HANDOFF check holds); a tool that honours it reads `StudentFlags.read()` and finds the id with `lookupId()`, as 007 does. No share
   link, export or handoff carries it, and the rollover deletes it. `npm run test:student-flags`,
   `npm run test:student-flags-smoke`.
 - **Restoring a backup is `_shared/restore-kit.js`** (`RestoreKit`, Path 4 P5, v298): the reader, the

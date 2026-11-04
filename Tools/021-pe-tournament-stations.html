@@ -12,9 +12,14 @@
 <meta property="og:url" content="https://www.aspermylessonplan.com/Tools/021-pe-tournament-stations.html">
 <meta property="og:title" content="PE Tournament & Station Rotation — AsPerMyLessonPlan.com">
 <meta property="og:description" content="Run timed PE station rotations for groups, plus a click-to-advance tournament bracket for the competitive activities inside a unit — all on one projector-friendly screen.">
+<meta property="og:image" content="https://www.aspermylessonplan.com/assets/og/toolbook.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The headline 'Classroom tools that run in your browser' and the name AsPerMyLessonPlan.com beside a drawing of an empty classroom.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="PE Tournament & Station Rotation — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Run timed PE station rotations for groups, plus a click-to-advance tournament bracket for the competitive activities inside a unit — all on one projector-friendly screen.">
+<meta name="twitter:image" content="https://www.aspermylessonplan.com/assets/og/toolbook.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='13' y='4' width='6' height='3' rx='1' fill='%23C43A2F'/%3E%3Cline x1='21.5' y1='8.5' x2='23.5' y2='6.5' stroke='%23C43A2F' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='19' r='9' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cpath d='M16 19V13M16 19l4.5 2.5' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
 <!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block
      (Path 5 P3); opting in here keeps a11y.js from putting its CSS-filter
@@ -54,7 +59,7 @@
     --good: #2f7d4f; --good-bg: #f3f9f5;
     --info-bg: #eef4f9;
     --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13;
-    --stage-bg: var(--accent); --stage-ink: #fff;
+    --stage-bg: var(--accent); --stage-ink: var(--accent-ink); /* AI-57: follows a school accent */
   }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
     --good: #63c08e; --good-bg: #173021;
@@ -94,7 +99,7 @@
   button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
   button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
   button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: var(--accent-ink); }
+  button.danger:hover { background: var(--err); color: var(--status-ink); }
   button.link-btn { background: transparent; color: var(--accent-2); border: none; text-decoration: underline; padding: .2rem 0; font-size: .78rem; }
   button.link-btn:hover { background: transparent; color: var(--accent); }
   button:disabled { opacity: .45; cursor: not-allowed; }
@@ -109,7 +114,7 @@
     background: var(--card); border: 1px solid var(--line-strong); color: var(--muted);
     width: 2.3rem; height: 2.3rem; flex-shrink: 0; border-radius: 6px; font-size: .9rem; padding: 0; cursor: pointer;
   }
-  .remove-row-btn:hover { background: var(--err); color: var(--accent-ink); border-color: var(--err); }
+  .remove-row-btn:hover { background: var(--err); color: var(--status-ink); border-color: var(--err); }
 
   .field-inline { display: flex; gap: .6rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: .6rem; }
   .field-inline > div { flex: 1 1 140px; }
@@ -142,16 +147,17 @@
   .stage-status { font-size: .85rem; opacity: .8; min-height: 1.2em; margin-bottom: 1rem; }
   .stage-controls { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; }
   .stage-controls button { font-size: 1rem; padding: .6rem 1.3rem; min-width: 108px; }
-  .stage-controls button.secondary { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.4); }
-  .stage-controls button.secondary:hover { background: rgba(255,255,255,.22); border-color: #fff; }
-  .stage-controls button.danger { background: rgba(255,255,255,.12); color: #ffd8d0; border-color: #e08a7a; }
-  .stage-controls button.danger:hover { background: var(--err); color: var(--accent-ink); border-color: var(--err); }
+  /* Drawn in --stage-ink, not white: the stage is the accent, so a light school colour takes dark text (AI-57). */
+  .stage-controls button.secondary { background: color-mix(in srgb, var(--stage-ink) 12%, transparent); color: var(--stage-ink); border-color: color-mix(in srgb, var(--stage-ink) 40%, transparent); }
+  .stage-controls button.secondary:hover { background: color-mix(in srgb, var(--stage-ink) 22%, transparent); border-color: var(--stage-ink); }
+  .stage-controls button.danger { background: color-mix(in srgb, var(--stage-ink) 12%, transparent); color: var(--stage-ink); border-color: #e08a7a; }
+  .stage-controls button.danger:hover { background: var(--err); color: var(--status-ink); border-color: var(--err); }
   .stage.is-fullscreen { width: 100vw; height: 100vh; border-radius: 0; display: flex; flex-direction: column; justify-content: center; }
 
   @keyframes stageFlash { 0% { box-shadow: inset 0 0 0 0 rgba(255,255,255,0); } 25% { box-shadow: inset 0 0 0 2000px rgba(255,255,255,.4); } 100% { box-shadow: inset 0 0 0 0 rgba(255,255,255,0); } }
   .stage.flash { animation: stageFlash .65s ease-out; }
 
-  .stage.hicontrast { background: #000; }
+  .stage.hicontrast { background: #000; --stage-ink: #fff; }
   .stage.hicontrast .stage-sub, .stage.hicontrast .stage-status { color: #ffd400; opacity: 1; }
   .stage.hicontrast .stage-time { color: #fff; }
   .stage.hicontrast .station-tile { background: #111; border-color: #333; border-left-color: #ffd400; }
@@ -174,7 +180,7 @@
   .station-tile .next-line strong { color: var(--accent-2); }
   .station-tile.is-rest { border-left-color: var(--good); background: var(--good-bg); }
   .station-tile.is-rest h3 { color: var(--good); }
-  .rest-badge { display: inline-block; background: var(--good); color: var(--accent-ink); border-radius: 999px; padding: .1rem .55rem; font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; margin-bottom: .35rem; }
+  .rest-badge { display: inline-block; background: var(--good); color: var(--status-ink); border-radius: 999px; padding: .1rem .55rem; font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; margin-bottom: .35rem; }
   .stage.is-fullscreen .rest-badge { font-size: clamp(.85rem, 1.5vw, 1.2rem); padding: .3rem 1rem; }
 
   .stage.is-fullscreen .stage-time { font-size: clamp(6rem, 20vw, 15rem); }
@@ -205,7 +211,7 @@
   .score-group { background: var(--card-2); border: 1px solid var(--line); border-radius: 7px; padding: .55rem .7rem; margin-bottom: .5rem; }
   .score-group-here { border-color: var(--accent-2); background: var(--info-bg); }
   .score-group-title { font-weight: 700; font-size: .82rem; margin-bottom: .4rem; }
-  .here-badge { background: var(--accent-2); color: var(--accent-ink); border-radius: 999px; padding: .1rem .5rem; font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; margin-left: .3rem; }
+  .here-badge { background: var(--accent-2); color: var(--accent-2-ink); border-radius: 999px; padding: .1rem .5rem; font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; margin-left: .3rem; }
   .score-row { display: flex; align-items: center; gap: .6rem; margin-bottom: .35rem; }
   .score-row:last-child { margin-bottom: 0; }
   .score-name { flex: 1 1 auto; font-size: .85rem; }

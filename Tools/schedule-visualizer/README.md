@@ -54,6 +54,8 @@ shapes:
   `sv-storage.js` (the storage-headroom warning and the "could NOT be saved" banner; rank 140),
   `sv-autosave.js` (the autosave debounce, the write to localStorage, the Saved indicator and the load with its quarantine copy; rank 140),
   `sv-apply.js` (`applyBlueprintData`: a deserialized plan onto the page, canvas and room registry; rank 140),
+  `sv-recovery-ui.js` (`RecoveryManager`: when to take a recovery point, the crash and unreadable-save banner, restore and the Settings tab's recovery list, over the ring in `sv-recovery.js`; rank 140),
+  `sv-onboarding.js` (`initOnboardingAndHelp`: the welcome dialog on first load, the Help dialog, and their backdrop and Escape dismissal; `openModal`/`closeModal` stay on the page; rank 140),
   `sv-safety.js` (the evacuation cards, one per room, the lockdown maps, one
   per floor, and the door signs, per teacher, through the print kit; Path 11 P4),
   `sv-checks-view.js` (the Schedules tab's checks banner, the group cards' and

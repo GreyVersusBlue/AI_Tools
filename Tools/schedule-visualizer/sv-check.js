@@ -77,6 +77,15 @@ export function passingSec(settings, day, i) {
   return start > end ? start - end : null;
 }
 
+/** True when mod `i`'s end and mod `i + 1`'s start are both typed, back to back
+    or not: passingSec() is null for both "no bell" and "no passing time", and a
+    teacher's move is flagged only for the first (AI-63, review L4). */
+function bellTyped(settings, day, i) {
+  const arr = bellDay(settings, day);
+  const a = arr && arr[i], b = arr && arr[i + 1];
+  return !!(a && b && hhmmSec(a.end) !== null && hhmmSec(b.start) !== null);
+}
+
 /** The days a schedule has: A and B when any group has a B day, else A. */
 export function daysOf(groups) {
   return (groups || []).some(g => g && Array.isArray(g.modsB) && g.modsB.some(x => x)) ? ['A', 'B'] : ['A'];
@@ -275,7 +284,11 @@ export function checkSchedule(groups, opts = {}) {
         if (from === to) continue;
         const window = passingSec(settings, day, i - 1);
         const f = { kind: 'teacher-moves', day, mods: [i, i + 1], teacher: t, rooms: [from, to], where: where(i) };
-        if (window === null) { add(f); continue; }
+        if (window === null) {
+          // Back-to-back times are no passing time, as for a group's walk below: no finding.
+          if (!bellTyped(settings, day, i - 1)) add(f);
+          continue;
+        }
         const sec = typeof opts.walk === 'function' ? opts.walk(from, to) : null;
         if (sec === null || sec === undefined || !Number.isFinite(sec)) continue;
         if (sec > window - limits.passingMarginSec) add({ ...f, sec: Math.round(sec), window, margin: limits.passingMarginSec });
