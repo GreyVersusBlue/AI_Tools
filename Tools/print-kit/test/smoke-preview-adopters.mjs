@@ -28,6 +28,11 @@
 //   - with nothing to print the button says what Print says and opens nothing
 //   - axe finds nothing serious with the preview open
 //
+// 046 (AI-41) is the first adopter whose sheet is a picture: its time-slices sheet is a canvas, put into
+// #printArea as one <img> that fills a page 046 sizes itself. It keeps its own @media print block
+// (`printBlock`), and closing the preview empties #printArea again (`clears`), so its sheet is held to
+// "as on a fresh page" through `rest` instead of to "as it was while open".
+//
 // A new adopter gets an entry in TOOLS; one with several print buttons lists
 // them in `buttons` and gives `pages` as a list in the same order. print() is
 // stubbed. The PDF is Chromium's; nothing was printed on paper.
@@ -46,6 +51,7 @@
 //   Tools/017-gallery-walk-qr.html
 //   Tools/escape-room-builder/monitor.html (019's teacher monitor)
 //   Tools/016-qr-code-generator.html
+//   Tools/046-blank-map-generator.html
 //
 // Exits 1 on any failure.
 
@@ -574,6 +580,38 @@ const TOOLS = [
       { name: 'an inventory of 70', inv: 70, only: 'btn-preview-inventory' },
     ].map(s => ({ ...s, paper: LETTER })),
   },
+  {
+    n: '046', file: '046-blank-map-generator.html', calls: 1, printBlock: true, clears: true, view: { width: 1300, height: 950 },
+    wiring: [/window\.PrintKit\.preview\(\{ area: el\('printArea'\), trigger: el\('btnSlicePreview'\), title, onClose: closed, onPrint: \(\) => \{ printing = true; window\.print\(\); \} \}\)/,
+      /if \(document\.body\.classList\.contains\('printing-slices'\)\) clearSlicesSheet\(\);/],
+    buttons: [{ preview: 'btnSlicePreview', print: 'btnSlicePrint', what: ' slices', label: 'Preview the slices', piece: '#printArea img', rest: true }],
+    store: () => [],
+    // a built-in map, then the slices, all through the page's own controls (046 saves a whole workspace)
+    after: async (page, s) => {
+      await page.selectOption('#baseMapSelect', 'usa-48');
+      await page.click('#btnBaseMap');
+      await page.waitForFunction(() => !document.getElementById('baseCanvas').hidden, null, { timeout: 30000 });
+      if (s.format) await page.selectOption('#pageFormatSelect', s.format);
+      if (s.flip) await page.click('#btnFlipOrientation');
+      if (s.ratio) {
+        await page.evaluate(([w, h]) => {
+          for (const [id, v] of [['customRatioW', w], ['customRatioH', h]]) {
+            const r = document.getElementById(id); r.value = String(v); r.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        }, s.ratio);
+      }
+      await page.click('#btnSliceStart');
+      for (let i = 1; i < s.n; i++) await page.click('#btnSliceAdd');
+      await settle(page, 300);
+    },
+    rest: () => document.getElementById('printArea').children.length + '|' + document.body.classList.contains('printing-slices'),
+    states: [
+      { name: 'two slices on Letter', n: 2, pages: 1, paper: LETTER },
+      { name: 'three slices on Letter turned', n: 3, flip: true, pages: 1, paper: [LETTER[1], LETTER[0]] },
+      { name: 'four slices, widescreen (shown on Letter turned)', n: 4, format: 'widescreen', pages: 1, paper: [LETTER[1], LETTER[0]] },
+      { name: 'five slices, a square custom page (shown on Letter)', n: 5, format: 'custom', ratio: [10, 10], pages: 1, paper: LETTER },
+    ],
+  },
 ].filter(t => !only || t.n === only);
 
 async function open(browser, tool, s, theme, view) {
@@ -643,7 +681,7 @@ const snapshot = (page, tool) => page.evaluate(rest => ({
   dialogs: document.querySelectorAll('dialog.pk-preview, iframe.pk-preview-frame').length,
 }), tool && tool.rest ? String(tool.rest) : null);
 
-console.log('the print preview on 076, 077, 051, 042, 064, 043, 070, 023, 040, 018, 017 and 016 (PrintKit.preview)');
+console.log('the print preview on 076, 077, 051, 042, 064, 043, 070, 023, 040, 018, 017, 016 and 046 (PrintKit.preview)');
 
 const server = await serve(PORT);
 const browser = await launch();
@@ -666,7 +704,7 @@ for (const tool of TOOLS) {
     ok(/PrintKit\.preview\(\{ trigger: els\.previewBtn, onPrint: printSheet \}\)/.test(src), `${T}: it calls PrintKit.preview(), handing over the button and the tool's own print`);
   }
   eq((src.match(/PrintKit\.preview\(/g) || []).length, tool.calls || 1, `${T}: PrintKit.preview() is called from ${tool.calls === 2 ? 'two places' : 'one place'}`);
-  ok(!/@media\s+print/.test(src), `${T}: and the page still has no print block of its own`);
+  if (!tool.printBlock) ok(!/@media\s+print/.test(src), `${T}: and the page still has no print block of its own`);
 
   // ---- the count is the PDF's, in every state --------------------------------
   for (const theme of ['light', 'dark']) {
@@ -707,7 +745,8 @@ for (const tool of TOOLS) {
         eq([shut.dialogs, await page.evaluate(() => document.activeElement.id)], [0, b.preview], `${what}: Escape closes it and the focus is back on the button`);
         if (b.rest) eq(shut.rest, before.rest, `${what}: and what Ctrl+P prints is what it was before the preview`);
         // 023's reteach list borrows #printArea and hands it back, so its sheet is not "as it was while open"
-        const same = x => ({ ...x, dialogs: 0, kids: 0, rest: '', area: T === '023' && b.rest ? '' : x.area });
+        // 046 empties its sheet on closing (`clears`), which `rest` holds instead
+        const same = x => ({ ...x, dialogs: 0, kids: 0, rest: '', area: (T === '023' || tool.clears) && b.rest ? '' : x.area, body: tool.clears ? '' : x.body });
         eq(same(shut), same(open1), `${what}: the sheet, the style sheets and <html> are as they were while it was open`);
         // The paper: open it again and press the preview's own Print, which is
         // how the sheet that was looked at is printed. print() is stubbed, so

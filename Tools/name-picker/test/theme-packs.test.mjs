@@ -6,7 +6,7 @@
 // whitelist, a value that is not a hex colour (url(), var(), expression(), a name), a missing property, a built-in
 // theme's id, a prototype key, too many themes or packs. Pure Node.
 
-import { validatePack, parsePackText, fix, blank, addPack, removePack, resolve, exportPack, packIdOf, packThemeId, MAX_PACKS, MAX_THEMES, labelOf } from '../np-theme-packs.js';
+import { validatePack, parsePackText, fix, blank, addPack, removePack, resolve, exportPack, packIdOf, packThemeId, upgradeThemeId, MAX_PACKS, MAX_THEMES, labelOf } from '../np-theme-packs.js';
 import { THEMES, themeVars } from '../np-themes.js';
 import { createStore, fixBundle } from '../np-store.js';
 
@@ -107,10 +107,10 @@ refuse(p => { p.themes = Array.from({ length: MAX_THEMES + 1 }, (_, i) => i).red
   ok(!!addPack(full, { ...validatePack(good()).pack, name: 'One more' }).error, 'a thirteenth is refused with a sentence');
   ok(!addPack(full, { ...validatePack(good()).pack, name: 'Unit A' }).error, 'but replacing one of the twelve is allowed');
   const res = resolve(a.doc);
-  eq(Object.keys(res), ['pk-ancient-rome-forum', 'pk-ancient-rome-colosseum'], 'resolve() gives each theme under its picked id');
-  eq(res['pk-ancient-rome-forum'].vars['--accent-fill'], rome()['--accent'], 'a theme with no --accent-fill fills with its accent, as themeVars does');
-  eq(res['pk-ancient-rome-forum'].vars, themeVars('classroom'), 'and a pack copy of a built-in theme resolves to exactly the built-in\'s variables');
-  eq(res['pk-ancient-rome-colosseum'].label, 'Colosseum', 'with a label');
+  eq(Object.keys(res), ['pk-ancient-rome.forum', 'pk-ancient-rome.colosseum'], 'resolve() gives each theme under its picked id');
+  eq(res['pk-ancient-rome.forum'].vars['--accent-fill'], rome()['--accent'], 'a theme with no --accent-fill fills with its accent, as themeVars does');
+  eq(res['pk-ancient-rome.forum'].vars, themeVars('classroom'), 'and a pack copy of a built-in theme resolves to exactly the built-in\'s variables');
+  eq(res['pk-ancient-rome.colosseum'].label, 'Colosseum', 'with a label');
   const out = exportPack(a.doc, 'ancient-rome');
   eq(validatePack(out).ok, true, 'an exported pack is a valid pack');
   eq(validatePack(out).pack, validatePack(good()).pack, 'and imports as the same pack');
@@ -140,6 +140,42 @@ refuse(p => { p.themes = Array.from({ length: MAX_THEMES + 1 }, (_, i) => i).red
   eq(createStore({ storage }).get('themePacks'), blank(), 'a poisoned stored value is repaired on read');
   eq(fixBundle({ np_theme_packs: { v: 1, packs: { 'ancient-rome': { name: 'Ok', themes: { a: rome() } } } } }), { np_theme_packs: { v: 1, packs: { 'ancient-rome': { name: 'Ok', themes: { a: rome() } } } } }, 'a backup file\'s packs pass through fixBundle');
   eq(fixBundle({ np_theme_packs: 'x' }), {}, 'and a bad one is skipped');
+}
+
+/* 8. (AI-61, M6) every pack has its own id: names that cut to the same slug, or have no Latin letters, do not
+   replace each other; only the same name replaces. A pack theme's id cannot collide across a dash. */
+{
+  const pk = (name, theme) => ({ ...validatePack(good()).pack, name, themes: { [theme || 'forum']: rome() } });
+  let d = addPack(blank(), pk('Ancient Rome Unit 1')).doc;
+  const two = addPack(d, pk('Ancient Rome Unit 2', 'senate'));
+  eq(two.replaced, false, 'Unit 2 is not a replacement of Unit 1');
+  eq(Object.values(two.doc.packs).map(p => p.name), ['Ancient Rome Unit 1', 'Ancient Rome Unit 2'], 'both packs are kept');
+  ok(Object.keys(two.doc.packs).every(id => /^[a-z0-9][a-z0-9-]{0,13}$/.test(id)), 'their ids are still ones fix() keeps: ' + Object.keys(two.doc.packs));
+  eq(Object.keys(fix(two.doc).packs).length, 2, 'and both survive a reload');
+  const again = addPack(two.doc, pk('Ancient Rome Unit 2', 'baths'));
+  eq([again.replaced, again.packId, Object.keys(again.doc.packs).length], [true, two.packId, 2], 'importing Unit 2 again replaces Unit 2, not Unit 1');
+  eq(Object.keys(again.doc.packs[two.packId].themes), ['baths'], 'with the new file\'s themes');
+  eq(addPack(two.doc, pk('ancient rome  unit 1')).replaced, true, 'the same name in another case or spacing still replaces');
+  d = ['Ρώμη', '日本の歴史', 'История'].reduce((x, n, i) => addPack(x, pk(n, 't' + i)).doc, blank());
+  eq(Object.values(d.packs).map(p => p.name), ['Ρώμη', '日本の歴史', 'История'], 'three non-Latin names make three packs');
+  eq(Object.keys(fix(d).packs).length, 3, 'and all three reload');
+  eq(Object.keys(resolve(d)).length, 3, 'and resolve to three themes');
+  const full = Array.from({ length: MAX_PACKS }, (_, i) => i).reduce((x, i) => addPack(x, pk('Урок ' + 'АБВГДЕЖЗИКЛМ'[i])).doc, blank());
+  eq(Object.keys(full.packs).length, MAX_PACKS, 'twelve packs whose names share a slug all fit');
+  ok(Object.keys(full.packs).every(id => /^[a-z0-9][a-z0-9-]{0,13}$/.test(id)), 'each with an id fix() keeps');
+  // the dash collision: pack "a-b" + theme "c" and pack "a" + theme "b-c"
+  ok(packThemeId('a-b', 'c') !== packThemeId('a', 'b-c'), 'packThemeId does not collide across a dash');
+  const dd = { v: 1, packs: { 'a-b': { name: 'A B', themes: { c: rome() } }, a: { name: 'A', themes: { 'b-c': { ...THEMES.sunset } } } } };
+  eq(Object.keys(resolve(dd)).length, 2, 'both themes resolve, neither hides the other');
+  ok(packThemeId('a'.repeat(14), 'b'.repeat(20)).length <= 40, 'the longest id still fits np_theme\'s 40');
+  // a theme picked on an older page (np_theme "pk-<pack>-<theme>") is still found
+  const old = addPack(blank(), validatePack(good()).pack).doc;
+  eq(upgradeThemeId(old, 'pk-ancient-rome-colosseum'), 'pk-ancient-rome.colosseum', 'an older saved theme id is upgraded');
+  eq(upgradeThemeId(old, 'pk-ancient-rome.forum'), 'pk-ancient-rome.forum', 'a current id is left alone');
+  eq(upgradeThemeId(old, 'medieval'), 'medieval', 'a built-in id is left alone');
+  eq(upgradeThemeId(old, 'pk-gone-forum'), 'pk-gone-forum', 'an id for a removed pack is left alone (the page falls back as before)');
+  eq(upgradeThemeId(dd, 'pk-a-b-c'), 'pk-a.b-c', 'an old id that two themes shared goes to the one the older page drew (the later pack)');
+  eq(upgradeThemeId(null, 'pk-x-y'), 'pk-x-y', 'no packs: unchanged');
 }
 
 console.log(`\ntheme-packs: ${passed} passed, ${failed} failed`);

@@ -81,10 +81,13 @@ works the same way: add the route in Cloudflare and put that address in `config.
 
 ## Not verified (read before trusting it)
 
-- **Nothing here has been deployed.** The Worker's wiring is tested in Node against a fake
-  Durable Object, and the pages against the same rules in a browser, but not on Cloudflare:
-  not `wrangler deploy`, not the migration, not the JSON import bundling, not the
-  free-plan limits under a real rush. Do a dry run with two phones and a few friends
+- **Cloudflare's own service has not been tested.** The Worker's wiring is tested in Node
+  against a fake Durable Object (`worker.test.mjs`), the pages against the same rules in a
+  browser, and the Worker itself under Cloudflare's runtime, workerd, through
+  `wrangler dev --local` (`smoke-workerd.mjs`, `npm run test:conference-workerd`: the bundle,
+  the JSON import, the SQLite migration, a restart on the same storage, PIN, lock-out and CORS;
+  it skips with a message when `wrangler` is not on PATH). Not tested: `wrangler deploy`, the
+  free-plan limits under a real rush, and a header Cloudflare's edge sets (`cf-connecting-ip`). Do a dry run with two phones and a few friends
   before the link goes to families.
 - **Request volume.** Each open family page asks for the state every 15 seconds. 600
   families for ten minutes is about 24,000 requests, inside the free plan's daily Worker and

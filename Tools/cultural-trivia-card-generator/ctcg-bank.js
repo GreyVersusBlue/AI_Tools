@@ -27,7 +27,17 @@
    standard, difficulty, tags, choices, media; points is 0 and there is no
    date. Stored nowhere: the set is built in memory each time this file loads.
    What is NOT in the set: a teacher's own questions ('ctcg_custom_v1') and
-   which built-ins they have hidden; a hidden built-in is still in the set. */
+   which built-ins they have hidden; a hidden built-in is still in the set.
+
+   DIFFICULTY (since v566, for the ready-made Review Game Board, rank 86):
+   TIERS gives every built-in row one of 'easy', 'medium' or 'hard', keyed by
+   the row's id, beside ROWS rather than inside it so items() and the seed set
+   hand back exactly what they did before. The ratings are one reading of how
+   hard a U.S. middle schooler would find each question (HISTORY, v566); no
+   language teacher has reviewed them. A row added to ROWS gets a line here
+   too: tierOf() answers 'medium' for an id it does not know, which is also
+   what a teacher's own question counts as. The tier is not handed to the
+   seed set (its `difficulty` stays blank); ctcg-board.js is its one reader. */
 (function (global) {
   'use strict';
 
@@ -67,6 +77,20 @@
       ['global', 'What is the world’s most widely celebrated New Year based on the lunar calendar, especially in China?', 'Lunar New Year (Chinese New Year)']
   ];
 
+  var TIERS = {
+    b0: 'easy', b1: 'medium', b2: 'hard', b3: 'medium', b4: 'hard',
+    b5: 'easy', b6: 'easy', b7: 'hard', b8: 'medium', b9: 'medium',
+    b10: 'medium', b11: 'easy', b12: 'hard', b13: 'easy', b14: 'medium',
+    b15: 'medium', b16: 'easy', b17: 'easy', b18: 'hard', b19: 'hard',
+    b20: 'medium', b21: 'hard', b22: 'hard', b23: 'easy', b24: 'easy',
+    b25: 'medium', b26: 'easy', b27: 'hard', b28: 'easy', b29: 'medium'
+  };
+
+  /** 'easy', 'medium' or 'hard' for a built-in's id; 'medium' for any other. */
+  function tierOf(id) {
+    return Object.prototype.hasOwnProperty.call(TIERS, id) ? TIERS[id] : 'medium';
+  }
+
   /** The built-ins as 053's page has always held them. A new list of new
       objects each call. */
   function items() {
@@ -81,8 +105,8 @@
   function questions() { return items().map(toQuestion); }
 
   global.CulturalTriviaBank = {
-    SET_ID: SET_ID, CAT_LABELS: CAT_LABELS, ROWS: ROWS,
-    items: items, toQuestion: toQuestion, questions: questions
+    SET_ID: SET_ID, CAT_LABELS: CAT_LABELS, ROWS: ROWS, TIERS: TIERS,
+    items: items, toQuestion: toQuestion, questions: questions, tierOf: tierOf
   };
 
   if (global.QuestionBank && global.QuestionBank.registerSet) {

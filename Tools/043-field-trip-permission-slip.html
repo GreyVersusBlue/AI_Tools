@@ -34,6 +34,7 @@
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <script src="../_shared/qr-scan.js"></script>
 <script src="../_shared/print-kit.js"></script>
+<script src="../_shared/stage.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -272,6 +273,41 @@
   #printArea .pk-header { margin-left: .5in; margin-right: .5in; }
   #printArea .pk-footer { margin-left: .65in; margin-right: .65in; }
   #printArea .nothing-missing { padding: 1in; font-family: Georgia, "Times New Roman", serif; }
+  /* ---- the trip-day view (rank 143) ----
+     A read-only page state for the day itself: a phone in a parking lot, or
+     the board through Stage (_shared/stage.js). It reads the open trip and
+     writes nothing; its tick boxes live in memory for this visit only. */
+  .trip-day { position: fixed; inset: 0; z-index: 60; overflow-y: auto; background: var(--paper); color: var(--ink);
+    padding: 16px 14px 60px; font-size: 1.15rem; line-height: 1.4; }
+  .trip-day[hidden] { display: none !important; }
+  .trip-day .td-inner { max-width: 960px; margin: 0 auto; }
+  .trip-day .td-bar { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: flex-end; margin-bottom: .6rem; }
+  .trip-day .td-bar button { width: auto; min-height: 44px; font-size: 1rem; padding: .5rem .9rem; }
+  .trip-day h2 { font-size: 1.5em; margin: 0 0 .2rem; line-height: 1.2; }
+  .trip-day .td-sub { color: var(--muted); margin: 0 0 .2rem; }
+  .trip-day h3 { font-size: 1.15em; margin: 1.3rem 0 .5rem; border-bottom: 2px solid var(--line-strong); padding-bottom: .2rem; }
+  .trip-day .td-note { color: var(--muted); font-size: .85em; margin: .3rem 0 0; }
+  .trip-day .td-sched { list-style: none; margin: 0; padding: 0; }
+  .trip-day .td-sched li { display: flex; gap: .8rem; padding: .35rem 0; border-bottom: 1px solid var(--line); }
+  .trip-day .td-time { flex: 0 0 5.2rem; font-weight: 700; }
+  .trip-day .td-phones { list-style: none; margin: 0; padding: 0; }
+  .trip-day .td-phones li { padding: .4rem 0; border-bottom: 1px solid var(--line); }
+  .trip-day .td-phones a { font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .trip-day .td-group { border: 1px solid var(--line-strong); border-radius: 8px; padding: .6rem .7rem; margin-bottom: .9rem; background: var(--card); }
+  .trip-day .td-group h4 { font-size: 1.05em; margin: 0 0 .1rem; }
+  .trip-day .td-counts { font-size: .9em; margin: 0 0 .4rem; }
+  .trip-day .td-row, .trip-day .td-head { display: grid; grid-template-columns: 1fr repeat(3, 3.2rem); gap: .3rem; align-items: center; padding: .25rem 0; }
+  .trip-day .td-row { border-top: 1px solid var(--line); }
+  .trip-day .td-head { font-size: .7em; font-weight: 700; color: var(--muted); text-align: center; }
+  .trip-day .td-head span:first-child { text-align: left; }
+  .trip-day .td-name { font-weight: 600; overflow-wrap: anywhere; }
+  .trip-day .td-out { display: inline-block; font-size: .7em; font-weight: 700; color: var(--err); margin-left: .3rem; }
+  .trip-day .td-row label { display: flex; justify-content: center; align-items: center; min-height: 44px; margin: 0; cursor: pointer; }
+  .trip-day .td-row input[type="checkbox"] { width: 28px; height: 28px; margin: 0; cursor: pointer; }
+  .trip-day.is-fullscreen { font-size: 1.5rem; }
+  .trip-day.is-fullscreen .td-inner { max-width: none; }
+  .trip-day.is-fullscreen .td-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); gap: .9rem; }
+  .trip-day.is-fullscreen .td-group { margin-bottom: 0; }
 </style>
 </head>
 <body>
@@ -456,13 +492,14 @@
           to tick for leaving school, arriving, and the trip home, and a column showing whose slip is still out.</p>
         <button type="button" class="secondary full" id="previewHeadcountBtn">Preview headcount checklist</button>
         <button type="button" class="secondary full" id="printHeadcountBtn">Print headcount checklist</button>
+        <p class="hint" style="margin-top:.7rem;">On the day: the schedule, the groups with a box to tick for each
+          student, and the adults&rsquo; phone numbers, in large type for a phone or the board. Nothing ticked there is saved.</p>
+        <button type="button" class="secondary full" id="tripDayBtn">Trip-day view</button>
       </div>
 
       <div class="card">
         <div class="card-title">Trip packet</div>
-        <p class="hint">The rest of the paper a trip needs, from the same details. <strong>The wording of the parent
-          letter is a draft that no one but its author has read: read it, and change anything that is not how your
-          school says it, before it goes home.</strong></p>
+        <p class="hint">The rest of the paper a trip needs, from the same details.</p>
         <label for="schedule">Day schedule (one stop to a line)</label>
         <textarea id="schedule" placeholder="e.g.&#10;8:30 Leave school&#10;10:00 Planetarium show&#10;12:00 Lunch&#10;2:15 Back at school"></textarea>
         <p class="hint">A line that starts with a time puts the time in its own column. With nothing here, the
@@ -495,6 +532,16 @@
 </div>
 
 <div id="printArea" class="pk-paper"></div>
+
+<div class="trip-day" id="tripDay" hidden role="dialog" aria-modal="true" aria-labelledby="tdTitle">
+  <div class="td-inner">
+    <div class="td-bar">
+      <button type="button" class="secondary" id="tdStageBtn">Full screen</button>
+      <button type="button" id="tdCloseBtn">Close trip-day view</button>
+    </div>
+    <div id="tdBody"></div>
+  </div>
+</div>
 
 <div class="cam-overlay" id="scanCamOverlay" hidden>
   <div class="cam-modal" role="dialog" aria-modal="true" aria-label="Scan a returned slip">
@@ -1523,7 +1570,7 @@
      holds a student's health or a parent's number. ---------- */
   function paragraph(text) { return text ? '<p>' + escapeHtml(text) + '</p>' : ''; }
 
-  /* DRAFT wording: nobody but the tool's author has read it. */
+  /* The letter's wording was read and kept by Devon on 2026-11-03. */
   function letterPrintHtml() {
     var when = tripDateLine();
     var go = 'Our class is going on a field trip' + (state.name ? ': ' + escapeHtml(state.name) : '') +
@@ -1954,6 +2001,169 @@
     fillForm();
     renderAll();
   }
+
+  /* ---------- the trip-day view (rank 143) ----------
+     The packet's day-of half, on a screen: the schedule, each chaperone's
+     group as first name and last initial (tagName, as the name tags), the
+     adults' phone numbers from the emergency sheet, and three tick boxes a
+     student (left school, arrived, back). It reads `state` and never writes
+     it: no save(), no storage key. The ticks are `tripDayTicks`, in memory
+     for this visit only, keyed by trip and student, so closing the view and
+     opening it again keeps them and a reload clears them, as the printed
+     headcount sheet keeps nothing. Built from elements and textContent: every
+     string here is something a teacher typed. */
+  var TD_PHASES = [['left', 'Left school'], ['arrived', 'Arrived'], ['back', 'Back']];
+  var tripDayTicks = {};
+  function tdTicksFor(name) {
+    var trip = tripDayTicks[state.name] || (tripDayTicks[state.name] = {});
+    return trip[name] || (trip[name] = { left: false, arrived: false, back: false });
+  }
+  function tdEl(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function tdTel(phone) { return String(phone || '').replace(/[^\d+]/g, ''); }
+  function tdPhoneItem(who, phone, extra) {
+    var li = tdEl('li');
+    li.appendChild(tdEl('strong', '', who));
+    if (extra) li.appendChild(document.createTextNode(' ' + extra));
+    li.appendChild(document.createTextNode(' '));
+    if (phone && tdTel(phone)) {
+      var a = tdEl('a', '', phone);
+      a.href = 'tel:' + tdTel(phone);
+      li.appendChild(a);
+    } else {
+      li.appendChild(tdEl('span', 'td-note', phone || 'no number'));
+    }
+    return li;
+  }
+  function tdCountsText(students) {
+    return TD_PHASES.map(function (p) {
+      var n = students.filter(function (s) { return tdTicksFor(s)[p[0]]; }).length;
+      return p[1] + ' ' + n + ' of ' + students.length;
+    }).join(' · ');
+  }
+  function tdGroup(heading, phone, students) {
+    var box = tdEl('section', 'td-group');
+    box.appendChild(tdEl('h4', '', heading));
+    if (phone) box.appendChild(tdEl('p', 'td-note', phone));
+    var counts = tdEl('p', 'td-counts', tdCountsText(students));
+    counts.setAttribute('aria-live', 'polite');
+    box.appendChild(counts);
+    var head = tdEl('div', 'td-head');
+    head.setAttribute('aria-hidden', 'true');
+    head.appendChild(tdEl('span', '', 'Student'));
+    TD_PHASES.forEach(function (p) { head.appendChild(tdEl('span', '', p[1])); });
+    box.appendChild(head);
+    students.forEach(function (s) {
+      var row = tdEl('div', 'td-row');
+      var nm = tdEl('div', 'td-name', tagName(s));
+      if (!collectedRecord(s).returned) nm.appendChild(tdEl('span', 'td-out', 'no slip'));
+      row.appendChild(nm);
+      TD_PHASES.forEach(function (p) {
+        var lab = tdEl('label');
+        var cb = tdEl('input');
+        cb.type = 'checkbox';
+        cb.checked = tdTicksFor(s)[p[0]];
+        cb.setAttribute('aria-label', tagName(s) + ': ' + p[1]);
+        cb.addEventListener('change', function () {
+          tdTicksFor(s)[p[0]] = cb.checked;
+          counts.textContent = tdCountsText(students);
+        });
+        lab.appendChild(cb);
+        row.appendChild(lab);
+      });
+      box.appendChild(row);
+    });
+    if (!students.length) box.appendChild(tdEl('p', 'td-note', 'No students in this group.'));
+    return box;
+  }
+  function renderTripDay() {
+    var body = document.getElementById('tdBody');
+    body.textContent = '';
+    var title = tdEl('h2', '', state.name || 'Field Trip');
+    title.id = 'tdTitle';
+    body.appendChild(title);
+    if (state.destination) body.appendChild(tdEl('p', 'td-sub', state.destination));
+    var when = [tripDateText(), state.departureTime ? 'leave ' + formatTime(state.departureTime) : '',
+      state.returnTime ? 'back ' + formatTime(state.returnTime) : ''].filter(Boolean).join(' · ');
+    if (when) body.appendChild(tdEl('p', 'td-sub', when));
+
+    body.appendChild(tdEl('h3', '', 'Schedule'));
+    var rows = scheduleRows();
+    if (!rows.length) {
+      if (state.departureTime) rows.push({ time: formatTime(state.departureTime), what: 'Leave school' });
+      if (state.returnTime) rows.push({ time: formatTime(state.returnTime), what: 'Back at school' });
+    }
+    if (rows.length) {
+      var ul = tdEl('ul', 'td-sched');
+      rows.forEach(function (r) {
+        var li = tdEl('li');
+        li.appendChild(tdEl('span', 'td-time', r.time));
+        li.appendChild(tdEl('span', '', r.what));
+        ul.appendChild(li);
+      });
+      body.appendChild(ul);
+    } else {
+      body.appendChild(tdEl('p', 'td-note', 'No schedule yet: type one stop to a line in the Trip packet card.'));
+    }
+
+    var cg = chaperoneGroups();
+    body.appendChild(tdEl('h3', '', 'Phone numbers'));
+    var phones = tdEl('ul', 'td-phones');
+    if (state.chaperoneName || state.chaperonePhone) phones.appendChild(tdPhoneItem(state.chaperoneName || 'Trip leader', state.chaperonePhone, '(trip leader)'));
+    state.chaperones.forEach(function (c) {
+      var n = c.name.trim();
+      if (n) phones.appendChild(tdPhoneItem(n, c.phone, ''));
+    });
+    if (phones.children.length) body.appendChild(phones);
+    else body.appendChild(tdEl('p', 'td-note', 'No trip leader or chaperones added yet.'));
+    if (state.emergencyInstructions && state.emergencyInstructions.trim()) body.appendChild(tdEl('p', 'td-note', state.emergencyInstructions.trim()));
+
+    var total = batchNamesList().length;
+    body.appendChild(tdEl('h3', '', 'Headcount' + (total ? ' (' + total + (total === 1 ? ' student)' : ' students)') : '')));
+    body.appendChild(tdEl('p', 'td-note', 'Ticks are kept only while this page is open; nothing here is saved.'));
+    var groups = tdEl('div', 'td-groups');
+    Object.keys(cg.groups).forEach(function (k) {
+      if (cg.groups[k].students.length) groups.appendChild(tdGroup(k, cg.groups[k].phone, cg.groups[k].students));
+    });
+    if (cg.unassigned.length) groups.appendChild(tdGroup('No chaperone yet', '', cg.unassigned));
+    if (groups.children.length) body.appendChild(groups);
+    else body.appendChild(tdEl('p', 'td-note', 'No students yet: add the class list, then assign each student to a chaperone.'));
+  }
+
+  var tripDayEl = document.getElementById('tripDay');
+  var tdStageBtn = document.getElementById('tdStageBtn');
+  var tdReturnFocus = null;
+  var tripDayStage = window.Stage ? Stage.mount(tripDayEl, {
+    button: tdStageBtn,
+    labels: { enter: 'Full screen', exit: 'Exit full screen' },
+    fullscreenKey: false,
+    presentation: false
+  }) : null;
+  if (!tripDayStage) tdStageBtn.hidden = true;
+  function openTripDay() {
+    tdReturnFocus = document.activeElement;
+    renderTripDay();
+    tripDayEl.hidden = false;
+    document.body.style.overflow = 'hidden';
+    document.getElementById('tdCloseBtn').focus();
+  }
+  function closeTripDay() {
+    if (tripDayStage && tripDayStage.isActive()) tripDayStage.exit();
+    tripDayEl.hidden = true;
+    document.body.style.overflow = '';
+    if (tdReturnFocus && tdReturnFocus.focus) tdReturnFocus.focus();
+  }
+  document.getElementById('tripDayBtn').addEventListener('click', openTripDay);
+  document.getElementById('tdCloseBtn').addEventListener('click', closeTripDay);
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || tripDayEl.hidden || e.defaultPrevented) return;
+    if (tripDayStage && tripDayStage.isActive()) return; // Escape leaves full screen first
+    closeTripDay();
+  });
 
   /* ---------- boot ---------- */
   var current = TripStore.getCurrentName();

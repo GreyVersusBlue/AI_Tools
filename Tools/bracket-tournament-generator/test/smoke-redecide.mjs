@@ -2,9 +2,9 @@
 //
 //   node Tools/bracket-tournament-generator/test/smoke-redecide.mjs        (or: npm run test:bracket-redecide)
 //
-// Five scenarios drive the page the way a teacher would: single elimination (a flipped first-round game clears
+// The scenarios drive the page the way a teacher would: single elimination (a flipped first-round game clears
 // what followed and says how much, with Undo), the first-round consolation bracket following a flipped loser,
-// a round robin with drawn games, Swiss (a flipped earlier round discards the later rounds) and pools (a flipped
+// a flipped quarterfinal taking the third-place pick with it (AI-58), a round robin with drawn games, Swiss (a flipped earlier round discards the later rounds) and pools (a flipped
 // pool game discards the drawn bracket). Every scenario is then run again against the page with one rule broken
 // on purpose (a route rewrites the page's own text) and must fail, and the saved brackets of the v276 page are
 // opened to show nothing was written or drawn that was not asked for. Exits 1 on any failure. Names are invented.
@@ -127,6 +127,23 @@ const SCENARIOS = {
     out.push(['and the game T2 had won there is open again', (await slotTexts(page, CONS, 1)).join() === 'TBD,TBD']);
     return out;
   },
+  async third(page) {
+    // AI-58 (M3): a changed quarterfinal reaches a semifinal, so the third-place pick goes with it and is counted
+    const out = [];
+    await make(page, { name: 'S2b', names: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8'], consolation: true });
+    await playAll(page);                                                // semifinal losers T3 and T7
+    const tp = () => page.evaluate(() => Array.from(document.querySelectorAll('.consolation-section .bracket + .bracket .slot')).map((s) => s.textContent.trim()));
+    out.push(['the third-place game is T3 v T7', (await tp()).join() === 'T3,T7']);
+    await page.evaluate(() => document.querySelector('.consolation-section .bracket + .bracket .slot').click());
+    await settle(page, 150);
+    out.push(['T3 took third', /^Third place: T3\./.test(await page.textContent('.cons-places'))]);
+    await click(page, MAIN, 0, 0, 1);                                   // T2 now wins the first quarterfinal
+    out.push(['the page counted the semifinal, the final and the third-place game', page.messages.some((t) => /also clears 3 later results/.test(t))]);
+    out.push(['third place is not decided any more', /^Third place: not decided yet\./.test(await page.textContent('.cons-places'))]);
+    await click(page, MAIN, 1, 0, 1);                                   // T3 beats T2 in the replayed semifinal
+    out.push(['the third-place game is T2 v T7, and T2 never played it', (await tp()).join() === 'T2,T7' && /^Third place: not decided yet\./.test(await page.textContent('.cons-places'))]);
+    return out;
+  },
   async draws(page) {
     const out = [];
     await make(page, { name: 'S3', type: 'roundrobin', names: ['P1', 'P2', 'P3', 'P4'] });
@@ -183,6 +200,7 @@ const MUTANTS = [
   ['singleSmall', 'captureUndoSnapshot();\n    Bracket.redecideElimination(obj, state.scores, r, m, prefix);', 'captureUndoSnapshot();'],
   ['single', "if (state.winnerSide[(r + 1) + '_' + m] !== idx) makeElimChangeable(slotEl, state, '', r, m, contestant);", "makeElimChangeable(slotEl, state, '', r, m, contestant);"],
   ['consolation', 'if (obj === state && state.consolation) BtTeams.reflow(state, r, m, Bracket);', ''],
+  ['third', 'if (obj === state && state.consolation) BtTeams.reflow(state, r, m, Bracket);', ''],
   ['draws', 'Bracket.resultFromScores(aNum, bNum, !!state.draws)', 'Bracket.resultFromScores(aNum, bNum, false)'],
   ['draws', 'box.disabled = hasDraws();', 'box.disabled = false;'],
   ['draws', 'if (game.winner === side) return;', 'return;'],

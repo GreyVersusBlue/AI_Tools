@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v560';
+const CACHE_VERSION = 'v573';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -124,6 +124,7 @@ const SHELL_URLS = [
   "Tools/002-group-team-generator.html",
   "Tools/group-team-generator/gtg-memory.js",
   "Tools/group-team-generator/gtg-seating.js",
+  "Tools/group-team-generator/gtg-teams.js",
   "Tools/001-hall-pass-log.html",
   "Tools/name-picker/fonts/bungee-latin-400-normal.woff2",
   "Tools/name-picker/fonts/bungee-latin-ext-400-normal.woff2",
@@ -163,6 +164,7 @@ const SHELL_URLS = [
   "Tools/seating-chart/seating-explain.mjs",
   "Tools/seating-chart/seating-room.mjs",
   "Tools/seating-chart/seating-rules.mjs",
+  "Tools/seating-chart/seating-handoff.mjs",
   "Tools/seating-chart/seating-solve.mjs",
   "Tools/seating-chart/seating.mjs",
   "_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css",
@@ -344,6 +346,7 @@ const PRECACHE_URLS = [
   "Tools/command-center/remote.html",
   "Tools/053-cultural-trivia-card-generator.html",
   "Tools/cultural-trivia-card-generator/ctcg-bank.js",
+  "Tools/cultural-trivia-card-generator/ctcg-board.js",
   "Tools/054-current-events-discussion-guide-generator.html",
   "Tools/current-events-discussion-guide-generator/cedg-readability.js",
   "Tools/current-events-discussion-guide-generator/cedg-qsets.js",
@@ -390,6 +393,7 @@ const PRECACHE_URLS = [
   "Tools/002-group-team-generator.html",
   "Tools/group-team-generator/gtg-memory.js",
   "Tools/group-team-generator/gtg-seating.js",
+  "Tools/group-team-generator/gtg-teams.js",
   "Tools/001-hall-pass-log.html",
   "Tools/064-historical-trading-card-maker.html",
   "Tools/historical-trading-card-maker/htcm-store.js",
@@ -412,6 +416,7 @@ const PRECACHE_URLS = [
   "Tools/math-drill-generator/mdg-templates.js",
   "Tools/066-math-find-the-mistake-generator.html",
   "Tools/067-music-sightreading-generator.html",
+  "Tools/music-sightreading-generator/msrg-audio.js",
   "Tools/name-picker/fonts/bungee-latin-400-normal.woff2",
   "Tools/name-picker/fonts/bungee-latin-ext-400-normal.woff2",
   "Tools/name-picker/fonts/outfit-latin-400-normal.woff2",
@@ -546,6 +551,7 @@ const PRECACHE_URLS = [
   "Tools/seating-chart/seating-explain.mjs",
   "Tools/seating-chart/seating-room.mjs",
   "Tools/seating-chart/seating-rules.mjs",
+  "Tools/seating-chart/seating-handoff.mjs",
   "Tools/seating-chart/seating-solve.mjs",
   "Tools/seating-chart/seating.mjs",
   "Tools/084-socratic-seminar-prep-organizer.html",

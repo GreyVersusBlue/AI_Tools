@@ -440,8 +440,9 @@ export function planIcsImport(cal, read) {
    reads that text into the same { ok, events, skipped } readIcs() gives, so planIcsImport()
    maps it onto the calendar exactly as it maps a file: types added and never removed, a
    label kept. It never guesses a date. A line is read only when it has exactly one date or
-   one range of dates; a line with none, with two, with a weekday that does not match its
-   date, with a date that is not real, or with no name beside it is skipped and listed with
+   one range of dates (a number after the dash that is a count or a grade, as in "Oct 1 - 3
+   Hour Early Release", is part of the name); a line with none, with two, with a weekday that
+   does not match its date, with a date that is not real, or with no name beside it is skipped and listed with
    its line number and the reason. A date without a year takes the year that puts it inside
    the school year (`start` to `end`), and is skipped when no year does or when two do. */
 
@@ -459,8 +460,11 @@ const DATE_RE = new RegExp(
     "|(" + MONTH_RE + ")\\s+(\\d{1,2})" + ORD + "(?:,?\\s+(\\d{4}))?" +
   ")(?![\\w/])", "gi");
 const RANGE_SEP = /^\s*(?:-|–|—|to|through|thru)\s*$/i;
-// what may end a range after its separator when the second half is a bare day: "Nov 25-27"
-const BARE_END = new RegExp("^(\\s*(?:-|–|—|to|through|thru)\\s*)(?:(" + WEEKDAY_RE + "),?\\s+)?(\\d{1,2})" + ORD + "(?:,?\\s+(\\d{4}))?(?![\\w/:])", "i");
+// what may end a range after its separator when the second half is a bare day: "Nov 25-27".
+// A number followed by a count or a grade starts the name instead: "Oct 1 - 3 Hour Early
+// Release" and "Sept 3 - 5th Grade Orientation" are one day each (AI-59).
+const NOT_A_DAY = "(?![\\s-]*(?:hours?|hrs?|minutes?|mins?|grade|graders?|periods?|blocks?)\\b)";
+const BARE_END = new RegExp("^(\\s*(?:-|–|—|to|through|thru)\\s*)(?:(" + WEEKDAY_RE + "),?\\s+)?(\\d{1,2})" + ORD + "(?:,?\\s+(\\d{4}))?(?![\\w/:])" + NOT_A_DAY, "i");
 
 function weekdayOf(word) {
   if (!word) return null;

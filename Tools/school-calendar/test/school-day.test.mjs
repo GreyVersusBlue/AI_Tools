@@ -176,6 +176,15 @@ function checks(S) {
     const c = clone(ab); c.abCycle = { enabled: true, anchorDate, anchorLetter };
     eq(S.abLetters(c), weeksLetters(c), `abLetters matches 032 with the anchor at ${anchorDate} ${anchorLetter}`);
   }
+  {
+    // the anchor takes its letter, wherever in the year it is (AI-46; before v573 a school-day anchor after
+    // meta.start showed the other letter, ANCHOR_QUIRK)
+    const at = (anchorDate, anchorLetter) => { const c = clone(ab); c.abCycle = { enabled: true, anchorDate, anchorLetter }; return S.abLetters(c); };
+    eq([at('2026-12-02', 'B')['2026-12-02'], at('2026-12-02', 'B')['2026-12-03']], ['B', 'A'], 'anchored on Dec 2 as B: Dec 2 is B, Dec 3 is A');
+    eq([at('2026-09-14', 'A')['2026-09-14'], at('2026-09-14', 'A')['2026-09-11']], ['A', 'B'], 'anchored on Sep 14 as A: Sep 14 is A, the Friday before is B');
+    eq(at('2026-09-07', 'A')['2026-09-08'], 'A', 'anchored on closed Labor Day as A: the Tuesday after takes A');
+    eq(at('2026-09-05', 'B')['2026-09-08'], 'B', 'anchored on a Saturday as B: the next school day takes B');
+  }
   eq(S.abLetters(bellCal({ cycle: false })), {}, 'cycle off: no letters');
   const snow = clone(ab);
   snow.days['2027-01-12'] = { types: ['holiday'], label: 'Snow Day', note: '', lesson: '' };
@@ -461,7 +470,9 @@ const MUTANTS = [
     "function localISO(d) { return d.toISOString().slice(0, 10); }"],
   ['dates walked in local time', "function msToIso(ms) {\n    var d = new Date(ms);\n    return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate());",
     "function msToIso(ms) {\n    var d = new Date(ms);\n    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());"],
-  ['letter does not slide over a closure', "      if (isSchoolDay(cal, iso)) {\n        map[iso] = letter;", "      if (isWeekday(iso)) {\n        map[iso] = letter;"],
+  ['letter does not slide over a closure', "      if (isSchoolDay(cal, iso)) {\n        if (LETTERS_BEFORE_ANCHOR", "      if (isWeekday(iso)) {\n        if (LETTERS_BEFORE_ANCHOR"],
+  ['ANCHOR_QUIRK back (count strictly between)', "for (var ms = isoToMs(a), end = isoToMs(b); ms < end; ms += DAY_MS) {\n      if (isSchoolDay", "for (var ms = isoToMs(a) + DAY_MS, end = isoToMs(b); ms < end; ms += DAY_MS) {\n      if (isSchoolDay"],
+  ['no letter before the anchor', "if (LETTERS_BEFORE_ANCHOR || iso >= anchor)", "if (iso >= anchor)"],
   ['anchor parity flipped', "% 2 === 0 ? anchorLetter : other;", "% 2 === 1 ? anchorLetter : other;"],
   ['half day counted as half', "      out.days++;\n      if (typesOn(cal, iso).some(isHalfType)) out.half++;",
     "      out.days += typesOn(cal, iso).some(isHalfType) ? 0.5 : 1;\n      if (typesOn(cal, iso).some(isHalfType)) out.half++;"],

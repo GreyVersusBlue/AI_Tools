@@ -312,6 +312,16 @@
   body.live .desk-ctrls, body.live .selnote{display:none !important;}
   body.live .desk .seat{cursor:pointer;}
   .desk.absent .seat{opacity:.4; text-decoration:line-through;}
+  /* What a tap marks in live mode (Devon's P5-route, 2026-11-03): Absent unless the
+     teacher switches; the switch rides into the stage with the exit button. */
+  .live-bar{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; padding:6px 10px;
+    background:var(--card,#fff); border:1px solid var(--line,#ccc); font-size:.9rem;}
+  #floorWrap.is-fullscreen .live-bar{position:sticky; bottom:0; z-index:5; margin-top:8px;}
+  .live-bar fieldset{border:0; margin:0; padding:0; display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px;}
+  .live-bar legend{float:left; font-weight:700; margin-right:6px; padding:0;}
+  .live-bar label{display:inline-flex; align-items:center; gap:4px; cursor:pointer;}
+  .live-bar .live-status{flex:1 1 16rem; min-width:12rem;}
+  .live-bar .live-status.bad{color:var(--err,#a33);}
   .desk.absent::after{content:"Absent"; position:absolute; left:0; right:0; bottom:-14px; text-align:center; font-size:.7rem; font-weight:700; color:var(--err,#a33);}
 
   /* Seat numbers: a sibling of .seat, not inside it, so a screen reader (and
@@ -759,6 +769,16 @@
       <div class="sep"></div>
       <div class="grp">
         <button class="btn sm ghost" id="liveBtn" type="button" title="Put the chart on the projector; tap a seat to mark that student absent today">Live mode</button>
+        <div class="live-bar" id="liveBar" hidden>
+          <fieldset>
+            <legend>Tap marks</legend>
+            <label><input type="radio" name="liveTapMode" value="absent" checked> Absent</label>
+            <label><input type="radio" name="liveTapMode" value="point"> A point (Behavior &amp; Points)</label>
+            <label><input type="radio" name="liveTapMode" value="pass"> A hall pass</label>
+          </fieldset>
+          <button class="btn sm ghost" type="button" id="liveUndoBtn" title="Undo (Ctrl+Z)">&#8630; Undo</button>
+          <span class="live-status" id="liveStatus" role="status" aria-live="polite"></span>
+        </div>
         <button class="btn sm ghost" id="zoomBtn" onclick="toggleZoom()" title="Fit the room to the window, or show it full size">Actual size</button>
         <button class="btn sm ghost" id="mirrorBtn" onclick="toggleMirror()"
                 title="Flip the floor left/right to see it the way students facing the front do">Mirror view</button>
@@ -870,6 +890,7 @@ import { explain } from './seating-chart/seating-explain.mjs';
 import { MARK_KINDS, createRoom, attachSection, detachSection, setRoomDesks, setMark, editMark, removeMark, deleteRoom, desksNear, sectionsIn, syncMarkRules } from './seating-chart/seating-room.mjs';
 import { forShare, subRules, buildRule, addRule, removeRule, pruneRules, describeRule } from './seating-chart/seating-rules.mjs';
 import { mountSaveBar, defaultStorage } from '../_shared/gvb-save.js';
+import { awardPoint, undoPoint, startPass, undoPass } from './seating-chart/seating-handoff.mjs';
 const { getParam, decodeState, clearParam } = window.StateLink;
 
 /* ============================================================
@@ -920,7 +941,10 @@ const undoStack = UndoStack.create({ limit: 60 });   // _shared/undo.js; no redo
 function pushUndo(){ undoStack.push(state); }
 function undo(){
   const prev = undoStack.undo();
-  if (!prev) return;
+  if (!prev) { if (liveOn) liveSay('Nothing to undo.', 'good'); return; }
+  const handed = prev[LIVE_UNDO];
+  delete prev[LIVE_UNDO];
+  if (handed) undoHandoff(handed);
   state = prev;
   if (!sec()) state.active = state.sections[0].id;
   selectedStudent = null;
@@ -2085,6 +2109,7 @@ function isAbsentLive(st){
 function liveTap(deskId){
   const st = studentById(sec().assign[deskId]);
   if (!st) return;
+  if (liveTapMode !== 'absent'){ liveHandoff(st, deskId); return; }
   const id = liveRosterId(st), now = !isAbsentLive(st);
   if (id){
     const doc = StudentFlags.set(readFlags(), id, 'absent', now, StudentFlags.dayKey());
@@ -2094,20 +2119,89 @@ function liveTap(deskId){
     if (now) liveLocal.add(st.id); else liveLocal.delete(st.id);
   }
   renderFloor();
-  say(st.name + (now ? ' marked absent today' : ' marked present') + (id ? '.' : ' for this live session only (not on a saved roster).'), 'good');
+  liveSay(st.name + (now ? ' marked absent today' : ' marked present') + (id ? '.' : ' for this live session only (not on a saved roster).'), 'good');
+  refocusSeat(deskId);
+}
+function refocusSeat(deskId){
   const again = [...document.querySelectorAll('.desk')].find(e => e.dataset.id === deskId);
   if (again) { const b = again.querySelector('.seat'); if (b) b.focus(); }
 }
+/* What a tap marks (Devon's P5-route answer, 2026-11-03, beside his P5-menu "a tap
+   marks absent only"): a switch beside the chart, never a menu on the tap, back to
+   Absent every time live mode starts. A point or a pass is written straight into
+   008's or 001's storage on this device (seating-chart/seating-handoff.mjs, which
+   says how the class is found and when it refuses), and goes on 005's own undo
+   stack: the snapshot carries what was written, and undo() takes it back. */
+let liveTapMode = 'absent';
+const LIVE_UNDO = '__liveHandoff';
+function setLiveTapMode(mode){
+  liveTapMode = ['point', 'pass'].includes(mode) ? mode : 'absent';
+  document.querySelectorAll('input[name="liveTapMode"]').forEach(r => { r.checked = r.value === liveTapMode; });
+}
+document.querySelectorAll('input[name="liveTapMode"]').forEach(r => r.addEventListener('change', () => {
+  if (!r.checked) return;
+  setLiveTapMode(r.value);
+  liveSay(liveTapMode === 'absent' ? 'A tap marks a student absent today.'
+    : liveTapMode === 'point' ? 'A tap gives one point in Behavior & Points. If it is open in another tab, reload it there first.'
+    : 'A tap starts a hall pass. If Hall Pass is open in another tab, reload it there first.', 'good');
+}));
+function liveSay(text, kind){
+  say(text, kind);
+  const out = el('liveStatus');
+  if (out){ out.textContent = text; out.classList.toggle('bad', kind === 'bad'); }
+}
+function liveHandoff(st, deskId){
+  const isPoint = liveTapMode === 'point';
+  if (isAbsentLive(st)){ liveSay(st.name + ' is marked absent today, so no ' + (isPoint ? 'point was given.' : 'pass was started.'), 'bad'); return; }
+  const s = sec();
+  const ctx = { section: { id: s.id, name: s.name, names: s.students.map(x => x.name) }, student: st.name, now: new Date() };
+  const stamp = 'ev' + ctx.now.getTime() + uid();
+  let raw = null;
+  try { raw = readHandoff(isPoint); }
+  catch(e){ liveSay('This browser would not let the page read its saved data, so nothing was written.', 'bad'); return; }
+  const res = isPoint ? awardPoint(raw, { ...ctx, logId: stamp }) : startPass(raw, { ...ctx, passId: stamp });
+  if (!res.ok){ liveSay(res.message, 'bad'); return; }
+  const before = JSON.stringify({ ...state, [LIVE_UNDO]: { kind: isPoint ? 'point' : 'pass', className: res.className, entryId: res.entryId } });
+  try {
+    if (isPoint) window.localStorage.setItem('behavior-points-tracker-sections', res.raw);
+    else window.localStorage.setItem('hall-pass-log-sections', res.raw);
+  } catch(e){ liveSay('Could not save that: the browser refused to store it.', 'bad'); return; }
+  undoStack.pushRaw(before);
+  liveSay(res.message + ' Undo takes it back.', 'good');
+  refocusSeat(deskId);
+}
+function undoHandoff(h){
+  const isPoint = h.kind === 'point';
+  let raw = null;
+  try { raw = readHandoff(isPoint); } catch(e){ /* read as missing below */ }
+  const res = isPoint ? undoPoint(raw, h) : undoPass(raw, h);
+  if (res.ok){
+    try {
+      if (isPoint) window.localStorage.setItem('behavior-points-tracker-sections', res.raw);
+      else window.localStorage.setItem('hall-pass-log-sections', res.raw);
+    } catch(e){ liveSay('Could not undo that: the browser refused to store it.', 'bad'); return; }
+  }
+  liveSay(res.message, res.ok ? 'good' : 'bad');
+}
+/* 008's and 001's keys spelled out at each call, so check:registry can read them. */
+function readHandoff(isPoint){
+  return isPoint ? window.localStorage.getItem('behavior-points-tracker-sections')
+                 : window.localStorage.getItem('hall-pass-log-sections');
+}
+el('liveUndoBtn').addEventListener('click', () => undo());
 function setLive(on){
   liveOn = !!on;
   document.body.classList.toggle('live', liveOn);
   if (!liveOn) liveLocal.clear();
+  setLiveTapMode('absent');
+  el('liveBar').hidden = !liveOn;
+  el('liveStatus').textContent = '';
   renderFloor();
 }
 if (window.Stage) Stage.mount(document.getElementById('floorWrap'), {
   button: document.getElementById('liveBtn'),
   labels: { enter: 'Live mode', exit: 'Exit live mode' },
-  hud: document.getElementById('liveBtn'),   // the exit button rides inside the stage, or it would vanish
+  hud: [document.getElementById('liveBtn'), document.getElementById('liveBar')],   // the exit button and the tap switch ride inside the stage, or they would vanish
   fullscreenKey: false,
   onChange: function(active){ setLive(active); }
 });

@@ -204,6 +204,32 @@
 
   @media (max-width: 780px) { .col-right { position: static; flex-basis: 100%; } }
 
+  /* Project teams (AI-31, rank 111): the editor is built with the DOM, the printed pages by gtg-teams.js. */
+  #pt-body[hidden], #pt-show-btn[hidden] { display: none; }
+  .pt-team { border: 1px solid var(--border); border-radius: 8px; padding: 0.7rem 0.8rem; margin-bottom: 0.7rem; background: var(--surface2); }
+  .pt-team-head { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+  .pt-team-head input { flex: 1; font-weight: 700; }
+  .pt-members { list-style: none; margin: 0 0 0.5rem; padding: 0; }
+  .pt-members li { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; font-size: 0.85rem; padding: 0.2rem 0; border-bottom: 1px dashed var(--border); }
+  .pt-members select, .pt-add select { width: auto; max-width: 11rem; font-size: 0.78rem; padding: 0.25rem 0.4rem; }
+  .pt-off { color: var(--text-dim); font-style: italic; }
+  .pt-add { margin-bottom: 0.5rem; }
+  .pt-team textarea { min-height: 80px; font-size: 0.8rem; }
+  .p-vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .p-blank { display: inline-block; min-width: 2.2in; border-bottom: 1px solid currentColor; height: 1em; vertical-align: baseline; }
+  .p-contract p { font-size: 1rem; line-height: 2.1; margin: 0 0 0.35rem; }
+  .p-sigs { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem 1.8rem; }
+  .p-sigs li { display: flex; flex-direction: column; }
+  .p-sig { display: block; border-bottom: 1px solid currentColor; height: 1.7rem; }
+  .p-signame { font-size: 0.8rem; color: var(--text-dim); }
+  .p-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+  .p-table th, .p-table td { border: 1px solid var(--border); padding: 0.55rem 0.5rem; text-align: left; vertical-align: top; }
+  .p-table td { height: 2.1rem; }
+  .p-box { width: 2.2rem; text-align: center; }
+  .p-check { display: inline-block; width: 1.05rem; height: 1.05rem; border: 2px solid currentColor; border-radius: 2px; }
+  .p-who { width: 22%; } .p-when { width: 18%; }
+  .p-none { color: var(--text-dim); font-style: italic; }
+
   @media print {
     body { background: #fff; color: #000; padding: 0; display: block; }
     header, #config-toolbar, .col-left, .btn-row, #msg { display: none !important; }
@@ -229,6 +255,10 @@
     .sheet-page { border: 1px solid #999; break-after: page; break-inside: avoid; }
     .sheet-page:last-child { break-after: auto; }
     .sheet-task-box { border: 1px solid #999; color: #333; }
+    .p-contract, .p-tasks { color: #000; }
+    .p-signame { color: #333; }
+    .p-table th, .p-table td { border-color: #999; }
+    .p-contract { break-inside: auto; }
 
     .grid-overlay { display: none !important; }
     .grid-summary { color: #333; }
@@ -255,6 +285,7 @@
 <script src="../_shared/seating-read.js"></script>
 <script src="group-team-generator/gtg-memory.js"></script>
 <script src="group-team-generator/gtg-seating.js"></script>
+<script src="group-team-generator/gtg-teams.js"></script>
 </head>
 <body>
 
@@ -388,6 +419,29 @@
       </div>
     </div>
 
+    <div class="card" id="pt-card">
+      <div class="card-title">7 · Project teams (optional)</div>
+      <p class="hint" id="pt-status" style="margin-top:0;" role="status">No project teams yet. Make groups, then start project teams from them: the same students, kept together until you dissolve them.</p>
+      <div class="btn-row" style="margin-top:0.6rem;">
+        <button class="btn-secondary btn-small" id="pt-start-btn" type="button" disabled>Start project teams from the groups on screen</button>
+        <button class="btn-secondary btn-small" id="pt-show-btn" type="button" hidden>Put the teams on screen</button>
+      </div>
+      <div id="pt-body" hidden>
+        <div id="pt-editor"></div>
+        <div class="control-group">
+          <label for="pt-contract">Team contract wording &mdash; {team} and {members} are filled in for each team; a run of underscores becomes a blank to write on</label>
+          <textarea id="pt-contract" spellcheck="false" style="min-height:150px;"></textarea>
+          <div class="btn-row" style="margin-top:0.5rem;"><button class="btn-secondary btn-small" id="pt-contract-reset-btn" type="button">Use the starter wording</button></div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <button class="btn-secondary btn-small" id="pt-print-tasks-btn" type="button">🖨️ Print task lists</button>
+          <button class="btn-secondary btn-small" id="pt-print-contracts-btn" type="button">🖨️ Print team contracts</button>
+          <button class="btn-secondary btn-small" id="pt-dissolve-btn" type="button">Dissolve project teams</button>
+        </div>
+        <p class="hint">Teams stay on this device, in this class only, and are never part of a share link. A team counts once for each school day (Monday to Friday) you open this page, for the students who are not marked absent; days you do not open it are not counted. Move a student between teams by hand. Task lists and contracts are printed and signed on paper; nothing records who signed.</p>
+      </div>
+    </div>
+
     <div class="btn-row" style="margin-top:0;">
       <button class="btn-primary" id="generate-btn" disabled>🎲 Make Groups</button>
       <button class="btn-secondary" id="regenerate-btn" disabled>🔀 Reshuffle</button>
@@ -485,6 +539,16 @@
     seatNearHint: document.getElementById('seat-near-hint'),
     rolesInput: document.getElementById('roles-input'),
     resetRolesBtn: document.getElementById('reset-roles-btn'),
+    ptStatus: document.getElementById('pt-status'),
+    ptStartBtn: document.getElementById('pt-start-btn'),
+    ptShowBtn: document.getElementById('pt-show-btn'),
+    ptBody: document.getElementById('pt-body'),
+    ptEditor: document.getElementById('pt-editor'),
+    ptContract: document.getElementById('pt-contract'),
+    ptContractResetBtn: document.getElementById('pt-contract-reset-btn'),
+    ptPrintTasksBtn: document.getElementById('pt-print-tasks-btn'),
+    ptPrintContractsBtn: document.getElementById('pt-print-contracts-btn'),
+    ptDissolveBtn: document.getElementById('pt-dissolve-btn'),
     explainArea: document.getElementById('explain-area'),
     warnArea: document.getElementById('warn-area'),
     results: document.getElementById('results'),
@@ -614,6 +678,10 @@
     if (els.longMemoryCheck.checked) state.longMemory = true; else delete state.longMemory;
     if (els.seatNearCheck.checked) state.seatNear = true; else delete state.seatNear;
     if (els.rolesInput.value.trim()) state.rolesText = els.rolesInput.value; else delete state.rolesText;
+    /* Project teams (AI-31): written only while teams exist, so a class that never starts any saves the string it always did. */
+    if (state.projectTeams) {
+      if (els.ptContract.value.trim() && els.ptContract.value !== GtgTeams.DEFAULT_CONTRACT) state.projectContract = els.ptContract.value; else delete state.projectContract;
+    }
     if (!Array.isArray(state.absentNames)) state.absentNames = [];
     saveConfig(state.name, state);
   }
@@ -633,6 +701,8 @@
     els.longMemoryCheck.checked = state.longMemory === true;
     els.seatNearCheck.checked = state.seatNear === true;
     els.rolesInput.value = typeof state.rolesText === 'string' ? state.rolesText : '';
+    /* Before onNamesChanged, which saves: the saved contract wording is read back from this box. */
+    els.ptContract.value = typeof state.projectContract === 'string' ? state.projectContract : GtgTeams.DEFAULT_CONTRACT;
     if (!Array.isArray(state.absentNames)) state.absentNames = [];
     keepApart = Array.isArray(state.keepApart) ? state.keepApart : [];
     keepTogether = Array.isArray(state.keepTogether) ? state.keepTogether : [];
@@ -643,6 +713,7 @@
     renderPairHistoryHint();
     renderSeatNearHint();
     clearTransientGroupState();
+    renderProjectTeams();
   }
 
   function newConfig(name) {
@@ -686,9 +757,15 @@
        there but not the shape below is read defensively, one that is absent
        stays absent. */
     if ('roleHistory' in state) state.roleHistory = GtgMemory.normalizeRoles(state.roleHistory);
+    /* Project teams exist only on a class that started some; a bad shape is read as none. */
+    if ('projectTeams' in state) {
+      var pt = GtgTeams.normalize(state.projectTeams);
+      if (pt) state.projectTeams = pt; else delete state.projectTeams;
+    }
     localStorage.setItem(CURRENT_KEY, name);
     refreshConfigSwitcher();
     applyStateToForm();
+    if (booted) countProjectDay();
   }
 
   els.configSelect.addEventListener('change', function () { loadConfigByName(els.configSelect.value); });
@@ -803,6 +880,7 @@
       else state.absentNames.splice(ai, 1);
       moved = true;
     }
+    if (state.projectTeams && GtgTeams.rename(state.projectTeams, from, to)) moved = true;
     ['keepApart', 'keepTogether'].forEach(function (bag) {
       (state[bag] || []).forEach(function (pair) {
         if (!Array.isArray(pair)) return;
@@ -982,6 +1060,13 @@
       if (lines[i]) return lines[i];
     }
     return 'Group ' + (i + 1);
+  }
+
+  /** The label of group `i` of `result` (the groups on screen when omitted): a project team's name for a team still
+      locked from the screen it was put on, otherwise the naming style's. */
+  function labelFor(i, result) {
+    var r = result || lastGroups;
+    return (r && r.labels && r.labels[i]) || groupLabel(i);
   }
 
   els.namingSelect.addEventListener('change', function () {
@@ -1240,7 +1325,12 @@
     var pairStats = countPairingsInGroups(groups);
     var busiest = longMemory ? busiestPairing(groups) : 0;
     var roleResult = assignGroupRoles(groups);
-    setPairMemory(Grouping.history.record(history, groups.map(function (g) {
+    /* A locked project team was counted for today by countProjectDay(); recording it again on each Reshuffle would
+       add a day per press (spec 4.4: once per day). Every other group, locked or not, is recorded as it always was. */
+    var toRecord = groups.filter(function (g, i) {
+      return !(lockedIdxSet[i] && lastGroups && lastGroups.labels && isProjectTeamGroup(lastGroups.labels[i], g));
+    });
+    setPairMemory(Grouping.history.record(history, toRecord.map(function (g) {
       return g.map(function (s) { return keyOfObj.get(s); });
     }), { members: members }));
     if (roleResult) {
@@ -1253,6 +1343,10 @@
       togetherViolations: togetherViolations,
       repeatViolations: repeatViolations,
       floaters: floaters,
+      /* A project team that stayed locked keeps its name; anything dealt again takes the naming style's. */
+      labels: usedLocks && lastGroups && lastGroups.labels ? res.groups.map(function (g, i) { return lockedIdxSet[i] ? lastGroups.labels[i] || null : null; }) : undefined,
+      /* The day and the groups this shuffle put in the pair memory, so Start project teams does not count them again. */
+      recorded: { date: GtgTeams.localDate(new Date()), sig: groupsSig(groups) },
       roles: roleResult ? roleResult.byGroup : null,
       meta: {
         longMemory: longMemory, longMemorySkipped: state && state.longMemory === true && !longMemory, busiestPairing: busiest,
@@ -1469,6 +1563,10 @@
   // compromise, so a teacher can trust it or reshuffle deliberately.
   function buildExplanation(result) {
     var lines = [];
+    if (result.meta.projectTeams) {
+      lines.push('These are your project teams, each locked as a group: Reshuffle leaves a locked team alone. Unlock a team to deal it again with the students who are on no team. Absent students are left out of the display only; they stay on their team.');
+      return lines;
+    }
     lines.push('Strategy: ' + (STRATEGY_LABELS[result.meta.strategy] || 'Random') + '.');
     if (result.meta.usedLocks) {
       lines.push(result.meta.lockedCount + ' group' + (result.meta.lockedCount === 1 ? '' : 's') +
@@ -1572,7 +1670,7 @@
     var cardsHtml = result.groups.map(function (group, i) {
       var avg = showAvg ? avgSkill(group) : null;
       var locked = !!lockedFlags[i];
-      var label = groupLabel(i);
+      var label = labelFor(i, result);
       var gi = 0;
       return '<div class="group-card' + (locked ? ' locked' : '') + '"><h3><span>' + escapeHtml(label) +
         (avg !== null ? '<span class="avg">avg skill ' + avg + '</span>' : '') + '</span>' +
@@ -1593,6 +1691,7 @@
     els.exportRow.style.display = 'flex';
     els.regenerateBtn.disabled = false;
     syncSplitLockUI();
+    syncProjectButtons();
   }
 
   els.results.addEventListener('click', function (e) {
@@ -1652,6 +1751,7 @@
     els.warnArea.innerHTML = '';
     els.results.innerHTML = '<p class="empty-hint">Add names on the left, then click "Make Groups."</p>';
     syncSplitLockUI();
+    syncProjectButtons();
   }
 
   function snapshotForUndo() {
@@ -1683,6 +1783,11 @@
   });
   els.regenerateBtn.addEventListener('click', function () {
     clearMsg();
+    /* Project teams put on screen start with every team locked; with nothing unlocked there is nothing to deal. */
+    if (lastGroups && lastGroups.labels && lockedFlags.length && lockedFlags.every(Boolean)) {
+      showMsg('Every project team is locked, so there is nothing to reshuffle. Unlock a team first.');
+      return;
+    }
     pushUndo();
     var result = makeGroups({ lockedFlags: lockedFlags });
     // A lock request that turned out invalid (e.g. a locked member went
@@ -1708,11 +1813,221 @@
     showMsg('Reverted to the previous shuffle.');
   });
 
+
+  // ── Project teams (AI-31, rank 111; Devon's answers 4.1 to 4.6 of 2026-10-07) ───
+  /* Named teams of the same students, kept in this class's own gtg:data:<class> as state.projectTeams (see
+     gtg-teams.js for the shape and for what "once per day" is read to mean). A team put on screen is a locked group
+     of lastGroups with its name in lastGroups.labels, so Reshuffle, tents, sheets and Copy treat it as they treat any
+     locked group (`previous` and `lock`, 4.5). The editor is built with the DOM, not markup. */
+  var booted = false;
+
+  function activeNameSet() {
+    var set = {};
+    getActiveStudents().forEach(function (s) { set[s.name] = true; });
+    return set;
+  }
+  function rosterNameSet() {
+    var set = {};
+    students.forEach(function (s) { set[s.name] = true; });
+    return set;
+  }
+
+  /** The groups' names, in order, as one string: what makeGroups() recorded, compared at Start. */
+  function groupsSig(groups) {
+    return JSON.stringify(groups.map(function (g) { return g.map(function (s) { return s.name; }); }));
+  }
+
+  /** Whether a group on screen named `label` is a project team with exactly these students. */
+  function isProjectTeamGroup(label, group) {
+    var pt = label && state && state.projectTeams;
+    if (!pt || !pt.teams) return false;
+    var names = group.map(function (s) { return s.name; }).sort();
+    return pt.teams.some(function (t, i) {
+      return (t.name || 'Team ' + (i + 1)) === label && JSON.stringify(t.members.slice().sort()) === JSON.stringify(names);
+    });
+  }
+
+  /** Records today in the pair memory once for each project team, if it is a school day not yet counted.
+      With opts.alreadyRecorded (Start, on groups a shuffle put in the memory today) the day is marked counted and
+      nothing is recorded a second time. */
+  function countProjectDay(opts) {
+    if (!state || !state.projectTeams) return false;
+    var pt = GtgTeams.normalize(state.projectTeams);
+    if (!pt) return false;
+    var today = GtgTeams.localDate(new Date());
+    if (!GtgTeams.isDue(pt, today)) return false;
+    if (!(opts && opts.alreadyRecorded)) {
+      var active = activeNameSet();
+      var names = GtgTeams.dayGroups(pt, function (n) { return !!active[n]; });
+      if (!names.length) return false;
+      var keyed = keyStudents(students), keyOfName = {};
+      keyed.members.forEach(function (m) { if (!keyOfName[m.name]) keyOfName[m.name] = m.key; });
+      setPairMemory(Grouping.history.record(keyed.history, names.map(function (g) {
+        return g.map(function (n) { return keyOfName[n]; });
+      }), { members: keyed.members }));
+    }
+    pt.counted = today;
+    pt.days += 1;
+    state.projectTeams = pt;
+    /* An Undo snapshot taken before this would put the memory back without today's count. */
+    undoStack.clear();
+    saveCurrentConfig();
+    renderPairHistoryHint();
+    renderProjectStatus();
+    return true;
+  }
+
+  function renderProjectStatus() {
+    var pt = state && state.projectTeams;
+    if (!pt) {
+      els.ptStatus.textContent = 'No project teams yet. Make groups, then start project teams from them: the same students, kept together until you dissolve them.';
+      return;
+    }
+    els.ptStatus.textContent = pt.teams.length + ' project team' + (pt.teams.length === 1 ? '' : 's') + ' since ' + (pt.since || 'an earlier day') +
+      '. Counted in the pairing memory for ' + pt.days + ' school day' + (pt.days === 1 ? '' : 's') + (pt.counted ? ', last on ' + pt.counted : '') + '.';
+  }
+
+  function syncProjectButtons() {
+    els.ptStartBtn.disabled = !(lastGroups && lastGroups.groups.some(function (g) { return g.length; }));
+  }
+
+  function projectEl(tag, props, kids) {
+    var el = document.createElement(tag);
+    Object.keys(props || {}).forEach(function (k) {
+      if (k === 'text') el.textContent = props[k]; else if (k === 'class') el.className = props[k]; else el.setAttribute(k, props[k]);
+    });
+    (kids || []).forEach(function (c) { el.appendChild(c); });
+    return el;
+  }
+
+  function projectSelect(label, first, options, onPick) {
+    var sel = projectEl('select', { 'aria-label': label });
+    sel.appendChild(projectEl('option', { value: '', text: first }));
+    options.forEach(function (o) { sel.appendChild(projectEl('option', { value: String(o.value), text: o.text })); });
+    sel.addEventListener('change', function () { if (sel.value !== '') onPick(sel.value); });
+    return sel;
+  }
+
+  function renderProjectTeams() {
+    var pt = state && state.projectTeams;
+    els.ptBody.hidden = !pt;
+    els.ptShowBtn.hidden = !pt;
+    els.ptContract.value = (state && state.projectContract) || GtgTeams.DEFAULT_CONTRACT;
+    renderProjectStatus();
+    syncProjectButtons();
+    els.ptEditor.textContent = '';
+    if (!pt) return;
+    var roster = rosterNameSet(), active = activeNameSet(), onTeam = {};
+    pt.teams.forEach(function (t) { t.members.forEach(function (n) { onTeam[n] = true; }); });
+    pt.teams.forEach(function (team, ti) {
+      var nameInput = projectEl('input', { type: 'text', value: team.name, maxlength: '60', 'aria-label': 'Name of project team ' + (ti + 1) });
+      nameInput.addEventListener('input', function () { team.name = nameInput.value; saveCurrentConfig(); });
+      var list = projectEl('ul', { class: 'pt-members' });
+      team.members.forEach(function (n) {
+        var li = projectEl('li');
+        var note = !roster[n] ? ' (not on the roster)' : (!active[n] ? ' (absent today)' : '');
+        li.appendChild(projectEl('span', { text: n + note, class: note ? 'pt-off' : '' }));
+        var moves = [];
+        pt.teams.forEach(function (o, oi) { if (oi !== ti) moves.push({ value: oi, text: 'To ' + (o.name || 'Team ' + (oi + 1)) }); });
+        moves.push({ value: -1, text: 'Take off the teams' });
+        li.appendChild(projectSelect('Move ' + n + ' to another team', 'Move…', moves, function (v) {
+          state.projectTeams = GtgTeams.move(state.projectTeams, n, parseInt(v, 10));
+          saveCurrentConfig(); renderProjectTeams();
+        }));
+        list.appendChild(li);
+      });
+      var free = students.filter(function (s) { return !onTeam[s.name]; }).map(function (s) { return { value: s.name, text: s.name }; });
+      var kids = [projectEl('div', { class: 'pt-team-head' }, [nameInput]), list];
+      if (free.length) {
+        var add = projectSelect('Add a student to ' + (team.name || 'team ' + (ti + 1)), 'Add a student…', free, function (v) {
+          state.projectTeams = GtgTeams.move(state.projectTeams, v, ti);
+          saveCurrentConfig(); renderProjectTeams();
+        });
+        kids.push(projectEl('div', { class: 'pt-add' }, [add]));
+      }
+      var tasks = projectEl('textarea', { 'aria-label': 'Tasks for ' + (team.name || 'team ' + (ti + 1)) + ', one per line', placeholder: 'One task per line, for the printed task list', spellcheck: 'false' });
+      tasks.value = team.tasks;
+      tasks.addEventListener('input', function () { team.tasks = tasks.value; saveCurrentConfig(); });
+      kids.push(tasks);
+      els.ptEditor.appendChild(projectEl('div', { class: 'pt-team' }, kids));
+    });
+  }
+
+  els.ptStartBtn.addEventListener('click', function () {
+    if (!state || !lastGroups) return;
+    var old = state.projectTeams;
+    var rec = lastGroups.recorded;
+    var alreadyRecorded = !!(rec && rec.date === GtgTeams.localDate(new Date()) && rec.sig === groupsSig(lastGroups.groups));
+    if (old && !confirm('Replace the ' + old.teams.length + ' project team' + (old.teams.length === 1 ? '' : 's') + ' you have with the groups on screen? Students who are absent today are left out of the new teams, and the pairing memory is not changed.')) return;
+    var tasksOf = {};
+    if (old) old.teams.forEach(function (t) { tasksOf[t.name] = t.tasks; });
+    var pt = GtgTeams.fromGroups(lastGroups.groups.map(function (g, i) {
+      return { label: labelFor(i), members: g.map(function (s) { return s.name; }) };
+    }), GtgTeams.localDate(new Date()));
+    if (!pt) return;
+    pt.teams.forEach(function (t) { if (tasksOf[t.name]) t.tasks = tasksOf[t.name]; });
+    if (old) { pt.since = old.since || pt.since; pt.counted = old.counted; pt.days = old.days; }
+    state.projectTeams = pt;
+    saveCurrentConfig();
+    renderProjectTeams();
+    countProjectDay({ alreadyRecorded: alreadyRecorded });
+    showMsg('Project teams started: ' + pt.teams.length + '. They stay until you dissolve them.');
+  });
+
+  els.ptShowBtn.addEventListener('click', function () {
+    var pt = state && state.projectTeams;
+    if (!pt) return;
+    var active = activeNameSet(), byName = {}, placed = {};
+    students.forEach(function (s) { if (!byName[s.name]) byName[s.name] = s; });
+    var groups = [], labels = [];
+    pt.teams.forEach(function (t, i) {
+      var g = t.members.filter(function (n) { return active[n] && byName[n]; });
+      g.forEach(function (n) { placed[n] = true; });
+      if (!g.length) return;
+      groups.push(g.map(function (n) { return byName[n]; }));
+      labels.push(t.name || 'Team ' + (i + 1));
+    });
+    if (!groups.length) { showMsg('None of the project teams has a student who is here today.'); return; }
+    var floaters = getActiveStudents().filter(function (s) { return !placed[s.name]; });
+    clearMsg();
+    pushUndo();
+    lockedFlags = groups.map(function () { return true; });
+    renderResults({ groups: groups, violations: [], togetherViolations: [], repeatViolations: [], floaters: floaters, labels: labels, roles: null, meta: { strategy: 'random', projectTeams: true } });
+  });
+
+  els.ptContract.addEventListener('input', function () { if (state) saveCurrentConfig(); });
+  els.ptContractResetBtn.addEventListener('click', function () {
+    els.ptContract.value = GtgTeams.DEFAULT_CONTRACT;
+    saveCurrentConfig();
+  });
+  els.ptPrintTasksBtn.addEventListener('click', function () {
+    var pt = state && state.projectTeams;
+    if (!pt) return;
+    printAlternateView('Task lists', function () { return pt.teams.map(GtgTeams.taskSheetHtml).join(''); }, true);
+  });
+  els.ptPrintContractsBtn.addEventListener('click', function () {
+    var pt = state && state.projectTeams;
+    if (!pt) return;
+    var template = els.ptContract.value.trim() ? els.ptContract.value : GtgTeams.DEFAULT_CONTRACT;
+    printAlternateView('Team contracts', function () {
+      return pt.teams.filter(function (t) { return t.members.length; }).map(function (t) { return GtgTeams.contractHtml(template, t); }).join('');
+    }, true);
+  });
+  els.ptDissolveBtn.addEventListener('click', function () {
+    if (!state || !state.projectTeams) return;
+    if (!confirm('Dissolve the project teams for "' + state.name + '"? The teams and their task lists are deleted, so this can’t be undone. The pairing memory keeps what they earned, and your contract wording is kept for the next project.')) return;
+    delete state.projectTeams;
+    saveCurrentConfig();
+    renderProjectTeams();
+    showMsg('Project teams dissolved.');
+  });
+  document.addEventListener('visibilitychange', function () { if (booted && !document.hidden) countProjectDay(); });
+
   // ── Export ───────────────────────────────────────────────────────────────
   function groupsAsText() {
     if (!lastGroups) return '';
     var text = lastGroups.groups.map(function (group, i) {
-      return groupLabel(i) + '\n' + group.map(function (s, mi) {
+      return labelFor(i) + '\n' + group.map(function (s, mi) {
         var role = lastGroups.roles && lastGroups.roles[i] ? lastGroups.roles[i][mi] : '';
         return '  ' + s.name + (role ? ' — ' + role : '');
       }).join('\n');
@@ -1751,7 +2066,7 @@
 
   function tentsHtml(result) {
     return '<div class="tent-sheet">' + result.groups.map(function (group, i) {
-      var panel = tentPanelHtml(group, groupLabel(i), result, i);
+      var panel = tentPanelHtml(group, labelFor(i, result), result, i);
       return '<div class="tent-card"><div class="tent-half tent-flip">' + panel + '</div>' +
         '<div class="tent-fold"></div><div class="tent-half">' + panel + '</div></div>';
     }).join('') + '</div>';
@@ -1760,7 +2075,7 @@
   // ── Group sheets: one printable page per group with room for the task ───
   function groupSheetHtml(result) {
     var pages = result.groups.map(function (group, i) {
-      return '<div class="sheet-page"><h2>' + escapeHtml(groupLabel(i)) + '</h2>' +
+      return '<div class="sheet-page"><h2>' + escapeHtml(labelFor(i, result)) + '</h2>' +
         '<div class="sheet-table-line">Table / Station: ______________</div>' +
         '<ul class="sheet-names">' + group.map(function (s, mi) {
           var role = result.roles && result.roles[i] ? result.roles[i][mi] : '';
@@ -1775,8 +2090,8 @@
     return pages.join('');
   }
 
-  function printAlternateView(title, buildHtml) {
-    if (!lastGroups || !lastGroups.groups.length) { showMsg('Make groups before printing.'); return; }
+  function printAlternateView(title, buildHtml, noGroups) {
+    if (!noGroups && (!lastGroups || !lastGroups.groups.length)) { showMsg('Make groups before printing.'); return; }
     var savedResults = els.results.innerHTML, savedWarn = els.warnArea.innerHTML, savedExplain = els.explainArea.innerHTML;
     els.printTitle.textContent = title + ' — ' + new Date().toLocaleDateString();
     els.warnArea.innerHTML = '';
@@ -1940,7 +2255,7 @@
       v: 1,
       title: (state && state.name) ? state.name : '',
       groups: lastGroups.groups.map(function (g, i) {
-        return { label: groupLabel(i), members: g.map(function (st) { return st.name; }) };
+        return { label: labelFor(i), members: g.map(function (st) { return st.name; }) };
       })
     };
   }
@@ -2029,6 +2344,8 @@
      NEXT rename visible — and follows one already made if the names in the box
      have moved on since this class last saw them. */
   followRenames();
+  booted = true;
+  countProjectDay();
 
   importSharedGrouping();
 

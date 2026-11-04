@@ -5,13 +5,17 @@
 //
 // Three things are held here.
 //
-//   1. The letter of every school day is the one the month grid has always shown: the new
-//      module (scv-weeks.js) is compared with a copy of the page's OLD function, which is
-//      written below in local-time Date arithmetic exactly as the page had it, and with
-//      properties that do not come from either: the letters alternate on school days and only
-//      on school days, a weekend or a no-school day never takes one and never advances the cycle.
-//   2. The one quirk of that rule (ANCHOR_QUIRK) is pinned by name, so that the day somebody
-//      fixes it, on purpose, this suite says so.
+//   1. The letter of every school day follows Devon's rule (2026-10-07): the anchor date takes
+//      the letter the teacher gave it, and every school day after it alternates from there.
+//      That is checked against properties that do not come from the module: the anchor (or,
+//      when it is not a school day, the first school day after it) has the letter given, the
+//      letters alternate on school days and only on school days, a weekend or a no-school day
+//      never takes one and never advances the cycle. The module is also compared with a copy
+//      of the page's OLD function (local-time Date arithmetic exactly as the page had it): the
+//      two agree wherever the old rule was right, and differ by every letter exactly where it
+//      had ANCHOR_QUIRK.
+//   2. ANCHOR_QUIRK, fixed in v573 (AI-46), is pinned by name the other way round: the
+//      calendars that had it now show the anchor with its own letter.
 //   3. Dates are calendar dates. Every date is checked against integer arithmetic that never
 //      touches Date, and the file runs itself again under four zones, two of which change
 //      their clocks at midnight, so a daylight-saving week cannot move a day.
@@ -131,6 +135,12 @@ function oldAbMap(cal) {
    where the old function was sound. The properties below are made everywhere. */
 const OLD_ORACLE_SOUND = ['UTC', 'America/New_York', 'Pacific/Auckland'].includes(process.env.TZ);
 
+/* ANCHOR_QUIRK, the old rule's one fault: the walk's first day (the calendar's start, the
+   anchor being later) was a school day, so the count "strictly between" missed it. Where that
+   held, the old page gave every day the other letter. Judged without the module. */
+const hadQuirk = (cal) => cal.abCycle.anchorDate > cal.meta.start && cal.meta.start <= cal.meta.end && isSchool(cal, cal.meta.start);
+const flipAll = (m) => Object.fromEntries(Object.entries(m).map(([d, l]) => [d, l === 'A' ? 'B' : 'A']));
+
 /* whole school years, each with its breaks somewhere else */
 const YEARS = {
   'a year that starts on a Monday, winter break at Dec 24-31': {
@@ -191,8 +201,22 @@ for (const [name, y] of Object.entries(YEARS)) {
       const got = W.abLetters(cal);
       const keys = Object.keys(got).sort();
 
-      // it is what the month grid has always shown
-      if (OLD_ORACLE_SOUND) eq(got, oldAbMap(cal), `${label}: the same letters the page gave before`);
+      // the old page's letters where its rule was right; every one flipped where it had ANCHOR_QUIRK
+      if (OLD_ORACLE_SOUND) {
+        const old = oldAbMap(cal);
+        if (hadQuirk(cal)) eq(got, flipAll(old), `${label}: ANCHOR_QUIRK fixed, every letter the other one from the old page's`);
+        else eq(got, old, `${label}: the same letters the page gave before (no quirk here)`);
+      }
+      // the anchor takes its letter: the first school day on or after it, if it is in the walk
+      {
+        const lo0 = anchor < cal.meta.start ? anchor : cal.meta.start, hi0 = anchor > cal.meta.end ? anchor : cal.meta.end;
+        const firstOnOrAfter = range(anchor, hi0).find((d) => isSchool(cal, d));
+        if (firstOnOrAfter) eq(got[firstOnOrAfter], letter, `${label}: the first school day on or after the anchor (${firstOnOrAfter}) is ${letter}`);
+        if (isSchool(cal, anchor)) eq(got[anchor], letter, `${label}: the anchor date itself is ${letter}`);
+        // days before it alternate backward from it (AI-46-1's default)
+        const beforeDays = range(lo0, anchor).filter((d) => d < anchor && isSchool(cal, d));
+        if (beforeDays.length) ok(beforeDays.every((d) => got[d]), `${label}: school days before the anchor keep a letter`);
+      }
 
       // the keys are the school days of the range, and nothing else
       const lo = anchor < cal.meta.start ? anchor : cal.meta.start, hi = anchor > cal.meta.end ? anchor : cal.meta.end;
@@ -237,21 +261,47 @@ eq(W.abLetters(makeCal({ ...YEARS['a leap year (Feb 29, 2028 a school day)'], an
   ok(noLeap['2028-02-29'] === undefined && noLeap['2028-02-28'] !== noLeap['2028-03-01'], 'with Feb 29 closed, Mar 1 follows Feb 28 in the cycle');
 }
 
-/* ── 2. the one quirk, by name ─────────────────────────────────────────── */
-// ANCHOR_QUIRK: when the range's first day is a school day and the anchor is LATER in it, the
-// anchor date shows the opposite of the letter given. Pinned because a calendar saved by the old
-// page prints this way; fixing it flips every letter of such a calendar.
+/* ── 2. ANCHOR_QUIRK, fixed (v573, AI-46) ───────────────────────────────── */
+// Before v573, when the range's first day was a school day and the anchor fell LATER in it, the
+// anchor date showed the opposite of the letter given. Devon asked for it fixed (2026-10-07):
+// the anchor takes its letter and the days after it follow.
 {
   const y = YEARS['a year that starts on a Monday, winter break at Dec 24-31'];
   const first = W.abLetters(makeCal({ ...y, anchor: '2026-08-31', letter: 'A' }));
   eq(first['2026-08-31'], 'A', 'anchored on the first day: the anchor shows the letter given');
   const later = W.abLetters(makeCal({ ...y, anchor: '2026-09-14', letter: 'A' }));
-  eq(later['2026-09-14'], 'B', 'ANCHOR_QUIRK: anchored on a later school day, the anchor date shows the OTHER letter');
-  eq(later['2026-09-15'], 'A', 'ANCHOR_QUIRK: and the cycle runs on from there');
+  eq(later['2026-09-14'], 'A', 'ANCHOR_QUIRK fixed: anchored on a later school day, the anchor date shows the letter given');
+  eq(later['2026-09-15'], 'B', 'and the next school day is the other letter');
+  eq(later['2026-09-11'], 'B', 'and the Friday before it, a school day, is the other letter too (alternating backward)');
+  const laterB = W.abLetters(makeCal({ ...y, anchor: '2026-09-14', letter: 'B' }));
+  eq(laterB['2026-09-14'], 'B', 'and a B anchor on the same day is B');
+  ok(Object.keys(later).every((d) => laterB[d] && laterB[d] !== later[d]), 'every school day of a B anchor is the other letter from the A anchor on the same date');
+  // an anchor on a Saturday gives its letter to the Monday after it
+  const sat = W.abLetters(makeCal({ ...y, anchor: '2026-09-12', letter: 'B' }));
+  eq(sat['2026-09-12'], undefined, 'a Saturday anchor carries no letter itself');
+  eq(sat['2026-09-14'], 'B', 'the Monday after a Saturday anchor takes its letter');
+  // an anchor on a closed Monday (Labor Day) gives its letter to the Tuesday
+  const closed = W.abLetters(makeCal({ ...y, anchor: '2026-09-07', letter: 'A' }));
+  eq(closed['2026-09-07'], undefined, 'a closed-day anchor carries no letter itself');
+  eq(closed['2026-09-08'], 'A', 'the next school day takes its letter');
+  // the late-year anchor, near the end of the walk
+  const june = W.abLetters(makeCal({ ...y, anchor: '2027-06-10', letter: 'B' }));
+  eq(june['2027-06-10'], 'B', 'an anchor in the last week shows its letter');
+  eq(june['2027-06-11'], 'A', 'and the last day follows it');
   const before = W.abLetters(makeCal({ ...y, anchor: '2026-08-17', letter: 'A' }));
   eq(before['2026-08-17'], 'A', 'anchored before the range, the anchor shows the letter given (the range is widened to take it in)');
   eq(before['2026-08-31'], W.abLetters(makeCal({ ...y, anchor: '2026-08-17', letter: 'A' }))['2026-08-31'], 'and the walk is the same each time');
   eq(before['2026-08-18'], 'B', 'the day after it is the other letter');
+}
+{
+  // leap years: an anchor on Feb 29 and one just after it
+  const y = YEARS['a leap year (Feb 29, 2028 a school day)'];
+  const leap = W.abLetters(makeCal({ ...y, anchor: '2028-02-29', letter: 'B' }));
+  eq([leap['2028-02-28'], leap['2028-02-29'], leap['2028-03-01']], ['A', 'B', 'A'], 'anchored on Feb 29, 2028 as B: Feb 28 A, Feb 29 B, Mar 1 A');
+  const closedLeap = W.abLetters(makeCal({ ...YEARS['a leap year with Feb 29 a no-school day'], anchor: '2028-02-29', letter: 'A' }));
+  eq([closedLeap['2028-02-29'], closedLeap['2028-03-01']], [undefined, 'A'], 'anchored on a closed Feb 29: Mar 1 takes the letter');
+  const mar = W.abLetters(makeCal({ ...y, anchor: '2028-03-01', letter: 'A' }));
+  eq([mar['2028-02-29'], mar['2028-03-01']], ['B', 'A'], 'anchored on Mar 1, 2028: Feb 29 is the letter before it');
 }
 
 /* ── 3. the year grid's badge ──────────────────────────────────────────── */

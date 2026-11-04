@@ -9,6 +9,440 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-46: 032's A/B anchor date takes its own letter (rank 138, `ANCHOR_QUIRK` fixed, 2026-11-04, `CACHE_VERSION` v573)
+
+(The commits say v570, then v572; AI-36 and AI-41 took v570 to v572 on `main` first, so this is v573.)
+
+Devon, 2026-10-07 (answer 4.7): "you should be able to set any particular day as A or B, and then all FOLLOWING days should
+follow the a/b pattern". The old rule lined the walk up from the count of school days strictly *between* the range's first day
+and the anchor, so when that first day was itself a school day and the anchor was later, the anchor showed the other letter
+(anchor 2026-09-14 'A' showed B). The AI-31-032 worker found it on 2026-10-07 and pinned it as `ANCHOR_QUIRK`.
+
+- **The fix**, in both copies of the rule: `Tools/school-calendar/scv-weeks.js` `abLetters()` (032's month grid, year grid,
+  printed weeks and pacing) and `_shared/school-day.js` `abLetters()` (loaded by 001, 004, 010, 035, 036, 044, 045 and 090). The count
+  now runs from the first day *inclusive* up to the anchor; an anchor on a weekend or a closed day gives its letter to the next
+  school day; the dead `anchor < lo` branch went. `scv_calendar_v1` is unchanged (010 reads it raw).
+- **Who sees a change.** A saved calendar whose anchor is a later school day than its first day, and whose first day is a school
+  day: every letter of it flips. That is the fix asked for. An anchor on or before the first day, or a year whose first day is not
+  a school day, gives the same letters as before (the suite proves both halves against a copy of the old page's function).
+- **Worker call, AI-46-1 (default):** school days *before* the anchor keep the alternation, run backward from it, as they always
+  had. Devon did not say. The other answer ("no letter before the date") is one constant, `LETTERS_BEFORE_ANCHOR`, in each of
+  the two files; set both false and the walk still steps over those days, so nothing after the anchor moves. A mutant in
+  `school-day.test.mjs` ("no letter before the anchor") and the weeks-core property "school days before the anchor keep a
+  letter" fail when it is false, so switching it means changing those two on purpose.
+- **Tests.** `smoke-weeks-core.mjs`: the old-page comparison is kept where the old rule was right and becomes "every letter
+  flipped" exactly where it had the quirk (judged without the module); every year-and-anchor case also asserts the anchor (or
+  the first school day after it) has its letter; the `ANCHOR_QUIRK` pins became assertions of the new rule (later anchor, B
+  anchor, Saturday, Labor Day, last week, Feb 29 2028 open and closed, Mar 1) in UTC, New York, Havana and Auckland. Run
+  against the old module it fails (11+ lines), and against the "no letter before" mutant too. `school-day.test.mjs` gains four
+  anchor checks and two mutants (the quirk put back, no letter before the anchor), 53/53 caught; one existing mutant's text was
+  re-cut to the new line.
+- **`golden-old-views.json` was not regenerated:** its A/B capture anchors on 2026-08-31, the seeded year's first day, where the
+  old rule was already right, and `test:school-calendar-weeks` passed 386/386 with it untouched. No other suite's fixture anchors
+  later than its year's first day.
+- **Not verified:** no saved real calendar was opened; nothing printed on paper.
+
+---
+
+---
+
+## AI-41: 046's time-slices sheet in the print preview (rank 60, 2026-11-04, `CACHE_VERSION` v572)
+
+(My commit says v571; AI-36 took v571 on `main` first, so the merge moved mine to v572.)
+
+Path 20 P4's last open piece (rank 60; the way back from Timeline Builder was closed, not built, Devon, 2026-11-03). The
+row said the kit's `preview()` did not cover 046's canvas export; it does, once the canvas is a picture in `#printArea`.
+`_shared/` is unchanged.
+
+- **What it is.** The Time slices card has **Preview the slices** in front of **Print the slices**. Both build the sheet as
+  before (`buildSlicesCanvas()`, its `sliceSheetBuilding` saving guard untouched) and put it in a new `#printArea`, a direct
+  child of `<body>`, as one `<img>`, under `body.printing-slices`; a print rule like the map export's shows only that. Print
+  prints it; Preview opens `PrintKit.preview({ area, trigger, title, onClose, onPrint })`, whose Print prints the same sheet.
+  Closing the preview, or `afterprint`, empties `#printArea` and takes the class off, so Ctrl+P prints the map again. The
+  slices Print used to borrow the single-map `#printExportStage`; it no longer does. Save the slices as PDF is unchanged.
+- **What I decided.** (1) A Preview button in front of Print, not Print opening the preview: the entry's words were "make
+  Print open the preview like the other print tools", and every other tool does it with a button in front (CLAUDE.md's
+  recipe), so the convention won. (2) **The paper.** `setPage()` takes only named papers, and 046's page is its own: the
+  Letter shape is exactly Letter, but a widescreen or custom sheet prints on an 11 in-long-edge page of its own shape
+  (11 x 6.19 in for 16:9). The preview shows every sheet on Letter turned the sheet's way (landscape when wider than tall),
+  fitted by the same `object-fit: contain` as print, and for a non-Letter shape the title says "shown on Letter (it prints
+  on its own 11 × 6.19 in page)". Making the kit take an arbitrary page size would have meant changing `_shared/print-kit.js`,
+  which this session could not touch; a later one could, and then the title line goes. (3) The kit's `@page` style element
+  (`#pk-page-style`) is removed right after `setPage()`: the preview reads the page from the kit's memory, not the element,
+  and leaving it would have fought `setPrintPageSize()`'s rule for which page 046 prints on.
+- **Tests.** `test:blank-map-slices-smoke` (68, was 44): the button, one page, Letter, the image filling the page, the
+  title, Escape, Close, the preview's Print once, Chromium's PDF of it one page, `afterprint`, Print the slices through
+  the same `#printArea`, nothing saved but `updatedAt` (the sheet build's own `save()`), the map as it was, and the
+  widescreen title. `test:preview-adopters` has a 046 entry (147 checks: Letter, Letter turned, widescreen and a square
+  custom page, light and dark, the preview's count against Chromium's PDF, axe, a phone); the suite gained two flags,
+  `printBlock` (046 keeps its own `@media print`) and `clears` (its sheet is emptied on close and held by `rest`).
+- **Not verified.** Paper: nothing was printed. A real print dialog's own preview of the custom-size page was not looked at.
+
+## AI-36: 007's seat equity joins by student id, not name (2026-11-04, `CACHE_VERSION` v571)
+
+Source: audit entry AI-36 (the Selector's `BACKLOG-AUDIT-2026-11-04.md`, split from AI-23), the gap BACKLOG's Path 15 P2 "Not done" and P3
+notes named. No ranked row. (The commit says v570; AI-49 took v570 on `main` first, so this is v571.)
+
+- `np-seat-equity.js`'s `joinCallRates(positions, equityRows, idOf, rosterName)` now joins a seat to an equity row by the student's Class
+  Roster Hub id first and by the loose name only when no id joins them. `idOf` is the same `(name, rosterName) => id | null` np-dashboard.js
+  and np-rollup.js already take; the page passes `lookupId(rosterIds, n, r || currentRosterName)`, the dashboard's own. `seatEquityReport`
+  takes `idOf` as a fourth argument and passes it through. A seated "Bobby Chen" now joins a roster "Robert Chen" when the sidecar gives both
+  one id, and `unmatched` lists only seats that match no id and no name.
+- *Call taken:* both sides are resolved against the picker's roster name, not the chart section's name. The section was picked to be this
+  roster, and resolving both sides the same way means two "Sam"s in two classes cannot resolve differently on each side. A seat with an
+  id that no row carries falls back to the name, so a row whose spelling matched before still matches. Two rows with one id: the first wins,
+  the rule the name map already had.
+- The summary's "could not be matched by name" says "by roster id or name" now, since that is what failed.
+- Held by `test:name-picker` (smoke.mjs, 331 cases, 14 new): a preferred name and a respelled name join by id through the real `lookupId`
+  over a real sidecar; without `idOf` the old join; the original nine-seat fixture joins identically either way. With the id step reverted
+  six of the new cases fail. Nothing stored changed (no key, no `np_daily`/history format), and the phone remote is untouched.
+- Not verified: no browser suite renders the seat section of the Equity tab. A scratch page check (seeded chart, sidecar and history)
+  was run once by hand; it is not committed.
+
+## AI-49: 043's trip-day view (rank 143, 2026-11-03, `CACHE_VERSION` v570)
+
+(My commit says v567; AI-58 (+AI-59), AI-47 and AI-56 took v567 to v569 on `main` first, so the merges moved mine to v570.)
+
+The last screen piece of 043's trip packet, the "Trip-day mode" BACKLOG had deferred since the first round. The draft flag on the parent
+letter, the entry's first half, was already gone (AI-31 (answers), 357854b, v562), so this session built only the view.
+
+- **What it is.** A **Trip-day view** button under the headcount buttons in the Chaperones card opens a fixed overlay (`#tripDay`, a
+  dialog) in large type: the trip's name, place and day; the day schedule (`scheduleRows()`, the same reader as the printed schedule, and the
+  leave and return times when there is none); the trip leader's and each chaperone's number as a `tel:` link, as on the emergency sheet; the
+  emergency instructions; and each chaperone's group, then "No chaperone yet", with each student as first name and last initial (`tagName()`,
+  the name tags' rule), a "no slip" mark from the collection tracker and three tick boxes, left school, arrived and back, with a count line per
+  group. **Full screen** puts the overlay on stage with `Stage.mount` (no hotkey, so typing F in the editor does nothing); in full screen the
+  groups lay out side by side and the type is larger. Close and Escape put it away and give focus back.
+- **Nothing is stored.** The view reads `state` and never calls `save()`; the ticks are a page variable keyed by trip and student, so closing
+  and reopening keeps them and a reload clears them, as the printed headcount sheet keeps nothing. No new key, so no registry row. The
+  overlay is built from elements and `textContent` only (no new markup sink).
+- **What I decided.** Where the button lives (the Chaperones card, not the toolbar, so the phone toolbar is untouched); that the "no slip"
+  mark is shown (it is the headcount sheet's Slip column, and a teacher at the bus wants it); that a chaperone with no phone says "no number".
+  No print rule of its own: `print-area.css` already takes everything but `#printArea` off the paper, and the mutant that deleted a rule
+  for it survived, so the rule was dead and went.
+- **Tests.** `test:permission-slip-trip-day` (`smoke-trip-day.mjs`, port 8687): contents, ticks and storage (byte-for-byte before and after,
+  and after a reload), Stage in and out, focus, Escape, print media, a hostile student and chaperone name, an empty trip, axe on the overlay
+  in light and dark, no sideways scroll at 360 px, names at least 16 px and 44 px tick targets, and 13 mutants each caught by its scenario.
+  Not tried on a real phone or a projector.
+
+## AI-56 (+AI-61): 037's item analysis reads a "Max", a numbered header and a stray word right; 007's theme packs each keep their own id (2026-11-03, `CACHE_VERSION` v569)
+
+Source: the AI_Tools review of 2026-11-04, findings **H4** and **M6** (audit entries AI-56 and AI-61 in the Selector's
+`BACKLOG-AUDIT-2026-11-04.md`). No ranked row. (The first commit says v567; AI-58 and AI-47 took v567 and v568 on `main` first, so this is v569.)
+
+- **H4, three ways a common paste gave the wrong questions (`gd-items.js`, from d90158e).** (1) `MAX_ROW` matched the start of the cell, so a
+  student called "Max Chen" became the points-possible row: Q1 was out of 1 and both real 2s were refused. The label must now be the whole
+  first cell ("Points possible", "Max", "Max points", "Out of:", "Total", "Possible"...). A student whose first cell is exactly "Max" is
+  still read as the points row, as before; the hint on the page names "Points possible", which is what a teacher types. (2) A header of
+  question numbers (`Name, 1, 2, 3`) was a student, since `PasteTable.isHeaderShape` takes words only. 037 now reads a first row as a header
+  when its first cell names a name column (Name, Names, Student, Student name, ID, #...) and the rest count 1, 2, 3... from 1; `_shared/paste-table.js`
+  is unchanged (it ran beside other workers, and the rule is 037's). A student "Ada" who scored 1, 2, 3 is still a student. (3) One "ab" in a
+  first column of numbers made the column names, so Q1 vanished and every later question was relabelled. The first column is names now only
+  when more of its cells are words than numbers (or a points row has a label there, as before); a stray word is named in `problems` under Q1.
+- **M6, packs replaced each other (`np-theme-packs.js`, from 970ffda).** `packIdOf` cut names to 14 characters, so "Ancient Rome Unit 1" and
+  "Unit 2" were one id and importing the second deleted the first (with "Replaced"); every name with no Latin letters was `pack`. `addPack`
+  now replaces only a pack with the same name (case and spacing aside) and gives any other the slug, or the slug cut short with `-2`, `-3`...
+  if that is taken. The ids are the same shape as before, so a stored `np_theme_packs` loads unchanged and needed no migration.
+  `packThemeId` joined pack and theme with a dash, so pack `a-b` + theme `c` and pack `a` + theme `b-c` were one id; it is a dot now, which
+  neither id can hold. **That changes the stored `np_theme` of anyone using a pack theme**, so `upgradeThemeId()` reads the old dash form as the
+  new id at load (007's one-line change); where two themes shared an old id it picks the one the old page drew (the later pack).
+- **Tests, each seen failing first.** `test:gd-items`: cases 15-17 (Max Chen, six points-row labels, numbered and non-numbered headers, the
+  stray "ab", a mostly-names column) and four new mutants. `test:name-picker-theme-packs`: case 8 (Unit 1 and 2, re-import replaces Unit 2,
+  three non-Latin names, twelve packs on one slug, the dash pair, `upgradeThemeId`); 9 of its assertions failed on the old module.
+  `test:name-picker-theme-packs-smoke`: an older saved `pk-ancient-rome-forum` still paints its theme and is saved back as the new id, and a
+  second pack whose name makes the same slug is imported, not a replacement; 5 failed on the old page.
+- **Not verified.** No real gradebook export was pasted; the header-word list is a guess at what exports put over a name column (a header
+  over question numbers that is not in the list, such as "Learner", is still read as a student). No pack was moved between two devices.
+
+## AI-47: 067's click track (rank 96, the metronome half, 2026-11-03, `CACHE_VERSION` v568)
+
+(My commit says v567; AI-58 (+AI-59) took v567 on `main` first, so the merge moved mine to v568.)
+
+Devon, 2026-10-07: "We should build a metronome." The tempo field on 067's rhythm tab ("♪ = 92", saved in `msrg_settings_v1`
+since P15) had been labelled "for the display only"; it now drives a click track. The reference pitch (the other half of rank 96)
+is AI-48's and was not touched; rank 96 is rewritten to it.
+
+- **The module.** `Tools/music-sightreading-generator/msrg-audio.js`, a classic script setting `globalThis.MsrgAudio`, no DOM, no
+  storage. `parseTempo(text)` reads the number after an "=" (otherwise the first number), clamps it to 30-240 and says whether it
+  did; no number is `null`. `createMetronome({ ctx, bpm, beatsPerMeasure, countIn, onBeat, ... })` is the look-ahead scheduler: a
+  25 ms timer schedules every click due in the next 0.12 s of `ctx.currentTime`, each at `start + k * 60/bpm` (computed from the
+  start, never accumulated, so a ten-minute run does not drift and a late timer does not move a click), and tells the indicator of a
+  beat on the first wake at or after its audio time. A click is a 50 ms sine blip, 1760 Hz and louder on beat 1 of each measure,
+  1320 Hz otherwise (`CLICK`). `stop()` clears the timer, disconnects and stops the clicks already in the graph, and is a no-op twice.
+  `audioContext()` is the page's one context, made on the first call, which the page makes only inside the Play click. AI-48 is meant
+  to use it rather than write its own.
+- **The page.** On the rhythm tab's display card: **Play click track** / **Stop click track** (`aria-pressed`), **Count in one measure
+  first** (saved as `rhythm.countIn` in the existing settings record; not in the share link, which lists its fields), numbered beat
+  circles (beat 1 double-bordered, the sounding one filled and enlarged, the count-in dashed; `aria-hidden`, since a live region per
+  beat would talk over the class) with "Measure 2 of 4, beat 3" beside them, the playing measure outlined, and a polite status line
+  that says what is playing, why it stopped, that a typed 300 plays at 240, or that a field with no number plays nothing. The track
+  stops on a new pattern, a tempo or time-signature change, the sight-reading tab, a hidden page and `pagehide`. Under
+  `prefers-reduced-motion` the enlarging pulse is off; the fill, border and text stay. The label now reads "Tempo (printed, and used by
+  the click track)". The measure counter wraps over the pattern's measures; the track loops until stopped. The big single-measure
+  display does not follow the beat (my call: it is stepped by hand for call-and-response, and moving it would take that away).
+- **Print is unchanged.** The controls sit inside `.wrap`, which 067's print block already hides; the print areas were not edited. A scratch run against `main` (seeded `Math.random`, both tabs, locked and not, light and a dark pref)
+  hashed the print areas' HTML, a print-media screenshot and Chromium's PDF: identical in all eight states. `audit-print --check --only 067` passes.
+- **Tests.** `test:music-metronome` (pure Node, a fake AudioContext and a hand-turned timer: click times at 92, 120 and 137 bpm,
+  an irregular timer, a ten-minute run, accents in 4/4 and 3/4, the count-in, the indicator never ahead of the sound, stop, the
+  context made once and only on demand; 18 mutants, every one caught). `test:music-metronome-smoke` (port 8688, a fake AudioContext in
+  the page whose clock the suite sets: 45 checks, from no context at load to every stop trigger, reduced motion, print media and no new
+  key). Deliberately breaking the page's stop-on-new-pattern and its reduced-motion rule turned the smoke red.
+- **Not verified.** Nobody has heard it: Huginn has no speakers in the loop. Whether the clicks are loud enough over a band room,
+  whether 1760/1320 Hz is a good pair, and whether a real Chromium's `AudioContext` keeps the beat when the tab is busy are all for a
+  person with ears (Devon, afterwards). Safari's `webkitAudioContext` is handled in code and untried.
+
+## AI-58 (+AI-59): a stale third place in 020, and "Oct 1 - 3 Hour Early Release" in 032 (review M3, M4, 2026-11-03, `CACHE_VERSION` v567)
+
+Two confirmed bugs from the AI_Tools review of 2026-11-04 (`~/projects/AI_Tools-REVIEW-2026-11-04.md`, M3 and M4).
+
+- **020 (M3).** `BtTeams.reflow()` took the third-place pick away only when the changed match was a semifinal
+  (`r === slots.length - 3`), but changing any earlier match clears the semifinal it fed, so that semifinal's loser can
+  change. In an 8-team consolation bracket with T3 third, giving the first quarterfinal to T2 and replaying the semifinal
+  as T3 over T2 named T2 third, a team that never played the game, and the "also clears N later results" confirm left
+  the pick out of N. Now `r <= slots.length - 3`; the confirm counts it through `decidedCount()`, which already did. An
+  earlier change in a half whose semifinal is not decided yet loses nothing real: a pick needs both semifinals decided.
+  `smoke-redecide.mjs` gained the `third` scenario (red before the fix: the count said 2, and T2 was named) and a mutant.
+- **032 (M4).** `readTable()`'s bare range end ("Nov 25-27") read the number in `Oct 1 - 3 Hour Early Release` and
+  `Sept 3 - 5th Grade Orientation` as the range's last day, and skipped `Aug 31 – 6th Grade Orientation` and
+  `Jan 5 - 2 Hour Delay` as ending before they start. **The call, mine, reversible:** a bare end followed by
+  hour(s)/hr(s)/minute(s)/min(s)/grade/grader(s)/period(s)/block(s), with spaces or a hyphen between, is not a range end,
+  so the line is one day and the number starts its name. It is a word list, so a count it does not name ("Oct 1 - 3 Day
+  Weekend") is still read as a range; I left "day" off because "Nov 25 - 27 Days Off" is as likely a line. To widen it,
+  add a word to `NOT_A_DAY` in `scv-ics.js` and a line to the test. `table.test.mjs` gained six lines (five counts and
+  grades, and "Nov 25 - 27 Thanksgiving Break" still a range; red before the fix) and a mutant (9/9 caught).
+- **Not verified:** no real district PDF was pasted; the word list is the review's examples plus my guess at the rest.
+
+## AI-31: 053's ready-made Review Game Board (rank 86, 2026-11-03, `CACHE_VERSION` v566)
+
+(My commits say v562; v562 to v565 were taken on `main` first, by AI-31 (answers), AI-53, AI-55 and AI-22 (route), so the merges moved mine to v566.)
+
+Devon decided on 2026-11-03 (`DEVON-ANSWERS-2026-11-03.md`, 86-1, 86-2 and 053-1, binding): build the ready-made board; its columns are 053's own
+built-in categories (Hispanic World, Francophone World, Global Culture); its points are graduated by difficulty, easy low to hard high (053's
+own "difficulty tiers" idea); and 053 keeps its categories by broad region, as built.
+
+- **What it is.** A fourth tab on 053, **Review game board**: a preview of the board (three categories across, five clues down, each with its points
+  and tier) and **Save board file**, which saves `cultural-trivia-board.json` through `ExportKit.download`. On 030 the teacher presses **Import JSON**
+  and the file opens as a board named "Cultural Trivia" with two teams. **030 did not change**: the file is the shape its Export JSON writes, and
+  its `normalizeBoard()` cleans it as it cleans any import. Nothing new is stored on 053 (no key, no registry row); the board is worked out each time.
+- **The route, and why not the two that existed.** 053's link ("Send to Quiz / Review Game Board") and its bank file both put a teacher's own
+  questions into 030's *question bank*, which has no columns or board; a board by link would be a new entry in `_shared/handoffs.js` and a
+  receiver on 030, and `_shared/` was out of this session's scope. A board file reaches 030 through a route 030 already has. That is my call;
+  a link route is listed as not done in 053's BACKLOG section.
+- **The tiers: my reading.** 053's built-ins carried no difficulty. I added one, by hand, rather than deriving it from something measurable
+  (question length, answer length), because nothing measurable on these thirty rows tracks how hard a question is. `TIERS` in `ctcg-bank.js`
+  gives each built-in `easy`, `medium` or `hard` by its id, beside `ROWS` so `items()` and the seed set are unchanged; the rating is how hard a
+  U.S. middle schooler would likely find it (Día de los Muertos, the Louvre and origami easy; Catalan, Pamplona, France's motto, Rwanda,
+  Diwali's three faiths and chanoyu hard). Each category has 3 or 4 easy, 3 or 4 medium and 3 hard. **No language teacher has reviewed them**,
+  and the card says so. A teacher's own question has no tier and counts as medium. The tier is not handed to the seed set's `difficulty`.
+- **The rule** (`Tools/cultural-trivia-card-generator/ctcg-board.js`, pure): per category, in `CAT_LABELS` order, the questions on show (hidden
+  built-ins left off, a teacher's own included) are put in order easy, medium, hard, keeping the bank's order inside a tier; five are taken at
+  places `round(k(n-1)/4)`, k = 0..4, so the easiest is the 100 and the hardest the 500; a column of five or fewer takes them all; an empty one is
+  left off. Points are 100 to 500, the scale 030 itself gives a seed question pulled onto a board. The built-in board is b0 b6 b8 b2 b7, b11 b16
+  b14 b12 b19, b23 b26 b25 b21 b27. The same questions always make the same board; hiding a built-in or adding one's own is how a teacher changes
+  it. The page's category filter does not apply to the board.
+- **Tests.** `test:trivia-board-logic` (pure Node: tiers, the pinned board, `spread()`, hidden and own questions, the file's shape; five breaks of
+  `ctcg-board.js` on purpose, each caught) and `test:trivia-board` (port 8679, 21 assertions: the preview, the file equal to `build()` of the
+  page, storage untouched, a hidden built-in and a markup question of one's own, everything hidden, axe on the tab, and 030's real Import JSON
+  taking the file: title, the three categories, the fifteen clues word for word at their points, two teams, fifteen cells). Two breaks of the page on purpose were each caught by it: the preview's question written with `innerHTML`, and the board built
+  with the hidden built-ins in. Also green: `trivia-bank-file`, `handoffs.test`, `question-bank.test`, `seed-sets`, `send-to`, `share-rollout`,
+  `test:theme` (both), `test:a11y -- --only 053`, `sw-tiers`, and every guard.
+- **Found:** BACKLOG's Tier 1 cell said 32 ranked rows after the answers entry below; `main` had 31 (counted from the table). With row 86 gone it is 30.
+- **Not verified.** No teacher has used the tab or played the board; the tiers are unreviewed; no file was opened on another device. The suite's
+  first run once ended with "Target page, context or browser has been closed" at the 030 step; the next runs were green and I did not find a cause.
+## AI-22: a point (008) and a hall pass (001) from 005's live mode (rank 37, Path 14 P5, 2026-11-03, `CACHE_VERSION` v565)
+
+Devon answered P5-route on 2026-11-03 (`~/projects/DEVON-ANSWERS-2026-11-03.md`, binding): 005's live mode writes 008's and 001's storage
+directly on the same device, the way 003 writes 037's. In the same answers he kept P5-menu ("No, a tap marks absent only"), P5-seat (stays and
+dims), P5-redo (no buttons) and P5-003 (003's undo listed, not built).
+
+- **The call, mine, reversible: a switch, not a menu.** The two answers pull apart (a tap gives a point, and a tap only marks absent), so I took the
+  most conservative reading that does both: a **"Tap marks: Absent / A point (Behavior & Points) / A hall pass"** radio group in a bar that rides
+  into the stage beside the chart with the exit button (`Stage.mount`'s `hud`), reached by Tab and moved by the arrow keys, with a visible status
+  line (`#liveStatus`, `role="status"`) and an Undo button. **Absent is the default and is put back every time live mode starts**, so a tap at rest
+  does exactly what it did in v377, and no menu ever opens on a tap. To reverse it: a different control (say, a long press) is a change to `liveTap()`
+  and the bar in 005, nothing else; the writes are in one pure module.
+- **The writes.** `Tools/seating-chart/seating-handoff.mjs` (pure; `awardPoint`, `undoPoint`, `startPass`, `undoPass`) takes the stored string and
+  returns the string to store, and the page does the one `getItem`/`setItem`, with the literal keys at each call so `check:registry` reads them.
+  A point is what 008's default +1 chip gives (`delta` 1, `tagLabel` "Manual", category Other, the student's team for today included, as `applyTap()`
+  and `BPTeams.award()`); a pass is 001's `signOutStudent()` with the section's armed destination (Restroom, 001's first default, on a section with
+  none). The class is the one pointed at the chart section (008's `seatingSectionId`), then the one with the section's name, then the one following
+  the roster of that name. **Refused, nothing written, each with a sentence:** a store that does not parse or has a shape it does not know (a
+  `version`, `v` or `schema` field, which neither tool writes today, reads as a newer tool); a store with classes but none that matches (no stray
+  copy is made); a student the class does not list; a student marked absent today; and, for a pass, a student already out, someone else out under
+  "one out at a time", a weekly budget used up (counted as 001 counts it, from Sunday), or a name on 001's approval list (001 asks there; a projected
+  chart should not). **A store with no classes at all** gets one, named after the section and holding its students, as 003 makes 037's first
+  assignment.
+- **Undo** is 005's own stack: the snapshot pushed carries what was written (`__liveHandoff`), and `undo()` takes it back with 008's `undoLogEntry()`
+  arithmetic or 001's sign-out undo, then drops the field. A point archived or undone in 008, or a pass signed back in on 001, is not undone from
+  here, and the status says so. Ctrl+Z works on stage as it does off it.
+- **008 fix found on the way.** 008's activity feed said "Nothing logged yet today" on every load whatever the log held, until the next tap, so a
+  point given from the chart (or any point from an earlier visit) had no Undo button in 008 until then. `applyStateToForm()` now calls
+  `renderActivity()`. `smoke-teams.mjs`'s golden (`golden-no-teams.json`, `start.feed`) had recorded the empty feed over a seeded log; that one field
+  is updated to what the page now draws, every other piece of the golden unchanged.
+- **Suites.** `test:seating-handoff` (pure, 54) and `test:seating-live-handoff` (port 8682, the batch's assignment for this session): both writes, 008
+  and 001 opened afterwards and showing them, old and missing and newer data, the refusals, Undo by button and by Ctrl+Z, the switch's default and
+  reset, the keyboard. Six mutants of the module each failed the pure suite.
+- **Not done, recorded.** 005's row in `_shared/tool-registry.js` should say `writes: ['behavior-points-tracker-sections', 'hall-pass-log-sections']`
+  (it is documentation there: `check:registry` passes, since both keys have an owner); this session ran in parallel with others and was told not to
+  touch `_shared/`, so it is on rank 37. 008 and 001 do not reload their own key on a `storage` event, so a copy of either open in another tab keeps
+  its old class and its next save writes over the chart's point or pass; the status tells the teacher to reload it, and nothing else handles it.
+- **Not verified.** No teacher has used it on a projector or a touch panel; no real tablet; the bar's layout on a phone-width stage was not looked at.
+
+## AI-55: 019's monitor refuses a station that is not a number, and keeps its record over a Reset, a reload and a re-pair (2026-11-03, `CACHE_VERSION` v564)
+
+Source: the AI_Tools review of 2026-11-04, findings **H3** and **M7** (audit entries AI-55 and AI-62 in the Selector's
+`BACKLOG-AUDIT-2026-11-04.md`). No ranked row; rank 51's "left" text is reworded for the reload.
+
+- **H3: a student device could run script on the teacher's monitor.** `er-board.js`'s `applyMessage` stored
+  `msg.station || 0` unchecked, and `monitor.html` put `'Station ' + (d.station + 1)` into `rosterBody.innerHTML`, so
+  `{"station":"<img src=x onerror=…>"}` from devtools on `lock.html` ran on the monitor, which shares the site's
+  localStorage. Now `ErBoard.readMessage()` reads `station` and `total` as whole numbers from 0 (`Number` and
+  `isFinite`, and only from a number or a string of digits, so an object with its own `toString` is never coerced),
+  and a message with either one wrong, missing or null is **refused whole** (`lock.html` always sends both): the device keeps what it had. The page's handler drops a
+  refused message before anything else, and the roster escapes its progress and score text as well (defence in
+  depth; the numbers are already numbers). `id` is kept only as a string of 64 characters or fewer, `score` only as a
+  finite number, `done` only as `true`.
+- **M7, Reset.** Reset was the only way to stop the readout and it saved `raceStartAt: null`, so the debrief printed
+  "—" for every "Reached at". The record now keeps the last Start pressed (`recordStart`); Reset only stops the
+  readout. Clear sets it back to the running clock, or none.
+- **M7, reload.** After a reload the first save wrote only the marks made since. A record kept **less than two hours
+  ago** is now carried (`ErBoard.carries`, `CARRY_MS`): its teams stay in every save, in their order, and new teams
+  follow. An older record is treated as last class's and the first new solve replaces it, as before. *Call made
+  here:* two hours, because a reload mid-game is minutes and a block period is 90; it is one constant to change.
+- **M7, re-pair.** A team whose phone reloaded came back as a second device, split across two sheets. The pairing box
+  now asks **Who is connecting?** (`ErBoard.rejoinChoices`): "A new team" by default, then the teams on the page
+  (disconnected first) and the kept teams from before a reload that no device has taken. Picking one moves the new
+  connection onto that row (the old connection is closed, and its handlers stop acting, so it closing late does not
+  mark the team disconnected and a message on it is not heard), or, for a kept team, links the device to that sheet
+  (`kept`) and takes its name. *Call made here, and the thing to reverse if Devon wants it automatic:* the teacher
+  says who is reconnecting, not the phone. The obvious automatic fix, a random team token that `lock.html` keeps beside
+  its progress and sends with each message, was built first and taken out before commit: rank 52 records that adding
+  fields to `lock.html`'s message is a change to the student player, held by "nothing is student-facing right now",
+  and a token would also be the first thing a device sends that the monitor trusts for identity. `lock.html` is
+  byte-for-byte unchanged.
+- **Tests.** `test:er-board` gains the hostile messages, the carried record, `rejoinChoices`, and eleven mutants (75
+  assertions, 22 mutants in all, every one caught). New `test:er-monitor-hostile` (`smoke-monitor-hostile.mjs`, port 8684) drives the
+  page's real Add device / Connect buttons and message handler through a stand-in `WebRTCPair` whose channel is an
+  EventTarget: ten hostile messages (markup in `station`, a script-shaped string, markup after a numeric total, an
+  object, `1e999`, a null or missing total, a negative, raw JSON) inject nothing and run nothing; then Reset, a reload, a three-hour-old record,
+  and a re-pair in the same session and after a reload. **Seen failing first** against the old code: the injected
+  `onerror` ran (`__pwned` was 1), the Reset cases failed, and the run stopped where the old page has no "Who is
+  connecting?" choice; a first draft of the suite showed every reload and re-pair case failing too.
+- **Not verified:** no real phone has re-paired with a real WebRTC connection (the stand-in fires `close` when asked;
+  a real `RTCPeerConnection.close()` may fire it later, which the guard is for). Not printed on paper.
+
+---
+
+## AI-53: 002 counts a project team once a day; the rollover clears the group memory (2026-11-03, `CACHE_VERSION` v563)
+
+Source: the AI_Tools review of 2026-11-04 (in the Selector's folder), findings M1 and H2. Two bugs, no feature work, no
+BACKLOG row (the item came from the Selector's audit, not the ranked list).
+
+- **M1, 002 project teams (unlanded `f0851e6`).** Start project teams recorded the groups on screen in the pair memory, which
+  the shuffle that put them there had already done, so on day one every teammate pair went up by 2 (Devon's 4.4 is once a day).
+  `makeGroups()` now puts `recorded: { date, sig }` on its result (the local date and the groups' names), and Start passes
+  `countProjectDay({ alreadyRecorded })` when that date is today and the names still match, which marks the day counted
+  without a second record. Groups moved by hand since the shuffle, or a shuffle from another day, are recorded at Start as
+  before. Reshuffle no longer records a locked group that is a project team (`isProjectTeamGroup()`: its label is a team's
+  name and its students are that team's); every other locked group is recorded as it always was, which is a separate question
+  this did not take up. `smoke-project-teams.mjs` takes its baseline before the shuffle, asserts +1 for both teams, and
+  presses Reshuffle twice against a locked team; against the old page it fails 4 assertions (got 4 for 3, 9 and 10 for 8).
+- **H2, the year rollover.** The `gtg:data:` reducer kept `groupHistory` (since v341), from which 002 rebuilds `pairHistory`,
+  so last year's pairs came back on the first load, and kept `projectTeams` and `projectContract`. It now deletes
+  `groupHistory` and `projectTeams` (counted in the review table as "project teams", by name) and deletes `projectContract` only
+  when it names one of this year's students. **A call, cheap to reverse:** the contract is the teacher's wording with blanks,
+  Dissolve keeps it "for the next project", and 044's behaviour text is already reduced the same way; the review asked for it
+  cleared outright. The `lgrr_rosters` (022) and `novel-study-circles` (027) reducers delete `groupHistory` (each page then
+  rebuilds an empty memory from the emptied `history`). `_rollover-fixtures.mjs` fills the fields for all three keys, plus a
+  `gtg:data:Period 4` whose contract names nobody and stays; `rollover.test.mjs` fails 8 assertions without the fix.
+- **Checked:** `smoke-project-teams.mjs` 98/0, `rollover.test.mjs` 742/0, `smoke-rollover-tools.mjs` 143/0,
+  `smoke-rollover.mjs` 57/0, all eight `group-team-generator` suites (`run-suites --only group-team-generator`), lint and the ten read-only guards, `check:precache --base origin/main`. **Not verified:** a page reload between Generate and Start
+  still counts twice (the marker lives on the result in memory and in Undo, not in storage); a real year-end rollover on a
+  teacher's data; 022's and 027's own suites were not run, as their pages did not change.
+
+## AI-31 (answers): Devon's answers of 2026-11-03 closed (bookkeeping, 2026-11-03, `CACHE_VERSION` v562)
+
+Source: `DEVON-ANSWERS-2026-11-03.md` in the Selector's folder (Devon's open-questions form of 2026-11-03, 80 of 80 answered,
+binding; full wording in `DEVON-QUESTIONS-2026-11-03.json`). 73 kept the default (the file's summary says 74; its log has 73
+lines marked so); four are work for other rows (86-1 and 86-2, rank 86; P5-route, rank 37; L4, rank 56) and three are the
+reviews below. No feature work.
+
+- **Three reviews kept, flags removed (the content is unchanged).** 043-letter: the bold "draft that no one but its author
+  has read" note is gone from 043's Trip packet card, and the `letterPrintHtml()` comment says the wording was kept.
+  029-prompts: `Tools/prompt-builder/pb-library.js`'s header no longer says the five library entries were never read (the
+  page itself never flagged them). 086-corpus: nothing in `086-wiki-race.html` flagged the CORPUS as unchecked, so no code
+  changed; this entry is the record that Devon read and kept it.
+- **Questions closed, default kept (ids, as on the form):** 053-1; 43-1, 43-2; 151-1, 080-2; P3-1 to P3-5 and P11X-P4-1 to
+  P4-4 (Path 11 P3, P4); 034-rep, 034-words, P6-1 to P6-5 (Path 11 P6); B1 to B5 (Path 9 P1); P5-1 to P5-3 (Path 3 P5);
+  66 to 69 (Path 12); P13B-P4-1 to P4-4, P4-5, D-1 to D-3 (Path 13 P4 and the display); P4-a to P4-c, P5-menu, P5-seat,
+  P5-redo, P5-003 (Path 14; 003's undo stays listed on rank 37); P18-1, P18-Q5 (Path 18); S1, I4, G4, G5, G1, I1, I2, L1,
+  G6, S2, I5 (Path 19 P3); 117, 149, 062-2, 150, 65, 60, TB-print; and the workers' own calls 050, 027, 021, 064 and
+  043-tags, each confirmed.
+- **Ranked rows deleted, nothing left to build:** 36 (Path 14 P4; its only open items were a-c), 43 (Path 16 P4's triage
+  lists and persistence question), 117 (008's per-day team record), 149 (062's timed bee; buzz-in stays a deferred,
+  student-facing item in 062's section), 150 (064's flag library; the fill-in mode stays deferred in 064's section) and
+  151 (080's combining and pattern blocks). Rewritten: 51 (minutes or points closed), 56 (only L4 left), 60 (only the slice
+  sheet's print preview left), 65 (the people-content tools get no sample). Not touched, as the batch assigned them to
+  other workers: rank 86's row, rank 37's live-mode route text, and Path 19 P3's L4. Ranks not renumbered.
+- **Found and fixed:** the numbers table's Tier 1 cell said "95 ranked rows, ranks to 164"; there were 38 rows before this
+  change and 32 after it, the last being 144.
+- **Not verified:** whether any Tier 2 note outside the sections the form cited still words one of these as open (I closed
+  each at the line the form named, found by its text, and the cross-references to the deleted ranks I could find with grep).
+
+---
+## AI-31: 002 project teams (rank 111, 2026-11-03, `CACHE_VERSION` v561)
+
+Devon had answered all six project-team questions on 2026-10-07 (`DEVON-ANSWERS-2026-10-07.md` 4.1 to 4.6, the second table, binding). BACKLOG's
+"Project teams, parked (2026-10-27)" paragraph and the v341-v352 line below ("Not built: the six questions are unanswered") were wrong, and both are
+corrected. His answers: 4.1 named teams of the same students until dissolved, "yes"; 4.2 the task list "printed only"; 4.3 the contract "yes should be fill
+in the blank"; 4.4 pair memory "once per day"; 4.5 "build now", in 002, on `previous` and `lock`; 4.6 "I'll move by hand".
+
+- **What it is.** Card 7 on 002, "Project teams". *Start project teams from the groups on screen* keeps those groups, with their names, as teams of the same students
+  until *Dissolve*. Teams are in the class's own `gtg:data:<class>` as `projectTeams` (`{ v, since, counted, days, teams: [{ name, members, tasks }] }`) and
+  `projectContract`: **no new key**, no registry row, and a class that never starts a team saves the string it always did (held by the old golden and by
+  `smoke-project-teams.mjs` section 1). Student names never go into a link: `buildSharePayload` is untouched and the suite reads its source for any team field.
+- **Task list (4.2), contract (4.3).** Each team has a text box, one task per line; *Print task lists* prints one page per team (the students, then a table with a box
+  to tick in pen, task, who, by when). *Print team contracts* prints one page per team from the teacher's wording: `{team}` and `{members}` are filled in, a run of three or
+  more underscores is a line to write on, and each student gets a signature line. **Nothing records who signs, and nothing is ticked on a screen.** The starter wording
+  is mine (Devon gave no text, only "fill in the blank"); the card says it is editable, it is stored only when it differs from the starter, and it survives a dissolve.
+  Both go through the page's existing print path (`printAlternateView`, now with a flag for a view that needs no groups), so no new markup sink was added (inline-sinks baseline unchanged at 20).
+- **4.4, once per day: my reading, the most conservative one.** A day counts when the page is open on a **Monday to Friday**, with the date not yet counted, for each team's
+  **students who are not marked absent** (a team down to one student counts nothing), and counts **once** however often the page is opened. A day the page was not opened is
+  **not** caught up: the tool does not know which days a class meets (a school day, a half day, a test week), so it counts only days it saw. A clock set back counts nothing
+  (`counted` only moves forward). The day goes in the pair memory with `Grouping.history.record`, the same call a shuffle makes, so the grid, "who has not yet worked
+  together" and the coverage strategy all see it; it also means a shuffle just after counts a team as having worked together last time. Counting happens on opening a
+  class, on starting teams, and when a hidden tab comes back. It clears Undo (an earlier snapshot would put the memory back without the day). Reverse it by changing
+  `isDue()`/`isSchoolDay()` in `gtg-teams.js` (the weekend rule is one line) or by counting from `school-day.js` once a calendar is in reach.
+- **4.5, on `previous` and `lock`.** *Put the teams on screen* shows each team as a locked group of `lastGroups` with its name in `lastGroups.labels` (absent students left out
+  of the display only; students on no team are the floaters). Reshuffle then is the engine's own locked path: unlock a team and it is dealt again with the students on no team;
+  a locked team keeps its students **and its name**; an unlocked one takes the naming style's label. Tents, group sheets, Copy and the share link read the label through the
+  new `labelFor()`. With every team locked, Reshuffle says there is nothing to deal rather than record another shuffle (only for a project-team result; any other all-locked reshuffle behaves as before).
+- **4.6, by hand.** Each student has a *Move* menu (to another team, or off the teams) and each team an *Add a student* menu of students on no team. A reshuffle never
+  changes the saved teams. A renamed student (Class Roster Hub) is carried through `renameStudentData`.
+- **Files.** `Tools/group-team-generator/gtg-teams.js` (`GtgTeams`, pure, in `PRECACHE_URLS` and `SHELL_URLS`); suites `smoke-project-teams-core.mjs` (`npm run test:project-teams-core`,
+  78 assertions) and `smoke-project-teams.mjs` (`npm run test:project-teams`, port 8678, 94 assertions with the page clock pinned). Seven deliberate breaks of the page and module
+  (no once-a-day check, absent counted, weekends counted, no all-locked guard, move does nothing, dissolve loses the wording, Undo not cleared) each fail it; the last survived
+  until its assertion was added.
+- **Not verified.** Nothing printed on paper (the pages are laid out for Letter and checked only as HTML in the suite, not in Chromium's PDF or `audit-print`'s baseline); no
+  teacher used the card; the starter contract wording is untested with a class; a phone-width layout of the editor was not looked at; the page was not run under `TZ` zones other than the
+  machine's (the date is the local one, `GtgTeams.localDate`).
+
+
+## AI-31: conference sign-up Worker run under workerd (rank 161, 2026-11-03, no page changed, no version bump)
+
+`conference-signup/test/smoke-workerd.mjs` (`npm run test:conference-workerd`, ports 8676 and 8677, 38 assertions, about
+12 s) starts `wrangler dev --local` (wrangler 4.157.0) on `conference-signup/worker/wrangler.toml` with a throwaway
+`--persist-to` and a made-up `ADMIN_PIN` passed by `--var`, and stops it by killing the process group. It checks the
+bundle (32 teachers through the `with { type: 'json' }` import), CORS and the origin refusals, the 400 and 413 limits, the
+PIN (none, wrong, a spoofed `x-room-admin`, right), a booking that survives stopping and restarting on the same storage
+(the `v1` SQLite migration and `ctx.storage`), the ten-wrong-PIN lock-out, the 503 with no `ADMIN_PIN`, and the six-character
+code from `crypto.getRandomValues`. It passed the first time: the runtime exposed no bug, so the Worker did not change.
+Decision: wrangler is **not** a devDependency (the repo keeps dependencies empty and a lockfile change could not be made
+here); the suite prints `SKIP` and exits 0 when `wrangler` is missing, which is what GitHub's runner will do, and
+`REQUIRE_WRANGLER=1` turns that into a failure. Reverse it by adding wrangler to devDependencies and setting that variable in CI.
+Not verified: CI's skip path was run only by hand with `PATH` stripped; the local explorer and `cf-connecting-ip` as Cloudflare's
+edge sets it (the suite sets the header itself); nothing was deployed and no login was used.
+
 ## AI-34: five suites that failed on GitHub's runner and passed on huginn (2026-11-02, no page changed, no version bump)
 
 Scope: the CI failures on the 2026-10-29 to 2026-11-02 landings. Each fix is its own commit, test code only; `CACHE_VERSION` did not move.
@@ -1662,7 +2096,7 @@ read 2.36 against 2.58: the memory, not the seating. Fixed in the suite, not the
 **Not verified.** No real seating chart from 005 (the suite's chart is hand-built to its shape); classes over about 35, where the
 swap search was not timed; 005's own desk spacing against the 106-px desk width the distance divides by.
 
-**Project teams.** Not built: the six questions are unanswered. BACKLOG's P2 bullet carries them with their defaults.
+**Project teams.** Not built then, and the line said the six questions were unanswered. **Corrected 2026-11-03 (AI-31, rank 111): Devon had answered all six on 2026-10-07 (`DEVON-ANSWERS-2026-10-07.md` 4.1 to 4.6); they were built in v561, see the entry at the top.**
 
 **Obliges.** `Tools/board-check/suite-durations.json` has `smoke-seat-near.mjs` at a guessed 40 s until the next refresh.
 
@@ -4706,7 +5140,7 @@ Audit entry AI-31, BACKLOG rank 119 (½), rewritten to what is left: project-tea
   students and rotates its roles** (decided here: locking is about who, and the same group next week is the usual reason to lock). History is
   `roleHistory` in the class's own `gtg:data:<class>`, written only once roles are used; Undo restores it; roster pruning and a roster rename carry it; its own
   Reset role history asks first and leaves the pairing memory alone. Roles show on cards, tents, sheets and Copy as Text; the share link carries none.
-- **Part 3, project-team mode, not built.** The section does not say enough (storage, who sees the task list, what the contract says, whether it counts in
+- **Part 3, project-team mode, not built** (built in v561 after Devon's answers of 2026-10-07; see the entry at the top). The section did not say enough (storage, who sees the task list, what the contract says, whether it counts in
   the pair memory, whether it is Path 13 P2's); six questions are in 002's Open Questions. Rank 119 is rewritten to that.
 - **Old behaviour pinned.** `golden-old-groupings.json`, recorded once from the page at 4162d61 (`_record-golden.mjs`, `Math.random` seeded): twelve classes,
   five rounds each, every strategy, locks, absences, keep-apart and keep-together. Groups, floaters and the saved string (SHA-256) are identical with both
