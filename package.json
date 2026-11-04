@@ -420,6 +420,7 @@
     "test:permission-slip-print": "node Tools/field-trip-permission-slip/test/smoke-print.mjs",
     "test:permission-slip-headcount": "node Tools/field-trip-permission-slip/test/smoke-headcount.mjs",
     "test:permission-slip-packet": "node Tools/field-trip-permission-slip/test/smoke-packet.mjs",
+    "test:permission-slip-trip-day": "node Tools/field-trip-permission-slip/test/smoke-trip-day.mjs",
     "test:exit-ticket-print": "node Tools/exit-ticket-generator/test/smoke-print.mjs",
     "test:certificate-print": "node Tools/certificate-award-maker/test/smoke-print.mjs",
     "test:safety-label-print": "node Tools/science-safety-label-maker/test/smoke-print.mjs",
