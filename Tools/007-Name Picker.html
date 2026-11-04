@@ -1658,13 +1658,15 @@ function loadSeatingChart(){
 }
 
 /* Row/region call rates, joined against the same equity rows the name list
-   above is built from — see np-seat-equity.js. `null` means no chart to read;
+   above is built from — see np-seat-equity.js. A seat joins its row by the
+   Class Roster Hub id first (the same lookupId the dashboard's idOf uses),
+   then by name. `null` means no chart to read;
    a chart with a matching section but nobody seated yet still returns a
    report (seated:0) so the UI can say so instead of just hiding. */
 function currentSeatEquityReport(rep){
   const state=loadSeatingChart();
   if(!state)return null;
-  return seatEquityReport(state,currentRosterName,rep.rows);
+  return seatEquityReport(state,currentRosterName,rep.rows,(n,r)=>lookupId(rosterIds,n,r||currentRosterName));
 }
 
 const REGION_LABEL={'front-left':'Front left','front-center':'Front center','front-right':'Front right','middle-left':'Middle left','middle-center':'Middle center','middle-right':'Middle right','back-left':'Back left','back-center':'Back center','back-right':'Back right'};
@@ -2596,7 +2598,8 @@ window.addEventListener('load',()=>{
 
   loadPacks();
   renderPackList();
-  const savedTheme=store.get('theme');
+  /* A pack theme saved before v569 was "pk-<pack>-<theme>"; read it as its current id (AI-61). */
+  const savedTheme=tpacks.upgradeThemeId(store.get('themePacks'),store.get('theme'));
   if(hasAnyTheme(savedTheme)){document.getElementById('theme').value=savedTheme;applyTheme(savedTheme);}
   else applyTheme('default');
 

@@ -163,7 +163,7 @@
   /** { 'YYYY-MM-DD': 'A'|'B' } for every school day from the earlier of meta.start and the
       anchor to the later of meta.end and the anchor; {} when the cycle is off. The anchor
       date takes the anchor letter (a non-school anchor gives it to the next school day), and
-      the days after it alternate from there (Devon, 2026-10-07; the off-by-one before v570
+      the days after it alternate from there (Devon, 2026-10-07; the off-by-one before v572
       is ANCHOR_QUIRK in HISTORY). */
   function abLetters(cal) {
     var map = {};

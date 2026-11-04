@@ -134,6 +134,34 @@ function check(G) {
   ok(/differed most on Q2 \(3rd 75%, 6th 25%\), Q1 \(3rd 100%, 6th 75%\)\./.test(nr.find(x => x.h === 'Sections differed').t), 'sections differed names the question and both figures: ' + nr.find(x => x.h === 'Sections differed').t);
   ok(G.narrate(Object.assign({}, base, { n: 0 }))[0].h === 'About these numbers', 'no scores: only the caveat');
   ok(nr[nr.length - 1].h === 'About these numbers', 'the caveat is last');
+
+  // 15. (AI-56, H4) a student whose name starts "Max" is a student, not the points-possible row;
+  // the label must be the whole cell ("Max", "Max points", "Points possible:", "Out of")
+  r = G.analyze('Name\tQ1\tQ2\nAna\t2\t2\nMax Chen\t1\t0\nBo\t2\t1');
+  ok(!r.maxGiven && r.students === 3 && r.problems.length === 0, 'Max Chen is a student: ' + JSON.stringify(r.problems));
+  ok(r.questions[0].max === 2 && r.questions[0].n === 3 && near(r.questions[0].pct, 5 / 6), 'Q1 out of 2 over three students');
+  ok(!G.analyze('Name,Q1\nTotally Real,1\nBo,0').maxGiven && !G.analyze('Name,Q1\nPointsetter Jo,1\nBo,0').maxGiven, 'a name that starts with a label word is a student');
+  ['Max points', 'Points possible:', 'Out of', 'Maximum', 'Total points', 'Possible'].forEach(lab => {
+    const m = G.analyze('Name,Q1,Q2\n' + lab + ',4,2\nAda,2,2');
+    ok(m.maxGiven && m.students === 1 && m.questions[0].max === 4, 'points row label "' + lab + '" still read');
+  });
+
+  // 16. (AI-56, H4) a header of question numbers is a header
+  r = G.analyze('Name\t1\t2\t3\nAda\t1\t0\t1\nBo\t1\t0\t1\nCy\t0\t0\t1');
+  ok(r.students === 3 && r.questions.map(q => q.label).join() === '1,2,3', 'numbered header read as labels: ' + r.questions.map(q => q.label).join() + ' / ' + r.students);
+  ok(r.questions[1].pct === 0 && near(r.questions[2].pct, 1), 'Q2 0%, Q3 100% once the header is not a student');
+  r = G.analyze('Student,Q1,Q2\nPoints,2,2\nAda,1,2');
+  ok(r.maxGiven && r.questions.map(q => q.label).join() === 'Q1,Q2', 'a word header still read');
+  r = G.analyze('Ada\t1\t2\t3\nBo\t1\t0\t1');
+  ok(r.students === 2 && r.questions.map(q => q.label).join() === 'Q1,Q2,Q3', 'a student who scored 1, 2, 3 is still a student');
+  r = G.analyze('Name\t1\t3\nAda\t1\t0\nBo\t1\t0');
+  ok(r.students === 3, 'numbers that are not 1, 2, 3, ... are not a header');
+
+  // 17. (AI-56, H4) one stray word in an all-number first column does not make it a name column
+  r = G.analyze('2\t1\t1\nab\t0\t1\n1\t1\t0\n2\t1\t1');
+  ok(!r.hasNames && r.questions.length === 3 && r.questions[0].label === 'Q1', 'Q1 kept, not turned into names: ' + r.questions.map(q => q.label).join());
+  ok(r.problems.length === 1 && r.problems[0].line === 2 && r.problems[0].label === 'Q1' && r.questions[0].n === 3, 'the ab is named in Q1, not guessed');
+  ok(G.analyze('Ada\t1\nBo\t0\n7\t1').hasNames, 'mostly names: still a name column');
   return bad;
 }
 
@@ -156,7 +184,11 @@ const MUTANTS = [
   ['plural always many', s => s.replace("(n === 1 ? one : many)", "many")],
   ['strongest is the weakest', s => s.replace('res.order[res.order.length - 1]', 'res.order[0]')],
   ['no zeros paragraph ever', s => s.replace('if (m.zeros > 0)', 'if (false)')],
-  ['negative accepted', s => s.replace('v === null || v < 0', 'v === null')]
+  ['negative accepted', s => s.replace('v === null || v < 0', 'v === null')],
+  ['points-row label not anchored (AI-56)', s => s.replace("out\\s+of)\\s*:?\\s*$/i;", "out\\s+of)\\b/i;")],
+  ['numbered header not read (AI-56)', s => s.replace('!parsed.header && parsed.rows.length > 1 && numberedHeader', 'false && numberedHeader')],
+  ['numbered header takes any numbers (AI-56)', s => s.replace("if (String(cells[i]).trim() !== String(i)) return false;", '')],
+  ['one word makes a name column (AI-56)', s => s.replace('(words > 0 && words > nums)', '(words > 0)')]
 ];
 
 let failed = 0;

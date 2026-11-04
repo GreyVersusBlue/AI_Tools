@@ -9,7 +9,9 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## AI-46: 032's A/B anchor date takes its own letter (rank 138, `ANCHOR_QUIRK` fixed, 2026-11-04, `CACHE_VERSION` v570)
+## AI-46: 032's A/B anchor date takes its own letter (rank 138, `ANCHOR_QUIRK` fixed, 2026-11-04, `CACHE_VERSION` v572)
+
+(The commits say v570; AI-36 took v570 and v571 on `main` first, so this is v572.)
 
 Devon, 2026-10-07 (answer 4.7): "you should be able to set any particular day as A or B, and then all FOLLOWING days should
 follow the a/b pattern". The old rule lined the walk up from the count of school days strictly *between* the range's first day
@@ -39,6 +41,84 @@ and the anchor, so when that first day was itself a school day and the anchor wa
   old rule was already right, and `test:school-calendar-weeks` passed 386/386 with it untouched. No other suite's fixture anchors
   later than its year's first day.
 - **Not verified:** no saved real calendar was opened; nothing printed on paper.
+
+---
+
+## AI-36: 007's seat equity joins by student id, not name (2026-11-04, `CACHE_VERSION` v571)
+
+Source: audit entry AI-36 (the Selector's `BACKLOG-AUDIT-2026-11-04.md`, split from AI-23), the gap BACKLOG's Path 15 P2 "Not done" and P3
+notes named. No ranked row. (The commit says v570; AI-49 took v570 on `main` first, so this is v571.)
+
+- `np-seat-equity.js`'s `joinCallRates(positions, equityRows, idOf, rosterName)` now joins a seat to an equity row by the student's Class
+  Roster Hub id first and by the loose name only when no id joins them. `idOf` is the same `(name, rosterName) => id | null` np-dashboard.js
+  and np-rollup.js already take; the page passes `lookupId(rosterIds, n, r || currentRosterName)`, the dashboard's own. `seatEquityReport`
+  takes `idOf` as a fourth argument and passes it through. A seated "Bobby Chen" now joins a roster "Robert Chen" when the sidecar gives both
+  one id, and `unmatched` lists only seats that match no id and no name.
+- *Call taken:* both sides are resolved against the picker's roster name, not the chart section's name. The section was picked to be this
+  roster, and resolving both sides the same way means two "Sam"s in two classes cannot resolve differently on each side. A seat with an
+  id that no row carries falls back to the name, so a row whose spelling matched before still matches. Two rows with one id: the first wins,
+  the rule the name map already had.
+- The summary's "could not be matched by name" says "by roster id or name" now, since that is what failed.
+- Held by `test:name-picker` (smoke.mjs, 331 cases, 14 new): a preferred name and a respelled name join by id through the real `lookupId`
+  over a real sidecar; without `idOf` the old join; the original nine-seat fixture joins identically either way. With the id step reverted
+  six of the new cases fail. Nothing stored changed (no key, no `np_daily`/history format), and the phone remote is untouched.
+- Not verified: no browser suite renders the seat section of the Equity tab. A scratch page check (seeded chart, sidecar and history)
+  was run once by hand; it is not committed.
+
+## AI-49: 043's trip-day view (rank 143, 2026-11-03, `CACHE_VERSION` v570)
+
+(My commit says v567; AI-58 (+AI-59), AI-47 and AI-56 took v567 to v569 on `main` first, so the merges moved mine to v570.)
+
+The last screen piece of 043's trip packet, the "Trip-day mode" BACKLOG had deferred since the first round. The draft flag on the parent
+letter, the entry's first half, was already gone (AI-31 (answers), 357854b, v562), so this session built only the view.
+
+- **What it is.** A **Trip-day view** button under the headcount buttons in the Chaperones card opens a fixed overlay (`#tripDay`, a
+  dialog) in large type: the trip's name, place and day; the day schedule (`scheduleRows()`, the same reader as the printed schedule, and the
+  leave and return times when there is none); the trip leader's and each chaperone's number as a `tel:` link, as on the emergency sheet; the
+  emergency instructions; and each chaperone's group, then "No chaperone yet", with each student as first name and last initial (`tagName()`,
+  the name tags' rule), a "no slip" mark from the collection tracker and three tick boxes, left school, arrived and back, with a count line per
+  group. **Full screen** puts the overlay on stage with `Stage.mount` (no hotkey, so typing F in the editor does nothing); in full screen the
+  groups lay out side by side and the type is larger. Close and Escape put it away and give focus back.
+- **Nothing is stored.** The view reads `state` and never calls `save()`; the ticks are a page variable keyed by trip and student, so closing
+  and reopening keeps them and a reload clears them, as the printed headcount sheet keeps nothing. No new key, so no registry row. The
+  overlay is built from elements and `textContent` only (no new markup sink).
+- **What I decided.** Where the button lives (the Chaperones card, not the toolbar, so the phone toolbar is untouched); that the "no slip"
+  mark is shown (it is the headcount sheet's Slip column, and a teacher at the bus wants it); that a chaperone with no phone says "no number".
+  No print rule of its own: `print-area.css` already takes everything but `#printArea` off the paper, and the mutant that deleted a rule
+  for it survived, so the rule was dead and went.
+- **Tests.** `test:permission-slip-trip-day` (`smoke-trip-day.mjs`, port 8687): contents, ticks and storage (byte-for-byte before and after,
+  and after a reload), Stage in and out, focus, Escape, print media, a hostile student and chaperone name, an empty trip, axe on the overlay
+  in light and dark, no sideways scroll at 360 px, names at least 16 px and 44 px tick targets, and 13 mutants each caught by its scenario.
+  Not tried on a real phone or a projector.
+
+## AI-56 (+AI-61): 037's item analysis reads a "Max", a numbered header and a stray word right; 007's theme packs each keep their own id (2026-11-03, `CACHE_VERSION` v569)
+
+Source: the AI_Tools review of 2026-11-04, findings **H4** and **M6** (audit entries AI-56 and AI-61 in the Selector's
+`BACKLOG-AUDIT-2026-11-04.md`). No ranked row. (The first commit says v567; AI-58 and AI-47 took v567 and v568 on `main` first, so this is v569.)
+
+- **H4, three ways a common paste gave the wrong questions (`gd-items.js`, from d90158e).** (1) `MAX_ROW` matched the start of the cell, so a
+  student called "Max Chen" became the points-possible row: Q1 was out of 1 and both real 2s were refused. The label must now be the whole
+  first cell ("Points possible", "Max", "Max points", "Out of:", "Total", "Possible"...). A student whose first cell is exactly "Max" is
+  still read as the points row, as before; the hint on the page names "Points possible", which is what a teacher types. (2) A header of
+  question numbers (`Name, 1, 2, 3`) was a student, since `PasteTable.isHeaderShape` takes words only. 037 now reads a first row as a header
+  when its first cell names a name column (Name, Names, Student, Student name, ID, #...) and the rest count 1, 2, 3... from 1; `_shared/paste-table.js`
+  is unchanged (it ran beside other workers, and the rule is 037's). A student "Ada" who scored 1, 2, 3 is still a student. (3) One "ab" in a
+  first column of numbers made the column names, so Q1 vanished and every later question was relabelled. The first column is names now only
+  when more of its cells are words than numbers (or a points row has a label there, as before); a stray word is named in `problems` under Q1.
+- **M6, packs replaced each other (`np-theme-packs.js`, from 970ffda).** `packIdOf` cut names to 14 characters, so "Ancient Rome Unit 1" and
+  "Unit 2" were one id and importing the second deleted the first (with "Replaced"); every name with no Latin letters was `pack`. `addPack`
+  now replaces only a pack with the same name (case and spacing aside) and gives any other the slug, or the slug cut short with `-2`, `-3`...
+  if that is taken. The ids are the same shape as before, so a stored `np_theme_packs` loads unchanged and needed no migration.
+  `packThemeId` joined pack and theme with a dash, so pack `a-b` + theme `c` and pack `a` + theme `b-c` were one id; it is a dot now, which
+  neither id can hold. **That changes the stored `np_theme` of anyone using a pack theme**, so `upgradeThemeId()` reads the old dash form as the
+  new id at load (007's one-line change); where two themes shared an old id it picks the one the old page drew (the later pack).
+- **Tests, each seen failing first.** `test:gd-items`: cases 15-17 (Max Chen, six points-row labels, numbered and non-numbered headers, the
+  stray "ab", a mostly-names column) and four new mutants. `test:name-picker-theme-packs`: case 8 (Unit 1 and 2, re-import replaces Unit 2,
+  three non-Latin names, twelve packs on one slug, the dash pair, `upgradeThemeId`); 9 of its assertions failed on the old module.
+  `test:name-picker-theme-packs-smoke`: an older saved `pk-ancient-rome-forum` still paints its theme and is saved back as the new id, and a
+  second pack whose name makes the same slug is imported, not a replacement; 5 failed on the old page.
+- **Not verified.** No real gradebook export was pasted; the header-word list is a guess at what exports put over a name column (a header
+  over question numbers that is not in the list, such as "Learner", is still read as a student). No pack was moved between two devices.
 
 ## AI-47: 067's click track (rank 96, the metronome half, 2026-11-03, `CACHE_VERSION` v568)
 

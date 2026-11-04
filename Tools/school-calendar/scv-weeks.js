@@ -45,7 +45,7 @@ export function isValidIso(dateISO) {
    The anchor date takes the anchor letter, and every school day after it alternates from it
    (Devon, 2026-10-07: "you should be able to set any particular day as A or B, and then all
    FOLLOWING days should follow the a/b pattern"). An anchor that is not a school day gives
-   its letter to the first school day after it. Until v570 the walk was lined up from the
+   its letter to the first school day after it. Until v572 the walk was lined up from the
    count of school days strictly BETWEEN the range's first day and the anchor, which put the
    anchor one step off whenever that first day was itself a school day (ANCHOR_QUIRK, pinned
    by test/smoke-weeks-core.mjs until it was fixed); counting from the first day inclusive is
