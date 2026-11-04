@@ -9,6 +9,33 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-53: 002 counts a project team once a day; the rollover clears the group memory (2026-11-03, `CACHE_VERSION` v563)
+
+Source: the AI_Tools review of 2026-11-04 (in the Selector's folder), findings M1 and H2. Two bugs, no feature work, no
+BACKLOG row (the item came from the Selector's audit, not the ranked list).
+
+- **M1, 002 project teams (unlanded `f0851e6`).** Start project teams recorded the groups on screen in the pair memory, which
+  the shuffle that put them there had already done, so on day one every teammate pair went up by 2 (Devon's 4.4 is once a day).
+  `makeGroups()` now puts `recorded: { date, sig }` on its result (the local date and the groups' names), and Start passes
+  `countProjectDay({ alreadyRecorded })` when that date is today and the names still match, which marks the day counted
+  without a second record. Groups moved by hand since the shuffle, or a shuffle from another day, are recorded at Start as
+  before. Reshuffle no longer records a locked group that is a project team (`isProjectTeamGroup()`: its label is a team's
+  name and its students are that team's); every other locked group is recorded as it always was, which is a separate question
+  this did not take up. `smoke-project-teams.mjs` takes its baseline before the shuffle, asserts +1 for both teams, and
+  presses Reshuffle twice against a locked team; against the old page it fails 4 assertions (got 4 for 3, 9 and 10 for 8).
+- **H2, the year rollover.** The `gtg:data:` reducer kept `groupHistory` (since v341), from which 002 rebuilds `pairHistory`,
+  so last year's pairs came back on the first load, and kept `projectTeams` and `projectContract`. It now deletes
+  `groupHistory` and `projectTeams` (counted in the review table as "project teams", by name) and deletes `projectContract` only
+  when it names one of this year's students. **A call, cheap to reverse:** the contract is the teacher's wording with blanks,
+  Dissolve keeps it "for the next project", and 044's behaviour text is already reduced the same way; the review asked for it
+  cleared outright. The `lgrr_rosters` (022) and `novel-study-circles` (027) reducers delete `groupHistory` (each page then
+  rebuilds an empty memory from the emptied `history`). `_rollover-fixtures.mjs` fills the fields for all three keys, plus a
+  `gtg:data:Period 4` whose contract names nobody and stays; `rollover.test.mjs` fails 8 assertions without the fix.
+- **Checked:** `smoke-project-teams.mjs` 98/0, `rollover.test.mjs` 742/0, `smoke-rollover-tools.mjs` 143/0,
+  `smoke-rollover.mjs` 57/0, all eight `group-team-generator` suites (`run-suites --only group-team-generator`), lint and the ten read-only guards, `check:precache --base origin/main`. **Not verified:** a page reload between Generate and Start
+  still counts twice (the marker lives on the result in memory and in Undo, not in storage); a real year-end rollover on a
+  teacher's data; 022's and 027's own suites were not run, as their pages did not change.
+
 ## AI-31 (answers): Devon's answers of 2026-11-03 closed (bookkeeping, 2026-11-03, `CACHE_VERSION` v562)
 
 Source: `DEVON-ANSWERS-2026-11-03.md` in the Selector's folder (Devon's open-questions form of 2026-11-03, 80 of 80 answered,
