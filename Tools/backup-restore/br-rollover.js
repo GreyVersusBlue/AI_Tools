@@ -599,8 +599,12 @@
 
     /* 002 Group Generator: the grouping settings, group labels and roles
        stay; names, absences, apart/together pairs, pairing and role history
-       and the id map go (defaultConfig()). */
-    { prefix: 'gtg:data:', tool: '002', kind: 'reduce', reduce: function (v) {
+       (the legacy pairHistory and the engine's groupHistory, which the page
+       would rebuild pairHistory from) and the id map go (defaultConfig()).
+       The project teams (named teams of students, and their task lists) go;
+       the teacher's contract wording stays, as Dissolve keeps it, unless it
+       names one of this year's students (044's behaviour text is the model). */
+    { prefix: 'gtg:data:', tool: '002', kind: 'reduce', reduce: function (v, ctx) {
       if (!isObj(v)) return UNREADABLE;
       var r = result(shallow(v));
       var list = lines(v.names).map(function (l) { return l.split('\t')[0]; });
@@ -608,7 +612,13 @@
       took(r, 'pairing history', size(v.pairHistory));
       r.value.names = ''; r.value.absentNames = []; r.value.keepApart = []; r.value.keepTogether = [];
       r.value.pairHistory = {}; r.value.pairGen = 0; r.value.idNames = {};
-      delete r.value.roleHistory;
+      delete r.value.roleHistory; delete r.value.groupHistory;
+      if (isObj(v.projectTeams)) {
+        var teams = Array.isArray(v.projectTeams.teams) ? v.projectTeams.teams : [];
+        took(r, 'project teams', teams.length, teams.map(function (t) { return isObj(t) ? String(t.name || '') : ''; }).filter(Boolean));
+      }
+      delete r.value.projectTeams;
+      if (hit(v.projectContract, ctx)) { took(r, 'a team contract naming a student', 1, [v.projectContract]); delete r.value.projectContract; }
       return keeps(r, 'group settings', 1);
     } },
     { key: 'gtg:current', tool: '002', kind: 'keep' },
@@ -648,6 +658,7 @@
         names += list.length; sample = sample.concat(list); roles += size(s.roles);
         q.students = ''; q.history = {}; q.lastGroups = null; q.checkoutLog = []; q.keepApart = []; q.absent = [];
         q.lastExcludedForSafety = []; q.idNames = {};
+        delete q.groupHistory; // the engine's role memory (v342), which the page reads before history
         r.value[k] = q;
       });
       took(r, 'names', names, sample);
@@ -888,6 +899,7 @@
         names += list.length; sample = sample.concat(list);
         groups += size(p.groups); meetings += size(p.meetings);
         q.students = ''; q.groups = []; q.history = {}; q.meetings = []; q.idNames = {};
+        delete q.groupHistory; // the engine's role memory (v343), which the page reads before history
         r.value[k] = q;
         books++;
       });
