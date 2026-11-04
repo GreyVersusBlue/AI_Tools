@@ -9,7 +9,9 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## AI-47: 067's click track (rank 96, the metronome half, 2026-11-03, `CACHE_VERSION` v567)
+## AI-47: 067's click track (rank 96, the metronome half, 2026-11-03, `CACHE_VERSION` v568)
+
+(My commit says v567; AI-58 (+AI-59) took v567 on `main` first, so the merge moved mine to v568.)
 
 Devon, 2026-10-07: "We should build a metronome." The tempo field on 067's rhythm tab ("♪ = 92", saved in `msrg_settings_v1`
 since P15) had been labelled "for the display only"; it now drives a click track. The reference pitch (the other half of rank 96)
@@ -43,6 +45,27 @@ is AI-48's and was not touched; rank 96 is rewritten to it.
 - **Not verified.** Nobody has heard it: Huginn has no speakers in the loop. Whether the clicks are loud enough over a band room,
   whether 1760/1320 Hz is a good pair, and whether a real Chromium's `AudioContext` keeps the beat when the tab is busy are all for a
   person with ears (Devon, afterwards). Safari's `webkitAudioContext` is handled in code and untried.
+
+## AI-58 (+AI-59): a stale third place in 020, and "Oct 1 - 3 Hour Early Release" in 032 (review M3, M4, 2026-11-03, `CACHE_VERSION` v567)
+
+Two confirmed bugs from the AI_Tools review of 2026-11-04 (`~/projects/AI_Tools-REVIEW-2026-11-04.md`, M3 and M4).
+
+- **020 (M3).** `BtTeams.reflow()` took the third-place pick away only when the changed match was a semifinal
+  (`r === slots.length - 3`), but changing any earlier match clears the semifinal it fed, so that semifinal's loser can
+  change. In an 8-team consolation bracket with T3 third, giving the first quarterfinal to T2 and replaying the semifinal
+  as T3 over T2 named T2 third, a team that never played the game, and the "also clears N later results" confirm left
+  the pick out of N. Now `r <= slots.length - 3`; the confirm counts it through `decidedCount()`, which already did. An
+  earlier change in a half whose semifinal is not decided yet loses nothing real: a pick needs both semifinals decided.
+  `smoke-redecide.mjs` gained the `third` scenario (red before the fix: the count said 2, and T2 was named) and a mutant.
+- **032 (M4).** `readTable()`'s bare range end ("Nov 25-27") read the number in `Oct 1 - 3 Hour Early Release` and
+  `Sept 3 - 5th Grade Orientation` as the range's last day, and skipped `Aug 31 – 6th Grade Orientation` and
+  `Jan 5 - 2 Hour Delay` as ending before they start. **The call, mine, reversible:** a bare end followed by
+  hour(s)/hr(s)/minute(s)/min(s)/grade/grader(s)/period(s)/block(s), with spaces or a hyphen between, is not a range end,
+  so the line is one day and the number starts its name. It is a word list, so a count it does not name ("Oct 1 - 3 Day
+  Weekend") is still read as a range; I left "day" off because "Nov 25 - 27 Days Off" is as likely a line. To widen it,
+  add a word to `NOT_A_DAY` in `scv-ics.js` and a line to the test. `table.test.mjs` gained six lines (five counts and
+  grades, and "Nov 25 - 27 Thanksgiving Break" still a range; red before the fix) and a mutant (9/9 caught).
+- **Not verified:** no real district PDF was pasted; the word list is the review's examples plus my guess at the rest.
 
 ## AI-31: 053's ready-made Review Game Board (rank 86, 2026-11-03, `CACHE_VERSION` v566)
 
