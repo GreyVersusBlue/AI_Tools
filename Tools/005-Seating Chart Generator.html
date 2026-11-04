@@ -1205,7 +1205,7 @@ function markNode(m, movable){
 /** Pull the corner: the change is measured along the mark's own width and height, so a turned mark resizes the way it looks. */
 let sizingMark = null;
 function markGripDown(ev, id, node, grip){
-  if (ev.button !== 0 || state.mirror) return;
+  if (ev.button !== 0 || state.mirror || liveOn) return;
   const r = roomOfActive(), m = r && r.marks.find(x => x.id === id); if (!m) return;
   sizingMark = { id, el: node, m, x0: ev.clientX, y0: ev.clientY, w: m.w, h: m.h, moved: false };
   grip.setPointerCapture(ev.pointerId);
@@ -1247,7 +1247,7 @@ function turnMark(id){
 function focusMark(id){ const n = document.querySelector(`.room-mark[data-mark-id="${id}"]`); if (n) n.focus(); }
 let movingMark = null;
 function markPointerDown(ev, id, node){
-  if (ev.button !== 0 || state.mirror) return;   // mirrored: the same screen-to-room guard the desks have
+  if (ev.button !== 0 || state.mirror || liveOn) return;   // mirrored: the same screen-to-room guard the desks have
   const r = roomOfActive(), m = r && r.marks.find(x => x.id === id); if (!m) return;
   const floorRect = el('floor').getBoundingClientRect();
   movingMark = { id, el: node, m, dx: ev.clientX - (floorRect.left + m.x * scale), dy: ev.clientY - (floorRect.top + m.y * scale), floorRect, moved: false };
@@ -1940,7 +1940,7 @@ function renderFloor(){
   const s = sec();
   const total = s.desks.length;
   const rm = roomOfActive();
-  if (rm) rm.marks.forEach(m => layer.appendChild(markNode(m, !state.mirror)));
+  if (rm) rm.marks.forEach(m => layer.appendChild(markNode(m, !state.mirror && !liveOn)));   // on stage a mark is not an edit target (AI-63, L1)
   s.desks.forEach((d, i) => {
     const sid = s.assign[d.id];
     const st = sid ? studentById(sid) : null;
@@ -2095,8 +2095,14 @@ document.addEventListener('pointerup', () => {
 ============================================================ */
 let liveOn = false;
 const liveLocal = new Set();   // 005 student ids with no roster id, absent this session
+/* A roster id is found by name, so two students with one name in this period would share one absence:
+   such a name gets none, and each seat is marked for the live session only (AI-63, review L2). */
+function liveSameName(st){
+  const k = Roster.normKey(st.name);
+  return sec().students.filter(x => Roster.normKey(x.name) === k).length > 1;
+}
 function liveRosterId(st){
-  try { return Roster.idFor(Roster.idIndex(), st.name, sec().name); } catch(e){ return null; }
+  try { return liveSameName(st) ? null : Roster.idFor(Roster.idIndex(), st.name, sec().name); } catch(e){ return null; }
 }
 function readFlags(){
   try { return StudentFlags.read(window.localStorage); } catch(e){ return StudentFlags.empty(); }
@@ -2119,7 +2125,9 @@ function liveTap(deskId){
     if (now) liveLocal.add(st.id); else liveLocal.delete(st.id);
   }
   renderFloor();
-  liveSay(st.name + (now ? ' marked absent today' : ' marked present') + (id ? '.' : ' for this live session only (not on a saved roster).'), 'good');
+  const why = (() => { try { return liveSameName(st); } catch(e){ return false; } })()
+    ? ' (another student in this period has the same name).' : ' (not on a saved roster).';
+  liveSay(st.name + (now ? ' marked absent today' : ' marked present') + (id ? '.' : ' for this live session only' + why), 'good');
   refocusSeat(deskId);
 }
 function refocusSeat(deskId){
