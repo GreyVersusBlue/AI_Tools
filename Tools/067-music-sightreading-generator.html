@@ -24,6 +24,7 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="music-sightreading-generator/msrg-audio.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -104,6 +105,29 @@
   .staff-system svg { width: 100%; height: auto; display: block; }
   .note-name-cap { font-size: .68rem; text-anchor: middle; fill: var(--muted); }
 
+  /* Click track (AI-47). The beat that is sounding is told by its number, a
+     solid fill, a thicker border and the "Measure 2 of 4" text beside it, never
+     by colour alone; the measure being played gets an outline. Only the pulse
+     on the current beat moves, and reduced motion turns it off. */
+  .metro { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin: .5rem 0 1rem; }
+  .metro-beats { display: flex; align-items: center; gap: .45rem; min-height: 2.4rem; }
+  .metro-beat {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 2.1rem; height: 2.1rem; border-radius: 50%; border: 2px solid var(--line-strong);
+    font-weight: 700; font-size: .95rem; color: var(--muted); background: var(--card);
+    transition: transform .08s ease-out;
+  }
+  .metro-beat.accent { border-style: double; border-width: 4px; }
+  .metro-beat.counting { border-style: dashed; }
+  .metro-beat.on { background: var(--ink); color: var(--card); border-color: var(--ink); transform: scale(1.18); }
+  .metro-where { font-weight: 700; font-size: .9rem; min-width: 8.5rem; }
+  .metro-status { flex-basis: 100%; margin: 0; font-size: .85rem; color: var(--muted); }
+  .measure.now-playing { outline: 3px solid var(--ink); outline-offset: 4px; }
+  @media (prefers-reduced-motion: reduce) {
+    .metro-beat { transition: none; }
+    .metro-beat.on { transform: none; }
+  }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
   .print-only { display: none; }
@@ -158,7 +182,7 @@
           </select>
         </div>
         <div>
-          <label for="tempo">Suggested tempo (for the display only)</label>
+          <label for="tempo">Tempo (printed, and used by the click track)</label>
           <input type="text" id="tempo" value="&#9834; = 92">
         </div>
       </div>
@@ -185,6 +209,13 @@
       <p class="display-note" id="rhythmNote">Clap or count through each measure left to right.</p>
       <label class="check-row lock-row"><input type="checkbox" id="lockRhythmToggle"> Lock this pattern for printing (new patterns keep displaying on screen, but printing uses the locked one)</label>
       <label class="check-row"><input type="checkbox" id="bigModeToggle"> Big single-measure display (for call-and-response clapping drills)</label>
+      <div class="metro" id="metroBox">
+        <button type="button" class="secondary" id="metroBtn" aria-pressed="false">&#9654; Play click track</button>
+        <label class="check-row"><input type="checkbox" id="countInToggle"> Count in one measure first</label>
+        <div class="metro-beats" id="metroBeats" aria-hidden="true"></div>
+        <span class="metro-where" id="metroWhere" aria-hidden="true"></span>
+        <p class="metro-status" id="metroStatus" role="status" aria-live="polite">The click track plays the tempo above, with a higher click on beat 1 of each measure. Nothing plays until you press Play.</p>
+      </div>
       <div class="measure-row" id="rhythmDisplay"></div>
       <div class="big-mode-wrap" id="bigModeWrap">
         <div class="btnrow" style="justify-content:center; align-items:center;">
@@ -273,7 +304,8 @@
    'printPitchArea', 'printPitchSub', 'printPitchDisplay',
    'lockRhythmToggle', 'lockPitchToggle',
    'bigModeToggle', 'bigModeWrap', 'bigMeasureDisplay', 'bigModeCounter', 'prevMeasureBtn', 'nextMeasureBtn',
-   'notationMode', 'glyphNotice', 'shareBtn', 'shareNote'
+   'notationMode', 'glyphNotice', 'shareBtn', 'shareNote',
+   'metroBtn', 'countInToggle', 'metroBeats', 'metroWhere', 'metroStatus'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var mode = 'rhythm';
@@ -305,7 +337,8 @@
         numMeasures: els.numMeasures.value,
         tempo: els.tempo.value,
         pool: selectedRhythmPool(),
-        notation: els.notationMode.value
+        notation: els.notationMode.value,
+        countIn: els.countInToggle.checked
       },
       pitch: {
         clef: els.clefSelect.value,
@@ -335,6 +368,7 @@
       setSelectIfValid(els.numMeasures, data.rhythm.numMeasures);
       if (typeof data.rhythm.tempo === 'string' && data.rhythm.tempo) els.tempo.value = data.rhythm.tempo;
       setSelectIfValid(els.notationMode, data.rhythm.notation);
+      if (typeof data.rhythm.countIn === 'boolean') els.countInToggle.checked = data.rhythm.countIn;
       if (Array.isArray(data.rhythm.pool)) {
         Array.prototype.slice.call(els.rhythmPool.querySelectorAll('input')).forEach(function (cb) {
           cb.checked = data.rhythm.pool.indexOf(cb.value) !== -1;
@@ -357,6 +391,7 @@
     els.pitchTabBtn.classList.toggle('active', m === 'pitch');
     els.rhythmPanel.style.display = m === 'rhythm' ? '' : 'none';
     els.pitchPanel.style.display = m === 'pitch' ? '' : 'none';
+    if (m !== 'rhythm') stopClickTrack('Stopped: the rhythm tab was closed.');
     saveSettings();
   }
 
@@ -486,6 +521,7 @@
   }
 
   function generateRhythm() {
+    stopClickTrack('Stopped: a new pattern was made. Press Play to hear it.');
     var beats = parseInt(els.timeSig.value, 10);
     var count = parseInt(els.numMeasures.value, 10);
     var pool = selectedRhythmPool();
@@ -515,10 +551,109 @@
   });
 
   els.newRhythmBtn.addEventListener('click', generateRhythm);
-  els.timeSig.addEventListener('change', saveSettings);
+  els.timeSig.addEventListener('change', function () { stopClickTrack('Stopped: the time signature changed.'); drawBeats(parseInt(els.timeSig.value, 10), null); saveSettings(); });
   els.numMeasures.addEventListener('change', saveSettings);
-  els.tempo.addEventListener('input', saveSettings);
+  els.tempo.addEventListener('input', function () { stopClickTrack('Stopped: the tempo changed. Press Play to hear the new one.'); saveSettings(); });
+  els.countInToggle.addEventListener('change', saveSettings);
   els.rhythmPool.addEventListener('change', saveSettings);
+
+  /* ---------------- Click track (AI-47) ----------------
+     msrg-audio.js schedules the clicks on the audio clock; this part only reads
+     the controls, makes the AudioContext inside the Play click, draws the beat
+     and says in words what is happening. It stops on a new pattern, a change of
+     time signature or tempo, the sight-reading tab, and a hidden tab. */
+  var metro = null;
+
+  function setMetroStatus(text) { els.metroStatus.textContent = text; }
+
+  function drawBeats(perMeasure, info) {
+    var dots = els.metroBeats.children;
+    if (dots.length !== perMeasure) {
+      while (els.metroBeats.firstChild) els.metroBeats.removeChild(els.metroBeats.firstChild);
+      for (var i = 0; i < perMeasure; i++) {
+        var d = document.createElement('span');
+        d.className = 'metro-beat' + (i === 0 ? ' accent' : '');
+        d.textContent = String(i + 1);
+        els.metroBeats.appendChild(d);
+      }
+      dots = els.metroBeats.children;
+    }
+    for (var j = 0; j < dots.length; j++) {
+      dots[j].classList.toggle('on', !!info && info.beat === j);
+      dots[j].classList.toggle('counting', !!info && info.countIn);
+    }
+  }
+
+  function markMeasure(index) {
+    var ms = els.rhythmDisplay.querySelectorAll('.measure');
+    for (var i = 0; i < ms.length; i++) ms[i].classList.toggle('now-playing', i === index);
+  }
+
+  function onBeat(info) {
+    var perMeasure = parseInt(els.timeSig.value, 10);
+    drawBeats(perMeasure, info);
+    if (info.countIn) {
+      els.metroWhere.textContent = 'Count-in, beat ' + (info.beat + 1);
+      markMeasure(-1);
+    } else {
+      var n = rhythmMeasures.length || 1;
+      var m = info.measure % n;
+      els.metroWhere.textContent = 'Measure ' + (m + 1) + ' of ' + n + ', beat ' + (info.beat + 1);
+      markMeasure(m);
+    }
+  }
+
+  function showStopped() {
+    els.metroBtn.textContent = '▶ Play click track';
+    els.metroBtn.setAttribute('aria-pressed', 'false');
+    els.metroWhere.textContent = '';
+    drawBeats(parseInt(els.timeSig.value, 10), null);
+    markMeasure(-1);
+  }
+
+  function stopClickTrack(why) {
+    if (!metro || !metro.running()) return;
+    metro.stop();
+    metro = null;
+    showStopped();
+    if (why) setMetroStatus(why);
+  }
+
+  function startClickTrack() {
+    var tempo = MsrgAudio.parseTempo(els.tempo.value);
+    if (!tempo) {
+      setMetroStatus('Nothing to play: the tempo field has no number in it. Type a number of beats a minute, such as 92.');
+      return;
+    }
+    var ctx = MsrgAudio.audioContext(window);
+    if (!ctx) { setMetroStatus('This browser cannot play sound, so the click track is not available here.'); return; }
+    var perMeasure = parseInt(els.timeSig.value, 10);
+    var countIn = els.countInToggle.checked;
+    metro = MsrgAudio.createMetronome({
+      ctx: ctx, bpm: tempo.bpm, beatsPerMeasure: perMeasure, countIn: countIn, onBeat: onBeat
+    });
+    drawBeats(perMeasure, null);
+    metro.start();
+    els.metroBtn.textContent = '■ Stop click track';
+    els.metroBtn.setAttribute('aria-pressed', 'true');
+    var bpmWords = tempo.bpm + ' beats a minute';
+    var said = 'Playing ' + bpmWords + ' in ' + perMeasure + '/4, with a higher click on beat 1 of each measure' +
+      (countIn ? ', after one measure of count-in' : '') + '.';
+    if (tempo.clamped) {
+      said = 'The tempo field says ' + tempo.asked + '; the click track goes from ' + MsrgAudio.BPM_MIN + ' to ' +
+        MsrgAudio.BPM_MAX + ', so it is ' + said.charAt(0).toLowerCase() + said.slice(1);
+    }
+    setMetroStatus(said);
+  }
+
+  els.metroBtn.addEventListener('click', function () {
+    if (metro && metro.running()) stopClickTrack('Stopped.');
+    else startClickTrack();
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) stopClickTrack('Stopped: the page was hidden.');
+  });
+  window.addEventListener('pagehide', function () { stopClickTrack(''); });
 
   /* ---------------- Lock pattern for printing ---------------- */
   els.lockRhythmToggle.addEventListener('change', function () {
@@ -847,6 +982,7 @@
   }
   renderPoolSamples();
   renderGlyphNotice();
+  drawBeats(parseInt(els.timeSig.value, 10), null);
   generateRhythm();
   generatePitches();
 })();

@@ -9,10 +9,10 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## AI-56 (+AI-61): 037's item analysis reads a "Max", a numbered header and a stray word right; 007's theme packs each keep their own id (2026-11-03, `CACHE_VERSION` v568)
+## AI-56 (+AI-61): 037's item analysis reads a "Max", a numbered header and a stray word right; 007's theme packs each keep their own id (2026-11-03, `CACHE_VERSION` v569)
 
 Source: the AI_Tools review of 2026-11-04, findings **H4** and **M6** (audit entries AI-56 and AI-61 in the Selector's
-`BACKLOG-AUDIT-2026-11-04.md`). No ranked row. (The first commit says v567; AI-58 took v567 on `main` first, so this is v568.)
+`BACKLOG-AUDIT-2026-11-04.md`). No ranked row. (The first commit says v567; AI-58 and AI-47 took v567 and v568 on `main` first, so this is v569.)
 
 - **H4, three ways a common paste gave the wrong questions (`gd-items.js`, from d90158e).** (1) `MAX_ROW` matched the start of the cell, so a
   student called "Max Chen" became the points-possible row: Q1 was out of 1 and both real 2s were refused. The label must now be the whole
@@ -37,6 +37,43 @@ Source: the AI_Tools review of 2026-11-04, findings **H4** and **M6** (audit ent
   second pack whose name makes the same slug is imported, not a replacement; 5 failed on the old page.
 - **Not verified.** No real gradebook export was pasted; the header-word list is a guess at what exports put over a name column (a header
   over question numbers that is not in the list, such as "Learner", is still read as a student). No pack was moved between two devices.
+
+## AI-47: 067's click track (rank 96, the metronome half, 2026-11-03, `CACHE_VERSION` v568)
+
+(My commit says v567; AI-58 (+AI-59) took v567 on `main` first, so the merge moved mine to v568.)
+
+Devon, 2026-10-07: "We should build a metronome." The tempo field on 067's rhythm tab ("♪ = 92", saved in `msrg_settings_v1`
+since P15) had been labelled "for the display only"; it now drives a click track. The reference pitch (the other half of rank 96)
+is AI-48's and was not touched; rank 96 is rewritten to it.
+
+- **The module.** `Tools/music-sightreading-generator/msrg-audio.js`, a classic script setting `globalThis.MsrgAudio`, no DOM, no
+  storage. `parseTempo(text)` reads the number after an "=" (otherwise the first number), clamps it to 30-240 and says whether it
+  did; no number is `null`. `createMetronome({ ctx, bpm, beatsPerMeasure, countIn, onBeat, ... })` is the look-ahead scheduler: a
+  25 ms timer schedules every click due in the next 0.12 s of `ctx.currentTime`, each at `start + k * 60/bpm` (computed from the
+  start, never accumulated, so a ten-minute run does not drift and a late timer does not move a click), and tells the indicator of a
+  beat on the first wake at or after its audio time. A click is a 50 ms sine blip, 1760 Hz and louder on beat 1 of each measure,
+  1320 Hz otherwise (`CLICK`). `stop()` clears the timer, disconnects and stops the clicks already in the graph, and is a no-op twice.
+  `audioContext()` is the page's one context, made on the first call, which the page makes only inside the Play click. AI-48 is meant
+  to use it rather than write its own.
+- **The page.** On the rhythm tab's display card: **Play click track** / **Stop click track** (`aria-pressed`), **Count in one measure
+  first** (saved as `rhythm.countIn` in the existing settings record; not in the share link, which lists its fields), numbered beat
+  circles (beat 1 double-bordered, the sounding one filled and enlarged, the count-in dashed; `aria-hidden`, since a live region per
+  beat would talk over the class) with "Measure 2 of 4, beat 3" beside them, the playing measure outlined, and a polite status line
+  that says what is playing, why it stopped, that a typed 300 plays at 240, or that a field with no number plays nothing. The track
+  stops on a new pattern, a tempo or time-signature change, the sight-reading tab, a hidden page and `pagehide`. Under
+  `prefers-reduced-motion` the enlarging pulse is off; the fill, border and text stay. The label now reads "Tempo (printed, and used by
+  the click track)". The measure counter wraps over the pattern's measures; the track loops until stopped. The big single-measure
+  display does not follow the beat (my call: it is stepped by hand for call-and-response, and moving it would take that away).
+- **Print is unchanged.** The controls sit inside `.wrap`, which 067's print block already hides; the print areas were not edited. A scratch run against `main` (seeded `Math.random`, both tabs, locked and not, light and a dark pref)
+  hashed the print areas' HTML, a print-media screenshot and Chromium's PDF: identical in all eight states. `audit-print --check --only 067` passes.
+- **Tests.** `test:music-metronome` (pure Node, a fake AudioContext and a hand-turned timer: click times at 92, 120 and 137 bpm,
+  an irregular timer, a ten-minute run, accents in 4/4 and 3/4, the count-in, the indicator never ahead of the sound, stop, the
+  context made once and only on demand; 18 mutants, every one caught). `test:music-metronome-smoke` (port 8688, a fake AudioContext in
+  the page whose clock the suite sets: 45 checks, from no context at load to every stop trigger, reduced motion, print media and no new
+  key). Deliberately breaking the page's stop-on-new-pattern and its reduced-motion rule turned the smoke red.
+- **Not verified.** Nobody has heard it: Huginn has no speakers in the loop. Whether the clicks are loud enough over a band room,
+  whether 1760/1320 Hz is a good pair, and whether a real Chromium's `AudioContext` keeps the beat when the tab is busy are all for a
+  person with ears (Devon, afterwards). Safari's `webkitAudioContext` is handled in code and untried.
 
 ## AI-58 (+AI-59): a stale third place in 020, and "Oct 1 - 3 Hour Early Release" in 032 (review M3, M4, 2026-11-03, `CACHE_VERSION` v567)
 

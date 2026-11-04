@@ -66,7 +66,7 @@ try {
   c = await css();
   ok(c.bg === '#112233' && (await page.inputValue('#theme')) === 'pk-ancient-rome.forum', 'a reload keeps the pack theme chosen');
 
-  // AI-61: a pack theme chosen on a page before v568 was saved as "pk-<pack>-<theme>"; it still loads, as the new id
+  // AI-61: a pack theme chosen on a page before v569 was saved as "pk-<pack>-<theme>"; it still loads, as the new id
   await page.evaluate(() => localStorage.setItem('np_theme', 'pk-ancient-rome-forum'));
   await page.reload({ waitUntil: 'networkidle' }); await settle(page, 300);
   c = await css();
