@@ -346,6 +346,7 @@ const PRECACHE_URLS = [
   "Tools/command-center/remote.html",
   "Tools/053-cultural-trivia-card-generator.html",
   "Tools/cultural-trivia-card-generator/ctcg-bank.js",
+  "Tools/cultural-trivia-card-generator/ctcg-board.js",
   "Tools/054-current-events-discussion-guide-generator.html",
   "Tools/current-events-discussion-guide-generator/cedg-readability.js",
   "Tools/current-events-discussion-guide-generator/cedg-qsets.js",

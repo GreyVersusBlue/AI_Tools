@@ -38,6 +38,43 @@ Source: the AI_Tools review of 2026-11-04, findings **H4** and **M6** (audit ent
 - **Not verified.** No real gradebook export was pasted; the header-word list is a guess at what exports put over a name column (a header
   over question numbers that is not in the list, such as "Learner", is still read as a student). No pack was moved between two devices.
 
+## AI-31: 053's ready-made Review Game Board (rank 86, 2026-11-03, `CACHE_VERSION` v566)
+
+(My commits say v562; v562 to v565 were taken on `main` first, by AI-31 (answers), AI-53, AI-55 and AI-22 (route), so the merges moved mine to v566.)
+
+Devon decided on 2026-11-03 (`DEVON-ANSWERS-2026-11-03.md`, 86-1, 86-2 and 053-1, binding): build the ready-made board; its columns are 053's own
+built-in categories (Hispanic World, Francophone World, Global Culture); its points are graduated by difficulty, easy low to hard high (053's
+own "difficulty tiers" idea); and 053 keeps its categories by broad region, as built.
+
+- **What it is.** A fourth tab on 053, **Review game board**: a preview of the board (three categories across, five clues down, each with its points
+  and tier) and **Save board file**, which saves `cultural-trivia-board.json` through `ExportKit.download`. On 030 the teacher presses **Import JSON**
+  and the file opens as a board named "Cultural Trivia" with two teams. **030 did not change**: the file is the shape its Export JSON writes, and
+  its `normalizeBoard()` cleans it as it cleans any import. Nothing new is stored on 053 (no key, no registry row); the board is worked out each time.
+- **The route, and why not the two that existed.** 053's link ("Send to Quiz / Review Game Board") and its bank file both put a teacher's own
+  questions into 030's *question bank*, which has no columns or board; a board by link would be a new entry in `_shared/handoffs.js` and a
+  receiver on 030, and `_shared/` was out of this session's scope. A board file reaches 030 through a route 030 already has. That is my call;
+  a link route is listed as not done in 053's BACKLOG section.
+- **The tiers: my reading.** 053's built-ins carried no difficulty. I added one, by hand, rather than deriving it from something measurable
+  (question length, answer length), because nothing measurable on these thirty rows tracks how hard a question is. `TIERS` in `ctcg-bank.js`
+  gives each built-in `easy`, `medium` or `hard` by its id, beside `ROWS` so `items()` and the seed set are unchanged; the rating is how hard a
+  U.S. middle schooler would likely find it (Día de los Muertos, the Louvre and origami easy; Catalan, Pamplona, France's motto, Rwanda,
+  Diwali's three faiths and chanoyu hard). Each category has 3 or 4 easy, 3 or 4 medium and 3 hard. **No language teacher has reviewed them**,
+  and the card says so. A teacher's own question has no tier and counts as medium. The tier is not handed to the seed set's `difficulty`.
+- **The rule** (`Tools/cultural-trivia-card-generator/ctcg-board.js`, pure): per category, in `CAT_LABELS` order, the questions on show (hidden
+  built-ins left off, a teacher's own included) are put in order easy, medium, hard, keeping the bank's order inside a tier; five are taken at
+  places `round(k(n-1)/4)`, k = 0..4, so the easiest is the 100 and the hardest the 500; a column of five or fewer takes them all; an empty one is
+  left off. Points are 100 to 500, the scale 030 itself gives a seed question pulled onto a board. The built-in board is b0 b6 b8 b2 b7, b11 b16
+  b14 b12 b19, b23 b26 b25 b21 b27. The same questions always make the same board; hiding a built-in or adding one's own is how a teacher changes
+  it. The page's category filter does not apply to the board.
+- **Tests.** `test:trivia-board-logic` (pure Node: tiers, the pinned board, `spread()`, hidden and own questions, the file's shape; five breaks of
+  `ctcg-board.js` on purpose, each caught) and `test:trivia-board` (port 8679, 21 assertions: the preview, the file equal to `build()` of the
+  page, storage untouched, a hidden built-in and a markup question of one's own, everything hidden, axe on the tab, and 030's real Import JSON
+  taking the file: title, the three categories, the fifteen clues word for word at their points, two teams, fifteen cells). Two breaks of the page on purpose were each caught by it: the preview's question written with `innerHTML`, and the board built
+  with the hidden built-ins in. Also green: `trivia-bank-file`, `handoffs.test`, `question-bank.test`, `seed-sets`, `send-to`, `share-rollout`,
+  `test:theme` (both), `test:a11y -- --only 053`, `sw-tiers`, and every guard.
+- **Found:** BACKLOG's Tier 1 cell said 32 ranked rows after the answers entry below; `main` had 31 (counted from the table). With row 86 gone it is 30.
+- **Not verified.** No teacher has used the tab or played the board; the tiers are unreviewed; no file was opened on another device. The suite's
+  first run once ended with "Target page, context or browser has been closed" at the 030 step; the next runs were green and I did not find a cause.
 ## AI-22: a point (008) and a hall pass (001) from 005's live mode (rank 37, Path 14 P5, 2026-11-03, `CACHE_VERSION` v565)
 
 Devon answered P5-route on 2026-11-03 (`~/projects/DEVON-ANSWERS-2026-11-03.md`, binding): 005's live mode writes 008's and 001's storage
