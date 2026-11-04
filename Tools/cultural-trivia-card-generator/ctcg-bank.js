@@ -29,11 +29,11 @@
    What is NOT in the set: a teacher's own questions ('ctcg_custom_v1') and
    which built-ins they have hidden; a hidden built-in is still in the set.
 
-   DIFFICULTY (since v564, for the ready-made Review Game Board, rank 86):
+   DIFFICULTY (since v566, for the ready-made Review Game Board, rank 86):
    TIERS gives every built-in row one of 'easy', 'medium' or 'hard', keyed by
    the row's id, beside ROWS rather than inside it so items() and the seed set
    hand back exactly what they did before. The ratings are one reading of how
-   hard a U.S. middle schooler would find each question (HISTORY, v564); no
+   hard a U.S. middle schooler would find each question (HISTORY, v566); no
    language teacher has reviewed them. A row added to ROWS gets a line here
    too: tierOf() answers 'medium' for an id it does not know, which is also
    what a teacher's own question counts as. The tier is not handed to the

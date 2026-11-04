@@ -15,15 +15,38 @@
   /** How far a device has got: stations passed, all of them once it is done. */
   function passed(d) { return d.total > 0 ? (d.done ? d.total : Math.min(d.station, d.total)) : 0; }
 
+  /** A count a device sent (its station, the room's total): a whole number from 0 up, or NaN for anything else,
+      a missing or null one included (lock.html always sends both). Only a number or a string of digits is read, so
+      an object with its own toString is never coerced. */
+  function count(v) {
+    if (typeof v !== 'number' && !(typeof v === 'string' && /^[0-9]{1,6}$/.test(v))) return NaN;
+    var n = Number(v);
+    return isFinite(n) && n >= 0 && Math.floor(n) === n ? n : NaN;
+  }
+
+  /** One message as the monitor reads it, or null when it is not one: a station or total that is not a count
+      refuses the whole message (review H3: a station of markup reached the roster's innerHTML). */
+  function readMessage(msg) {
+    if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return null;
+    var station = count(msg.station), total = count(msg.total);
+    if (isNaN(station) || isNaN(total)) return null;
+    return { station: station, total: total, done: msg.done === true,
+      id: typeof msg.id === 'string' && msg.id.length <= 64 ? msg.id : null,
+      score: typeof msg.score === 'number' && isFinite(msg.score) ? msg.score : null };
+  }
+
   /** Takes one message from a device (the shape lock.html sends: station, id, total, done, score)
-      and notes when it arrived. `now` is the monitor's clock in ms. */
-  function applyMessage(device, msg, now) {
+      and notes when it arrived. `now` is the monitor's clock in ms. Returns the device, or null, changing
+      nothing, when the message is not one (readMessage). */
+  function applyMessage(device, raw, now) {
+    var msg = readMessage(raw);
+    if (!msg) return null;
     var before = passed(device), wasDone = !!device.done, wasId = device.stationId || null;
-    device.station = msg.station || 0;
-    device.stationId = typeof msg.id === 'string' ? msg.id : null;
-    device.total = msg.total || 0;
-    device.done = !!msg.done;
-    device.score = typeof msg.score === 'number' ? msg.score : null;
+    device.station = msg.station;
+    device.stationId = msg.id;
+    device.total = msg.total;
+    device.done = msg.done;
+    device.score = msg.score;
     if (typeof device.firstAt !== 'number') device.firstAt = now;
     var after = passed(device);
     if (after !== before || typeof device.lastAt !== 'number') device.lastAt = now;
@@ -62,17 +85,46 @@
       (`raceStartAt`, `teams [{ name, code, marks, attempts, hintsUsed, penaltyMs }]`), so the debrief has one
       rule and not a second. A device reports where a team is, not its wrong tries or hints, so `attempts`
       and `hintsUsed` are empty here by design and the sheet is drawn `without` them. Student devices are
-      not asked for anything: this is only what the monitor already heard. `at` is when it was kept. */
-  function toRecord(devices, clockStart, at) {
-    return {
-      v: 1, at: typeof at === 'number' ? at : null,
-      raceStartAt: typeof clockStart === 'number' ? clockStart : null,
-      teams: devices.filter(function (d) { return d.marks && Object.keys(d.marks).length; }).map(function (d) {
-        var marks = {};
-        Object.keys(d.marks).forEach(function (id) { marks[id] = { at: d.marks[id].at }; });
-        return { name: nameOf(d), code: '', marks: marks, attempts: {}, hintsUsed: {}, penaltyMs: 0 };
-      })
-    };
+      not asked for anything: this is only what the monitor already heard. `at` is when it was kept.
+      `base` (review M7) is the record kept before this page was opened, or null. Its teams stay, in its order; a
+      device the teacher paired as one of them (`kept`, the team's place in `base.teams`) adds its solves to that
+      sheet, the first solve of a station kept, and gives it its typed name when it has one; the rest follow. */
+  function toRecord(devices, clockStart, at, base) {
+    var mine = devices.filter(function (d) { return d.marks && Object.keys(d.marks).length; });
+    var used = {};
+    function sheet(name, marks) { return { name: name, code: '', marks: marks, attempts: {}, hintsUsed: {}, penaltyMs: 0 }; }
+    function copy(into, from) { Object.keys(from || {}).forEach(function (id) { if (!into[id]) into[id] = { at: from[id].at }; }); return into; }
+    var teams = (base && Array.isArray(base.teams) ? base.teams : []).map(function (t, i) {
+      var d = mine.filter(function (x) { return x.kept === i; })[0];
+      if (!d) return sheet(t.name, copy({}, t.marks));
+      used[d.id] = true;
+      var typed = typeof d.name === 'string' && d.name.trim();
+      return sheet(typed || t.name, copy(copy({}, t.marks), d.marks));
+    });
+    mine.forEach(function (d) { if (!used[d.id]) teams.push(sheet(nameOf(d), copy({}, d.marks))); });
+    return { v: 1, at: typeof at === 'number' ? at : null, raceStartAt: typeof clockStart === 'number' ? clockStart : null, teams: teams };
+  }
+
+  /** How long a kept record is carried into a newly opened monitor (review M7): a reload mid-game is minutes,
+      a block period is 90; a record older than this is last class's, and a new solve starts a new one, as
+      before. */
+  var CARRY_MS = 2 * 60 * 60 * 1000;
+  function carries(record, now) { return !!(record && typeof record.at === 'number' && now - record.at >= 0 && now - record.at < CARRY_MS); }
+
+  /** Who a new pairing can be (review M7), for the pairing box's "Who is connecting?": a team already on this page
+      (`d:<id>`, the disconnected ones first) and a team kept from before the page was opened that no device has
+      taken yet (`k:<place>`). A new team is the page's own first option and is not in the list. The teacher picks;
+      nothing a device sends decides it. */
+  function rejoinChoices(devices, base) {
+    var out = [];
+    devices.filter(function (d) { return !d.connected; }).concat(devices.filter(function (d) { return d.connected; })).forEach(function (d) {
+      out.push({ value: 'd:' + d.id, label: nameOf(d) + (d.connected ? ' (still connected)' : ' (disconnected)') });
+    });
+    (base && Array.isArray(base.teams) ? base.teams : []).forEach(function (t, i) {
+      if (devices.some(function (d) { return d.kept === i; })) return;
+      out.push({ value: 'k:' + i, label: (t.name || 'Team') + ' (kept before this page was opened)' });
+    });
+    return out;
   }
 
   /** A stored record, or null when it is not one. Anything else in a team is dropped. */
@@ -114,5 +166,6 @@
   }
 
   global.ErBoard = { passed: passed, applyMessage: applyMessage, leaderboard: leaderboard, formatElapsed: formatElapsed, nameOf: nameOf,
-    toRecord: toRecord, cleanRecord: cleanRecord, roomFor: roomFor };
+    toRecord: toRecord, cleanRecord: cleanRecord, roomFor: roomFor,
+    readMessage: readMessage, carries: carries, CARRY_MS: CARRY_MS, rejoinChoices: rejoinChoices };
 })(typeof window !== 'undefined' ? window : this);

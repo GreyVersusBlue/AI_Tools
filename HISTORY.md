@@ -9,9 +9,9 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## AI-31: 053's ready-made Review Game Board (rank 86, 2026-11-03, `CACHE_VERSION` v564)
+## AI-31: 053's ready-made Review Game Board (rank 86, 2026-11-03, `CACHE_VERSION` v566)
 
-(My commits say v562; AI-31 (answers) took v562 and AI-53 v563 on `main` first, so the merge moved mine to v564.)
+(My commits say v562; v562 to v565 were taken on `main` first, by AI-31 (answers), AI-53, AI-55 and AI-22 (route), so the merges moved mine to v566.)
 
 Devon decided on 2026-11-03 (`DEVON-ANSWERS-2026-11-03.md`, 86-1, 86-2 and 053-1, binding): build the ready-made board; its columns are 053's own
 built-in categories (Hispanic World, Francophone World, Global Culture); its points are graduated by difficulty, easy low to hard high (053's
@@ -46,6 +46,90 @@ own "difficulty tiers" idea); and 053 keeps its categories by broad region, as b
 - **Found:** BACKLOG's Tier 1 cell said 32 ranked rows after the answers entry below; `main` had 31 (counted from the table). With row 86 gone it is 30.
 - **Not verified.** No teacher has used the tab or played the board; the tiers are unreviewed; no file was opened on another device. The suite's
   first run once ended with "Target page, context or browser has been closed" at the 030 step; the next runs were green and I did not find a cause.
+## AI-22: a point (008) and a hall pass (001) from 005's live mode (rank 37, Path 14 P5, 2026-11-03, `CACHE_VERSION` v565)
+
+Devon answered P5-route on 2026-11-03 (`~/projects/DEVON-ANSWERS-2026-11-03.md`, binding): 005's live mode writes 008's and 001's storage
+directly on the same device, the way 003 writes 037's. In the same answers he kept P5-menu ("No, a tap marks absent only"), P5-seat (stays and
+dims), P5-redo (no buttons) and P5-003 (003's undo listed, not built).
+
+- **The call, mine, reversible: a switch, not a menu.** The two answers pull apart (a tap gives a point, and a tap only marks absent), so I took the
+  most conservative reading that does both: a **"Tap marks: Absent / A point (Behavior & Points) / A hall pass"** radio group in a bar that rides
+  into the stage beside the chart with the exit button (`Stage.mount`'s `hud`), reached by Tab and moved by the arrow keys, with a visible status
+  line (`#liveStatus`, `role="status"`) and an Undo button. **Absent is the default and is put back every time live mode starts**, so a tap at rest
+  does exactly what it did in v377, and no menu ever opens on a tap. To reverse it: a different control (say, a long press) is a change to `liveTap()`
+  and the bar in 005, nothing else; the writes are in one pure module.
+- **The writes.** `Tools/seating-chart/seating-handoff.mjs` (pure; `awardPoint`, `undoPoint`, `startPass`, `undoPass`) takes the stored string and
+  returns the string to store, and the page does the one `getItem`/`setItem`, with the literal keys at each call so `check:registry` reads them.
+  A point is what 008's default +1 chip gives (`delta` 1, `tagLabel` "Manual", category Other, the student's team for today included, as `applyTap()`
+  and `BPTeams.award()`); a pass is 001's `signOutStudent()` with the section's armed destination (Restroom, 001's first default, on a section with
+  none). The class is the one pointed at the chart section (008's `seatingSectionId`), then the one with the section's name, then the one following
+  the roster of that name. **Refused, nothing written, each with a sentence:** a store that does not parse or has a shape it does not know (a
+  `version`, `v` or `schema` field, which neither tool writes today, reads as a newer tool); a store with classes but none that matches (no stray
+  copy is made); a student the class does not list; a student marked absent today; and, for a pass, a student already out, someone else out under
+  "one out at a time", a weekly budget used up (counted as 001 counts it, from Sunday), or a name on 001's approval list (001 asks there; a projected
+  chart should not). **A store with no classes at all** gets one, named after the section and holding its students, as 003 makes 037's first
+  assignment.
+- **Undo** is 005's own stack: the snapshot pushed carries what was written (`__liveHandoff`), and `undo()` takes it back with 008's `undoLogEntry()`
+  arithmetic or 001's sign-out undo, then drops the field. A point archived or undone in 008, or a pass signed back in on 001, is not undone from
+  here, and the status says so. Ctrl+Z works on stage as it does off it.
+- **008 fix found on the way.** 008's activity feed said "Nothing logged yet today" on every load whatever the log held, until the next tap, so a
+  point given from the chart (or any point from an earlier visit) had no Undo button in 008 until then. `applyStateToForm()` now calls
+  `renderActivity()`. `smoke-teams.mjs`'s golden (`golden-no-teams.json`, `start.feed`) had recorded the empty feed over a seeded log; that one field
+  is updated to what the page now draws, every other piece of the golden unchanged.
+- **Suites.** `test:seating-handoff` (pure, 54) and `test:seating-live-handoff` (port 8682, the batch's assignment for this session): both writes, 008
+  and 001 opened afterwards and showing them, old and missing and newer data, the refusals, Undo by button and by Ctrl+Z, the switch's default and
+  reset, the keyboard. Six mutants of the module each failed the pure suite.
+- **Not done, recorded.** 005's row in `_shared/tool-registry.js` should say `writes: ['behavior-points-tracker-sections', 'hall-pass-log-sections']`
+  (it is documentation there: `check:registry` passes, since both keys have an owner); this session ran in parallel with others and was told not to
+  touch `_shared/`, so it is on rank 37. 008 and 001 do not reload their own key on a `storage` event, so a copy of either open in another tab keeps
+  its old class and its next save writes over the chart's point or pass; the status tells the teacher to reload it, and nothing else handles it.
+- **Not verified.** No teacher has used it on a projector or a touch panel; no real tablet; the bar's layout on a phone-width stage was not looked at.
+
+## AI-55: 019's monitor refuses a station that is not a number, and keeps its record over a Reset, a reload and a re-pair (2026-11-03, `CACHE_VERSION` v564)
+
+Source: the AI_Tools review of 2026-11-04, findings **H3** and **M7** (audit entries AI-55 and AI-62 in the Selector's
+`BACKLOG-AUDIT-2026-11-04.md`). No ranked row; rank 51's "left" text is reworded for the reload.
+
+- **H3: a student device could run script on the teacher's monitor.** `er-board.js`'s `applyMessage` stored
+  `msg.station || 0` unchecked, and `monitor.html` put `'Station ' + (d.station + 1)` into `rosterBody.innerHTML`, so
+  `{"station":"<img src=x onerror=…>"}` from devtools on `lock.html` ran on the monitor, which shares the site's
+  localStorage. Now `ErBoard.readMessage()` reads `station` and `total` as whole numbers from 0 (`Number` and
+  `isFinite`, and only from a number or a string of digits, so an object with its own `toString` is never coerced),
+  and a message with either one wrong, missing or null is **refused whole** (`lock.html` always sends both): the device keeps what it had. The page's handler drops a
+  refused message before anything else, and the roster escapes its progress and score text as well (defence in
+  depth; the numbers are already numbers). `id` is kept only as a string of 64 characters or fewer, `score` only as a
+  finite number, `done` only as `true`.
+- **M7, Reset.** Reset was the only way to stop the readout and it saved `raceStartAt: null`, so the debrief printed
+  "—" for every "Reached at". The record now keeps the last Start pressed (`recordStart`); Reset only stops the
+  readout. Clear sets it back to the running clock, or none.
+- **M7, reload.** After a reload the first save wrote only the marks made since. A record kept **less than two hours
+  ago** is now carried (`ErBoard.carries`, `CARRY_MS`): its teams stay in every save, in their order, and new teams
+  follow. An older record is treated as last class's and the first new solve replaces it, as before. *Call made
+  here:* two hours, because a reload mid-game is minutes and a block period is 90; it is one constant to change.
+- **M7, re-pair.** A team whose phone reloaded came back as a second device, split across two sheets. The pairing box
+  now asks **Who is connecting?** (`ErBoard.rejoinChoices`): "A new team" by default, then the teams on the page
+  (disconnected first) and the kept teams from before a reload that no device has taken. Picking one moves the new
+  connection onto that row (the old connection is closed, and its handlers stop acting, so it closing late does not
+  mark the team disconnected and a message on it is not heard), or, for a kept team, links the device to that sheet
+  (`kept`) and takes its name. *Call made here, and the thing to reverse if Devon wants it automatic:* the teacher
+  says who is reconnecting, not the phone. The obvious automatic fix, a random team token that `lock.html` keeps beside
+  its progress and sends with each message, was built first and taken out before commit: rank 52 records that adding
+  fields to `lock.html`'s message is a change to the student player, held by "nothing is student-facing right now",
+  and a token would also be the first thing a device sends that the monitor trusts for identity. `lock.html` is
+  byte-for-byte unchanged.
+- **Tests.** `test:er-board` gains the hostile messages, the carried record, `rejoinChoices`, and eleven mutants (75
+  assertions, 22 mutants in all, every one caught). New `test:er-monitor-hostile` (`smoke-monitor-hostile.mjs`, port 8684) drives the
+  page's real Add device / Connect buttons and message handler through a stand-in `WebRTCPair` whose channel is an
+  EventTarget: ten hostile messages (markup in `station`, a script-shaped string, markup after a numeric total, an
+  object, `1e999`, a null or missing total, a negative, raw JSON) inject nothing and run nothing; then Reset, a reload, a three-hour-old record,
+  and a re-pair in the same session and after a reload. **Seen failing first** against the old code: the injected
+  `onerror` ran (`__pwned` was 1), the Reset cases failed, and the run stopped where the old page has no "Who is
+  connecting?" choice; a first draft of the suite showed every reload and re-pair case failing too.
+- **Not verified:** no real phone has re-paired with a real WebRTC connection (the stand-in fires `close` when asked;
+  a real `RTCPeerConnection.close()` may fire it later, which the guard is for). Not printed on paper.
+
+---
+
 ## AI-53: 002 counts a project team once a day; the rollover clears the group memory (2026-11-03, `CACHE_VERSION` v563)
 
 Source: the AI_Tools review of 2026-11-04 (in the Selector's folder), findings M1 and H2. Two bugs, no feature work, no
@@ -103,7 +187,6 @@ reviews below. No feature work.
   each at the line the form named, found by its text, and the cross-references to the deleted ranks I could find with grep).
 
 ---
-
 ## AI-31: 002 project teams (rank 111, 2026-11-03, `CACHE_VERSION` v561)
 
 Devon had answered all six project-team questions on 2026-10-07 (`DEVON-ANSWERS-2026-10-07.md` 4.1 to 4.6, the second table, binding). BACKLOG's
