@@ -9,6 +9,38 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-60: German separable verbs take their own auxiliary, and an unlisted one is split (review M5, 2026-11-04, `CACHE_VERSION` v577)
+
+The 2026-11-04 review's M5 (`~/projects/AI_Tools-REVIEW-2026-11-04.md`), brought in by `1dd649b` and carried into the
+Plusquamperfekt by `f124e9d`: a separable verb took its base verb's auxiliary, so aufstehen and einschlafen printed "habe
+aufgestanden" and "habe eingeschlafen", aufstehen on the pack's own check sheet. A verb whose base the pack did not know was not
+split at all: aufwachen gave "aufwache" and "habe geaufwacht", einsteigen "geeinsteigt". Reproduced first: the new cases in
+`conjugate.test.mjs` failed 13 ways before the fix, and the old line that pinned "habe aufgestanden" was the bug written down.
+
+- **`separable.auxiliary`** in `conjugate-de.js` names a separable verb's own auxiliary by its whole infinitive (aufstehen,
+  einschlafen, aufwachen, zurückkehren, umziehen, einziehen: sein). The engine's `separableAux()` applies it in `lookup()`, so a
+  teacher's record merged over the pack's keeps it, and in `resolve()`; a record that names its own auxiliary wins, and a
+  reflexive verb still takes haben (sich umziehen). Stehen and schlafen on their own are unchanged.
+- **`separable.unlisted(prefix, rest, infinitive)`** is a second pass in `splitSeparable()`, after the known-base pass, so every
+  verb that split before splits the same way. German's `unlistedSeparable()` splits when what is left can begin a word, ends in
+  -en/-eln/-ern and keeps a vowel in its stem (so zupfen, angeln, hindern and ankern stay whole). It does not guess um- or
+  wieder- (umarmen, wiederholen), an -ieren verb (analysieren, annoncieren), or einigen, festigen, ankern, angeln, hindern and
+  umarmen, which pass every test and are one word. A split unlisted verb (abtrocknen: trockne ab, abgetrocknet) stays
+  `known: false` and `assumed`, like any unlisted verb.
+- **Records added:** steigen (strong, sein), so einsteigen, aussteigen and umsteigen are eingestiegen, not a weak guess; wachen
+  and probieren as regulars (aufwachen and ausprobieren are checked verbs now). einschlafen, aufwachen and einsteigen are on the
+  check sheet's examples.
+- **Not changed:** Devon's G4 answer stands, so the Vorgangspassiv is still printed for every unmarked verb, aufstehen included
+  ("ich werde aufgestanden"). The check sheet's imperative row reads "wir stehen wir auf", the subject put in front of a form
+  that already carries it; that is the sheet's pronoun option and every German verb, not this change, and is left alone.
+- **What did not work:** an unlisted verb whose base is strong still gets a weak participle (auftreten would be "aufgetretet"),
+  which is why steigen became a record rather than relying on the split; the pack's known gap for unlisted verbs is unchanged.
+  An unlisted verb with a separable prefix that is really inseparable (unterhalten-style, or a durch-/über- verb) is not in the
+  prefix list and is untouched, but a new prefix-shaped false split will show only when someone types it. No language teacher
+  has read any of this.
+- Checks: `test:conjugate` (079 parity 132 forms + 41 tables, 169 broken copies caught), `test:conjugate-039`, `test:verb-poster`,
+  `test:verb-poster-add-verb`, `test:verb-poster-callouts`, `test:word-list-039`, `test:conjdrill-share`, lint and the guards.
+
 ## AI-57: the school accent no longer re-colours text on status fills (review M2, 2026-11-04, `CACHE_VERSION` v576)
 
 The 2026-11-04 review's M2 (`~/projects/AI_Tools-REVIEW-2026-11-04.md`), brought in by `73670b7` (AI-29): `brandCss()` in

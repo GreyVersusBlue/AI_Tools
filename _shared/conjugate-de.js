@@ -14,7 +14,10 @@
  * Persons are six fixed slots: ich, du, er/sie/es, wir, ihr, sie/Sie (the plural "they" and the
  * formal "you" are one form). A separable verb (aufmachen, ankommen, einkaufen) is a prefix glued
  * to a verb this pack knows: the engine moves the prefix to the end of a finite form (ich mache
- * auf) and puts it between ge- and the stem in the participle (aufgemacht).
+ * auf) and puts it between ge- and the stem in the participle (aufgemacht). Its auxiliary is its base
+ * verb's unless `separable.auxiliary` names its own (aufstehen and einschlafen take sein; stehen and
+ * schlafen haben). An unlisted verb with a separable prefix (abtrocknen) is split the same way when
+ * `unlistedSeparable()` says what is left can be a verb, and stays unchecked like any unlisted verb.
  *
  * Reflexive verbs (sich waschen, sich anziehen) put the accusative pronoun after the finite verb. A dative reflexive
  * (sich etwas vorstellen: ich stelle mir etwas vor) takes mir, dir, sich, uns, euch, sich: a verb the pack lists as
@@ -93,6 +96,7 @@
   strong('liegen', 'lag', 'gelegen');
   strong('ziehen', 'zog', 'gezogen');
   strong('fliegen', 'flog', 'geflogen', SEIN);
+  strong('steigen', 'stieg', 'gestiegen', SEIN);
   strong('schwimmen', 'schwamm', 'geschwommen', { auxiliary: 'sein', k2alt: 'schwömm' });
   strong('rufen', 'rief', 'gerufen');
   strong('waschen', 'wusch', 'gewaschen', { stemChange: 'a>ä' });
@@ -120,7 +124,7 @@
   var REG = {};
   ('machen spielen lernen arbeiten wohnen kaufen sagen fragen hören lieben leben brauchen öffnen reisen tanzen ' +
     'sammeln wandern studieren besuchen verkaufen erklären bezahlen holen räumen schauen zählen stellen setzen ' +
-    'legen packen putzen suchen zeigen bauen lachen antworten warten rechnen freuen merken wünschen leisten').split(' ')
+    'legen packen putzen suchen zeigen bauen lachen antworten warten rechnen freuen merken wünschen leisten probieren wachen').split(' ')
     .forEach(function (v) { REG[v] = true; });
 
   var E_RE = /(?:[dt]|(?:[^aeiouäöüyhlrmn]|ch)[mn])$/; // a stem that takes an e before -st, -t, -te...
@@ -132,6 +136,17 @@
   // verbs that look prefixed to a vowel (beug-en, beicht-en, enter-n): they take ge- in the participle
   var NOT_PREFIXED = ['beugen', 'beichten', 'entern'];
   function prefixed(inf) { var m = INSEP.exec(inf); return !!m && ONSET.test(m[1]) && NOT_PREFIXED.indexOf(inf) < 0; }
+  // An unlisted verb that starts with a separable prefix (aufwachen, einatmen) is split off its base when what is left can be
+  // a German verb: it can begin a word, ends in -en, -eln or -ern, and keeps a vowel in its stem once that ending is off
+  // (so zupfen is not zu-pfen, angeln not an-geln, hindern not hin-dern). um- and wieder- are separable in some verbs and
+  // not in others (umarmen, wiederholen), so an unlisted one is left whole; so is an -ieren verb (analysieren, annoncieren)
+  // and the few below that pass every test and are still one word.
+  var NOT_SEPARABLE = ['einigen', 'festigen', 'ankern', 'angeln', 'hindern', 'umarmen'];
+  function unlistedSeparable(pre, rest, inf) {
+    if (pre === 'um' || pre === 'wieder' || /ieren$/.test(inf) || NOT_SEPARABLE.indexOf(inf) >= 0) return false;
+    var m = /^(.*?)(?:eln|ern|en)$/.exec(rest);
+    return !!m && rest.length >= 4 && /[aeiouäöüy]/.test(m[1]) && ONSET.test(rest);
+  }
   // Konjunktiv II proper (wäre, käme, hätte, könnte): a strong verb's Präteritum stem with umlaut and -e, -est, -e, -en, -et,
   // -en; a weak verb's is its Präteritum; a mixed verb marked `k2: 'umlaut'` takes the umlaut on the Präteritum (brächte).
   // `k2alt` is the second stem a few verbs have (stünde / stände). The irregular few (sein, haben, werden, tun, the modals,
@@ -162,7 +177,11 @@
     reflexivePronounsDative: ['mir', 'dir', 'sich', 'uns', 'euch', 'sich'],
     dativeVerbs: ['vornehmen', 'merken', 'wünschen', 'ansehen', 'anschauen', 'holen', 'bestellen', 'kaufen', 'leisten'],
     pronouns: { words: ['ich', 'du', 'er', 'sie', 'es', 'wir', 'ihr'] },
-    separable: { prefixes: ['auseinander', 'entgegen', 'zusammen', 'herunter', 'hinunter', 'heraus', 'herein', 'herauf', 'hinaus', 'hinein', 'hinauf', 'voraus', 'nieder', 'zurück', 'vorbei', 'weiter', 'wieder', 'statt', 'fort', 'fest', 'heim', 'los', 'mit', 'nach', 'teil', 'weg', 'vor', 'her', 'hin', 'ab', 'an', 'auf', 'aus', 'bei', 'ein', 'um', 'zu'] },
+    separable: { prefixes: ['auseinander', 'entgegen', 'zusammen', 'herunter', 'hinunter', 'heraus', 'herein', 'herauf', 'hinaus', 'hinein', 'hinauf', 'voraus', 'nieder', 'zurück', 'vorbei', 'weiter', 'wieder', 'statt', 'fort', 'fest', 'heim', 'los', 'mit', 'nach', 'teil', 'weg', 'vor', 'her', 'hin', 'ab', 'an', 'auf', 'aus', 'bei', 'ein', 'um', 'zu'],
+      unlisted: unlistedSeparable,
+      // separable verbs whose auxiliary is not their base verb's (stehen, schlafen, wachen, kehren and ziehen take haben).
+      // umziehen and einziehen are moving house; sich umziehen, getting changed, is reflexive and takes haben anyway.
+      auxiliary: { aufstehen: 'sein', einschlafen: 'sein', aufwachen: 'sein', zurückkehren: 'sein', umziehen: 'sein', einziehen: 'sein' } },
     classes: {
       en: { name: '-en', example: 'machen', suffixes: ['en'], not: /\s/ },
       eln: { name: '-eln', example: 'sammeln', suffixes: ['eln'], cut: 1, not: /\s/ },
@@ -223,7 +242,7 @@
       { id: 'eln', tenses: ['present', 'subjunctive', 'imperative'], cls: ['eln'], stem: /el$/, next: /^$/, stemRepl: [/el$/, 'le'] }
     ],
     // separable verbs are not records (they are a prefix on one); these are listed so the check sheet prints them
-    examples: 'aufmachen zumachen einkaufen anrufen mitkommen ankommen aufstehen ansehen abholen mitbringen einladen zurückkommen sich_waschen sich_anziehen sich_freuen sich_merken sich_(dat.)_vorstellen sich_(dat.)_waschen sich_kaufen'.split(' ').map(function (v) { return v.replace(/_/g, ' '); }),
+    examples: 'aufmachen zumachen einkaufen anrufen mitkommen ankommen aufstehen einschlafen aufwachen einsteigen ansehen abholen mitbringen einladen zurückkommen sich_waschen sich_anziehen sich_freuen sich_merken sich_(dat.)_vorstellen sich_(dat.)_waschen sich_kaufen'.split(' ').map(function (v) { return v.replace(/_/g, ' '); }),
     records: R,
     regulars: REG
   });

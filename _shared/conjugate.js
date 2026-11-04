@@ -185,16 +185,30 @@
 
   // A pack with `separable: { prefixes }` (German): an infinitive that is a prefix glued to a verb the
   // pack knows (aufmachen = auf + machen) is that verb, with the prefix moved to the end of a finite form.
+  // Failing that, a pack's `separable.unlisted(prefix, base, infinitive)` may say an unknown base is a verb too
+  // (aufwachen = auf + wachen, which the pack does not list): it is split the same way, and stays unchecked.
   function splitSeparable(p, inf) {
-    var sp = p.separable;
+    var sp = p.separable, i, pre;
     if (!sp || !sp.prefixes || knownBase(p, inf)) return null;
-    for (var i = 0; i < sp.prefixes.length; i++) {
-      var pre = sp.prefixes[i];
+    for (i = 0; i < sp.prefixes.length; i++) {
+      pre = sp.prefixes[i];
       if (inf.indexOf(pre) === 0 && inf.length - pre.length >= 3 && knownBase(p, inf.slice(pre.length))) {
         return { prefix: pre, base: inf.slice(pre.length) };
       }
     }
+    if (typeof sp.unlisted !== 'function') return null;
+    for (i = 0; i < sp.prefixes.length; i++) {
+      pre = sp.prefixes[i];
+      if (inf.indexOf(pre) === 0 && sp.unlisted(pre, inf.slice(pre.length), inf)) return { prefix: pre, base: inf.slice(pre.length) };
+    }
     return null;
+  }
+
+  // A separable verb's own auxiliary, when it is not its base verb's (aufstehen and einschlafen take sein, stehen and
+  // schlafen haben): the pack's `separable.auxiliary` map, keyed by the whole infinitive.
+  function separableAux(p, full) {
+    var m = p.separable && p.separable.auxiliary;
+    return m && has(m, full) ? m[full] : null;
   }
 
   function lookup(lang, infinitive) {
@@ -207,6 +221,8 @@
       var out = {};
       Object.keys(rec).forEach(function (k) { out[k] = rec[k]; });
       out.infinitive = inf; out.as = sp.base; delete out.prefixes; delete out.except;
+      var ownAux = separableAux(p, inf);
+      if (ownAux) out.auxiliary = ownAux;
       return out;
     }
     return lookupBase(p, inf) || null;
@@ -237,6 +253,13 @@
     var cut = cdef ? (cdef.cut || 2) : 0;
     var known = typeof verb === 'string' ? (!!rec || has(p.regulars, inf))
       : !!(lookupBase(p, inf) || has(p.regulars, inf) || (rec && rec.teacher && Object.keys(rec.teacher).length));
+    // the separable verb's own auxiliary over its base verb's; a record that names one itself keeps it
+    var sepAux = sepSplit ? separableAux(p, full) : null;
+    if (sepAux && !(typeof verb !== 'string' && rec && rec.auxiliary)) {
+      var withAux = {};
+      Object.keys(rec || {}).forEach(function (k) { withAux[k] = rec[k]; });
+      withAux.auxiliary = sepAux; rec = withAux;
+    }
     return {
       lang: lang, p: p, rec: rec || null, base: inf, sep: sep, full: full, reflexive: reflexive, dative: dative, cls: cl, 'class': cdef,
       // rec.stem is a lexical stem the infinitive does not show (Latin: dīcere -> dīc-)
