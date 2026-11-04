@@ -9,6 +9,36 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-41: 046's time-slices sheet in the print preview (rank 60, 2026-11-04, `CACHE_VERSION` v571)
+
+Path 20 P4's last open piece (rank 60; the way back from Timeline Builder was closed, not built, Devon, 2026-11-03). The
+row said the kit's `preview()` did not cover 046's canvas export; it does, once the canvas is a picture in `#printArea`.
+`_shared/` is unchanged.
+
+- **What it is.** The Time slices card has **Preview the slices** in front of **Print the slices**. Both build the sheet as
+  before (`buildSlicesCanvas()`, its `sliceSheetBuilding` saving guard untouched) and put it in a new `#printArea`, a direct
+  child of `<body>`, as one `<img>`, under `body.printing-slices`; a print rule like the map export's shows only that. Print
+  prints it; Preview opens `PrintKit.preview({ area, trigger, title, onClose, onPrint })`, whose Print prints the same sheet.
+  Closing the preview, or `afterprint`, empties `#printArea` and takes the class off, so Ctrl+P prints the map again. The
+  slices Print used to borrow the single-map `#printExportStage`; it no longer does. Save the slices as PDF is unchanged.
+- **What I decided.** (1) A Preview button in front of Print, not Print opening the preview: the entry's words were "make
+  Print open the preview like the other print tools", and every other tool does it with a button in front (CLAUDE.md's
+  recipe), so the convention won. (2) **The paper.** `setPage()` takes only named papers, and 046's page is its own: the
+  Letter shape is exactly Letter, but a widescreen or custom sheet prints on an 11 in-long-edge page of its own shape
+  (11 x 6.19 in for 16:9). The preview shows every sheet on Letter turned the sheet's way (landscape when wider than tall),
+  fitted by the same `object-fit: contain` as print, and for a non-Letter shape the title says "shown on Letter (it prints
+  on its own 11 × 6.19 in page)". Making the kit take an arbitrary page size would have meant changing `_shared/print-kit.js`,
+  which this session could not touch; a later one could, and then the title line goes. (3) The kit's `@page` style element
+  (`#pk-page-style`) is removed right after `setPage()`: the preview reads the page from the kit's memory, not the element,
+  and leaving it would have fought `setPrintPageSize()`'s rule for which page 046 prints on.
+- **Tests.** `test:blank-map-slices-smoke` (68, was 44): the button, one page, Letter, the image filling the page, the
+  title, Escape, Close, the preview's Print once, Chromium's PDF of it one page, `afterprint`, Print the slices through
+  the same `#printArea`, nothing saved but `updatedAt` (the sheet build's own `save()`), the map as it was, and the
+  widescreen title. `test:preview-adopters` has a 046 entry (147 checks: Letter, Letter turned, widescreen and a square
+  custom page, light and dark, the preview's count against Chromium's PDF, axe, a phone); the suite gained two flags,
+  `printBlock` (046 keeps its own `@media print`) and `clears` (its sheet is emptied on close and held by `rest`).
+- **Not verified.** Paper: nothing was printed. A real print dialog's own preview of the custom-size page was not looked at.
+
 ## AI-49: 043's trip-day view (rank 143, 2026-11-03, `CACHE_VERSION` v570)
 
 (My commit says v567; AI-58 (+AI-59), AI-47 and AI-56 took v567 to v569 on `main` first, so the merges moved mine to v570.)
