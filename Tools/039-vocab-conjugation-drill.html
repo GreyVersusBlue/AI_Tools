@@ -1281,9 +1281,14 @@
   }
 
   /* ---------- lifecycle ---------- */
+  /* A new set named like one of the word lists opens with that list's words (AI-54): the set and the
+     list are one by name from here on, so starting it blank would let the first edit replace them.
+     A term with a colon is left out of 039's text and stays in the list (WordList.toPairs, putPairs). */
   function newSet(name) {
+    var hubList = Store.list().indexOf(name) === -1 ? wordListDo(function () { return WordList.get(name); }) : null;
+    var seeded = hubList ? (wordListDo(function () { return WordList.toPairs(hubList.words); }) || '') : '';
     state = {
-      name: name, mode: 'vocab', vocabText: '', persons: DEFAULT_PERSONS.slice(), personSlots: [0, 1, 2, 3, 4, 5], conjugations: [],
+      name: name, mode: 'vocab', vocabText: seeded, persons: DEFAULT_PERSONS.slice(), personSlots: [0, 1, 2, 3, 4, 5], conjugations: [],
       shuffleVocab: false, shuffleConjugation: false, ttsLang: 'es-ES', printCombined: false,
       langPreset: 'spanish', vocabDirection: 'target2en', vocabLimit: 0, printVersions: 1
     };
@@ -1328,13 +1333,18 @@
   els.importFlashBtn.addEventListener('click', function () {
     if (!state) return;
     var name = els.flashSetSelect.value;
-    var items = getFlashcardItems(name);
-    if (!items.length) { alert('That list has no words saved yet.'); return; }
+    var all = getFlashcardItems(name);
+    if (!all.length) { alert('That list has no words saved yet.'); return; }
+    // A word with a colon in it would be read here as a word and its translation (AI-54): leave it out.
+    var items = all.filter(function (it) { return it.word.indexOf(':') === -1; });
+    var skipped = all.length - items.length;
     var lines = items.map(function (it) { return it.translation ? (it.word + ': ' + it.translation) : it.word; });
-    state.vocabText = (state.vocabText.trim() ? state.vocabText.replace(/\n*$/, '\n') : '') + lines.join('\n');
+    if (lines.length) state.vocabText = (state.vocabText.trim() ? state.vocabText.replace(/\n*$/, '\n') : '') + lines.join('\n');
     els.vocabInput.value = state.vocabText;
     save();
-    alert('Added ' + items.length + ' word(s) from "' + name + '".');
+    alert('Added ' + items.length + ' word(s) from "' + name + '".' + (skipped ? ' Left out ' + skipped +
+      ' with a colon in it, which this tool reads as the split between a word and its translation; ' +
+      (skipped === 1 ? 'it stays' : 'they stay') + ' in the list.' : ''));
     renderPreview();
   });
 
@@ -1536,7 +1546,8 @@
       saved is touched, save, open. Returns the name it was filed under. */
   function adoptSet(decoded) {
     var name = (decoded.name && String(decoded.name).trim()) || 'Shared drill set';
-    var existing = Store.list();
+    // A word list of that name counts as taken too: saving here writes through to it (AI-54).
+    var existing = Store.list().concat(listFlashcardSets());
     if (existing.indexOf(name) !== -1) {
       name = name + ' (shared)';
       while (existing.indexOf(name) !== -1) name = name + ' 2';

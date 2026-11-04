@@ -9,6 +9,33 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-54: a new or shared 039 set never empties a 040 list, and a colon term survives 039 (review H1, 2026-11-04, `CACHE_VERSION` v575)
+
+The 2026-11-04 review's H1 (`~/projects/AI_Tools-REVIEW-2026-11-04.md`), brought in by `8943438` (AI-27, 039's write-through to
+`gvb-word-lists`): 039's `Store.save` always calls `WordList.putPairs(name, vocabText)`, `newSet()` saves an empty vocabulary at
+once, and `putPairs` skipped a blank text only when no list of that name existed. So New set "Unit 3" in 039 emptied 040's "Unit 3"
+(words, examples, gender, tags, verb records), and Import set or a `?set=` link named like a list overwrote it, since `adoptSet()`
+only checked 039's own set names. Separately, a term with a colon ("10:00 a.m.") cannot be in 039's text, so every 039 save of a
+list of that name deleted it.
+
+- **`_shared/word-list.js`.** `putPairs` writes nothing for a blank text, ever: no list made, none emptied (it returns the list
+  unchanged). A word whose term holds a colon is never deleted by it: it is put back at its index after the reconcile. `toPairs` is
+  unchanged (it still leaves such a term out of 039's text).
+- **039.** `newSet()` with a list's name (and no 039 set of that name) opens with that list's words, through `toPairs`. `adoptSet()`
+  counts a list's name as taken, so a shared "Unit 5" is filed as "Unit 5 (shared)". "Add words from a list" leaves out a word with
+  a colon (it would become the word "10" with the translation "00 a.m.: ...") and says how many it left out.
+- **Calls made, cheap to reverse.** (1) A blank 039 text never empties a list, even when the teacher deliberately cleared it in 039:
+  emptying a list is 040's job. (2) A new set named like a list *joins* that list (seeded from it) rather than being renamed away
+  from it: the write-through's model is "one name, one list". (3) A shared set is renamed away instead, since another teacher's set
+  should not edit yours.
+- **Tests, each seen failing first.** `test:word-list` has four new checks and two new broken copies (`putPairs empties a list
+  from a blank text`, `putPairs drops a colon term`); `smoke-adopter-039.mjs` has section 3b, which fails four ways without the
+  `word-list.js` half and six without the 039 half (the shared-file case needed a list-only name, "Unit 5": "Unit 3" was by then a
+  039 set name too, so the old check passed on it).
+- **Not done.** Renaming a 039 set (the Set name box) to a list's name still writes the set's vocabulary over that list at once:
+  `smoke-adopter-039.mjs` section 3 uses that rename as the deliberate way to link a set to a list, so it was left alone. A colon
+  term still cannot be drilled in 039 (its format splits at the first colon). Not checked on a real device.
+
 ## AI-40: the Latin deponent perfect, locūtus sum (rank 56, Path 19 P3, Devon's L4, 2026-11-04, `CACHE_VERSION` v574)
 
 Devon, 2026-11-03, answer L4 (`~/projects/DEVON-ANSWERS-2026-11-03.md`, binding; the question's full wording is in
