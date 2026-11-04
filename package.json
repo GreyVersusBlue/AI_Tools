@@ -375,6 +375,8 @@
     "test:pe-uneven": "node Tools/pe-tournament-stations/test/smoke-uneven.mjs",
     "test:gallery-rotation-parity": "node Tools/gallery-walk-qr/test/rotation-parity.test.mjs",
     "test:seat-near": "node Tools/group-team-generator/test/smoke-seat-near.mjs",
+    "test:project-teams-core": "node Tools/group-team-generator/test/smoke-project-teams-core.mjs",
+    "test:project-teams": "node Tools/group-team-generator/test/smoke-project-teams.mjs",
     "test:named-sets": "node Tools/review-game-board/test/smoke-named-sets.mjs",
     "test:stations-smoke": "node Tools/stations/test/smoke-ids.mjs",
     "test:stations": "node Tools/stations/test/stations.test.mjs",

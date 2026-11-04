@@ -801,7 +801,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 11 | Path 8 P4 — device-to-device project transfer through the share sheet | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
-| 32 | Path 13 P2 — the rest. **All six splitters call `_shared/grouping.js` (v336–v341); 002, 022 and 027 keep their memory in a `groupHistory` field with the old fields written from it (v341–v343) and key it by roster id (v344–v346); the five improvements are in (002's floater fix v347, `keepStrategy` v348, `together: 'units'` v349, `restarts` for 002 and 022 v350, `method: 'best'` for 022 and 027 v351); the P2 bullet's increments 1–6.** Seating-aware grouping on 002 is in (v352, increment 6). Left: project teams on 002, parked on Devon's six questions (the P2 bullet, increment 6). Hold the twelve golden classes (`golden-old-groupings.json` now carries six re-recorded scenarios, each with an `amended` note), `smoke-rename-follow.mjs`, `test:grouping-parity` and `test:grouping-adopters` | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 36 | Path 14 P4 — the room, not the grid. **Everything buildable is built (AI-22, v365-v370): `seating-room.mjs`; the Room card on 005 (one room shared by periods); marks dragged, moved by arrow keys, resized, turned and relabelled, printed on the live page, Print all and the sub packet; marks in 010's and 008's pictures; a zone rule "desks near a mark" that follows its mark.** Waits on Devon: marks in 007's and 045's pictures (if wanted; those readers do not ask for marks yet); his two open questions (a: does the room live in 005's storage or a shared store; b: layouts per room or per section), built on their defaults | 005 | ¼ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 37 | Path 14 P5 — what is left: `_shared/undo.js` for 003 (no undo today, so a new feature); and "a point in 008" / "a pass in 001" from live mode, which needs Devon to pick a route (a `Handoffs` entry plus a receiver in each tool, or 005 writing their storage as 003 writes 037's); neither tool takes anything in today (live mode, absent today, 018 and 043 decided out: v377) | 005 | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 42 | Path 15 P5 — the phone remote, the one piece of P5 left (Team Draft's teams to 002 and 020 and the theme packs are built, v459-v460); it needs `_shared/remote.js`, which waits on Path 8 P1, so nothing to build until that lands | 007 | ½ | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
@@ -824,7 +823,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 86 | Export into Review Game Board — a board built straight from 053’s questions, with categories and points. **Since v269 the sheet’s “Send to Quiz / Review Game Board” row puts a teacher’s own questions in 030’s bank by link (Path 6 P4), up to about fifty; since v297 a longer list is offered as a bank file instead (“Save a bank file instead”), which 030’s “Share the bank” import reads, shows first and only adds from (Devon, 2026-10-07: “yes, the file”). Left: the ready-made board (which categories and points it gets is not decided)** | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
 | 96 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
 | 110 | Correlate hall-pass trips with the schedule; a student-initiated request flow | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
-| 111 | Project-team mode: longer-lived named teams, a shared task list, a printable team contract (roles and the year-long pair memory shipped, v277; this part waits on the questions in 002's section) | 002 | ½ | | [002 Group / Team Generator](#002--group--team-generator) |
 | 113 | Bell-schedule awareness (reads 032's `scv_calendar_v1`; needs a registry and cross-tool decision); a reconnecting mirror (`_shared/webrtc-pair.js`, a platform edit). The multi-timer board shipped v279 | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
 | 117 | Per-day team history, so a term view can show house points by week (today a team total is one running total; the term view of student points shipped v515). Needs a new stored shape: Devon's design call | 008 | ½ | | [008 Behavior & Points Tracker](#008--behavior--points-tracker) |
 | 118 | Per-record conflict resolution ("keep the newer of each"; needs per-record timestamps) | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
@@ -6111,12 +6109,13 @@ match; (021's silent overwrite of a saved unit on a name collision was fixed in 
   `test:grouping` (93 to 96: the cost check and its mutant) and `test:seat-near` (26: off by default, no chart, a chart, a keep-apart
   pair on neighbouring desks, two unseated, two unrelated sections, reload, long memory), each seen failing with the swap pass
   and the page's `cost` taken out.
-  **Project teams, parked (2026-10-27):** the six questions in 002's section ("Project-team mode, for Devon") are unanswered
-  (`DEVON-ANSWERS-2026-10-07.md` 4.1 to 4.6; "the rest of the Qs, leave for later"), so nothing is built. Defaults if they stay
-  unanswered, for whoever builds it: (1) named teams of the same students until the teacher dissolves them, stored in the class's
-  `gtg:data:<class>` (no new key); (2) a task list the teacher prints, not one students tick (nothing is student-facing); (3) an
-  editable contract template, signed on paper only, nothing recorded; (4) a team counts in the pair memory once, when it is made;
-  (5) built in 002 on `previous` and `lock`, now, rather than waiting for a shared home; (6) mid-project changes by hand.
+  **Project teams: answered and built (AI-31 rank 111, v561).** The paragraph that stood here, "parked (2026-10-27), the six questions
+  are unanswered", was wrong: Devon answered all six on 2026-10-07 (`DEVON-ANSWERS-2026-10-07.md` 4.1 to 4.6, the second table, binding).
+  4.1 named teams of the same students until dissolved: yes. 4.2 the task list: printed only. 4.3 the contract: yes, fill in the
+  blank (his wording with blanks; signed on paper, nothing recorded). 4.4 in the pair memory: once per day (not the default of once).
+  4.5 build now, in 002, on `previous` and `lock`. 4.6 mid-project changes: he moves by hand. Built as 002's card 7
+  (`gtg-teams.js`, `projectTeams` and `projectContract` in the class's own `gtg:data:<class>`, no new key); HISTORY has the entry,
+  including how "once per day" was read.
 - **P3 — `_shared/bracket.js` + `_shared/rotation.js`.** *Design (AI-21, 2026-10-27; read from the tree at v352.)*
   **Two corrections to the text above first.** (a) 021 has **no bracket**: its page and CSS carry the word, but no
   seeding, advance or match code exists in it, so "the same algorithm line for line in 020 and 021" is stale and
@@ -9827,9 +9826,9 @@ room and what was happening in class at the time.
   and a printable team contract, rather than a one-period grouping. **Skip
   (2026-08-10)** — out of scope for this round; a persistent multi-day team
   is a different data model than this tool's per-period generate/print flow.
-  **Not built in v277 (AI-31-002): the section does not say enough to build it
-  without a decision that is Devon's.** The questions, under Open Questions
-  below, come first.
+  **Built in v561 (AI-31, rank 111), after Devon's answers of 2026-10-07** (the
+  questions and his answers are under Open Questions below). Not built in v277:
+  the section then did not say enough to build it without his decisions.
 
 #### Moonshot / North Star
 
@@ -9849,7 +9848,9 @@ every tool on the site that forms groups, using the same memory.
   They're arguably the most sensitive thing the site would store. (Path 3 P4
   answered it: 002's skill ratings and pairing memory stay in 002's own
   storage.)
-- **Project-team mode, for Devon (asked 2026-10-07, none answered):**
+- **Project-team mode (asked 2026-10-07; Devon answered all six that evening, `DEVON-ANSWERS-2026-10-07.md` 4.1 to 4.6; built in v561, AI-31 rank 111, HISTORY has what was decided):**
+  Answers: (1) yes, named teams of the same students until dissolved; (2) printed only; (3) yes, fill in the blank, paper signing only;
+  (4) once per day; (5) build now, in this tool; (6) moved by hand. The questions as asked:
   1. *Which project is it?* A team that lasts a few weeks, kept as named teams with the same students
      until the teacher dissolves them: stored in this class's `gtg:data:<class>` (no new key), or in a key of
      its own with a registry row and per-key student data flags?

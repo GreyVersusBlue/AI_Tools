@@ -9,6 +9,44 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-31: 002 project teams (rank 111, 2026-11-03, `CACHE_VERSION` v561)
+
+Devon had answered all six project-team questions on 2026-10-07 (`DEVON-ANSWERS-2026-10-07.md` 4.1 to 4.6, the second table, binding). BACKLOG's
+"Project teams, parked (2026-10-27)" paragraph and the v341-v352 line below ("Not built: the six questions are unanswered") were wrong, and both are
+corrected. His answers: 4.1 named teams of the same students until dissolved, "yes"; 4.2 the task list "printed only"; 4.3 the contract "yes should be fill
+in the blank"; 4.4 pair memory "once per day"; 4.5 "build now", in 002, on `previous` and `lock`; 4.6 "I'll move by hand".
+
+- **What it is.** Card 7 on 002, "Project teams". *Start project teams from the groups on screen* keeps those groups, with their names, as teams of the same students
+  until *Dissolve*. Teams are in the class's own `gtg:data:<class>` as `projectTeams` (`{ v, since, counted, days, teams: [{ name, members, tasks }] }`) and
+  `projectContract`: **no new key**, no registry row, and a class that never starts a team saves the string it always did (held by the old golden and by
+  `smoke-project-teams.mjs` section 1). Student names never go into a link: `buildSharePayload` is untouched and the suite reads its source for any team field.
+- **Task list (4.2), contract (4.3).** Each team has a text box, one task per line; *Print task lists* prints one page per team (the students, then a table with a box
+  to tick in pen, task, who, by when). *Print team contracts* prints one page per team from the teacher's wording: `{team}` and `{members}` are filled in, a run of three or
+  more underscores is a line to write on, and each student gets a signature line. **Nothing records who signs, and nothing is ticked on a screen.** The starter wording
+  is mine (Devon gave no text, only "fill in the blank"); the card says it is editable, it is stored only when it differs from the starter, and it survives a dissolve.
+  Both go through the page's existing print path (`printAlternateView`, now with a flag for a view that needs no groups), so no new markup sink was added (inline-sinks baseline unchanged at 20).
+- **4.4, once per day: my reading, the most conservative one.** A day counts when the page is open on a **Monday to Friday**, with the date not yet counted, for each team's
+  **students who are not marked absent** (a team down to one student counts nothing), and counts **once** however often the page is opened. A day the page was not opened is
+  **not** caught up: the tool does not know which days a class meets (a school day, a half day, a test week), so it counts only days it saw. A clock set back counts nothing
+  (`counted` only moves forward). The day goes in the pair memory with `Grouping.history.record`, the same call a shuffle makes, so the grid, "who has not yet worked
+  together" and the coverage strategy all see it; it also means a shuffle just after counts a team as having worked together last time. Counting happens on opening a
+  class, on starting teams, and when a hidden tab comes back. It clears Undo (an earlier snapshot would put the memory back without the day). Reverse it by changing
+  `isDue()`/`isSchoolDay()` in `gtg-teams.js` (the weekend rule is one line) or by counting from `school-day.js` once a calendar is in reach.
+- **4.5, on `previous` and `lock`.** *Put the teams on screen* shows each team as a locked group of `lastGroups` with its name in `lastGroups.labels` (absent students left out
+  of the display only; students on no team are the floaters). Reshuffle then is the engine's own locked path: unlock a team and it is dealt again with the students on no team;
+  a locked team keeps its students **and its name**; an unlocked one takes the naming style's label. Tents, group sheets, Copy and the share link read the label through the
+  new `labelFor()`. With every team locked, Reshuffle says there is nothing to deal rather than record another shuffle (only for a project-team result; any other all-locked reshuffle behaves as before).
+- **4.6, by hand.** Each student has a *Move* menu (to another team, or off the teams) and each team an *Add a student* menu of students on no team. A reshuffle never
+  changes the saved teams. A renamed student (Class Roster Hub) is carried through `renameStudentData`.
+- **Files.** `Tools/group-team-generator/gtg-teams.js` (`GtgTeams`, pure, in `PRECACHE_URLS` and `SHELL_URLS`); suites `smoke-project-teams-core.mjs` (`npm run test:project-teams-core`,
+  78 assertions) and `smoke-project-teams.mjs` (`npm run test:project-teams`, port 8678, 94 assertions with the page clock pinned). Seven deliberate breaks of the page and module
+  (no once-a-day check, absent counted, weekends counted, no all-locked guard, move does nothing, dissolve loses the wording, Undo not cleared) each fail it; the last survived
+  until its assertion was added.
+- **Not verified.** Nothing printed on paper (the pages are laid out for Letter and checked only as HTML in the suite, not in Chromium's PDF or `audit-print`'s baseline); no
+  teacher used the card; the starter contract wording is untested with a class; a phone-width layout of the editor was not looked at; the page was not run under `TZ` zones other than the
+  machine's (the date is the local one, `GtgTeams.localDate`).
+
+
 ## AI-31: conference sign-up Worker run under workerd (rank 161, 2026-11-03, no page changed, no version bump)
 
 `conference-signup/test/smoke-workerd.mjs` (`npm run test:conference-workerd`, ports 8676 and 8677, 38 assertions, about
@@ -1677,7 +1715,7 @@ read 2.36 against 2.58: the memory, not the seating. Fixed in the suite, not the
 **Not verified.** No real seating chart from 005 (the suite's chart is hand-built to its shape); classes over about 35, where the
 swap search was not timed; 005's own desk spacing against the 106-px desk width the distance divides by.
 
-**Project teams.** Not built: the six questions are unanswered. BACKLOG's P2 bullet carries them with their defaults.
+**Project teams.** Not built then, and the line said the six questions were unanswered. **Corrected 2026-11-03 (AI-31, rank 111): Devon had answered all six on 2026-10-07 (`DEVON-ANSWERS-2026-10-07.md` 4.1 to 4.6); they were built in v561, see the entry at the top.**
 
 **Obliges.** `Tools/board-check/suite-durations.json` has `smoke-seat-near.mjs` at a guessed 40 s until the next refresh.
 
@@ -4721,7 +4759,7 @@ Audit entry AI-31, BACKLOG rank 119 (½), rewritten to what is left: project-tea
   students and rotates its roles** (decided here: locking is about who, and the same group next week is the usual reason to lock). History is
   `roleHistory` in the class's own `gtg:data:<class>`, written only once roles are used; Undo restores it; roster pruning and a roster rename carry it; its own
   Reset role history asks first and leaves the pairing memory alone. Roles show on cards, tents, sheets and Copy as Text; the share link carries none.
-- **Part 3, project-team mode, not built.** The section does not say enough (storage, who sees the task list, what the contract says, whether it counts in
+- **Part 3, project-team mode, not built** (built in v561 after Devon's answers of 2026-10-07; see the entry at the top). The section did not say enough (storage, who sees the task list, what the contract says, whether it counts in
   the pair memory, whether it is Path 13 P2's); six questions are in 002's Open Questions. Rank 119 is rewritten to that.
 - **Old behaviour pinned.** `golden-old-groupings.json`, recorded once from the page at 4162d61 (`_record-golden.mjs`, `Math.random` seeded): twelve classes,
   five rounds each, every strategy, locks, absences, keep-apart and keep-together. Groups, floaters and the saved string (SHA-256) are identical with both
