@@ -664,7 +664,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 92 rows, **239 keys and 31 prefixes across 134 files** (`check:registry`); **55** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 90) | `sw-register.js` 88 · `a11y.css` 87 · `a11y.js` 87 · `ink-paper.css` 79 · `base.css` 73 · `qr-draw.js` 61 · `state-link.js` 57 · `share.js` 56 · `store.js` 45 · `roster.js` 35 · `print-area.css` 32 · `print-kit.css` 19 · `print-kit.js` 19 · `media-db.js` 18 · `export.js` 16 · `stage.js` 16 · `tool-registry.js` 14 · `qr-scan.js` 10 · `handoffs.js` 9 · `school-day.js` 9 · `sample-data.js` 8 · `webrtc-pair.js` 8 · `paste-table.js` 7 (+2 via a module) · `grouping.js` 6 · `list-sentence.js` 6 (+3 via a module) · `question-bank.js` 6 · `student-flags.js` 6 · `undo.js` 6 · `word-list.js` 6 · `speak.js` 5 · `theme.css` 5 · `chart-svg.js` 4 · `levels.js` 4 · `seating-read.js` 4 · `countdown.js` 3 · `remote-channel.js` 3 · `restore-kit.js` 3 · `binder-stale.js` 2 · `bracket.js` 2 · `conjugate-de.js` 2 · `conjugate-es.js` 2 · `conjugate-fr.js` 2 · `conjugate-it.js` 2 · `conjugate-la.js` 2 · `conjugate.js` 2 · `rotation.js` 2 · `ss-glossary.js` 2 · `stations-bank.js` 2 · `stations.js` 2 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `stations-debrief.css` 1 · `stations-debrief.js` 1 · `student-details.js` 1 (+1 via a module) · `geo-project.js` 0 (+2 via a module) |
+| Shared-file adoption (of 90) | `sw-register.js` 88 · `a11y.css` 87 · `a11y.js` 87 · `ink-paper.css` 79 · `base.css` 73 · `qr-draw.js` 61 · `state-link.js` 57 · `share.js` 56 · `store.js` 45 · `roster.js` 35 · `print-area.css` 32 · `print-kit.css` 19 · `print-kit.js` 19 · `media-db.js` 18 · `export.js` 17 · `stage.js` 16 · `tool-registry.js` 14 · `qr-scan.js` 10 · `handoffs.js` 9 · `school-day.js` 9 · `sample-data.js` 8 · `webrtc-pair.js` 8 · `paste-table.js` 7 (+2 via a module) · `grouping.js` 6 · `list-sentence.js` 6 (+3 via a module) · `question-bank.js` 6 · `student-flags.js` 6 · `undo.js` 6 · `word-list.js` 6 · `speak.js` 5 · `theme.css` 5 · `chart-svg.js` 4 · `levels.js` 4 · `seating-read.js` 4 · `countdown.js` 3 · `remote-channel.js` 3 · `restore-kit.js` 3 · `binder-stale.js` 2 · `bracket.js` 2 · `conjugate-de.js` 2 · `conjugate-es.js` 2 · `conjugate-fr.js` 2 · `conjugate-it.js` 2 · `conjugate-la.js` 2 · `conjugate.js` 2 · `rotation.js` 2 · `ss-glossary.js` 2 · `stations-bank.js` 2 · `stations.js` 2 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `stations-debrief.css` 1 · `stations-debrief.js` 1 · `student-details.js` 1 (+1 via a module) · `geo-project.js` 0 (+2 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **95 ranked rows, ranks to 164** (rank 161 shipped on 2026-11-03 (AI-31) and leaves a gap; ranks 152–160 shipped on 2026-11-01 (Path 22 P6–P14) and leave gaps; ranks 19 and 20 shipped on 2026-10-29 and leave gaps, as the earlier deletions did; rank 43 shipped three times on 2026-10-28, Path 16 P1 and then P2, and the ranks after it moved up one each time; the ranks before it keep the gaps earlier deletions left). Path 21 is finished; per-tool rows start at rank **75** |
@@ -820,7 +820,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 60 | Path 20 P4, what is left — the way back from Timeline Builder into a map project (needs a route 015 does not accept; Devon's call on where an event's year goes on a map), and the slice sheet in the print preview (the kit's `preview()` does not cover 046's canvas export); time slices themselves shipped in v433 | 046, 015 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 65 | First-run "Load sample data" across the tools that open to an empty form (P15); 059, 072, 049 (v488) and 043, 042, 082, 038, 084 (v489) done; the people-content tools wait on Devon (question below) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 66 | Phone-sized layout pass beyond 005: sideways overflow is gone from all 90 pages at 360 px (v490-v491) and the three toolbars over half a 740 px screen fold behind a More button (011, 032, 054; v498, `test:phone-toolbar`); left: only that a real phone has not been tried | site | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 86 | Export into Review Game Board — a board built straight from 053’s questions, with categories and points. **Since v269 the sheet’s “Send to Quiz / Review Game Board” row puts a teacher’s own questions in 030’s bank by link (Path 6 P4), up to about fifty; since v297 a longer list is offered as a bank file instead (“Save a bank file instead”), which 030’s “Share the bank” import reads, shows first and only adds from (Devon, 2026-10-07: “yes, the file”). Left: the ready-made board (which categories and points it gets is not decided)** | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
 | 96 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
 | 110 | Correlate hall-pass trips with the schedule; a student-initiated request flow | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
 | 113 | Bell-schedule awareness (reads 032's `scv_calendar_v1`; needs a registry and cross-tool decision); a reconnecting mirror (`_shared/webrtc-pair.js`, a platform edit). The multi-timer board shipped v279 | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
@@ -13520,15 +13519,18 @@ before building it.
 
 #### Major Features
 
-- **Direct export/feed into Review Game Board**, which the backlog
-  explicitly names as a pairing ("feeding into the Quiz / Review Game
-  Board") — Review Game Board already imports Category/Points/Question/
-  Answer from a spreadsheet; a one-click "download as .xlsx for Review
-  Game Board" button would deliver on that named integration instead of
-  leaving it as a manual copy-paste.
-- **Difficulty tiers per question** (easy/medium/hard), letting a teacher
-  build a review game board with graduated point values straight from
-  this bank.
+- ~~Direct export/feed into Review Game Board~~ — **done 2026-11-03 (v562)**, with
+  ~~difficulty tiers per question~~ (Devon's answers of 2026-11-03, 86-1 and 86-2). A
+  **Review game board** tab previews a ready-made board and **Save board file** saves it as
+  the JSON 030's **Import JSON** already reads (030 unchanged): one column per category
+  (Hispanic World, Francophone World, Global Culture), five clues at 100 to 500, the easiest
+  at 100 and the hardest at 500. Every built-in has an easy/medium/hard tier (`TIERS` in
+  `ctcg-bank.js`, beside `ROWS`; one reading, unreviewed, HISTORY v562); a teacher's own
+  question counts as medium; hidden built-ins are left off. The rule is
+  `ctcg-board.js` (`test:trivia-board-logic`, `test:trivia-board`, port 8679). Since v269 a
+  teacher's own questions also go to 030's bank by link, and since v297 by bank file. Not
+  done: a board by link (it would be a `_shared/handoffs.js` entry), a difficulty on a
+  teacher's own question, the tier in the seed set's `difficulty`, an .xlsx.
 - **Image support per card** (a flag, a landmark photo) for a richer
   printed card, matching the visual richness already built into
   Historical Figure / Country Trading Card Maker.
@@ -13544,16 +13546,10 @@ from the same content, with no retyping."
 
 #### Open Questions
 
-- Should categories be organized by broad cultural region (current
-  approach: Hispanic World, Francophone World, Global Culture) or by
-  specific country, given "for whatever language you teach" spans many
-  programs with very different needs? Region-level categories are easier
-  to maintain as a fixed built-in set; per-country tagging scales better
-  but needs many more built-in questions to feel populated per country.
-- Is a direct .xlsx export matching Review Game Board's exact expected
-  column format worth building now, or does that create a maintenance
-  dependency between two tools that would need to stay in sync if either
-  one's import/column format changes later?
+- ~~Region or country?~~ Decided: by broad region, as built (Devon, 2026-11-03, 053-1).
+- ~~An .xlsx in 030's column format?~~ Settled by building the board as 030's own board JSON
+  (v562), which `normalizeBoard()` already cleans on import, so there is no second column
+  format to keep in step.
 
 #### Platform themes that matter here
 

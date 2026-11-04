@@ -342,6 +342,8 @@
     "test:rename-follow": "node Tools/roster/test/smoke-rename-follow.mjs",
     "test:share": "node Tools/share/test/qr-draw.test.mjs && node Tools/share/test/share.test.mjs && node Tools/share/test/handoffs.test.mjs && node Tools/share/test/trivia-bank-file.test.mjs",
     "test:trivia-bank-file": "node Tools/share/test/trivia-bank-file.test.mjs",
+    "test:trivia-board-logic": "node Tools/cultural-trivia-card-generator/test/board.test.mjs",
+    "test:trivia-board": "node Tools/cultural-trivia-card-generator/test/smoke-board.mjs",
     "test:send-to": "node Tools/share/test/smoke-send-to.mjs",
     "test:pairing-code": "node Tools/share/test/pairing-code.test.mjs",
     "test:pairing-qr": "node Tools/share/test/smoke-pairing-qr.mjs",

@@ -31,6 +31,10 @@
 <script src="../_shared/tool-registry.js"></script>
 <script src="../_shared/handoffs.js"></script>
 <script src="cultural-trivia-card-generator/ctcg-bank.js"></script>
+<!-- Rank 86: the ready-made Review Game Board (a board file 030's Import JSON
+     reads), built by ctcg-board.js and saved through ExportKit.download. -->
+<script src="../_shared/export.js"></script>
+<script src="cultural-trivia-card-generator/ctcg-board.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -109,6 +113,16 @@
   .bank-list { max-height: 40vh; overflow-y: auto; }
   .bank-row .del-btn { float: right; }
 
+  .board-preview { overflow-x: auto; margin: .4rem 0 .8rem; }
+  .board-preview table { width: 100%; border-collapse: collapse; font-size: .84rem; table-layout: fixed; }
+  .board-preview th, .board-preview td { border: 1px solid var(--line); padding: .4rem .5rem; vertical-align: top; text-align: left; }
+  .board-preview th { background: var(--card-2); }
+  .board-preview .pts { font-weight: 700; }
+  .board-preview .tier { display: inline-block; font-size: .7rem; color: var(--muted); margin-left: .35rem; }
+  .board-preview .ans { color: var(--muted); font-style: italic; }
+  .board-note { font-size: .82rem; margin: .5rem 0 0; }
+  .board-note.error { color: var(--err); }
+
   #printArea { display: none; }
   .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .2in; margin-bottom: .3in; }
   .trivia-card { border: 1.5px solid #333; border-radius: 8px; padding: .2in; height: 2in; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; page-break-inside: avoid; }
@@ -158,6 +172,7 @@
     <button type="button" class="tab-btn active" data-stage="display">Projector display</button>
     <button type="button" class="tab-btn" data-stage="print">Printable cards</button>
     <button type="button" class="tab-btn" data-stage="bank">Trivia bank</button>
+    <button type="button" class="tab-btn" data-stage="board">Review game board</button>
   </div>
 
   <div class="stage active" id="stage-display">
@@ -217,6 +232,21 @@
       <div class="bank-list" id="bankList"></div>
     </div>
   </div>
+
+  <div class="stage" id="stage-board">
+    <div class="card">
+      <h2>A ready-made board for the Quiz / Review Game Board</h2>
+      <p class="hint">One column per category, five clues each, worth 100 to 500: the easiest question at 100, the hardest
+        at 500. Every built-in question has an easy, medium or hard rating (this page&rsquo;s own reading, not reviewed
+        by a language teacher); a question you added counts as medium. Hidden built-ins are left off, so hiding one or
+        adding your own is how you change the board.</p>
+      <div class="board-preview" id="boardPreview"></div>
+      <button type="button" id="saveBoardBtn">Save board file</button>
+      <p class="board-note" id="boardNote" aria-live="polite"></p>
+      <p class="hint">Then open the Quiz / Review Game Board, press <b>Import JSON</b> and choose the file. It arrives as a
+        new board named &ldquo;Cultural Trivia&rdquo; with two teams, and nothing on this page changes.</p>
+    </div>
+  </div>
 </div>
 
 <div id="printArea"></div>
@@ -237,7 +267,8 @@
   var els = {};
   ['categoryFilter', 'applyFilterBtn', 'displayNum', 'displayCat', 'displayQ', 'displayA', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
    'cardCount', 'printBtn', 'newCategory', 'newQ', 'newA', 'addQBtn', 'bankCount', 'bankList',
-   'bulkInput', 'bulkImportBtn', 'bulkNote', 'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'bulkInput', 'bulkImportBtn', 'bulkNote', 'shareBtn', 'shareNote',
+   'boardPreview', 'saveBoardBtn', 'boardNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var customQs = [];
   var hiddenIds = [];
@@ -428,10 +459,77 @@
       document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
       btn.classList.add('active');
       var stage = btn.getAttribute('data-stage');
-      ['display', 'print', 'bank'].forEach(function (s) {
+      ['display', 'print', 'bank', 'board'].forEach(function (s) {
         document.getElementById('stage-' + s).classList.toggle('active', s === stage);
       });
+      if (stage === 'board') renderBoard();
     });
+  });
+
+  /* ---------- the ready-made Review Game Board (rank 86) ----------
+     ctcg-board.js holds the rule; this draws its preview with text nodes
+     only and saves its board as the file 030's Import JSON reads. The
+     category filter does not apply: the board always has every category. */
+  var TIER_WORD = { easy: 'easy', medium: 'medium', hard: 'hard' };
+  function currentBoard() {
+    return window.CulturalTriviaBoard.build({
+      items: allQuestions(), labels: CAT_LABELS, tierOf: window.CulturalTriviaBank.tierOf, name: 'Cultural Trivia'
+    });
+  }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function renderBoard() {
+    var built = currentBoard();
+    els.boardPreview.textContent = '';
+    els.saveBoardBtn.disabled = !built;
+    if (!built) {
+      els.boardPreview.appendChild(el('p', 'hint', 'Every question is hidden, so there is nothing to put on a board. Unhide some in the Trivia bank.'));
+      return;
+    }
+    var table = el('table');
+    var cap = el('caption', 'hint', 'The board, ' + built.columns.length + ' categor' + (built.columns.length === 1 ? 'y' : 'ies') + ' across');
+    table.appendChild(cap);
+    var head = el('tr');
+    built.columns.forEach(function (c) { var th = el('th', null, c.label); th.scope = 'col'; head.appendChild(th); });
+    var thead = el('thead'); thead.appendChild(head); table.appendChild(thead);
+    var tbody = el('tbody');
+    var rows = Math.max.apply(null, built.columns.map(function (c) { return c.clues.length; }));
+    for (var r = 0; r < rows; r++) {
+      var tr = el('tr');
+      built.columns.forEach(function (c) {
+        var td = el('td');
+        var cl = c.clues[r];
+        if (cl) {
+          td.appendChild(el('span', 'pts', String(cl.points)));
+          td.appendChild(el('span', 'tier', TIER_WORD[cl.tier] + (cl.custom ? ', yours' : '')));
+          td.appendChild(el('div', null, cl.question));
+          td.appendChild(el('div', 'ans', cl.answer));
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    els.boardPreview.appendChild(table);
+  }
+  els.saveBoardBtn.addEventListener('click', function () {
+    var built = currentBoard();
+    if (!built) return;
+    var n = built.board.categories.reduce(function (sum, c) { return sum + c.clues.length; }, 0);
+    try {
+      ExportKit.download(JSON.stringify(built.board, null, 2), 'cultural-trivia-board.json', 'application/json');
+    } catch (e) {
+      els.boardNote.className = 'board-note error';
+      els.boardNote.textContent = 'Could not save the file: ' + ((e && e.message) || e);
+      return;
+    }
+    els.boardNote.className = 'board-note';
+    els.boardNote.textContent = 'Saved cultural-trivia-board.json: ' + built.board.categories.length + ' categories, ' + n +
+      ' clues. On the Quiz / Review Game Board, press Import JSON and choose it.';
   });
 
   /* ---------- share the custom bank: _shared/share.js (Path 6 P3) ----------
