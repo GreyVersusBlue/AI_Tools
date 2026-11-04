@@ -87,6 +87,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-47 (v568), rank 96 rewritten to the reference pitch half: 067's click track.** The tempo field ("♪ = 92") now drives a Web Audio click on the rhythm tab: Play/Stop, an optional one-measure count-in (saved in `msrg_settings_v1`, no new key), the first beat of each measure higher and louder, numbered beat circles and "Measure 2 of 4, beat 3" in text, the playing measure outlined, reduced motion respected; 30-240 bpm with a sentence when clamped, nothing played (and said) when the field has no number; stops on a new pattern, tempo or time-signature change, the other tab, a hidden page. `MsrgAudio` in `Tools/music-sightreading-generator/msrg-audio.js`. Suites `test:music-metronome` (pure, 18 mutants) and `test:music-metronome-smoke` (8688, assigned for this batch). **Nobody has listened to it.** Print unchanged.
 - **AI-22 (v565), rank 37 rewritten: a point (008) and a hall pass (001) from 005's live mode** (Devon's P5-route, 2026-11-03). A "Tap marks: Absent / A point / A hall pass" switch rides into the stage beside the chart, back on Absent every time live mode starts (his P5-menu kept: no menu on a tap); 005 writes 008's and 001's storage on this device (`seating-chart/seating-handoff.mjs`, refusing unknown or newer data, a student not on the class, a second pass), and Undo / Ctrl+Z take each back through 005's undo stack. `test:seating-handoff` (pure) and `test:seating-live-handoff` (port 8682, assigned for this batch). The switch is my reading of his two answers together, reversible (`HISTORY.md`). Left on rank 37: 003's undo (listed, not built), and 005's registry row's `writes` line (a `_shared/` edit this parallel session could not make).
 - **AI-55 (v564), review H3 and M7 fixed on 019's monitor; no ranked row.** A device's `station` and `total` are numbers or the message is refused (`ErBoard.readMessage`; a station of markup reached the roster's `innerHTML`); Reset keeps the start in the kept record; a record kept in the last two hours is carried over a reload; the pairing box asks **Who is connecting?** so a team that dropped picks up its own row and sheet. `lock.html` unchanged. Suite `test:er-monitor-hostile` (8684), **next free suite port: 8685.**
 - **AI-31 (v538-v541), ranks 125, 129, 131 and 135 DELETED, rank 44 rewritten to step 6 only (gaps, not renumbered).** 038's chart sheet (`#chartSheet`, 1/2/4/6 to a page, Preview, in memory only; `test:chart-sheet`, 8655), 017's typed link and comment area on the QR card (`test:gallery-card-options`, 8656), 021's multi-rotation stations and sit-out groups (`test:pe-uneven`, 8657), 027's discussion assessment (`NscAssess`; `test:nsc-assess-core`, `test:nsc-assess`, 8658); 023's name and date lines were already built (no code). Rank 44 keeps only the 065/073 handoffs, which still have no receiving field. **Next free suite port: 8659.** Nothing here has been on paper. The `showNumber` box on 017 is read at print time and never saved (found, not fixed).
@@ -820,7 +821,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 60 | Path 20 P4, what is left — the slice sheet in the print preview (the way back from Timeline Builder into a map project is closed, not built: Devon, 2026-11-03, kept the default) (the kit's `preview()` does not cover 046's canvas export); time slices themselves shipped in v433 | 046, 015 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 65 | First-run "Load sample data" across the tools that open to an empty form (P15); 059, 072, 049 (v488) and 043, 042, 082, 038, 084 (v489) done; the people-content tools get no sample (Devon, 2026-11-03: kept the default) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 66 | Phone-sized layout pass beyond 005: sideways overflow is gone from all 90 pages at 360 px (v490-v491) and the three toolbars over half a 740 px screen fold behind a More button (011, 032, 054; v498, `test:phone-toolbar`); left: only that a real phone has not been tried | site | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 96 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
+| 96 | Reference pitch and "play the notes" on the sight-reading tab (the metronome half shipped in v568, AI-47; reuse `msrg-audio.js`) | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
 | 110 | Correlate hall-pass trips with the schedule; a student-initiated request flow | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
 | 113 | Bell-schedule awareness (reads 032's `scv_calendar_v1`; needs a registry and cross-tool decision); a reconnecting mirror (`_shared/webrtc-pair.js`, a platform edit). The multi-timer board shipped v279 | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
 | 118 | Per-record conflict resolution ("keep the newer of each"; needs per-record timestamps) | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
@@ -14328,11 +14329,15 @@ minutes, not one form submission at a time.
   rhythm generated alongside them (durations assigned per note) for a
   true melodic sight-reading drill instead of two separate, unrelated
   warm-ups.
-- **Audio playback**: a Web Audio API metronome click track for the
-  rhythm tab (tempo already has a display field with no function behind
-  it today) and/or a reference pitch/scale play-through for the
-  sight-reading tab, so students can check their own accuracy without a
-  teacher at a piano.
+- **Audio playback**: ~~a Web Audio API metronome click track for the
+  rhythm tab~~ **built in v568 (AI-47)**: `Tools/music-sightreading-generator/msrg-audio.js`
+  (`MsrgAudio`: `parseTempo`, a look-ahead scheduler on the audio clock, and
+  `audioContext()`, made only inside a click), Play/Stop and a count-in on the
+  rhythm tab; unheard, so a person still has to listen to it. **Left:** a
+  reference pitch/scale play-through for the sight-reading tab, so students
+  can check their own accuracy without a teacher at a piano. It shares
+  `MsrgAudio.audioContext()` and the click's oscillator idiom; do not write a
+  second context helper.
 
 #### Moonshot / North Star
 
