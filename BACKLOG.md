@@ -6749,7 +6749,7 @@ day; the cross-week, cross-period view teachers actually want does not.
   reloads; the fold is on the page's in-memory overflow and the invariant the smoke holds is rollup + last 500 = every pick.
   Not done, on purpose: no reader uses `view()` yet (P3); the ids come from the sidecar the page already loads, so a name
   with no id is keyed on its name until P3 reads it through `view()`.
-- **P3 — Equity dashboard. Built (AI-23, 2026-10-29, v456-v457); nothing left in it except the seat-join `unmatched` fix, which stays with `np-seat-equity.js`.** Who hasn't been called on in three weeks, distribution
+- **P3 — Equity dashboard. Built (AI-23, 2026-10-29, v456-v457); nothing left in it (the seat-join `unmatched` fix landed in `np-seat-equity.js`, AI-36, v570).** Who hasn't been called on in three weeks, distribution
   by seat position, per period and across periods, printed as a one-page artifact.
   A "Data" front door with an erase button, matching the site's privacy posture.
   **Design (AI-23, 2026-10-29; written before any code, read against 007 at v455).** *What exists.* The Equity tab
@@ -6778,7 +6778,7 @@ day; the cross-week, cross-period view teachers actually want does not.
   button to the Data tab, where the erase buttons already are, and a "Clear pick history" shortcut that is the
   existing button's own handler (one erase, so nothing hidden is left). *Stored: nothing.* No key, no setting (the
   period and window are page variables), no student fact; `np-seat-equity.js` and `np-equity.js` are untouched and the
-  `unmatched` fix stays with the seat join (it reads names; moving it to ids is its own change, not in P3). *Defaults
+  `unmatched` fix stays with the seat join (it reads names; moving it to ids is its own change, not in P3; done since, AI-36, v570). *Defaults
   taken, none of them Devon's open questions:* three weeks is the "quiet" line; Monday starts a week; eight weeks is
   the opening window.
   **As built (v456-v457).** As designed. `np-dashboard.js` (pure: `weekStart`, `weekList`, `build`, `compare`, `chartData`, `lines`; held by
@@ -6796,7 +6796,10 @@ day; the cross-week, cross-period view teachers actually want does not.
   student stored under a name key before an id existed is matched on both keys (the counts add), because P2 never rewrites stored keys.
   *Defaults taken, none of them Devon's open questions:* periods are the saved rosters (a student on two counts in both; "All periods"
   counts them once); three weeks is the quiet line; eight weeks opens; the period and window are page variables, nothing is stored.
-  Not done: `np-seat-equity.js` still joins by name, so its `unmatched` count is unchanged; moving the seat join to ids is its own change.
+  Since AI-36 (2026-11-04, v570) `np-seat-equity.js` joins a seat to its equity row by the Class Roster Hub id first (`joinCallRates(...,
+  idOf, rosterName)`, the page's `lookupId` over the sidecar, both sides resolved against the picker's roster) and by the loose name only
+  when the ids do not meet, so a preferred or respelled name on the chart joins and `unmatched` lists only seats that match neither; with
+  no `idOf` it is the old name join, and the original fixture joins identically (`test:name-picker`'s smoke.mjs). Nothing stored changed.
 - **P4 — Question-attached picks. Built (AI-23, 2026-10-29, v458); nothing left in it.** A pick is `{student, question}` when a prompt
   bank is loaded (Exit Ticket, Number Talks, the question bank of Path 12), logged
   together.

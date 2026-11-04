@@ -30,13 +30,18 @@
 //      same way 010-command-center-dashboard.html matches a class period to
 //      a section, because Name Picker's roster names and the chart's section
 //      names are typed independently and rarely match byte-for-byte.
-//   2. Which SEATED STUDENT is which np_history NAME — matched by a
-//      case/punctuation/whitespace-insensitive key, the same strength of
-//      "loose" _shared/student-details.js already uses for the same reason.
-//      This is not nickname-aware or fuzzy in the typo-tolerant sense: a
-//      seated "Bobby Chen" will not match a roster "Robert Chen". A seated
-//      student who cannot be matched is left out of the report rather than
-//      guessed at, and the caller can show how many were dropped.
+//   2. Which SEATED STUDENT is which equity row — by the student's Class
+//      Roster Hub id first (AI-36), then by name. The caller passes `idOf`,
+//      the same `(name, rosterName) => id | null` np-dashboard.js and
+//      np-rollup.js take (the page's is `lookupId` over the sidecar it
+//      already loads), so a seated "Bobby Chen" joins a roster "Robert Chen"
+//      when the sidecar gives both the same id. Without an id on both sides
+//      it falls back to a case/punctuation/whitespace-insensitive name key,
+//      the same strength of "loose" _shared/student-details.js uses, which is
+//      exactly the join this file made before ids; with no `idOf` that is
+//      the only join. Nothing here is fuzzy in the typo-tolerant sense, and a
+//      seated student who matches neither way is left out of the report
+//      rather than guessed at, and the caller can show how many were dropped.
 //
 // And one caveat this file cannot fix, only inherit: np_history is capped at
 // 500 entries (np-store.js), so a seat-position report built from it carries
@@ -176,28 +181,41 @@ export function derivePositions(section) {
 }
 
 /**
- * Loose-name-join `positions` (from `derivePositions`) against `equityRows`
+ * Join `positions` (from `derivePositions`) against `equityRows`
  * — the `rows` array np-equity.js's `report()` already returns, reused
  * rather than recomputed so a seat report and the name-only Equity view can
  * never disagree about a pick count for the same student.
  *
+ * `idOf(name, rosterName)` is optional: when given, a seat whose name and a
+ * row whose name resolve to the same id join first, and only a seat with no
+ * id match falls back to the loose name key. Both sides are resolved
+ * against `rosterName` (the picker's roster, which is what the section was
+ * picked to be), so two "Sam"s in different classes resolve the same way on
+ * either side. Without `idOf` this is the name join alone, as it always was.
+ *
  * Returns `{matched, unmatched}`. `matched` entries carry the position's
  * seat data plus `count` (picks in the report's window), `lifetime`, and
  * `daysSince` from the joined row. `unmatched` is the plain list of seated
- * names that found no loose match — a seated student typed differently in
- * the two tools, or simply not on the roster loaded into the picker right
- * now — so the caller can report how many seats were left out rather than
- * silently under-counting.
+ * names that matched no id and no name — a seated student typed differently
+ * in the two tools with no roster id to tie them, or simply not on the
+ * roster loaded into the picker right now — so the caller can report how
+ * many seats were left out rather than silently under-counting.
  */
-export function joinCallRates(positions, equityRows) {
-  const byLoose = new Map();
+export function joinCallRates(positions, equityRows, idOf, rosterName) {
+  const resolve = typeof idOf === "function"
+    ? name => { const id = idOf(name, rosterName); return typeof id === "string" && id ? id : null; }
+    : () => null;
+  const byLoose = new Map(), byId = new Map();
   for (const r of (equityRows || [])) {
     const key = looseKey(r && r.name);
     if (key && !byLoose.has(key)) byLoose.set(key, r);
+    const id = key ? resolve(r.name) : null;
+    if (id && !byId.has(id)) byId.set(id, r);
   }
   const matched = [], unmatched = [];
   for (const p of (positions || [])) {
-    const hit = byLoose.get(looseKey(p.name));
+    const id = resolve(p.name);
+    const hit = (id && byId.get(id)) || byLoose.get(looseKey(p.name));
     if (hit) matched.push({ ...p, count: hit.count, lifetime: hit.lifetime, daysSince: hit.daysSince, matchedName: hit.name });
     else unmatched.push(p.name);
   }
@@ -236,12 +254,13 @@ export function byRegion(matched) { return aggregate(matched || [], m => m.regio
  * when there is no seating chart to read at all (so the caller can hide the
  * feature) — a chart with no seats filled in yet returns a report with
  * `seated: 0` instead, so the caller can say *that* rather than nothing.
+ * `idOf` is passed through to `joinCallRates`.
  */
-export function seatEquityReport(state, rosterName, equityRows) {
+export function seatEquityReport(state, rosterName, equityRows, idOf) {
   const section = pickSection(state, rosterName);
   if (!section) return null;
   const positions = derivePositions(section);
-  const { matched, unmatched } = joinCallRates(positions, equityRows);
+  const { matched, unmatched } = joinCallRates(positions, equityRows, idOf, rosterName);
   return {
     sectionName: section.name || "",
     seated: positions.length,
@@ -269,7 +288,7 @@ export function seatSummaryLine(rep) {
       }
     }
   }
-  if (rep.unmatched.length) bits.push(`${rep.unmatched.length} seated student${rep.unmatched.length === 1 ? "" : "s"} could not be matched by name`);
+  if (rep.unmatched.length) bits.push(`${rep.unmatched.length} seated student${rep.unmatched.length === 1 ? "" : "s"} could not be matched by roster id or name`);
   return bits.join(" · ") + ".";
 }
 
