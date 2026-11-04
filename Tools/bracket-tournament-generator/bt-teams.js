@@ -220,7 +220,9 @@
 
   /* After the main bracket's match (r, m) was given to its loser (Bracket.redecideElimination):
      the consolation forgets the first-round loser who changed, with every game decided from
-     them, and a changed semifinal takes the third-place pick away. sync() puts the new loser in. */
+     them, and a change in a semifinal or any round before it takes the third-place pick away (an
+     earlier round's change clears the semifinal it fed, so its loser can change). sync() puts the
+     new loser in. */
   function reflow(state, r, m, B) {
     var c = state.consolation;
     if (!c) return;
@@ -230,7 +232,7 @@
         if (f.m === m && c.slots[0][feed[i]] !== null) B.vacateSlot(c, state.scores, 'c', 0, feed[i]);
       });
     }
-    if (r === state.slots.length - 3) {
+    if (r <= state.slots.length - 3) {
       c.third = null;
       if (state.scores) delete state.scores.cthird;
     }

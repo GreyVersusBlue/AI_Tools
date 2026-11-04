@@ -12,7 +12,8 @@
 // listed with its number and the reason, never guessed: a header, two dates, a weekday that
 // is not the date's, a date that is not real, a yearless date outside the year or in it twice
 // (a 14-month year), a range that ends before it starts, a date with no name. "1/2 Day" is a
-// half day, not January 2. Then the deliberate breaks (MUTANTS): each must turn a check red.
+// half day, not January 2, and "Oct 1 - 3 Hour Early Release" or "Sept 3 - 5th Grade" is one day
+// whose name starts with the number, not a range (AI-59). Then the deliberate breaks (MUTANTS): each must turn a check red.
 //
 // The reader reads no clock and no zone; the file runs itself again under
 // TZ=Pacific/Kiritimati (UTC+14) anyway and judges the breaks in the first zone only.
@@ -151,6 +152,24 @@ function checks(M, counting = true) {
     eq(M.readTable('Mon 9/7 - Fri 9/11  Spirit Week', YEAR).events[0].dates.length, 5, 'a range with a weekday on each end');
     eq(M.readTable('Mon 9/7 - Thu 9/11  Spirit Week', YEAR).error, 'That line could not be read: it says Thursday, but Sep 11, 2026 is a Friday.', 'and the end\'s weekday is held too (one line, refused in words)');
     eq(M.readTable('Sept 7th, 2026: Labor Day', YEAR).events[0].dates, ['2026-09-07'], 'an ordinal and a colon');
+    // AI-59 (M4): a number after the dash that is a count or a grade is the start of the name, not a range's end
+    const counted = M.readTable([
+      'Oct 1 - 3 Hour Early Release',
+      'Sept 3 - 5th Grade Orientation',
+      'Aug 31 – 6th Grade Orientation',
+      'Jan 5 - 2 Hour Delay',
+      'Feb 4 - 90 Minute Delay',
+      'Nov 25 - 27 Thanksgiving Break',
+    ].join('\n'), YEAR);
+    eq(pairs(counted), [
+      ['3 Hour Early Release', '2026-10-01', '2026-10-01', 1],
+      ['5th Grade Orientation', '2026-09-03', '2026-09-03', 1],
+      ['6th Grade Orientation', '2026-08-31', '2026-08-31', 1],
+      ['2 Hour Delay', '2027-01-05', '2027-01-05', 1],
+      ['90 Minute Delay', '2027-02-04', '2027-02-04', 1],
+      ['Thanksgiving Break', '2026-11-25', '2026-11-27', 3],
+    ], '"Oct 1 - 3 Hour…" and "Sept 3 - 5th Grade…" are one day each, named with the number; "Nov 25 - 27 Thanksgiving" is still a range');
+    eq(counted.skipped, [], 'and none of them is skipped as ending before it starts');
 
     /* ── refusals ── */
     eq(M.readTable('', YEAR).ok, false, 'nothing pasted: refused');
@@ -200,6 +219,7 @@ const MUTANTS = [
   ['1/2 read as a date', 'const scan = line.replace(/(?<![\\w/])1\\/2(?=[\\s-]*days?\\b)/gi, "½  ");', 'const scan = line;'],
   ['no-name line read', 'if (!summary) return skip("it has a date but no name beside it", a.date);', ''],
   ['weekday column kept in the name', 'else if (wd === null) cells.push(c);', 'cells.push(c);'],
+  ['a count after the dash read as a range\'s end', '"(?:,?\\\\s+(\\\\d{4}))?(?![\\\\w/:])" + NOT_A_DAY', '"(?:,?\\\\s+(\\\\d{4}))?(?![\\\\w/:])"'],
   ['range end year not lent back', 'if (p.y === null && last && last.p.y !== null && !(last.p.mo < p.mo)) p.y = last.p.y;', ''],
 ];
 

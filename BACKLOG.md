@@ -12815,7 +12815,7 @@ enough that the result doesn't look like a form.
   Preview): one page per chaperone with students, one for anyone with none, a row per student with three tick boxes (left
   school, arrived, back), a Slip column from the collection tracker and a count line; no new data stored
   (`smoke-headcount.mjs`, port 8663; not printed on paper). The screen half is the trip-day view, below.
-- **Done — 2026-11-03 (AI-49, v567, rank 143). Trip-day mode.** A "Trip-day view" button in the Chaperones card opens a read-only,
+- **Done — 2026-11-03 (AI-49, v568, rank 143). Trip-day mode.** A "Trip-day view" button in the Chaperones card opens a read-only,
   large-type overlay: the trip, the day schedule, the trip leader's and chaperones' numbers as `tel:` links, and each group (and the
   unassigned) as first name and last initial with a "no slip" mark and three tick boxes (left school, arrived, back) counted per
   group. It reads the open trip and writes nothing: the ticks are in memory for the visit (closing the view keeps them, a reload
