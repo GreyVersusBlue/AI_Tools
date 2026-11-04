@@ -29,20 +29,20 @@
      that sets display beats it (#mapImg, #scaleBar and .loadMoreRow all did).
      This makes `el.hidden = true` mean it (check-hidden-flex). */
   [hidden] { display: none !important; }
-  /* Path 5 P3. --ok is the "valid data" green on the choropleth report,
-     --accent-deep the darker navy a primary button goes to on hover (in dark
-     the accent is already light, so it brightens instead), and --warn-* the
+  /* Path 5 P3. --ok is the "valid data" green on the choropleth report
+     (a primary button's hover is --accent-2, which the school accent sets with
+     its text colour; AI-57), and --warn-* the
      amber of the storage banner. --map-mat is the grey behind the map itself:
      it is NOT a theme colour, it is the exact value buildExportCanvas() fills
      the canvas with (#eef0ec), and it is named here so the next person can see
      that the two have to agree. */
   :root {
-    --ok: #2e6b3e; --accent-deep: #16283f;
+    --ok: #2e6b3e;
     --warn-bg: #fff3d6; --warn-line: #e0c27a;
     --map-mat: #eef0ec;
   }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
-    --ok: #63c08e; --accent-deep: var(--accent-2);
+    --ok: #63c08e;
     --warn-bg: #332711; --warn-line: #5e4a20;
   }
   * { box-sizing: border-box; }
@@ -68,7 +68,7 @@
   button:hover { background: var(--card-2); }
   button:disabled { opacity: 0.5; cursor: default; }
   button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
-  button.primary:hover { background: var(--accent-deep); }
+  button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
   button.small { padding: 4px 9px; font-size: 0.76rem; }
   button.icon { width: 34px; padding: 6px 0; font-size: 1rem; line-height: 1; }
   input[type=text] {
@@ -206,7 +206,7 @@
   .lbl-style-bar button {
     padding: 2px 8px; font-size: 0.72rem; border-radius: 4px; line-height: 1.2;
   }
-  .lbl-style-bar button.active { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
+  .lbl-style-bar button.active { background: var(--accent-2); color: var(--accent-2-ink); border-color: var(--accent-2); }
 
   #markerLayer { position: absolute; inset: 0; pointer-events: none; }
   .bmg-marker { position: absolute; pointer-events: auto; cursor: grab; z-index: 5; }
@@ -290,7 +290,7 @@
   .customRatioControls input[type=range] { width: 100px; }
   .zoomReadout { font-size: 0.78rem; color: var(--muted); min-width: 46px; text-align: center; }
   .spacer { flex: 1; }
-  button.toggle.active { background: var(--accent-2); color: var(--accent-ink); border-color: var(--accent-2); }
+  button.toggle.active { background: var(--accent-2); color: var(--accent-2-ink); border-color: var(--accent-2); }
   .toolHint { font-size: 0.78rem; color: var(--accent-2); font-weight: 600; }
   select.styleSelect {
     font-family: inherit; font-size: 0.8rem; padding: 6px 8px; border: 1px solid var(--line);

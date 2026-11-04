@@ -9,6 +9,7 @@
 // a second tab follows a set and a reset live. The widget's section sets,
 // derives, warns (without blocking) and resets without a reload, by keyboard.
 
+import { readFileSync } from 'node:fs';
 import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
 
 const PORT = 8622;
@@ -197,6 +198,115 @@ console.log('Brand — a second tab follows live');
   eq(await two.evaluate(() => window.__heard), 'reset', 'onChange fires for a reset from another tab');
   eq(await hasStyle(two), false, 'and the colours are gone there');
   await ctx.close();
+}
+
+// AI-57 (review M2). --accent-ink is the text on an accent fill, and the brand
+// re-picks it for the school colour; a gold school made it near-black, and 62
+// pages drew it on --err as well (2.69 to 1 on 001's danger hover). Every rule
+// that pairs a text token with a fill token is read off the page's own CSS and
+// measured with and without a brand: a pair the brand changes must hold 4.5:1.
+// A hover rule that sets only a fill takes its text from the same selector
+// without :hover (001's `button:hover` over `button`).
+const PAIR_PAGES = (await import('node:child_process')).execSync('git ls-files "Tools/*.html"', { encoding: 'utf8' })
+  .split('\n').filter(Boolean)
+  .filter(f => { const s = (awaitRead(f)); return /ink-paper\.css/.test(s) && /a11y\.js/.test(s) && !/BRAND_OPT_OUT\s*=\s*true/.test(s); })
+  .map(f => encodeURI(f.slice('Tools/'.length)));
+function awaitRead(f) { return readFileSync(new URL('../../../' + f, import.meta.url), 'utf8'); }
+
+async function tokenPairs(page) {
+  return page.evaluate(() => {
+    const rules = [];
+    const walk = list => {
+      for (const r of list) {
+        if (r.media && !matchMedia(r.media.mediaText).matches) continue;
+        if (r.cssRules && !r.selectorText) { walk(r.cssRules); continue; }
+        if (r.selectorText && r.style) rules.push(r);
+      }
+    };
+    for (const sh of document.styleSheets) { try { walk(sh.cssRules); } catch (e) {} }
+    const colorOf = sel => { for (let i = rules.length - 1; i >= 0; i--) if (rules[i].selectorText === sel && /var\(--/.test(rules[i].style.getPropertyValue('color'))) return rules[i].style.getPropertyValue('color'); return ''; };
+    const probe = document.createElement('div'); document.body.appendChild(probe);
+    const rgb = v => { probe.style.color = ''; probe.style.color = v; return getComputedStyle(probe).color; };
+    const out = [];
+    for (const r of rules) {
+      if (/printArea|paper-sheet|print/i.test(r.selectorText)) continue;
+      const bg = r.style.getPropertyValue('background-color') || r.style.getPropertyValue('background');
+      const m = /^\s*var\((--[\w-]+)\)\s*$/.exec(bg);
+      if (!m) continue;
+      let c = r.style.getPropertyValue('color');
+      if (!c && /:hover/.test(r.selectorText)) c = colorOf(r.selectorText.replace(/:hover/g, ''));
+      const t = /^\s*var\((--[\w-]+)\)\s*$/.exec(c);
+      if (!t) continue;
+      out.push({ sel: r.selectorText, fill: m[1], text: t[1], fillRgb: rgb(`var(${m[1]})`), textRgb: rgb(`var(${t[1]})`) });
+    }
+    probe.remove();
+    return out;
+  });
+}
+const lum = rgbStr => { const [r, g, b] = rgbStr.match(/[\d.]+/g).map(Number).map(v => v / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+
+// In light the accent written as text on a surface (`color: var(--accent)` on
+// --card) is the teacher's own colour on white, which the widget's "pale
+// choice" warning covers; those pairs are counted, not failed. In dark the
+// brand lifts the accent itself, so there they must hold too.
+async function pool(items, n, fn) { const out = []; let i = 0; await Promise.all(Array.from({ length: n }, async () => { while (i < items.length) { const k = i++; out[k] = await fn(items[k]); } })); return out; }
+async function pairsOf(f, opts) { const page = await open(f, opts); try { return await tokenPairs(page); } finally { await page.context().close(); } }
+
+console.log(`Brand — every text-on-fill pair the brand changes holds 4.5:1 (${PAIR_PAGES.length} pages)`);
+for (const theme of ['light', 'dark']) {
+  const stock = await pool(PAIR_PAGES, 4, f => pairsOf(f, { theme }));
+  for (const b of [{ v: 1, accent: '#ffc72c' }, { v: 1, accent: '#ff8200' }, { v: 1, accent: '#006747' }, { v: 1, accent: '#ffc72c', accent2: '#ffe08a' }]) {
+    const label = `${theme}, ${b.accent}${b.accent2 ? '+' + b.accent2 : ''}`;
+    let checked = 0, owned = 0; const bad = [];
+    const branded = await pool(PAIR_PAGES, 4, f => pairsOf(f, { theme, store: { [KEY]: JSON.stringify(b) } }));
+    PAIR_PAGES.forEach((f, k) => {
+      for (const p of branded[k]) {
+        const was = stock[k].find(q => q.sel === p.sel && q.fill === p.fill && q.text === p.text);
+        if (was && was.fillRgb === p.fillRgb && was.textRgb === p.textRgb) continue; // the brand did not touch it
+        if (theme === 'light' && /^--accent(-2)?$/.test(p.text)) { owned++; continue; }
+        checked++;
+        const r = ratio(p.fillRgb, p.textRgb);
+        if (r < 4.5) bad.push(`${decodeURI(f)} ${p.sel}: ${p.text} on ${p.fill} ${r.toFixed(2)}`);
+      }
+    });
+    ok(checked > 100, `${label}: the sweep measured the pairs the brand changed (${checked}, and ${owned} accent-as-text pairs left to the widget's warning)`);
+    ok(bad.length === 0, `${label}: ${bad.length} pairs under 4.5:1:\n    ` + bad.slice(0, 40).join('\n    '));
+  }
+}
+
+console.log('Brand — the text on a status fill never follows the brand');
+{
+  const page = await open(INK, { store: { [KEY]: JSON.stringify({ v: 1, accent: '#ffc72c' }) } });
+  await page.evaluate(() => { const b = document.createElement('button'); b.className = 'danger'; b.id = 'probe'; b.textContent = 'Delete'; document.body.prepend(b); });
+  await page.hover('#probe');
+  const [c, bg] = await page.evaluate(() => { const s = getComputedStyle(document.getElementById('probe')); return [s.color, s.backgroundColor]; });
+  ok(ratio(c, bg) >= 4.5, `001's danger button on hover, gold school: ${c} on ${bg} is ${ratio(c, bg).toFixed(2)} to 1`);
+  await page.context().close();
+}
+for (const f of ['044-Sub%20Plan%20Builder.html', '032-School%20Calendar%20Visualizer.html', '046-blank-map-generator.html']) {
+  for (const theme of ['light', 'dark']) {
+    const page = await open(f, { theme, store: { [KEY]: JSON.stringify({ v: 1, accent: '#ffc72c' }) } });
+    await page.evaluate(() => { const b = document.createElement('button'); b.className = 'primary'; b.id = 'probe'; b.textContent = 'Save'; document.body.prepend(b); });
+    await page.hover('#probe');
+    const [c, bg] = await page.evaluate(() => { const s = getComputedStyle(document.getElementById('probe')); return [s.color, s.backgroundColor]; });
+    ok(ratio(c, bg) >= 4.5, `${decodeURI(f)} primary button on hover, gold school, ${theme}: ${c} on ${bg} is ${ratio(c, bg).toFixed(2)} to 1`);
+    await page.context().close();
+  }
+}
+
+console.log('Brand — two school colours no one text colour reads on are warned about');
+{
+  const page = await open(INK);
+  await page.locator('.a11y-toggle').click();
+  await page.locator('#a11y-brand-accent').evaluate(el => { el.value = '#1f3550'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  eq(await page.locator('.a11y-brand-warn').textContent(), '', 'navy alone: no warning');
+  await page.locator('#a11y-brand-auto').uncheck();
+  await page.locator('#a11y-brand-accent2').evaluate(el => { el.value = '#ffc72c'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  ok(/Button text on the second colour/.test(await page.locator('.a11y-brand-warn').textContent()), 'navy with gold: the button text is warned about: ' + await page.locator('.a11y-brand-warn').textContent());
+  const [ink2, a2] = await page.evaluate(() => ['--accent-2-ink', '--accent-2'].map(n => getComputedStyle(document.documentElement).getPropertyValue(n).trim()));
+  eq(ink2, '#101720', 'and a fill that is only ever accent-2 still gets dark text on the gold (' + a2 + ')');
+  await page.context().close();
 }
 
 await browser.close(); server.close();

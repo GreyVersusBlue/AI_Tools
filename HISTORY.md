@@ -9,6 +9,49 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-57: the school accent no longer re-colours text on status fills (review M2, 2026-11-04, `CACHE_VERSION` v576)
+
+The 2026-11-04 review's M2 (`~/projects/AI_Tools-REVIEW-2026-11-04.md`), brought in by `73670b7` (AI-29): `brandCss()` in
+`_shared/a11y.js` set the site-wide `--accent-ink` to `inkOn(accent)`, which is near-black for any light school colour, and 69
+pages drew `--accent-ink` on `--err`, `--danger`, `--good`, `--warn`, `--ok`, `--paid` and `--success` fills too. Reproduced
+before the fix: with gold (#ffc72c), 001's danger hover was 2.69 to 1 and 044's primary hover 1.44 (dark ink on navy).
+
+- **Two tokens in `ink-paper.css`.** `--status-ink` is the text on any fill the brand does not change; the brand never sets it.
+  `--accent-2-ink` is the text on a fill that is only ever `--accent-2`; the brand sets it to `inkOn(accent2)`. Both equal
+  `--accent-ink` in every block (light, dark, `.paper-sheet`, print) until a brand is set, so with no brand no pixel changes.
+  98 rules that put `--accent-ink` on a status fill now say `--status-ink`, 8 on an accent-2 fill say `--accent-2-ink`; 030's
+  recording button (a fill with inherited ink) and 080's two labels on rendered art (their `renders.json` regions) too.
+- **`--accent-ink` reads on both school colours.** Every tool's `button:hover { background: var(--accent-2) }` keeps the
+  button's text, so the brand picks the one ink with the better worst case over accent and accent-2 (`inkOnAll`). The widget
+  warns when even that is under 4.5 to 1 (navy with a gold second colour). Adding `color` to the 74 hover rules instead was
+  tried and backed out: a `.tab:hover` that sets only a background would then take white text on `--card-2`.
+- **`deriveAccent2()` steps the other way when its step would cross the ink:** orange #ff8200 derived #ae5d09, 3.75 to 1
+  under its dark text; it now derives #f6a551 (8.9). Forest green and #c8102e had the same fault. A brand whose derived step
+  read fine is unchanged.
+- **`liftForDark()` lifts until the accent reads on paper, card, card-2 and the info tint**, not paper alone (forest green was
+  3.7 to 1 on a dark note). 060's dark sorted-header tint went from #2f3b4a to #212c3a, no lighter than `--card-2`.
+- **Hovers that used a page's own dark navy** (044 `--accent-dark`, 032 and 046 `--accent-deep`, 1.21 to 1 under gold) use
+  `--accent-2` now, as the rest of the site does; 032's and 046's `--accent-deep` is gone. The stock light hover is the
+  lighter #2e6b8f rather than a darker navy: that is the visible change with no brand.
+- **Literal light text on brand fills:** 015's map pins and blank numbers (`#fff`), 046's active label style, 018's
+  required-move button, and the radio toggles in 002, 016 and 038 (`var(--bg)`) take `--accent-ink`/`--accent-2-ink`; the
+  projector stages of 021 and 024 (`--stage-ink: #fff` on the accent) take `--accent-ink`, 024's muted caption is mixed from it,
+  and 021's stage buttons are drawn in `--stage-ink` (its high-contrast stage pins `--stage-ink: #fff` on its black).
+- **Test.** `test:brand` gained a sweep: on each of the 87 ink-paper pages that load a11y.js (not 007), every CSS rule pairing
+  a text token with a fill token is resolved with and without a brand (gold, orange, forest green, gold with a pale second
+  colour; light and dark), and a pair the brand changed fails under 4.5 to 1. A hover rule with only a fill takes its text from
+  the same selector without `:hover`. In light, the accent written as text on a surface is counted and left to the widget's
+  "pale choice" warning. Against HEAD the sweep failed 6 of 8 combinations (108 pairs for gold, 190 for orange); the explicit
+  hover probes reproduced the review's 2.69 and 1.44.
+- **Found, not fixed.** An axe colour-contrast pass over all 87 pages with a gold brand (seeded with `seeds.mjs`, light and
+  dark, scratch script, not committed) found 423 nodes that were not failing without it. 369 are the accent itself as text on
+  white (the teacher's choice, warned). The other 54 were 021's stage buttons (5, fixed above) and **four of the five
+  Industry tools on `theme.css`: 005 (42), 011, 029, 036**, whose `_ds` stylesheet and own rules put literal `#fff` on the
+  branded `--color-accent-*` steps (1.51 to 2.81). 031 showed none in the states the sweep reaches, and 004 is not affected (its
+  `--color-accent` is its own literal, which the brand does not set). The Industry pages need an ink on that scale, left for a
+  row of its own. Not checked on a real school colour on a real
+  screen, or in Firefox or Safari (021's and 024's `color-mix()` needs Firefox 113 and Safari 16.2).
+
 ## AI-54: a new or shared 039 set never empties a 040 list, and a colon term survives 039 (review H1, 2026-11-04, `CACHE_VERSION` v575)
 
 The 2026-11-04 review's H1 (`~/projects/AI_Tools-REVIEW-2026-11-04.md`), brought in by `8943438` (AI-27, 039's write-through to

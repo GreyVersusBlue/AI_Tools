@@ -88,7 +88,7 @@
   button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
   button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
   button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: var(--accent-ink); }
+  button.danger:hover { background: var(--err); color: var(--status-ink); }
   button.small { width: auto; padding: .35rem .7rem; font-size: .78rem; margin-bottom: 0; }
   button:disabled { opacity: .4; cursor: not-allowed; }
 
@@ -116,7 +116,7 @@
     background: var(--card); border: 1px solid var(--line-strong); color: var(--muted);
     width: 1.9rem; height: 1.9rem; flex-shrink: 0; border-radius: 5px; font-size: .82rem; padding: 0; cursor: pointer;
   }
-  .doc-remove-btn:hover { background: var(--err); color: var(--accent-ink); border-color: var(--err); }
+  .doc-remove-btn:hover { background: var(--err); color: var(--status-ink); border-color: var(--err); }
   .doc-fee { flex: 0 0 6.5rem; width: 6.5rem; margin-bottom: 0 !important; }
   .doc-body { min-height: unset; font-family: inherit; font-size: .82rem; margin-bottom: 1.1rem; }
 
@@ -135,9 +135,9 @@
     background: var(--card); color: var(--muted); border: 1.5px solid var(--line-strong);
   }
   .status-toggle:hover { border-color: var(--accent-2); color: var(--ink); }
-  .status-toggle.is-signed { background: var(--good); border-color: var(--good); color: var(--accent-ink); }
+  .status-toggle.is-signed { background: var(--good); border-color: var(--good); color: var(--status-ink); }
   .status-toggle.is-signed:hover { background: var(--good-2); border-color: var(--good-2); }
-  .status-toggle.is-paid { background: var(--paid); border-color: var(--paid); color: var(--accent-ink); }
+  .status-toggle.is-paid { background: var(--paid); border-color: var(--paid); color: var(--status-ink); }
   .status-toggle.is-paid:hover { background: var(--paid-2); border-color: var(--paid-2); }
   .s-date { width: auto; flex-shrink: 0; max-width: 9.5rem; margin-bottom: 0; font-size: .82rem; padding: .4rem .5rem; }
   .s-note { flex: 1 1 180px; min-width: 140px; margin-bottom: 0; font-size: .82rem; padding: .4rem .55rem; }

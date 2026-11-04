@@ -84,7 +84,7 @@
   button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
   button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
   button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: var(--accent-ink); }
+  button.danger:hover { background: var(--err); color: var(--status-ink); }
   button.small { padding: .25rem .5rem; font-size: .78rem; width: auto; margin: 0; }
 
   .warn-banner { font-size: .82rem; color: var(--err); background: var(--err-bg); border: 1px solid var(--err-line); border-radius: 6px; padding: .5rem .7rem; margin-bottom: .8rem; display: none; }
@@ -214,7 +214,7 @@
   .mapPin {
     position: absolute; transform: translate(-50%, -50%);
     min-width: 19px; height: 19px; padding: 0 4px; border-radius: 10px;
-    background: var(--accent); color: #fff; border: 1.5px solid #fff;
+    background: var(--accent); color: var(--accent-ink); border: 1.5px solid #fff;
     box-shadow: 0 0 0 1px var(--accent);
     font-size: 11px; font-weight: 700; line-height: 16px; text-align: center; white-space: nowrap;
   }
@@ -400,7 +400,7 @@
   .blank-num {
     position: absolute; top: 50%; transform: translate(-50%, -50%);
     min-width: 1.6rem; height: 1.6rem; padding: 0 .25rem; border-radius: .8rem;
-    background: var(--accent); color: #fff; border: 2px solid #fff;
+    background: var(--accent); color: var(--accent-ink); border: 2px solid #fff;
     font-size: 1rem; font-weight: 700; line-height: 1.35rem; text-align: center; white-space: nowrap;
   }
   /* A blanked event's own label is pushed clear of its badge — the badge is

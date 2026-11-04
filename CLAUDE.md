@@ -248,7 +248,10 @@ copy of the boilerplate:
   `gvb-brand:settings.v1`, applied as a screen-only `<style id="gvb-brand-style">` before first paint, so no key
   means no element and no change. A page with a palette of its own sets `window.BRAND_OPT_OUT = true` before the
   script (007 does); never set `--accent` on `<html>` yourself and never add a logo (Devon, 2026-10-21). Read it
-  through `window.Brand`. `npm run test:brand`.
+  through `window.Brand`. The brand re-picks `--accent-ink` (text on `--accent`, and on `--accent-2` under a hover) and
+  `--accent-2-ink` (text on a fill that is only ever accent-2); text on any other fill (`--err`, `--good`, `--warn`, a
+  tool's `--danger`) is `var(--status-ink)`, which it never touches (AI-57, v576). `npm run test:brand`, whose sweep reads
+  every text-on-fill rule off 87 pages and fails a pair a brand takes under 4.5:1.
 - `<script src="../_shared/sw-register.js" defer></script>` — service-worker
   registration, the update bar, the deferred precache pass, and (since v180) the
   request for persistent storage. It exists and is precached; link it rather than

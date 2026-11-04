@@ -32,9 +32,11 @@
 <style>
   /* Path 5 P3. The sorted column's header fill is the one tint on this page
      with no token behind it: a shade bluer than --card-2 so the sorted column
-     reads as chosen rather than merely as a header. */
+     reads as chosen rather than merely as a header. Dark's is no lighter than
+     --card-2 (it was #2f3b4a), since the accent written on it is lifted only
+     until it reads on the shared dark surfaces (AI-57). */
   :root { --sorted-bg: #e2e9ef; }
-  :root[data-theme="dark"]:not(.a11y-filter-dark) { --sorted-bg: #2f3b4a; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --sorted-bg: #212c3a; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -63,7 +65,7 @@
   button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
   button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
   button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: var(--accent-ink); }
+  button.danger:hover { background: var(--err); color: var(--status-ink); }
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
 

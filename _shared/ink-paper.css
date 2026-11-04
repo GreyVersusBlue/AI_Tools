@@ -39,7 +39,9 @@
         a form control, a hover fill — swaps its literal for a token:
           #fff / #ffffff / white  →  var(--card)
           #f1f0ea and friends     →  var(--card-2)
-          white text on a fill    →  var(--accent-ink)
+          white text on a fill    →  var(--accent-ink) on --accent,
+                                     var(--accent-2-ink) on --accent-2,
+                                     var(--status-ink) on any other fill
      2. Anything that is a *sheet of paper* — a print preview, a handout
         simulation, a certificate — is left white on purpose and marked
         `.paper-sheet` (or is `#printArea`, which is treated as one already).
@@ -112,6 +114,17 @@
      invert, so a literal `#fff` cannot stay. */
   --card-2: var(--card-2-light);
   --accent-ink: var(--accent-ink-light);
+
+  /* AI-57. The school accent (a11y.js's brand block) re-picks --accent-ink for
+     its own colour, so a light school colour turns it near-black. Text on any
+     other saturated fill must not follow it:
+       on --accent           →  var(--accent-ink)    (the brand sets it)
+       on --accent-2         →  var(--accent-2-ink)  (the brand sets it)
+       on --err, --good, --warn, --danger, --ok… →  var(--status-ink)
+     --status-ink is never branded. All three equal --accent-ink until a brand
+     is set, so with no brand nothing looks different. */
+  --accent-2-ink: var(--accent-ink-light);
+  --status-ink: var(--accent-ink-light);
 }
 
 /* Native dark, for pages that set window.A11Y_NATIVE_THEME = true. Chalk on
@@ -128,6 +141,8 @@
   --accent: #7fb2e5;
   --accent-2: #a8cdf2;
   --accent-ink: #101720;
+  --accent-2-ink: #101720;
+  --status-ink: #101720;
   --muted: #a9a69c;
   --err: #ef8f84;
   --info-bg: #1b2a35;
@@ -156,6 +171,8 @@
   --accent: var(--accent-light);
   --accent-2: var(--accent-2-light);
   --accent-ink: var(--accent-ink-light);
+  --accent-2-ink: var(--accent-ink-light);
+  --status-ink: var(--accent-ink-light);
   --muted: var(--muted-light);
   --err: var(--err-light);
   --info-bg: var(--info-bg-light);
@@ -191,6 +208,8 @@
     --accent: var(--accent-light);
     --accent-2: var(--accent-2-light);
     --accent-ink: var(--accent-ink-light);
+    --accent-2-ink: var(--accent-ink-light);
+    --status-ink: var(--accent-ink-light);
     --muted: var(--muted-light);
     --err: var(--err-light);
     --info-bg: var(--info-bg-light);

@@ -130,7 +130,7 @@
   .set-items .si-btns button:hover:not(:disabled) { color: var(--accent-2); border-color: var(--accent-2); }
   .set-items .si-btns button:disabled { opacity: .35; cursor: not-allowed; }
   .set-items .si-btns .remove-btn { color: var(--err); border-color: var(--err); }
-  .set-items .si-btns .remove-btn:hover { background: var(--err); color: var(--accent-ink); }
+  .set-items .si-btns .remove-btn:hover { background: var(--err); color: var(--status-ink); }
 
   .stage {
     background: var(--card); border: 1px solid var(--line); border-radius: 14px;
@@ -225,9 +225,9 @@
     background: var(--card); color: var(--muted); border: 1px solid var(--line-strong);
   }
   .triage-opt:hover { border-color: var(--accent-2); color: var(--accent-2); }
-  .triage-opt.opt-got.active { background: var(--good); border-color: var(--good); color: var(--accent-ink); }
-  .triage-opt.opt-almost.active { background: var(--warn); border-color: var(--warn); color: var(--accent-ink); }
-  .triage-opt.opt-reteach.active { background: var(--err); border-color: var(--err); color: var(--accent-ink); }
+  .triage-opt.opt-got.active { background: var(--good); border-color: var(--good); color: var(--status-ink); }
+  .triage-opt.opt-almost.active { background: var(--warn); border-color: var(--warn); color: var(--status-ink); }
+  .triage-opt.opt-reteach.active { background: var(--err); border-color: var(--err); color: var(--status-ink); }
   .triage-empty { color: var(--muted); font-size: .85rem; margin: 0; }
   .triage-results h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); margin: 1rem 0 .4rem; }
   .triage-results h3:first-child { margin-top: 0; }

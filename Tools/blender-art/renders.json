@@ -2521,7 +2521,7 @@
             32,
             32
           ],
-          "token": "--accent-ink",
+          "token": "--status-ink",
           "large": false,
           "lumMin": 0.0932,
           "lumMax": 0.0977
@@ -2547,7 +2547,7 @@
             32,
             60
           ],
-          "token": "--accent-ink",
+          "token": "--status-ink",
           "large": false,
           "lumMin": 0.0938,
           "lumMax": 0.0977
@@ -2573,7 +2573,7 @@
             80,
             60
           ],
-          "token": "--accent-ink",
+          "token": "--status-ink",
           "large": false,
           "lumMin": 0.0977,
           "lumMax": 0.0977
@@ -2586,7 +2586,7 @@
             36,
             32
           ],
-          "token": "--accent-ink",
+          "token": "--status-ink",
           "large": false,
           "lumMin": 0.1489,
           "lumMax": 0.1535

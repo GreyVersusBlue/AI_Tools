@@ -37,7 +37,7 @@
 //             "underText" is one region or, for an atlas with a label on
 //             several cells, a list of named regions, each held to its own
 //             token (080's algebra tiles: --ink on the pale positive tiles,
-//             --accent-ink on the red negative ones). A region whose text is
+//             --status-ink on the red negative ones). A region whose text is
 //             not an ink-paper colour names it as "hex" with a "why" instead
 //             of "token" (030's board is navy and gold, its own colours in
 //             both themes); a hex with no why is a CONTRAST failure.
