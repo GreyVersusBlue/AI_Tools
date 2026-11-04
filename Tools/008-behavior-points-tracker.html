@@ -685,6 +685,9 @@
     renderTagsEditor();
     renderChips();
     renderBoard();
+    /* Today's log, with its Undo buttons, as soon as a class opens. Until v562 the feed said
+       "Nothing logged yet today" on every load, whatever the log held, until the next tap. */
+    renderActivity();
     renderHistory();
     renderCumulative(); renderTerm();
     renderGoals();

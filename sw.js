@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v561';
+const CACHE_VERSION = 'v562';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -164,6 +164,7 @@ const SHELL_URLS = [
   "Tools/seating-chart/seating-explain.mjs",
   "Tools/seating-chart/seating-room.mjs",
   "Tools/seating-chart/seating-rules.mjs",
+  "Tools/seating-chart/seating-handoff.mjs",
   "Tools/seating-chart/seating-solve.mjs",
   "Tools/seating-chart/seating.mjs",
   "_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css",
@@ -548,6 +549,7 @@ const PRECACHE_URLS = [
   "Tools/seating-chart/seating-explain.mjs",
   "Tools/seating-chart/seating-room.mjs",
   "Tools/seating-chart/seating-rules.mjs",
+  "Tools/seating-chart/seating-handoff.mjs",
   "Tools/seating-chart/seating-solve.mjs",
   "Tools/seating-chart/seating.mjs",
   "Tools/084-socratic-seminar-prep-organizer.html",
