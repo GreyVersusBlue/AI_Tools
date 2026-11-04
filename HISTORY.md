@@ -51,6 +51,26 @@ other item and, like it, ships unheard.
   enough on a classroom speaker, whether 85% of a beat reads as separate notes at 30 and at 240, and whether C2 (65 Hz) is audible on
   a laptop at all are for a person with ears. Safari untried.
 
+## AI-64: the share-rollout suite closes each section's pages (review test section, 2026-11-04, no `CACHE_VERSION` bump)
+
+The 2026-11-04 review (`~/projects/AI_Tools-REVIEW-2026-11-04.md`, test section): `Tools/share/test/smoke-share-rollout.mjs`
+kept every page it opens (about seven per tool, each in its own browser context) in `pages[]` until section 9's console-noise check, and was
+OOM-killed on Huginn under 3.5 GB and 5.8 GB caps (it passes in CI, which has the memory). Reproduced first: main's copy under a
+3.5 GB cgroup (`systemd-run --user --scope -p MemoryMax=3584M -p MemorySwapMax=0`) was OOM-killed at tool 048 with a 3.5 GB peak.
+
+- **`retire()`** ends every section (the per-tool loop and the ten single-tool blocks): each open page's `__errs` and
+  `__blocked` are copied into `ledger` and its context is closed. The copy is taken before the close, so a request the close
+  aborts is not reported as a finding. Section 9 reads `ledger`, and first asserts that every page the suite opened reached it.
+- **A canary** opens one page, throws in it, retires it, and asserts the error is still on record and the page is closed, so a
+  `retire()` that dropped what it records fails instead of leaving section 9 nothing to complain about. Shown failing by a
+  mutant that records empty lists.
+- **Measured** under the same 3.5 GB cap: 1583 passed, 0 failed, a whole-tree cgroup `memory.peak` of 478 MiB and no OOM event
+  (`/usr/bin/time -v`'s 188 MB maximum RSS is the largest single process only, so the cgroup figure is the one to quote). A
+  deliberate `console.error` in 052's fresh page, closed long before section 9, failed it as
+  `no page/console errors (052-fresh)`.
+- **Not verified:** CI has not run it yet; the suite's wall time (about 4:40 here) was not compared with
+  `suite-durations.json`.
+
 ## AI-60: German separable verbs take their own auxiliary, and an unlisted one is split (review M5, 2026-11-04, `CACHE_VERSION` v577)
 
 The 2026-11-04 review's M5 (`~/projects/AI_Tools-REVIEW-2026-11-04.md`), brought in by `1dd649b` and carried into the
