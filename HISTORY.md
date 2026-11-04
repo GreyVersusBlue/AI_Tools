@@ -9,6 +9,34 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-44: README.md's tools table is generated from index-rows.json (2026-11-04, no `CACHE_VERSION` bump)
+
+AI-30 made index.html's tool rows a render of `Tools/board-check/index-rows.json`, and its second session named the gap
+left beside it: README.md's hand-kept Tool / File / What it does table (90 rows) could drift from the same tools. It is
+now the same data's render too. `build-index.mjs` writes the lines between `<!-- tools-table:start … -->` and
+`<!-- tools-table:end -->` in README.md, and `--check` (`npm run check:index`, already a CI guard; its step is renamed)
+fails on either file. README is not precached, so nothing in `sw.js` changed, and index.html's output is byte-identical.
+
+- **The data.** Each row gained `readme`, its README "What it does" cell copied verbatim (Markdown, so backticks and
+  README's own punctuation stay; it is not the landing page's pitch, which is shorter and different), and a top-level
+  `readmeOrder` lists the 90 slugs in README's order (which is not the landing page's category order). The Tool cell is
+  the row's `name` with its HTML entities turned into characters (`&amp;` to `&`, `&rarr;` to `→`, `&ndash;` to `–`);
+  an entity the decoder has no spelling for is an error, not a guess. Three rows' README names are not that, and carry a
+  `readmeName` with README's wording: **Command Center** (the page says "Command Center (Daily Dashboard)"), **East
+  Middle Schedule Browser** (the page says "Schedule Browser") and **Math "Find the Mistake" Warm-Up Generator** (README
+  has straight quotes, the page curly ones). The File cell is the decoded `href`. No row's wording changed: the only
+  change to README.md is the two marker lines, and the table between them was the same bytes before and after.
+- **Decision (mine, cheap to reverse):** README's wording and order were kept rather than replaced by the landing page's
+  names and pitches, as the entry asked; a later session that wants one wording for both deletes `readme`/`readmeName`
+  and renders `pitch`. Every row was already in both files (90 and 90, matched one to one by file), so there was no
+  missing row to write wording for.
+- **Tests.** `npm run test:build-index` (514 checks, was 319): README equals the render, one marker pair, a line per row,
+  `readmeOrder` names every row once, and mutants (a changed `readme`, a reordered list, a row dropped from or doubled in
+  `readmeOrder`, a row with no `readme`, a missing end marker, an unknown entity) are each seen. A hand edit to one
+  README cell was run through `check:index` and failed it, naming the line.
+- **Not verified:** how GitHub renders the README with the comment lines; they sit on lines of their own with a blank
+  line between the table and the end marker, which CommonMark reads as an HTML block, but the page was not looked at.
+
 ## AI-30: first-run samples for 019 and 030, the last two P15 adopters (2026-11-04, `CACHE_VERSION` v585)
 
 The v489 survey skipped 019 (Escape Room Builder) and 030 (Review Game Board) because each validates and chains what a

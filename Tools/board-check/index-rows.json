@@ -25,7 +25,8 @@
      "grade": "A+",
      "gradeTitle": "Comment: a pleasure to have in class.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t007"
+     "icon": "t007",
+     "readme": "Pull a random student for cold-calls, groups, or who goes first. Rosters stay in your browser."
     },
     {
      "d": "550ms",
@@ -45,7 +46,8 @@
      "grade": "A",
      "gradeTitle": "Comment: works well with others. Rearranges them, actually.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t005"
+     "icon": "t005",
+     "readme": "Build a chart once, then reshuffle it whenever you need to."
     },
     {
      "d": "1250ms",
@@ -65,7 +67,8 @@
      "grade": "A",
      "gradeTitle": "Comment: readable from the back row.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t004"
+     "icon": "t004",
+     "readme": "Big-digit projector timer: countdown, transition presets, random-interval surprise cues, stopwatch, and round-robin stations."
     },
     {
      "d": "1296ms",
@@ -85,7 +88,8 @@
      "grade": "A",
      "gradeTitle": "Comment: never puts the same two together twice.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t002"
+     "icon": "t002",
+     "readme": "Split a pasted or Name-Picker roster into random groups by count or size, with optional skill-balancing and \"keep these two apart\" constraints. Prints a clean group sheet."
     },
     {
      "d": "1308ms",
@@ -105,7 +109,8 @@
      "grade": "A",
      "gradeTitle": "Comment: never forgets who was helping, or who wasn't.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t008"
+     "icon": "t008",
+     "readme": "Arm a behavior (built-in +1/-1, or an editable list of point-valued behaviors) and tap any student's card to apply it — a live, projector-friendly per-student point tally with an activity feed and undo. Archive a day into an expandable history and print a report of the current totals. Multiple named sections, and can load a Name Picker roster."
     },
     {
      "d": "1380ms",
@@ -124,7 +129,8 @@
      "grade": "A",
      "gradeTitle": "Comment: knows exactly how long &ldquo;just the bathroom&rdquo; really takes.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t001"
+     "icon": "t001",
+     "readme": "Tap a destination, tap a student — a live board tracks who's out and for how long, with a per-day log, archived history, and a printable report."
     },
     {
      "d": "1388ms",
@@ -144,7 +150,8 @@
      "grade": "A",
      "gradeTitle": "Comment: types your roster once, remembers it everywhere.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t006"
+     "icon": "t006",
+     "readme": "Build and save a class roster once, in the same shared storage Name Picker uses — several other tools can load it straight in instead of re-typing a class list."
     },
     {
      "d": "1404ms",
@@ -164,7 +171,9 @@
      "grade": "A",
      "gradeTitle": "Comment: runs the whole period without a single tab switch.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t010"
+     "icon": "t010",
+     "readme": "A timer, today's School Calendar Visualizer entry, and a no-repeats roster quick-call, side by side on one projector page.",
+     "readmeName": "Command Center"
     },
     {
      "d": "1420ms",
@@ -184,7 +193,8 @@
      "grade": "A",
      "gradeTitle": "Comment: everything on the board, nothing in a tab.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t087"
+     "icon": "t087",
+     "readme": "A projector board built from widgets you drag and resize: timer, stopwatch, clock, text boxes, YouTube videos, a traffic light, work symbols, a noise meter (the microphone never leaves the page), a drawing pad, pictures (kept in IndexedDB), QR codes, dice, and a name picker and group maker on the shared roster. Each screen has its own background, can be linked to a bell period from Command Center (the board switches when the period starts), and can be exported to a file and imported elsewhere; six starter screens. A phone can run the board over a direct WebRTC link (`Tools/class-screen/remote.html`, paired by QR code, no server). Saves one named screen per class; everything but YouTube works offline."
     },
     {
      "d": "1304ms",
@@ -204,7 +214,8 @@
      "grade": "A",
      "gradeTitle": "Comment: nobody forgets cafeteria duty again.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t058"
+     "icon": "t058",
+     "readme": "Editable duty locations and staff list, a round-robin auto-fill across the week, and a printable Monday–Friday grid for the workroom board."
     },
     {
      "d": null,
@@ -225,7 +236,8 @@
      "gradeTitle": "Comment: know who talked without a clipboard tally.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
      "pin": "Socratic Seminar Prep",
-     "icon": "t084"
+     "icon": "t084",
+     "readme": "Print a claim/evidence/rebuttal prep sheet for a central question, then run a live speaking-order and participation tracker with shuffle, drag-to-reorder, and an optional inner/outer fishbowl split."
     }
    ]
   },
@@ -253,7 +265,9 @@
      "grade": "A+",
      "gradeTitle": "Comment: always knows where everyone is supposed to be.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t034"
+     "icon": "t034",
+     "readme": "This year's actual A/B schedule, searchable by teacher, room, or period. Published from the School Layout Visualizer, below.",
+     "readmeName": "East Middle Schedule Browser"
     },
     {
      "d": "690ms",
@@ -273,7 +287,8 @@
      "grade": "A",
      "gradeTitle": "Comment: sees the big picture.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t035"
+     "icon": "t035",
+     "readme": "Build a hyperlinked map of teachers, rooms, and clusters — and publish a schedule browser like the one above from it."
     },
     {
      "d": "1180ms",
@@ -293,7 +308,8 @@
      "grade": "A",
      "gradeTitle": "Comment: plans ahead.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t032"
+     "icon": "t032",
+     "readme": "Build a full-year calendar template — holidays, half days, workdays, grading periods, testing windows — and lay lesson pacing on top: paste a `U1-03-A-Title` lesson list or import the county pacing spreadsheet, then bump lessons (with reasons) around closures. Saves in your browser; print or export a backup."
     },
     {
      "d": "1040ms",
@@ -313,7 +329,8 @@
      "grade": "A",
      "gradeTitle": "Comment: leaves detailed instructions.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t044"
+     "icon": "t044",
+     "readme": "Fill in the boilerplate once (schedule, emergency info, phone numbers), then add today's lesson and export a ready-to-print sub plan as a Word doc."
     },
     {
      "d": "1396ms",
@@ -333,7 +350,8 @@
      "grade": "A",
      "gradeTitle": "Comment: one stack for the sub, not three separate tabs.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t045"
+     "icon": "t045",
+     "readme": "Pulls Sub Plan Builder's standing details and the current Seating Chart into one printable packet, plus today's lesson."
     },
     {
      "d": "1308ms",
@@ -353,7 +371,8 @@
      "grade": "A",
      "gradeTitle": "Comment: the sub-day debrief that actually gets written.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t076"
+     "icon": "t076",
+     "readme": "An editable list of prompts, each printed with blank lines, as repeated half-sheets a substitute fills out by hand before leaving for the day."
     },
     {
      "d": "1312ms",
@@ -373,7 +392,8 @@
      "grade": "A",
      "gradeTitle": "Comment: never asks what room twice.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t075"
+     "icon": "t075",
+     "readme": "Add staff one at a time or paste a whole list from a spreadsheet, sort and search, print a clean one-page directory (name, room, extension, subject) for the workroom wall or a new teacher's binder."
     }
    ]
   },
@@ -402,7 +422,8 @@
      "grade": "A+",
      "gradeTitle": "Comment: shows all work.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t036"
+     "icon": "t036",
+     "readme": "Enter grades by hand or paste a TAC export, and check the math automatically."
     },
     {
      "d": "1332ms",
@@ -422,7 +443,8 @@
      "grade": "A",
      "gradeTitle": "Comment: grades the assignment, not you.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t003"
+     "icon": "t003",
+     "readme": "Build a grading rubric from a template or from scratch — editable criteria and performance levels, live point totals, print a clean landscape table. Saves multiple named rubrics."
     },
     {
      "d": "1356ms",
@@ -441,7 +463,8 @@
      "grade": "A",
      "gradeTitle": "Comment: the curve, visualized.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t037"
+     "icon": "t037",
+     "readme": "Paste a gradebook export and get class-wide stats, an editable letter-grade breakdown, and a score histogram — a companion to the Final Grade Checker."
     },
     {
      "d": "1320ms",
@@ -461,7 +484,8 @@
      "grade": "A",
      "gradeTitle": "Comment: three minutes of writing, zero minutes of grading.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t023"
+     "icon": "t023",
+     "readme": "A bank of short warm-up and reflection prompts with a big projector display, plus a printable handout mode for half- or quarter-sheet exit tickets."
     },
     {
      "d": "1316ms",
@@ -481,7 +505,8 @@
      "grade": "A",
      "gradeTitle": "Comment: no more sticky notes on the desk.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t077"
+     "icon": "t077",
+     "readme": "A roster × accommodation-type grid with a per-student note field, printed as small reference cards — entirely local."
     },
     {
      "d": "1420ms",
@@ -500,7 +525,8 @@
      ],
      "grade": "A",
      "gradeTitle": "Comment: progress reports without the retyping.",
-     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4"
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "readme": "Drop in Student Detail Report PDFs (one student per file or a whole class) and get a sortable class overview plus a one-page, family-friendly progress report per student: overall and summative/formative averages, missing and low work, trend, editable comments and a teacher note. Grading weights, missing-work rules and the letter scale are adjustable. Prints, or downloads one report or all as HTML, plus a class CSV. PDFs are read in the browser and student data is never saved. Works offline."
     },
     {
      "d": "1420ms",
@@ -518,7 +544,8 @@
      ],
      "grade": "A",
      "gradeTitle": "Comment: one packet, in the order you want it.",
-     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4"
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "readme": "Choose which pages go in one printed packet, put them in order, preview the pages and print it. Every page is a section read live from the tool that holds it (substitute information and emergency information from Sub Plan Builder to start; a section with nothing saved yet is greyed with a link to the tool that fills it in), so nothing is copied and nothing goes stale. Two built-in presets (Sub day, Emergency binder) and your own, saved as lists of section names only. Print goes through the shared print kit; works offline."
     }
    ]
   },
@@ -547,7 +574,8 @@
      "grade": "A",
      "gradeTitle": "Comment: handles elimination gracefully.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t020"
+     "icon": "t020",
+     "readme": "Build a single-elimination bracket (byes handled automatically), run it live with click-to-advance picks, save/switch between multiple brackets, and print a blank copy."
     },
     {
      "d": "1272ms",
@@ -566,7 +594,8 @@
      "grade": "A",
      "gradeTitle": "Comment: knows the answer, in the form of a question.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t030"
+     "icon": "t030",
+     "readme": "A Jeopardy-style review board — type in questions or import them from an Excel sheet (Category/Points/Question/Answer columns), click a cell to reveal it, award points per team."
     },
     {
      "d": "1368ms",
@@ -586,7 +615,8 @@
      "grade": "A",
      "gradeTitle": "Comment: keeps the answers to itself.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t018"
+     "icon": "t018",
+     "readme": "Type in stations (or paste them from a spreadsheet) and print a sheet of station QR codes sized however many-per-page you need, plus a separate answer key that never shares a page with the codes."
     },
     {
      "d": "1412ms",
@@ -606,7 +636,8 @@
      "grade": "A",
      "gradeTitle": "Comment: the only lock in the building that&rsquo;s supposed to be picked.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t019"
+     "icon": "t019",
+     "readme": "Chain QR-code puzzle stations into a linear or branching escape room — scanning one out of order sends a student back instead of giving away the clue."
     },
     {
      "d": "1110ms",
@@ -625,7 +656,8 @@
      "grade": "A",
      "gradeTitle": "Comment: scans on the first try.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t016"
+     "icon": "t016",
+     "readme": "Turn a link or short text into a printable QR code, with an optional logo in the center."
     },
     {
      "d": "1284ms",
@@ -645,7 +677,8 @@
      "grade": "A+",
      "gradeTitle": "Comment: everyone&rsquo;s a winner.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t042"
+     "icon": "t042",
+     "readme": "Five templates × four decorative borders, editable name/title/reason/date/signature with a live preview, and a batch mode that prints one certificate per name for a whole class."
     }
    ]
   },
@@ -673,7 +706,8 @@
      "grade": "A",
      "gradeTitle": "Comment: turns work in on time, stapled.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t011"
+     "icon": "t011",
+     "readme": "Combine photos into one clean PDF."
     },
     {
      "d": "970ms",
@@ -692,7 +726,8 @@
      "grade": "A",
      "gradeTitle": "Comment: works well with others.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t031"
+     "icon": "t031",
+     "readme": "Combine multiple Word docs into one, in order."
     },
     {
      "d": "900ms",
@@ -712,7 +747,8 @@
      "grade": "A",
      "gradeTitle": "Comment: asks good questions.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t029"
+     "icon": "t029",
+     "readme": "Answer a guided form about what you're building — audience, tone, format, guardrails — and get a ready-to-use prompt for whatever AI assistant you use, with task presets, prompt history, and a shareable link."
     },
     {
      "d": "1344ms",
@@ -731,7 +767,8 @@
      "grade": "A",
      "gradeTitle": "Comment: fills in the fine print, you still chase the signatures.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t043"
+     "icon": "t043",
+     "readme": "Fill in trip details once, then print one slip, a whole class set, or blank copies — save the trip as a template for next year."
     },
     {
      "d": "1416ms",
@@ -750,7 +787,8 @@
      "grade": "A",
      "gradeTitle": "Comment: remembers so you don't have to.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t068"
+     "icon": "t068",
+     "readme": "Log a call, email, or note home per student — date, method, and outcome — with a per-student contact count and a printable history, for quick reference before a conference or a difficult phone call."
     },
     {
      "d": null,
@@ -770,7 +808,8 @@
      "grade": "A",
      "gradeTitle": "Comment: a drafted email beats a blank compose window.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t085"
+     "icon": "t085",
+     "readme": "Fill in the blanks on ready-made letters — positive notes, missing-work notices, conference requests, and more — then copy, print, or email one, or batch-fill the same letter for a whole roster at once."
     },
     {
      "d": null,
@@ -790,7 +829,8 @@
      "grade": "A",
      "gradeTitle": "Comment: no more how do I cite Wikipedia mid-class.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t082"
+     "icon": "t082",
+     "readme": "Add books, articles, websites, Wikipedia pages, videos, and more, then print a Works Cited, References, or Bibliography page in MLA, APA, or Chicago style, alphabetized automatically."
     }
    ]
   },
@@ -818,7 +858,8 @@
      "grade": "A",
      "gradeTitle": "Comment: never draws outside the lines.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t012"
+     "icon": "t012",
+     "readme": "Printable graph paper (fill-the-page or exact grid size), number lines (single or several per page), and coordinate planes (four-quadrant or first-quadrant), all sized true-to-scale for printing."
     },
     {
      "d": "1412ms",
@@ -838,7 +879,8 @@
      "grade": "A",
      "gradeTitle": "Comment: shows its work.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t026"
+     "icon": "t026",
+     "readme": "Randomized addition/subtraction/multiplication/division/mixed drill sheets with a matching answer key — a fresh sheet every time you generate."
     },
     {
      "d": "1424ms",
@@ -858,7 +900,8 @@
      "grade": "A",
      "gradeTitle": "Comment: keeps a formula sheet.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t041"
+     "icon": "t041",
+     "readme": "Five topic templates (geometry, linear equations, quadratics, basic statistics) or start blank, customize and reorder the list, print a one-page reference sheet. Saves multiple named sheets."
     },
     {
      "d": "1432ms",
@@ -878,7 +921,8 @@
      "grade": "A",
      "gradeTitle": "Comment: shows the string one piece at a time, keeps the guessing to the students.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t024"
+     "icon": "t024",
+     "readme": "A bank of number-talk prompts that reveal one expression at a time on a projector display, plus a lightweight strategy-sharing board."
     },
     {
      "d": "1436ms",
@@ -897,7 +941,8 @@
      "grade": "A",
      "gradeTitle": "Comment: no more digging through the manipulatives bin.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t080"
+     "icon": "t080",
+     "readme": "Draggable base-ten blocks, fraction tiles, and algebra tiles on a shared board, plus a separate draggable number line, each with a one-click PNG snapshot."
     },
     {
      "d": "1320ms",
@@ -917,7 +962,8 @@
      "grade": "A",
      "gradeTitle": "Comment: minus the writer's block.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t081"
+     "icon": "t081",
+     "readme": "Randomized word problems by operation and grade band, projected one at a time with a reveal-answer button or printed as a worksheet with a matching answer key."
     },
     {
      "d": "1324ms",
@@ -937,7 +983,8 @@
      "grade": "A",
      "gradeTitle": "Comment: metric panic, cured.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t078"
+     "icon": "t078",
+     "readme": "Check off customary, metric, cross-system, temperature, and time unit sets, add custom lines, and print a one-page conversion reference chart."
     },
     {
      "d": "1328ms",
@@ -957,7 +1004,9 @@
      "grade": "A",
      "gradeTitle": "Comment: grades the teacher's fake work for once.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t066"
+     "icon": "t066",
+     "readme": "A worked math solution with one deliberate error, revealed on a projector display or printed as a worksheet with an explanation-and-answer key.",
+     "readmeName": "Math \"Find the Mistake\" Warm-Up Generator"
     },
     {
      "d": "1332ms",
@@ -977,7 +1026,8 @@
      "grade": "A",
      "gradeTitle": "Comment: three ways to say the same number.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t061"
+     "icon": "t061",
+     "readme": "Randomized conversion rows across three difficulty tiers, one form given and the other two left blank, with a matching answer key."
     }
    ]
   },
@@ -1006,7 +1056,8 @@
      "grade": "A",
      "gradeTitle": "Comment: never mixes up its cards.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t040"
+     "icon": "t040",
+     "readme": "Paste a \"term: definition\" word list, print cut-apart flashcards (front/back pages, mirrored for double-siding) or large word-wall cards. Saves multiple named word lists."
     },
     {
      "d": "1456ms",
@@ -1026,7 +1077,8 @@
      "grade": "A",
      "gradeTitle": "Comment: never has writer&rsquo;s block.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t025"
+     "icon": "t025",
+     "readme": "200 prompts (100 middle school, 100 high school) across five genres, with a big projector-friendly display and a session history."
     },
     {
      "d": "1468ms",
@@ -1046,7 +1098,8 @@
      "grade": "A",
      "gradeTitle": "Comment: knows who&rsquo;s still on chapter 3.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t033"
+     "icon": "t033",
+     "readme": "Track books and pages read during independent reading time, per student or for the whole class — multiple saved sections, a class summary table, and printable logs."
     },
     {
      "d": "1472ms",
@@ -1066,7 +1119,8 @@
      "grade": "A",
      "gradeTitle": "Comment: nobody's the word wizard two meetings running.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t027"
+     "icon": "t027",
+     "readme": "Splits a roster into reading circles and rotates discussion roles meeting after meeting, with a chapter checkpoint logged each time."
     },
     {
      "d": "1476ms",
@@ -1086,7 +1140,8 @@
      "grade": "A",
      "gradeTitle": "Comment: catches the typo before third period does.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t055"
+     "icon": "t055",
+     "readme": "A bank of broken sentences reveals one at a time on the projector with a click-to-show corrected version, plus a printable worksheet mode and a teacher-added custom sentence bank."
     },
     {
      "d": "1336ms",
@@ -1106,7 +1161,8 @@
      "grade": "A",
      "gradeTitle": "Comment: turns it's good into actual feedback.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t070"
+     "icon": "t070",
+     "readme": "Build a custom peer-review checklist (grammar, structure, argument) from a template or from scratch, tied to a specific writing assignment, and print it as a half-sheet per student."
     },
     {
      "d": "1340ms",
@@ -1126,7 +1182,8 @@
      "grade": "A",
      "gradeTitle": "Comment: serves 30, no reservations needed.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t049"
+     "icon": "t049",
+     "readme": "Add books with title, author, genre, blurb, and an optional cover image, then print a two-column menu or fold-in-half table tents."
     },
     {
      "d": "1344ms",
@@ -1146,7 +1203,8 @@
      "grade": "A",
      "gradeTitle": "Comment: nouns and verbs, now with jokes.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t063"
+     "icon": "t063",
+     "readme": "Four built-in story templates (or write your own with {tag} placeholders), a \"fill randomly\" demo reveal, and a printable worksheet with a word-bank suggestion box per blank type."
     },
     {
      "d": "1348ms",
@@ -1166,7 +1224,8 @@
      "grade": "A",
      "gradeTitle": "Comment: climbs the mountain, sticks the landing.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t072"
+     "icon": "t072",
+     "readme": "A five-stage plot-mountain diagram (exposition through resolution) alongside a characters/setting/conflict/theme summary, printable or projectable as one shared reference."
     }
    ]
   },
@@ -1195,7 +1254,8 @@
      "grade": "A",
      "gradeTitle": "Comment: recorder isn&rsquo;t anyone&rsquo;s permanent job here.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t022"
+     "icon": "t022",
+     "readme": "Randomize lab groups and assign roles (recorder, materials, safety, etc.) — remembers who's had which role so nobody's stuck as Recorder every lab."
     },
     {
      "d": "1500ms",
@@ -1215,7 +1275,8 @@
      "grade": "A",
      "gradeTitle": "Comment: knows exactly who can't touch the bunsen burner yet.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t013"
+     "icon": "t013",
+     "readme": "One-tap signed/not-signed tracking per student, with a live \"N of M signed\" count and a missing-list before lab day."
     },
     {
      "d": "1512ms",
@@ -1235,7 +1296,8 @@
      "grade": "A",
      "gradeTitle": "Comment: turns a spreadsheet into a chart before the bell rings.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t038"
+     "icon": "t038",
+     "readme": "Paste a table from a spreadsheet or lab notebook, pick the columns, and get a bar, line, pie, or scatter chart with quick descriptive stats — download as PNG or SVG."
     },
     {
      "d": "1520ms",
@@ -1255,7 +1317,8 @@
      "grade": "A",
      "gradeTitle": "Comment: saves you a prep period. Confirmed.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t065"
+     "icon": "t065",
+     "readme": "Build a reusable lab report template — hypothesis, materials, procedure, a configurable data table, and conclusion prompts — from a subject-flavored starter or from scratch, and print a fillable packet for each lab."
     },
     {
      "d": "1352ms",
@@ -1275,7 +1338,8 @@
      "grade": "A",
      "gradeTitle": "Comment: every bin knows what it is now.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t074"
+     "icon": "t074",
+     "readme": "Ten hazard/equipment icons, custom label text and copy counts, printed as a grid of storage-bin labels."
     },
     {
      "d": "1356ms",
@@ -1295,7 +1359,8 @@
      "grade": "A",
      "gradeTitle": "Comment: plans the experiment before it plans you.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t059"
+     "icon": "t059",
+     "readme": "A guided pre-lab worksheet — testable question, If/then/because hypothesis, variables, materials, and procedure — printable as a fillable planning packet."
     },
     {
      "d": "1360ms",
@@ -1315,7 +1380,8 @@
      "grade": "A",
      "gradeTitle": "Comment: finds who hasn't started the board.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t073"
+     "icon": "t073",
+     "readme": "Six editable milestones with due dates, a per-student checkbox grid with a live progress percentage, and a printable report with a \"still missing, by milestone\" chase-list."
     },
     {
      "d": "1364ms",
@@ -1335,7 +1401,8 @@
      "grade": "A",
      "gradeTitle": "Comment: backbone or not, it'll figure you out.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t057"
+     "icon": "t057",
+     "readme": "Numbered couplets branching to another step or a final answer, with example specimens tagged per result, printed as a shuffled classification worksheet plus a matching answer key."
     }
    ]
   },
@@ -1364,7 +1431,8 @@
      "grade": "A+",
      "gradeTitle": "Comment: always knows where things are.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t046"
+     "icon": "t046",
+     "readme": "Start from a built-in base map — world, any continent, or the USA — drawn offline from map data that ships with the tool and calibrated automatically, or search Wikimedia Commons instead. Pan/zoom into a region and annotate it with draggable labels, markers (pin/star/dot/flag), shaded regions, and typed lines (river/border/trade route) — all auto-building an editable legend. **Click a country or state on a built-in map and it shades itself**, in colours that stay readable on a black-and-white copier, with the key naming what you shaded. Or paste \"state, value\" data and get the whole map shaded in bands, with a legend that writes its own numeric ranges. Drop in ready-made place lists (13 colonies, 50 states, countries of Europe), tidy overlapping labels in one pass, and print a numbered fill-in-the-blank worksheet with a word bank, several shuffled versions, and an answer key. Compass rose, lat/long grid, scale bar, locator inset, and a projector-ready self-check quiz. Maps are cached for offline reuse; print, save as PDF, or tile across several pages."
     },
     {
      "d": "1544ms",
@@ -1384,7 +1452,8 @@
      "grade": "A",
      "gradeTitle": "Comment: never late to history class.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t015"
+     "icon": "t015",
+     "readme": "Add events (exact years, BCE, or ranges/eras) with an optional photo and place each, pick a line style, view a scrolling on-screen timeline or a paginated print layout. Prints a combined map + timeline page with numbered pins linking when to where, or a tiled wall timeline. Presents the timeline full screen one event at a time, with the map panning to each place. Prints a fill-in-the-blank timeline worksheet with a word bank and answer key. Loads a ready-made example, shares by link or QR, saves multiple named timelines."
     },
     {
      "d": "1548ms",
@@ -1404,7 +1473,8 @@
      "grade": "A",
      "gradeTitle": "Comment: knows the difference between a photo and a speech.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t028"
+     "icon": "t028",
+     "readme": "Builds a printable OPTIC or SOAPSTone worksheet around a described or pasted-in source, with an answer key from your own notes. One worksheet, three class sets: pick Academic, Honors, or Honors GT, or print all three at once. Corroboration mode prints two sources side by side, and a tagged source library saves sources for reuse."
     },
     {
      "d": "1552ms",
@@ -1424,7 +1494,8 @@
      "grade": "A",
      "gradeTitle": "Comment: zero photocopier jams.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t056"
+     "icon": "t056",
+     "readme": "Add text or image sources with a citation and source-specific guiding questions, plus a shared question set, printed as one packet with a cover page and one source per page. Multiple named saved packets, plus share a packet with a teammate by link or QR code (text and questions travel; images stay on-device). Optional essay planning organizer and editable scoring rubric close out the packet, and one packet prints at Academic, Honors, or Honors GT, or all three leveled sets in one run. Any text source can be sent to Primary Source Analysis as a full worksheet in one click."
     },
     {
      "d": "1368ms",
@@ -1444,7 +1515,8 @@
      "grade": "A",
      "gradeTitle": "Comment: gotta research 'em all.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t064"
+     "icon": "t064",
+     "readme": "Build collectible-style research cards with a live preview: seven era themes plus science, math, literature and vocabulary looks, decorative frames, rarity foil tiers, photo crop/shape editing, stat bars, set numbering, named decks, and batch-add from a saved class roster or a pasted list — printed as duplex front/back grids, exported as PNG / PDF / zip, or shared as a finished deck by link or QR code (card text and design, not photos). Then play the finished deck as a teacher-run projector review game: two cards face down, a recall question, a stat challenge, a scoreboard that survives a reload. Sample decks for every theme load with one click."
     },
     {
      "d": "1372ms",
@@ -1464,7 +1536,8 @@
      "grade": "A",
      "gradeTitle": "Comment: tomorrow's bell ringer.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t054"
+     "icon": "t054",
+     "readme": "Paste a news article to pull out a summary starter and candidate vocabulary automatically, edit both, add your own questions, and print a discussion guide — or add a second article on the same event for a side-by-side bias/framing comparison guide with shared vocabulary. An optional media literacy kit adds a SIFT source-evaluation checklist, a headline rewrite exercise, and a claim vs. evidence organizer, printable at Academic, Honors, or Honors GT (or all three at once)."
     },
     {
      "d": "1376ms",
@@ -1484,7 +1557,8 @@
      "grade": "A",
      "gradeTitle": "Comment: objection, sustained, per the card.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t050"
+     "icon": "t050",
+     "readme": "Prints the whole simulation: role cards, private case files, an agenda with time boxes, ballots, a scoring rubric, and reflection sheets. Five starter templates (Mock Trial, Debate, Legislative Simulation, UN Security Council, Constitutional Convention) or build from scratch, saved by name."
     },
     {
      "d": "1380ms",
@@ -1504,7 +1578,8 @@
      "grade": "A",
      "gradeTitle": "Comment: finds Waldo and the capital of Peru.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t062"
+     "icon": "t062",
+     "readme": "A 120-question built-in bank across capitals, landmarks, map-reading skills, and outline-map &ldquo;which country/state is highlighted?&rdquo; questions drawn offline from the Blank Map Generator&rsquo;s own map data &mdash; filterable by category, projected one at a time or printed as a quiz with an answer key, short answer or multiple choice with same-category distractors and a seeded, reprintable quiz version, plus a 2&ndash;6 team tournament scoreboard for the projector."
     },
     {
      "d": null,
@@ -1524,7 +1599,8 @@
      "grade": "A",
      "gradeTitle": "Comment: bandwagon, glittering generalities, and receipts.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t083"
+     "icon": "t083",
+     "readme": "Set up a poster, cartoon, or ad once and print a leveled student worksheet — symbols, a propaganda-technique checklist, ethos/pathos/logos, message and audience — plus a matching teacher answer key."
     },
     {
      "d": null,
@@ -1544,7 +1620,8 @@
      "grade": "A",
      "gradeTitle": "Comment: six clicks from cheese to charlemagne.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t086"
+     "icon": "t086",
+     "readme": "Classroom Wikipedia race: one seed phrase gives the whole class the identical start→target matchup, with a live timer, click count, breadcrumb path, and verifiable finish codes. Fully self-contained single file; Wikipedia races need internet, or play with no network on 66 short articles written for the tool."
     }
    ]
   },
@@ -1573,7 +1650,8 @@
      "grade": "A",
      "gradeTitle": "Comment: conjugates verbs, not your patience.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t039"
+     "icon": "t039",
+     "readme": "Vocabulary quiz drills (any language) and verb-conjugation tables with editable person/subject labels, each with a printable answer key."
     },
     {
      "d": "1572ms",
@@ -1593,7 +1671,8 @@
      "grade": "A",
      "gradeTitle": "Comment: orders the coffee, directions to the station are on you.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t014"
+     "icon": "t014",
+     "readme": "Real-life dialogue scenarios with vocabulary scaffolding cards you fill in for whatever language you teach."
     },
     {
      "d": "1568ms",
@@ -1613,7 +1692,8 @@
      "grade": "A",
      "gradeTitle": "Comment: every desk and doorknob, fluent now.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t051"
+     "icon": "t051",
+     "readme": "Paste a target-word/English vocabulary list and print small labels each with a QR code linking to a browser-text-to-speech pronunciation page, plus a plain reference sheet."
     },
     {
      "d": "1384ms",
@@ -1633,7 +1713,8 @@
      "grade": "A",
      "gradeTitle": "Comment: conjugates so nobody has to guess twice.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t079"
+     "icon": "t079",
+     "readme": "Spanish, French, or blank starter templates of verb-group conjugation panels with editable subject/person labels, printed as a large-font wall poster."
     },
     {
      "d": "1388ms",
@@ -1653,7 +1734,8 @@
      "grade": "A",
      "gradeTitle": "Comment: 30 facts, zero stereotypes.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t053"
+     "icon": "t053",
+     "readme": "A 30-question built-in bank across Hispanic World, Francophone World, and Global Culture categories, filterable, projected one at a time or printed as matching front/back trivia cards."
     },
     {
      "d": "1392ms",
@@ -1673,7 +1755,8 @@
      "grade": "A",
      "gradeTitle": "Comment: a thousand conjugated words.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t071"
+     "icon": "t071",
+     "readme": "Upload images, pair each with a random editable task prompt, step through no-repeats-until-cycled for a projector display, or print a set of image + prompt cards."
     },
     {
      "d": "1396ms",
@@ -1693,7 +1776,8 @@
      "grade": "A",
      "gradeTitle": "Comment: embarazada is not what you think.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t052"
+     "icon": "t052",
+     "readme": "Spanish and French starter examples (or build from scratch) split into true cognates and false friends, printed as a two-section reference sheet."
     },
     {
      "d": "1400ms",
@@ -1711,7 +1795,8 @@
      ],
      "grade": "A",
      "gradeTitle": "Comment: six dots, zero excuses.",
-     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4"
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "readme": "Learn to read Unified English Braille by sight, Duolingo-style: 22 units and 86 short lessons from the alphabet through numbers, punctuation, every contraction and the shortforms (212 signs). New signs come with numbered dots; questions ask what a cell says, which cell is a sign, which dots to fill in (F D S / J K L, like a Perkins), and to read words and sentences built only from signs already learned, with mirror-image look-alikes as the distractors. Missed signs come back before the lesson ends. Leitner-box review promotes a sign only when it is answered right and fast; there is a weakest-signs drill and a 60-second sprint. A reading room unlocks after punctuation: ten graded original passages (or your own pasted text) shown contracted as far as you have learned, timed in words per minute, with click-to-peek words. Includes a reference of every sign and a text-to-braille translator. Saves progress in one localStorage key; works offline."
     }
    ]
   },
@@ -1740,7 +1825,8 @@
      "grade": "A",
      "gradeTitle": "Comment: rotates the groups, the trash talk rotates itself.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t021"
+     "icon": "t021",
+     "readme": "A station rotation timer with named stations and groups, plus a tournament bracket for PE units."
     },
     {
      "d": "1596ms",
@@ -1760,7 +1846,8 @@
      "grade": "A",
      "gradeTitle": "Comment: sends them to the work, not a 404.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t017"
+     "icon": "t017",
+     "readme": "Batch-generate QR codes linking to student work for a gallery walk, printed in a configurable grid, plus a plain-text reference sheet for you."
     },
     {
      "d": "1600ms",
@@ -1780,7 +1867,8 @@
      "grade": "A",
      "gradeTitle": "Comment: no blank stares.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t047"
+     "icon": "t047",
+     "readme": "A four-step describe/analyze/interpret/judge critique worksheet with editable prompts and follow-up questions per step, printed as repeated half-sheets for a gallery walk or artwork critique."
     },
     {
      "d": "1400ms",
@@ -1800,7 +1888,8 @@
      "grade": "A",
      "gradeTitle": "Comment: the mile time that got faster every retell.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t060"
+     "icon": "t060",
+     "readme": "Save a roster, add time- or count-based fitness-test events, enter results in a per-student grid with live class average/range stats, and print a report."
     },
     {
      "d": "1404ms",
@@ -1820,7 +1909,8 @@
      "grade": "A",
      "gradeTitle": "Comment: a QR code for the kid who ate the artist statement.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t048"
+     "icon": "t048",
+     "readme": "Add a title, photo, and artist statement per piece; print portfolio labels with a thumbnail and a QR code carrying the statement text itself, no hosting needed."
     },
     {
      "d": "1408ms",
@@ -1840,7 +1930,8 @@
      "grade": "A",
      "gradeTitle": "Comment: random, but never on the beat you'd guess.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t067"
+     "icon": "t067",
+     "readme": "Randomized rhythm patterns (4/4, 3/4, or 2/4) or randomized pitch sight-reading on a real treble/bass staff, for a projector display or printed handout."
     },
     {
      "d": "1412ms",
@@ -1860,7 +1951,8 @@
      "grade": "A",
      "gradeTitle": "Comment: station 4 is just a water break in disguise.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t069"
+     "icon": "t069",
+     "readme": "A default 8-station calisthenics circuit (or build from scratch), each with an emoji, duration/reps, and instructions, printed as large station cards."
     }
    ]
   },
@@ -1888,9 +1980,102 @@
      "grade": "A",
      "gradeTitle": "Comment: a wiped cache is no longer a re-do of the whole semester.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
-     "icon": "t009"
+     "icon": "t009",
+     "readme": "Scans your browser for everything every tool on this site has saved and downloads it as one file, or restores it back on a new computer or after a wiped cache."
     }
    ]
   }
+ ],
+ "readmeOrder": [
+  "schedule-browser",
+  "layout-visualizer",
+  "grade-checker",
+  "image-to-pdf",
+  "name-picker",
+  "seating-chart",
+  "docx-merger",
+  "sub-plan-builder",
+  "school-calendar-visualizer",
+  "classroom-timer",
+  "bracket-tournament-generator",
+  "review-game-board",
+  "certificate-award-maker",
+  "graph-paper-generator",
+  "math-drill-generator",
+  "formula-sheet-builder",
+  "vocab-flashcard-generator",
+  "writing-prompt-generator",
+  "timeline-builder",
+  "blank-map-generator",
+  "group-team-generator",
+  "behavior-points-tracker",
+  "data-chart-builder",
+  "qr-scavenger-hunt-builder",
+  "ssr-log-tracker",
+  "lab-group-role-randomizer",
+  "rubric-builder",
+  "grade-distribution-visualizer",
+  "vocab-conjugation-drill",
+  "gallery-walk-qr",
+  "backup-restore",
+  "class-roster-hub",
+  "hall-pass-log",
+  "exit-ticket-generator",
+  "command-center-dashboard",
+  "field-trip-permission-slip",
+  "escape-room-builder",
+  "sub-binder-generator",
+  "number-talks-board",
+  "novel-study-reading-circles",
+  "lab-safety-contract-tracker",
+  "primary-source-analysis-generator",
+  "roleplay-scenario-generator",
+  "pe-tournament-station-rotation",
+  "prompt-builder",
+  "qr-code-generator",
+  "parent-contact-log",
+  "staff-directory-builder",
+  "word-problem-warmup-generator",
+  "unit-conversion-chart-builder",
+  "daily-editing-warmup-generator",
+  "peer-feedback-checklist-generator",
+  "lab-report-template-builder",
+  "current-events-discussion-guide",
+  "verb-conjugation-poster-generator",
+  "art-critique-worksheet-generator",
+  "duty-roster-builder",
+  "sub-note-feedback-slip",
+  "testing-accommodations-card-generator",
+  "virtual-manipulatives-board",
+  "math-find-the-mistake-generator",
+  "fraction-decimal-percent-drill-generator",
+  "book-tasting-menu-generator",
+  "grammar-mad-libs-generator",
+  "plot-diagram-builder",
+  "science-safety-label-maker",
+  "scientific-method-planner",
+  "science-fair-project-tracker",
+  "dichotomous-key-builder",
+  "dbq-source-packet-builder",
+  "historical-trading-card-maker",
+  "civics-simulation-role-cards",
+  "geography-bee-quiz-generator",
+  "classroom-label-maker",
+  "cultural-trivia-card-generator",
+  "picture-prompt-task-generator",
+  "cognates-false-friends-builder",
+  "braille-reading-trainer",
+  "progress-report-parser",
+  "packet-builder",
+  "fitness-skill-assessment-tracker",
+  "art-portfolio-label-maker",
+  "music-sightreading-generator",
+  "pe-warmup-circuit-generator",
+  "citation-generator",
+  "propaganda-analysis-worksheet-generator",
+  "socratic-seminar-prep-organizer",
+  "parent-communication-templates",
+  "wiki-race",
+  "class-screen"
  ]
 }

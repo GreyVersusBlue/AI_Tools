@@ -181,9 +181,10 @@ jobs:
         if: '!cancelled()'
         run: npm run check:publisher
 
-      # index.html's tool rows are rendered from Tools/board-check/index-rows.json by
-      # build-index.mjs; a hand edit to a row (or a data edit not rebuilt) fails here.
-      - name: 'Guard: index.html is what index-rows.json renders'
+      # index.html's tool rows and README.md's tools table are rendered from
+      # Tools/board-check/index-rows.json by build-index.mjs; a hand edit to either
+      # (or a data edit not rebuilt) fails here.
+      - name: 'Guard: index.html and the README table are what index-rows.json renders'
         if: '!cancelled()'
         run: npm run check:index
 
