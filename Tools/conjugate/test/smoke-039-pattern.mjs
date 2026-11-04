@@ -263,6 +263,14 @@ await page.selectOption(last + ' .pattern-row select:nth-of-type(2)', 'konjunkti
 await page.click(last + ' .pattern-row button'); await settle(page, 150);
 const k2 = await page.$$eval(last + ' .forms-grid input', els => els.map(e => e.value));
 eq(k2.slice(0, 6), ['käme', 'kämest', 'käme', 'kämen', 'kämet', 'kämen'], 'Fill writes Konjunktiv II');
+// a Latin deponent fills its perfect: the participle and sum (Devon's L4, 2026-11-03)
+await page.selectOption(last + ' .pattern-row select:nth-of-type(1)', 'la'); await settle(page, 100);
+await page.fill(last + ' input[placeholder^="Infinitive"]', 'loqui');
+await page.selectOption(last + ' .pattern-row select:nth-of-type(2)', 'perfect');
+await page.click(last + ' .pattern-row button'); await settle(page, 150);
+const dep = await page.$$eval(last + ' .forms-grid input', els => els.map(e => e.value));
+eq(dep.slice(0, 6), ['locūtus sum', 'locūtus es', 'locūtus est', 'locūtī sumus', 'locūtī estis', 'locūtī sunt'], 'Fill writes a Latin deponent perfect (locūtus sum)');
+ok(/Unreviewed/.test(await page.$eval(last + ' .pattern-status', e => e.textContent)), 'and says unreviewed');
 
 await browser.close(); server.close();
 console.log(`\n${passed} passed, ${failed} failed`);

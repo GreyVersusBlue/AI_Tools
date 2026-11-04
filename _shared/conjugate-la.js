@@ -23,8 +23,10 @@
  * amātī erant; the participle is lexical, so a record carries `ppp`, and only -āre and -īre verbs have a default;
  * the masculine is printed, the plural for nōs, vōs and eī, the way French and Italian print theirs) and the
  * imperative (tū and vōs). A deponent verb (loquī, sequī, cōnārī) wears the passive endings in the present, imperfect
- * and future and its imperative in -re / -minī, and is marked unbuilt elsewhere (the deponent perfect, locūtus sum,
- * waits on Devon's L4). NOT BUILT: the future imperative (amātō), the participles, the gerund.
+ * and future, its imperative in -re / -minī, and in the perfect, pluperfect and future perfect is its participle and
+ * sum (locūtus sum, locūtus eram, locūtus erō; Devon's L4, 2026-11-03), agreeing as the perfect passive does. Its
+ * participle is lexical and typed on its record; a deponent with none typed is left empty, never guessed. A deponent's
+ * subjunctive and passive tenses are marked unbuilt. NOT BUILT: the future imperative (amātō), the participles, the gerund.
  *
  * NOTHING HERE HAS BEEN READ BY A LANGUAGE TEACHER. Records were written from the standard principal
  * parts as remembered, not copied from a dictionary. Macrons are the least certain part. A teacher
@@ -55,13 +57,16 @@
   rec('dare', { 'class': 'a', ppp: 'datus', forms: { imperative: { 4: 'date' }, 'present-subjunctive': pr('dem dēs det dēmus dētis dent'), 'imperfect-subjunctive': pr('darem darēs daret darēmus darētis darent'), 'present-passive': pr('dor dāris dātur dāmur dāminī dantur'), 'imperfect-passive': pr('dabar dabāris dabātur dabāmur dabāminī dabantur'), 'future-passive': pr('dabor daberis dabitur dabimur dabiminī dabuntur'), present: pr('dō dās dat damus datis dant'), imperfect: pr('dabam dabās dabat dabāmus dabātis dabant'), future: pr('dabō dabis dabit dabimus dabitis dabunt') }, stems: { perfect: 'ded' } });
   a1('stare', 'stet', 'st').defective = { tenses: PASS.concat(PERFPASS) };
 
-  // ---- deponent verbs: passive endings, active meaning (loquor, sequor). Only the present, imperfect and future are built;
-  // the perfect system (locūtus sum), the subjunctive and the passive tenses are not, and say so.
-  var NOT_BUILT = ['perfect', 'pluperfect', 'future-perfect', 'present-subjunctive', 'imperfect-subjunctive', 'present-passive', 'imperfect-passive', 'future-passive'].concat(PERFPASS);
-  function dep(inf, cls, stem) { return rec(inf, { 'class': cls, stem: stem, deponent: true, defective: { tenses: NOT_BUILT } }); }
-  dep('loqui', 'c', 'loqu'); dep('sequi', 'c', 'sequ'); dep('uti', 'c', 'ūt'); dep('nasci', 'c', 'nasc'); dep('proficisci', 'c', 'proficisc');
-  dep('conari', 'a', 'cōn'); dep('hortari', 'a', 'hort'); dep('mirari', 'a', 'mīr'); dep('arbitrari', 'a', 'arbitr');
-  dep('vereri', 'e', 'ver'); dep('mori', 'io', 'mor'); dep('pati', 'io', 'pat'); dep('progredi', 'io', 'progred');
+  // ---- deponent verbs: passive endings, active meaning (loquor, sequor). The present, imperfect and future wear the
+  // passive endings; the perfect, pluperfect and future perfect are the participle and sum (locūtus sum, Devon's L4). The
+  // participle (the third principal part of a deponent: loquor, loquī, locūtus sum) is lexical and typed here. The
+  // subjunctive and the passive tenses are not built, and say so (a deponent has no passive of its own).
+  var NOT_BUILT = ['present-subjunctive', 'imperfect-subjunctive', 'present-passive', 'imperfect-passive', 'future-passive'].concat(PERFPASS);
+  function dep(inf, cls, stem, ppp) { return rec(inf, { 'class': cls, stem: stem, ppp: ppp, deponent: true, defective: { tenses: NOT_BUILT } }); }
+  dep('loqui', 'c', 'loqu', 'locūtus'); dep('sequi', 'c', 'sequ', 'secūtus'); dep('uti', 'c', 'ūt', 'ūsus'); dep('nasci', 'c', 'nasc', 'nātus');
+  dep('proficisci', 'c', 'proficisc', 'profectus');
+  dep('conari', 'a', 'cōn', 'cōnātus'); dep('hortari', 'a', 'hort', 'hortātus'); dep('mirari', 'a', 'mīr', 'mīrātus'); dep('arbitrari', 'a', 'arbitr', 'arbitrātus');
+  dep('vereri', 'e', 'ver', 'veritus'); dep('mori', 'io', 'mor', 'mortuus'); dep('pati', 'io', 'pat', 'passus'); dep('progredi', 'io', 'progred', 'progressus');
 
   // ---- first conjugation (regular: -āvī) -----------------------------------------
   ('amare laudare portare vocare ambulare habitare laborare narrare parare natare servare spectare superare').split(' ').forEach(function (v) { a1(v); });
@@ -137,11 +142,13 @@
     subjects: ['ego', 'tū', 'is', 'nōs', 'vōs', 'eī'],
     pronouns: { words: ['ego', 'tu', 'nos', 'vos', 'is', 'ea', 'id', 'ei', 'eae'] },
     // the perfect passive prints the masculine, plural for nōs, vōs and eī (amātus sum, amātī sumus), the way French and
-    // Italian print theirs; a deponent has none
+    // Italian print theirs; a deponent's perfect (locūtus sum, locūtī sumus) agrees the same way
     agreementAux: 'esse', agreementPlural: [/us$/, 'ī'],
     pppOf: function (ctx) {
       var rec = ctx.rec || {};
       if (rec.ppp) return rec.ppp;
+      // a deponent's participle is never guessed from its class (cōnārī is cōnātus, but morī is mortuus)
+      if (rec.deponent) return '';
       if (ctx.cls === 'a') return ctx.stem + 'ātus';
       if (ctx.cls === 'i') return ctx.stem + 'ītus';
       return '';
@@ -170,9 +177,10 @@
           io: ['iam', 'iēs', 'iet', 'iēmus', 'iētis', 'ient'], i: ['iam', 'iēs', 'iet', 'iēmus', 'iētis', 'ient']
         } },
       // with a perfect stem on the record the plain endings are used; without one, the class's usual stem is built in
-      { id: 'perfect', name: 'Perfect', mood: 'indicative', kind: 'simple', strongEndings: perfectEnds(''), endings: perfAll(PRE, perfectEnds) },
-      { id: 'pluperfect', name: 'Pluperfect', mood: 'indicative', kind: 'simple', stemsAlias: 'perfect', strongEndings: pluEnds(''), endings: perfAll(PRE, pluEnds) },
-      { id: 'future-perfect', name: 'Future perfect', mood: 'indicative', kind: 'simple', stemsAlias: 'perfect', strongEndings: futPerfEnds(''), endings: perfAll(PRE, futPerfEnds) }
+      // a deponent's perfect system is the participle and sum (locūtus sum, locūtus eram, locūtus erō)
+      { id: 'perfect', name: 'Perfect', mood: 'indicative', kind: 'simple', deponentAs: 'perfect-passive', strongEndings: perfectEnds(''), endings: perfAll(PRE, perfectEnds) },
+      { id: 'pluperfect', name: 'Pluperfect', mood: 'indicative', kind: 'simple', deponentAs: 'pluperfect-passive', stemsAlias: 'perfect', strongEndings: pluEnds(''), endings: perfAll(PRE, pluEnds) },
+      { id: 'future-perfect', name: 'Future perfect', mood: 'indicative', kind: 'simple', deponentAs: 'future-perfect-passive', stemsAlias: 'perfect', strongEndings: futPerfEnds(''), endings: perfAll(PRE, futPerfEnds) }
     ],
     // beyond the six: the present and imperfect subjunctive, the passive of the present, imperfect and future, the
     // perfect, pluperfect and future perfect passive (participle and sum) and the imperative (tū, vōs)

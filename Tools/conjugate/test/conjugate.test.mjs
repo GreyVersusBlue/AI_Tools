@@ -449,8 +449,8 @@ function suite(win) {
   cells('la', 'vereri', 'present', 'vereor | verēris | verētur | verēmur | verēminī | verentur');
   cells('la', 'mori', 'present', 'morior | moreris | moritur | morimur | moriminī | moriuntur');
   cells('la', 'sequi', 'future', 'sequar | sequēris | sequētur | sequēmur | sequēminī | sequentur');
-  eq(forms('la', 'loqui', 'perfect'), Array(6).fill(''), 'la a deponent perfect is not built, so it is empty');
-  eq(C.conjugate('la', 'loqui', 'perfect').notes.map((n) => n.kind), Array(6).fill('defective'), 'la a deponent perfect says none');
+  eq(forms('la', 'loqui', 'present-subjunctive'), Array(6).fill(''), 'la a deponent subjunctive is not built, so it is empty');
+  eq(C.conjugate('la', 'loqui', 'present-subjunctive').notes.map((n) => n.kind), Array(6).fill('defective'), 'la a deponent subjunctive says none');
   eq(forms('la', 'amare', 'present')[0], 'amō', 'la a deponent record does not touch an active verb');
   eq(C.conjugate('es', 'hablar', 'present', { slots: [0, 2] }).forms, ['hablo', '', 'habla', '', '', ''], 'opts.slots');
 
@@ -977,7 +977,25 @@ function suite(win) {
   for (const v of ['esse', 'ire', 'posse', 'velle', 'stare', 'loqui', 'conari', 'mori', 'sequi', 'ambulare', 'venire', 'discere']) {
     for (const t of ['perfect-passive', 'pluperfect-passive', 'future-perfect-passive']) eq(forms('la', v, t).filter(Boolean), [], `la ${v} ${t}: none (no personal passive, or a deponent: Devon's L4)`);
   }
-  eq(forms('la', 'loqui', 'perfect'), sx('', '', '', '', '', ''), 'la loqui: the deponent perfect is still not built (Devon\'s L4)');
+  // Latin: the deponent perfect system is the participle and sum (Devon's L4, 2026-11-03), agreeing as the perfect passive does
+  cmd('la', 'loqui', 'perfect', sx('locūtus sum', 'locūtus es', 'locūtus est', 'locūtī sumus', 'locūtī estis', 'locūtī sunt'));
+  cmd('la', 'loqui', 'pluperfect', sx('locūtus eram', 'locūtus erās', 'locūtus erat', 'locūtī erāmus', 'locūtī erātis', 'locūtī erant'));
+  cmd('la', 'loqui', 'future-perfect', sx('locūtus erō', 'locūtus eris', 'locūtus erit', 'locūtī erimus', 'locūtī eritis', 'locūtī erunt'));
+  cmd('la', 'sequi', 'perfect', sx('secūtus sum', 'secūtus es', 'secūtus est', 'secūtī sumus', 'secūtī estis', 'secūtī sunt'));
+  cmd('la', 'conari', 'perfect', sx('cōnātus sum', 'cōnātus es', 'cōnātus est', 'cōnātī sumus', 'cōnātī estis', 'cōnātī sunt'));
+  cmd('la', 'vereri', 'pluperfect', sx('veritus eram', 'veritus erās', 'veritus erat', 'veritī erāmus', 'veritī erātis', 'veritī erant'));
+  cmd('la', 'mori', 'perfect', sx('mortuus sum', 'mortuus es', 'mortuus est', 'mortuī sumus', 'mortuī estis', 'mortuī sunt'), '(-uus keeps its u: mortuī)');
+  cmd('la', 'pati', 'future-perfect', sx('passus erō', 'passus eris', 'passus erit', 'passī erimus', 'passī eritis', 'passī erunt'));
+  const DEP_PPP = { loqui: 'locūtus', sequi: 'secūtus', uti: 'ūsus', nasci: 'nātus', proficisci: 'profectus', conari: 'cōnātus', hortari: 'hortātus',
+    mirari: 'mīrātus', arbitrari: 'arbitrātus', vereri: 'veritus', mori: 'mortuus', pati: 'passus', progredi: 'progressus' };
+  for (const v of Object.keys(DEP_PPP)) {
+    eq(forms('la', v, 'perfect')[0], DEP_PPP[v] + ' sum', `la ${v}: the deponent perfect is its participle and sum`);
+    eq(C.lookup('la', v).ppp, DEP_PPP[v], `la ${v}: the deponent's participle is typed on its record`);
+  }
+  eq(C.conjugate('la', 'loqui', 'perfect').notes.map((n) => n.kind), Array(6).fill('irregular'), 'la a deponent perfect is noted as a lexical participle, not a rule');
+  eq(forms('la', { infinitive: 'hortari', 'class': 'a', stem: 'hort', deponent: true }, 'perfect'), Array(6).fill(''), 'la a deponent with no typed participle is left empty, not guessed from its class');
+  eq(forms('la', C.merge(C.lookup('la', 'loqui'), { infinitive: 'loqui', ppp: 'loquūtus' }), 'perfect')[3], 'loquūtī sumus', 'la a teacher\'s participle replaces the pack\'s');
+  eq(forms('la', 'regere', 'perfect')[0], 'rēxī', 'la an active verb keeps its own perfect');
   // Latin: the imperative
   const imp = (a, b) => sx('', a, '', '', b, '');
   cmd('la', 'amare', 'imperative', imp('amā', 'amāte'));
@@ -1174,8 +1192,8 @@ const BROKEN = [
   ['Latin sim', '_shared/conjugate-la.js', "pr('sim sīs sit", "pr('sum sīs sit"],
   ['Latin ferre passive', '_shared/conjugate-la.js', "pr('feror ferris fertur", "pr('feror ferēris fertur"],
   ['Latin deponents are active', '_shared/conjugate.js', "if (rec.deponent && tdef.deponentAs)", "if (false)"],
-  ['Latin loquor is a 1st conjugation verb', '_shared/conjugate-la.js', "dep('loqui', 'c', 'loqu')", "dep('loqui', 'a', 'loqu')"],
-  ['Latin a deponent perfect is guessed', '_shared/conjugate-la.js', "function dep(inf, cls, stem) { return rec(inf, { 'class': cls, stem: stem, deponent: true, defective: { tenses: NOT_BUILT } }); }", "function dep(inf, cls, stem) { return rec(inf, { 'class': cls, stem: stem, deponent: true }); }"],
+  ['Latin loquor is a 1st conjugation verb', '_shared/conjugate-la.js', "dep('loqui', 'c', 'loqu',", "dep('loqui', 'a', 'loqu',"],
+  ['Latin a deponent subjunctive and passive are guessed', '_shared/conjugate-la.js', "function dep(inf, cls, stem, ppp) { return rec(inf, { 'class': cls, stem: stem, ppp: ppp, deponent: true, defective: { tenses: NOT_BUILT } }); }", "function dep(inf, cls, stem, ppp) { return rec(inf, { 'class': cls, stem: stem, ppp: ppp, deponent: true }); }"],
   ['German bellen gets no ge-', '_shared/conjugate-de.js', "var NOT_PREFIXED = ['beugen', 'beichten', 'entern'];", "var NOT_PREFIXED = [];"],
   ['German beißen is weak', '_shared/conjugate-de.js', "strong('beißen', 'biss', 'gebissen');", "rec('beißen', {});"],
   ['German entgegen- is not a prefix', '_shared/conjugate-de.js', "'auseinander', 'entgegen', ", "'auseinander', "],
@@ -1217,6 +1235,14 @@ const BROKEN = [
   ['la the perfect passive participle has no macron', '_shared/conjugate-la.js', "if (ctx.cls === 'a') return ctx.stem + 'ātus';", "if (ctx.cls === 'a') return ctx.stem + 'atus';"],
   ['la the perfect passive plural is amātus', '_shared/conjugate-la.js', "agreementPlural: [/us$/, 'ī'],", "agreementPlural: [/us$/, 'us'],"],
   ['la the participle goes after sum', '_shared/conjugate.js', "cd.partFirst ? part + ' ' + ac.forms[0] : ac.forms[0] + ' ' + part", "ac.forms[0] + ' ' + part"],
+  ['la a deponent perfect is the perfect stem', '_shared/conjugate-la.js', "kind: 'simple', deponentAs: 'perfect-passive', strongEndings", "kind: 'simple', strongEndings"],
+  ['la a deponent pluperfect is the perfect stem', '_shared/conjugate-la.js', "deponentAs: 'pluperfect-passive', ", ""],
+  ['la a deponent future perfect is the perfect stem', '_shared/conjugate-la.js', "deponentAs: 'future-perfect-passive', ", ""],
+  ['la a deponent future perfect uses the present of sum', '_shared/conjugate-la.js', "deponentAs: 'future-perfect-passive', ", "deponentAs: 'perfect-passive', "],
+  ['la a deponent participle is guessed from its class', '_shared/conjugate-la.js', "if (rec.deponent) return '';", ""],
+  ['la locūtus is loquūtus', '_shared/conjugate-la.js', "dep('loqui', 'c', 'loqu', 'locūtus')", "dep('loqui', 'c', 'loqu', 'loquūtus')"],
+  ['la mortuus is mortus', '_shared/conjugate-la.js', "'mor', 'mortuus')", "'mor', 'mortus')"],
+  ['la a deponent perfect is not built', '_shared/conjugate-la.js', "var NOT_BUILT = ['present-subjunctive',", "var NOT_BUILT = ['perfect', 'pluperfect', 'future-perfect', 'present-subjunctive',"],
   ['la a deponent has a perfect passive', '_shared/conjugate-la.js', "'future-passive'].concat(PERFPASS);\n  function dep", "'future-passive'];\n  function dep"],
   ['la dūc is dūce', '_shared/conjugate-la.js', "R.ducere.forms = { imperative: { 1: 'dūc' } };", ""],
   ['la a deponent imperative is active', '_shared/conjugate-la.js', "deponentEndings: {", "deponentEndingsX: {"],

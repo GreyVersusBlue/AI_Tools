@@ -9,6 +9,41 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-40: the Latin deponent perfect, locūtus sum (rank 56, Path 19 P3, Devon's L4, 2026-11-04, `CACHE_VERSION` v574)
+
+Devon, 2026-11-03, answer L4 (`~/projects/DEVON-ANSWERS-2026-11-03.md`, binding; the question's full wording is in
+`~/projects/DEVON-QUESTIONS-2026-11-03.json`): "ADD the Latin deponent perfect (locūtus sum: participle plus sum)". Until now a
+deponent (loquī, sequī, cōnārī...) in `_shared/conjugate-la.js` had the present, imperfect, future and imperative, and "none" in
+the perfect system.
+
+- **What shipped.** The perfect, pluperfect and future perfect tenses carry `deponentAs` (`perfect-passive`, `pluperfect-passive`,
+  `future-perfect-passive`), the hook the infectum tenses already used, so a deponent's perfect is built by the same compound rule as
+  an ordinary verb's perfect passive: `locūtus sum ... locūtī sunt`, `locūtus eram`, `locūtus erō`. The pack treats the perfect
+  system as one, so all three came together. Nothing in `_shared/conjugate.js` changed: the defective check runs on the asked tense
+  before `deponentAs` swaps it, so a deponent's own perfect passive (`perfect-passive` asked for directly) stays "none", as does its
+  subjunctive and its present/imperfect/future passive.
+- **Principal parts.** `dep()` takes the participle as a fourth argument, and all thirteen deponents have one: locūtus, secūtus, ūsus,
+  nātus, profectus, cōnātus, hortātus, mīrātus, arbitrātus, veritus, mortuus, passus, progressus (the prefix macron left off, as the
+  pack's other compounds are: `constitūtus`, `confectus`). `pppOf()` returns nothing for a deponent with no typed participle, so a
+  teacher's deponent record without `ppp` is empty rather than guessed from its class (cōnārī → cōnātus would be right; morī →
+  morātus would not). A teacher's `ppp` on a merged record replaces the pack's.
+- **Agreement, my reading.** The pack's existing convention, unchanged: the masculine, plural for nōs, vōs and eī (`locūtī sumus`),
+  as the perfect passive, I2 and French print theirs. Latin textbooks print the paradigm the same way; nothing in the Latin design
+  says otherwise. `mortuus` → `mortuī` through the same `/us$/` rule.
+- **Kind.** The cells are noted `irregular` (the lexical participle), from the infinitive, as an ordinary verb's typed `ppp` is.
+- **Where it shows.** 039's Fill (a Latin deponent with Perfect picked fills `locūtus sum`...), 079's Add a verb card and the check
+  sheet (`node Tools/conjugate/print-corpus.mjs la`; its note to the teacher is rewritten). No 079 starter poster is a deponent, so
+  the posters are byte-identical (`test:verb-poster-callouts`).
+- **Tests.** `conjugate.test.mjs`: named goldens for loqui (all three tenses), sequi, conari, vereri, mori, pati; every deponent's
+  perfect first person and typed `ppp`; the kind; an untyped deponent left empty; a teacher's participle; an active verb's perfect
+  untouched; the subjunctive (not the perfect) is now the "none" a deponent shows. Eight new broken copies (each `deponentAs` taken
+  out, the future perfect pointed at the perfect, the guard against guessing removed, loquūtus, mortus, the perfect put back in
+  `NOT_BUILT`): 169 caught. `smoke-039-pattern.mjs`: Fill writes `locūtus sum`... and says unreviewed (57/57).
+- **Unreviewed.** The participles and goldens were typed by the session from its own knowledge, not copied from a dictionary. No
+  table is called reviewed until the language teacher Devon is arranging has read the check sheet.
+- **Not done.** The deponent subjunctive and passive (not asked), the semi-deponents (audeō, gaudeō, soleō: active infectum,
+  deponent perfect; none is in the pack), a deponent's future active participle or gerundive. Not checked on paper or by a teacher.
+
 ## AI-46: 032's A/B anchor date takes its own letter (rank 138, `ANCHOR_QUIRK` fixed, 2026-11-04, `CACHE_VERSION` v573)
 
 (The commits say v570, then v572; AI-36 and AI-41 took v570 to v572 on `main` first, so this is v573.)
