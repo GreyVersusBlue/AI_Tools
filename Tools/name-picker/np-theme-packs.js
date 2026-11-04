@@ -11,7 +11,13 @@
 
    Stored in one key, np_theme_packs: { v: 1, packs: { <packId>: { name, themes: { <themeId>: { <var>: <colour> } } } } }.
    Not student data. A pack's themes are picked by the id packThemeId(packId, themeId), which is at most 40 characters
-   (np_theme keeps 40) and cannot collide with a built-in theme id. DOM-free; loads in Node. */
+   (np_theme keeps 40) and cannot collide with a built-in theme id. DOM-free; loads in Node.
+
+   Each stored pack has its own id (AI-61): the slug of its name, and "-2", "-3"... when another pack already has that
+   slug, so "Ancient Rome Unit 1" and "Unit 2", or two names with no Latin letters, are two packs. Only a pack with the
+   same name (case and spacing aside) is replaced. packThemeId joins the two ids with a dot, which neither id can hold;
+   until v567 it was a dash, so pack "a-b" + theme "c" and pack "a" + theme "b-c" were one id. An np_theme saved in the
+   dash form is read through upgradeThemeId(). The stored document's shape did not change. */
 
 import { THEMES } from './np-themes.js';
 
@@ -31,8 +37,32 @@ export function packIdOf(name) {
   return s || 'pack';
 }
 
-/** The id a pack theme is chosen by (and stored under np_theme). */
-export function packThemeId(packId, themeId) { return 'pk-' + packId + '-' + themeId; }
+/** The id a pack theme is chosen by (and stored under np_theme). Neither id can hold a dot. */
+export function packThemeId(packId, themeId) { return 'pk-' + packId + '.' + themeId; }
+
+/** An np_theme value saved before v567 ("pk-<pack>-<theme>") as the current id; anything else unchanged. Where two
+    themes shared an old id, the older page drew the later one (resolve() wrote it last), so that one is kept. */
+export function upgradeThemeId(doc, id) {
+  if (typeof id !== 'string' || !id.startsWith('pk-') || id.includes('.')) return id;
+  let found = id;
+  for (const [pid, p] of Object.entries(fix(doc).packs)) {
+    for (const tid of Object.keys(p.themes)) if ('pk-' + pid + '-' + tid === id) found = packThemeId(pid, tid);
+  }
+  return found;
+}
+
+const sameName = (a, b) => String(a).trim().replace(/\s+/g, ' ').toLowerCase() === String(b).trim().replace(/\s+/g, ' ').toLowerCase();
+
+/** A free id for a new pack: its name's slug, or the slug cut short with "-2", "-3"... if that is taken. */
+function freePackId(packs, name) {
+  const slug = packIdOf(name);
+  if (!own(packs, slug)) return slug;
+  for (let n = 2; ; n++) {
+    const tail = '-' + n;
+    const id = slug.slice(0, 14 - tail.length).replace(/-+$/, '') + tail;
+    if (!own(packs, id)) return id;
+  }
+}
 
 function luminance(hex) {
   let h = hex.slice(1);
@@ -109,12 +139,13 @@ export function fix(raw) {
 
 /**
  * Add a validated pack to a stored document. Same name replaces (importing a corrected file); a different name adds, up
- * to MAX_PACKS. Returns { doc, packId, replaced } or { error }.
+ * to MAX_PACKS, under an id no other pack has. Returns { doc, packId, replaced } or { error }.
  */
 export function addPack(doc, pack) {
   const base = fix(doc);
-  const packId = packIdOf(pack.name);
-  const replaced = own(base.packs, packId);
+  const same = Object.keys(base.packs).find(id => sameName(base.packs[id].name, pack.name));
+  const replaced = same !== undefined;
+  const packId = replaced ? same : freePackId(base.packs, pack.name);
   if (!replaced && Object.keys(base.packs).length >= MAX_PACKS) {
     return { error: 'This device already holds ' + MAX_PACKS + ' theme packs. Remove one first.' };
   }

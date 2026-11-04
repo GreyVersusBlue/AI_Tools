@@ -9,6 +9,35 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-56 (+AI-61): 037's item analysis reads a "Max", a numbered header and a stray word right; 007's theme packs each keep their own id (2026-11-03, `CACHE_VERSION` v567)
+
+Source: the AI_Tools review of 2026-11-04, findings **H4** and **M6** (audit entries AI-56 and AI-61 in the Selector's
+`BACKLOG-AUDIT-2026-11-04.md`). No ranked row.
+
+- **H4, three ways a common paste gave the wrong questions (`gd-items.js`, from d90158e).** (1) `MAX_ROW` matched the start of the cell, so a
+  student called "Max Chen" became the points-possible row: Q1 was out of 1 and both real 2s were refused. The label must now be the whole
+  first cell ("Points possible", "Max", "Max points", "Out of:", "Total", "Possible"...). A student whose first cell is exactly "Max" is
+  still read as the points row, as before; the hint on the page names "Points possible", which is what a teacher types. (2) A header of
+  question numbers (`Name, 1, 2, 3`) was a student, since `PasteTable.isHeaderShape` takes words only. 037 now reads a first row as a header
+  when its first cell names a name column (Name, Names, Student, Student name, ID, #...) and the rest count 1, 2, 3... from 1; `_shared/paste-table.js`
+  is unchanged (it ran beside other workers, and the rule is 037's). A student "Ada" who scored 1, 2, 3 is still a student. (3) One "ab" in a
+  first column of numbers made the column names, so Q1 vanished and every later question was relabelled. The first column is names now only
+  when more of its cells are words than numbers (or a points row has a label there, as before); a stray word is named in `problems` under Q1.
+- **M6, packs replaced each other (`np-theme-packs.js`, from 970ffda).** `packIdOf` cut names to 14 characters, so "Ancient Rome Unit 1" and
+  "Unit 2" were one id and importing the second deleted the first (with "Replaced"); every name with no Latin letters was `pack`. `addPack`
+  now replaces only a pack with the same name (case and spacing aside) and gives any other the slug, or the slug cut short with `-2`, `-3`...
+  if that is taken. The ids are the same shape as before, so a stored `np_theme_packs` loads unchanged and needed no migration.
+  `packThemeId` joined pack and theme with a dash, so pack `a-b` + theme `c` and pack `a` + theme `b-c` were one id; it is a dot now, which
+  neither id can hold. **That changes the stored `np_theme` of anyone using a pack theme**, so `upgradeThemeId()` reads the old dash form as the
+  new id at load (007's one-line change); where two themes shared an old id it picks the one the old page drew (the later pack).
+- **Tests, each seen failing first.** `test:gd-items`: cases 15-17 (Max Chen, six points-row labels, numbered and non-numbered headers, the
+  stray "ab", a mostly-names column) and four new mutants. `test:name-picker-theme-packs`: case 8 (Unit 1 and 2, re-import replaces Unit 2,
+  three non-Latin names, twelve packs on one slug, the dash pair, `upgradeThemeId`); 9 of its assertions failed on the old module.
+  `test:name-picker-theme-packs-smoke`: an older saved `pk-ancient-rome-forum` still paints its theme and is saved back as the new id, and a
+  second pack whose name makes the same slug is imported, not a replacement; 5 failed on the old page.
+- **Not verified.** No real gradebook export was pasted; the header-word list is a guess at what exports put over a name column (a header
+  over question numbers that is not in the list, such as "Learner", is still read as a student). No pack was moved between two devices.
+
 ## AI-22: a point (008) and a hall pass (001) from 005's live mode (rank 37, Path 14 P5, 2026-11-03, `CACHE_VERSION` v565)
 
 Devon answered P5-route on 2026-11-03 (`~/projects/DEVON-ANSWERS-2026-11-03.md`, binding): 005's live mode writes 008's and 001's storage

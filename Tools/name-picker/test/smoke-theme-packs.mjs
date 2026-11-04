@@ -23,6 +23,7 @@ const rome = { ...THEMES.classroom, '--bg': '#112233' };
 const goodFile = write('rome.json', { v: 1, name: 'Ancient Rome', themes: { forum: rome } });
 const urlFile = write('url.json', { v: 1, name: 'Sneaky', themes: { t: { ...rome, '--bg': 'url(https://example.com/a.png)' } } });
 const propFile = write('prop.json', { v: 1, name: 'Sneaky2', themes: { t: { ...rome, 'background-image': '#000000' } } });
+const twinFile = write('twin.json', { v: 1, name: 'Ancient Rome!!', themes: { senate: rome } });
 const junkFile = write('junk.json', 'this is not json');
 
 const server = await serve(PORT);
@@ -53,17 +54,24 @@ try {
   ok((await page.textContent('#packList')).includes('Ancient Rome (1 theme)'), 'the pack is listed with Export and Remove');
 
   await page.keyboard.press('Escape'); await settle(page, 200);
-  await page.selectOption('#theme', 'pk-ancient-rome-forum');
+  await page.selectOption('#theme', 'pk-ancient-rome.forum');
   await settle(page, 200);
   const css = () => page.evaluate(() => ({ bg: document.documentElement.style.getPropertyValue('--bg'), fill: document.documentElement.style.getPropertyValue('--accent-fill'), stored: localStorage.getItem('np_theme') }));
   let c = await css();
   ok(c.bg === '#112233', 'choosing it paints the board with the pack\'s --bg: ' + c.bg);
   ok(c.fill === THEMES.classroom['--accent'], '--accent-fill falls back to the accent: ' + c.fill);
-  ok(c.stored === 'pk-ancient-rome-forum', 'np_theme holds the pack theme id');
+  ok(c.stored === 'pk-ancient-rome.forum', 'np_theme holds the pack theme id');
 
   await page.reload({ waitUntil: 'networkidle' }); await settle(page, 300);
   c = await css();
-  ok(c.bg === '#112233' && (await page.inputValue('#theme')) === 'pk-ancient-rome-forum', 'a reload keeps the pack theme chosen');
+  ok(c.bg === '#112233' && (await page.inputValue('#theme')) === 'pk-ancient-rome.forum', 'a reload keeps the pack theme chosen');
+
+  // AI-61: a pack theme chosen on a page before v567 was saved as "pk-<pack>-<theme>"; it still loads, as the new id
+  await page.evaluate(() => localStorage.setItem('np_theme', 'pk-ancient-rome-forum'));
+  await page.reload({ waitUntil: 'networkidle' }); await settle(page, 300);
+  c = await css();
+  ok(c.bg === '#112233' && (await page.inputValue('#theme')) === 'pk-ancient-rome.forum', 'an older saved pack theme id still paints its theme: ' + c.bg);
+  ok(c.stored === 'pk-ancient-rome.forum', 'and is saved back as the current id: ' + c.stored);
 
   await page.click('#settingsBtn'); await settle(page, 200);
   await page.click('[data-tab="options"]'); await settle(page, 200);
@@ -80,6 +88,14 @@ try {
   ok((await page.inputValue('#theme')) === 'default', 'and puts the board back on the default theme');
   c = await css();
   ok(c.bg === THEMES.default['--bg'] && c.stored === 'default', 'painted and stored as default: ' + c.bg + ' ' + c.stored);
+
+  // AI-61: two packs whose names make the same id are two packs, and the first is not replaced
+  ok(/Imported the pack Ancient Rome /.test(await importPack(goodFile)), 'Ancient Rome imported again');
+  const twin = await importPack(twinFile);
+  ok(/^Imported the pack Ancient Rome!!/.test(twin), 'a pack whose name makes the same id is imported, not a replacement: ' + twin);
+  const listed = await page.textContent('#packList');
+  ok(listed.includes('Ancient Rome (1 theme)') && listed.includes('Ancient Rome!! (1 theme)'), 'both packs are listed: ' + listed);
+  ok(await page.$$eval('#packThemeGroup option', o => o.length) === 2, 'and both themes are in the Theme list');
   await page.context().close();
 } finally {
   await browser.close();
