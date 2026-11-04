@@ -16,7 +16,7 @@
    Each stored pack has its own id (AI-61): the slug of its name, and "-2", "-3"... when another pack already has that
    slug, so "Ancient Rome Unit 1" and "Unit 2", or two names with no Latin letters, are two packs. Only a pack with the
    same name (case and spacing aside) is replaced. packThemeId joins the two ids with a dot, which neither id can hold;
-   until v567 it was a dash, so pack "a-b" + theme "c" and pack "a" + theme "b-c" were one id. An np_theme saved in the
+   until v568 it was a dash, so pack "a-b" + theme "c" and pack "a" + theme "b-c" were one id. An np_theme saved in the
    dash form is read through upgradeThemeId(). The stored document's shape did not change. */
 
 import { THEMES } from './np-themes.js';
@@ -40,7 +40,7 @@ export function packIdOf(name) {
 /** The id a pack theme is chosen by (and stored under np_theme). Neither id can hold a dot. */
 export function packThemeId(packId, themeId) { return 'pk-' + packId + '.' + themeId; }
 
-/** An np_theme value saved before v567 ("pk-<pack>-<theme>") as the current id; anything else unchanged. Where two
+/** An np_theme value saved before v568 ("pk-<pack>-<theme>") as the current id; anything else unchanged. Where two
     themes shared an old id, the older page drew the later one (resolve() wrote it last), so that one is kept. */
 export function upgradeThemeId(doc, id) {
   if (typeof id !== 'string' || !id.startsWith('pk-') || id.includes('.')) return id;

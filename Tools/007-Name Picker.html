@@ -2596,7 +2596,7 @@ window.addEventListener('load',()=>{
 
   loadPacks();
   renderPackList();
-  /* A pack theme saved before v567 was "pk-<pack>-<theme>"; read it as its current id (AI-61). */
+  /* A pack theme saved before v568 was "pk-<pack>-<theme>"; read it as its current id (AI-61). */
   const savedTheme=tpacks.upgradeThemeId(store.get('themePacks'),store.get('theme'));
   if(hasAnyTheme(savedTheme)){document.getElementById('theme').value=savedTheme;applyTheme(savedTheme);}
   else applyTheme('default');
