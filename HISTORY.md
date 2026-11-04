@@ -37,7 +37,8 @@ dims), P5-redo (no buttons) and P5-003 (003's undo listed, not built).
   here, and the status says so. Ctrl+Z works on stage as it does off it.
 - **008 fix found on the way.** 008's activity feed said "Nothing logged yet today" on every load whatever the log held, until the next tap, so a
   point given from the chart (or any point from an earlier visit) had no Undo button in 008 until then. `applyStateToForm()` now calls
-  `renderActivity()`.
+  `renderActivity()`. `smoke-teams.mjs`'s golden (`golden-no-teams.json`, `start.feed`) had recorded the empty feed over a seeded log; that one field
+  is updated to what the page now draws, every other piece of the golden unchanged.
 - **Suites.** `test:seating-handoff` (pure, 54) and `test:seating-live-handoff` (port 8682, the batch's assignment for this session): both writes, 008
   and 001 opened afterwards and showing them, old and missing and newer data, the refusals, Undo by button and by Ctrl+Z, the switch's default and
   reset, the keyboard. Six mutants of the module each failed the pure suite.
