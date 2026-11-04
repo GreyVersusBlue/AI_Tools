@@ -460,9 +460,7 @@
 
       <div class="card">
         <div class="card-title">Trip packet</div>
-        <p class="hint">The rest of the paper a trip needs, from the same details. <strong>The wording of the parent
-          letter is a draft that no one but its author has read: read it, and change anything that is not how your
-          school says it, before it goes home.</strong></p>
+        <p class="hint">The rest of the paper a trip needs, from the same details.</p>
         <label for="schedule">Day schedule (one stop to a line)</label>
         <textarea id="schedule" placeholder="e.g.&#10;8:30 Leave school&#10;10:00 Planetarium show&#10;12:00 Lunch&#10;2:15 Back at school"></textarea>
         <p class="hint">A line that starts with a time puts the time in its own column. With nothing here, the
@@ -1523,7 +1521,7 @@
      holds a student's health or a parent's number. ---------- */
   function paragraph(text) { return text ? '<p>' + escapeHtml(text) + '</p>' : ''; }
 
-  /* DRAFT wording: nobody but the tool's author has read it. */
+  /* The letter's wording was read and kept by Devon on 2026-11-03. */
   function letterPrintHtml() {
     var when = tripDateLine();
     var go = 'Our class is going on a field trip' + (state.name ? ': ' + escapeHtml(state.name) : '') +

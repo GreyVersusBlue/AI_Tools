@@ -1325,7 +1325,12 @@
     var pairStats = countPairingsInGroups(groups);
     var busiest = longMemory ? busiestPairing(groups) : 0;
     var roleResult = assignGroupRoles(groups);
-    setPairMemory(Grouping.history.record(history, groups.map(function (g) {
+    /* A locked project team was counted for today by countProjectDay(); recording it again on each Reshuffle would
+       add a day per press (spec 4.4: once per day). Every other group, locked or not, is recorded as it always was. */
+    var toRecord = groups.filter(function (g, i) {
+      return !(lockedIdxSet[i] && lastGroups && lastGroups.labels && isProjectTeamGroup(lastGroups.labels[i], g));
+    });
+    setPairMemory(Grouping.history.record(history, toRecord.map(function (g) {
       return g.map(function (s) { return keyOfObj.get(s); });
     }), { members: members }));
     if (roleResult) {
@@ -1340,6 +1345,8 @@
       floaters: floaters,
       /* A project team that stayed locked keeps its name; anything dealt again takes the naming style's. */
       labels: usedLocks && lastGroups && lastGroups.labels ? res.groups.map(function (g, i) { return lockedIdxSet[i] ? lastGroups.labels[i] || null : null; }) : undefined,
+      /* The day and the groups this shuffle put in the pair memory, so Start project teams does not count them again. */
+      recorded: { date: GtgTeams.localDate(new Date()), sig: groupsSig(groups) },
       roles: roleResult ? roleResult.byGroup : null,
       meta: {
         longMemory: longMemory, longMemorySkipped: state && state.longMemory === true && !longMemory, busiestPairing: busiest,
@@ -1825,21 +1832,40 @@
     return set;
   }
 
-  /** Records today in the pair memory once for each project team, if it is a school day not yet counted. */
-  function countProjectDay() {
+  /** The groups' names, in order, as one string: what makeGroups() recorded, compared at Start. */
+  function groupsSig(groups) {
+    return JSON.stringify(groups.map(function (g) { return g.map(function (s) { return s.name; }); }));
+  }
+
+  /** Whether a group on screen named `label` is a project team with exactly these students. */
+  function isProjectTeamGroup(label, group) {
+    var pt = label && state && state.projectTeams;
+    if (!pt || !pt.teams) return false;
+    var names = group.map(function (s) { return s.name; }).sort();
+    return pt.teams.some(function (t, i) {
+      return (t.name || 'Team ' + (i + 1)) === label && JSON.stringify(t.members.slice().sort()) === JSON.stringify(names);
+    });
+  }
+
+  /** Records today in the pair memory once for each project team, if it is a school day not yet counted.
+      With opts.alreadyRecorded (Start, on groups a shuffle put in the memory today) the day is marked counted and
+      nothing is recorded a second time. */
+  function countProjectDay(opts) {
     if (!state || !state.projectTeams) return false;
     var pt = GtgTeams.normalize(state.projectTeams);
     if (!pt) return false;
     var today = GtgTeams.localDate(new Date());
     if (!GtgTeams.isDue(pt, today)) return false;
-    var active = activeNameSet();
-    var names = GtgTeams.dayGroups(pt, function (n) { return !!active[n]; });
-    if (!names.length) return false;
-    var keyed = keyStudents(students), keyOfName = {};
-    keyed.members.forEach(function (m) { if (!keyOfName[m.name]) keyOfName[m.name] = m.key; });
-    setPairMemory(Grouping.history.record(keyed.history, names.map(function (g) {
-      return g.map(function (n) { return keyOfName[n]; });
-    }), { members: keyed.members }));
+    if (!(opts && opts.alreadyRecorded)) {
+      var active = activeNameSet();
+      var names = GtgTeams.dayGroups(pt, function (n) { return !!active[n]; });
+      if (!names.length) return false;
+      var keyed = keyStudents(students), keyOfName = {};
+      keyed.members.forEach(function (m) { if (!keyOfName[m.name]) keyOfName[m.name] = m.key; });
+      setPairMemory(Grouping.history.record(keyed.history, names.map(function (g) {
+        return g.map(function (n) { return keyOfName[n]; });
+      }), { members: keyed.members }));
+    }
     pt.counted = today;
     pt.days += 1;
     state.projectTeams = pt;
@@ -1930,6 +1956,8 @@
   els.ptStartBtn.addEventListener('click', function () {
     if (!state || !lastGroups) return;
     var old = state.projectTeams;
+    var rec = lastGroups.recorded;
+    var alreadyRecorded = !!(rec && rec.date === GtgTeams.localDate(new Date()) && rec.sig === groupsSig(lastGroups.groups));
     if (old && !confirm('Replace the ' + old.teams.length + ' project team' + (old.teams.length === 1 ? '' : 's') + ' you have with the groups on screen? Students who are absent today are left out of the new teams, and the pairing memory is not changed.')) return;
     var tasksOf = {};
     if (old) old.teams.forEach(function (t) { tasksOf[t.name] = t.tasks; });
@@ -1942,7 +1970,7 @@
     state.projectTeams = pt;
     saveCurrentConfig();
     renderProjectTeams();
-    countProjectDay();
+    countProjectDay({ alreadyRecorded: alreadyRecorded });
     showMsg('Project teams started: ' + pt.teams.length + '. They stay until you dissolve them.');
   });
 

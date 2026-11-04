@@ -84,14 +84,19 @@ await reload(at(2026, 11, 3));
 
 /* ── 2. start teams from the groups on screen (4.1, 4.5) ──────────────── */
 await page.click('#generate-btn'); await settle(page, 250);
+/* The baseline is the memory before the shuffle that makes the teams: that shuffle records them once, and Start, on
+   the same day, must not record them again (the review of 2026-11-04, M1: Start used to add a second count). */
+const memBefore = (await saved()).pairHistory || {};
+const countIn = (h, x, y) => { const k = x < y ? x + '␟' + y : y + '␟' + x; return h[k] ? h[k].count : 0; };
 await page.click('#generate-btn'); await settle(page, 250);
 ok(!(await page.isDisabled('#undo-btn')), 'Undo is on after two shuffles');
 const groups = await cards();
 eq(groups.length, 2, 'two groups of four');
 const [g0, g1] = groups;
 const [a, b] = g0.members, [c, d] = g1.members;
-const beforeA_B = await pairCount(a, b);
-const beforeA_C = await pairCount(a, c);
+const beforeA_B = countIn(memBefore, a, b);
+const beforeA_C = countIn(memBefore, a, c);
+eq(await pairCount(a, b), beforeA_B + 1, 'the shuffle on screen is in the pair memory once');
 await page.click('#pt-start-btn'); await settle(page, 250);
 let s1 = await saved();
 ok(!!s1.projectTeams, 'Start project teams saves the teams in the class’s own record');
@@ -100,7 +105,8 @@ same(s1.projectTeams.teams.map(t => t.name), [g0.label, g1.label], 'named as the
 same(s1.projectTeams.teams.map(t => t.members), [g0.members, g1.members], 'with the same students');
 eq(s1.projectTeams.since, '2026-11-03', 'started today, by the pinned clock');
 eq(s1.projectTeams.days, 1, 'and today counted, since it is a Tuesday');
-eq(await pairCount(a, b), beforeA_B + 1, 'two teammates have worked together one more time (4.4)');
+eq(await pairCount(a, b), beforeA_B + 1, 'two teammates have worked together one more time today, not two (4.4)');
+eq(await pairCount(c, d), countIn(memBefore, c, d) + 1, 'and so have two on the other team');
 eq(await pairCount(a, c), beforeA_C, 'two students on different teams have not');
 ok(await page.isDisabled('#undo-btn'), 'counting a day clears Undo, which would otherwise put the memory back without it');
 ok((await status()).includes('2 project teams') && (await status()).includes('1 school day'), 'the status says so');
@@ -225,7 +231,12 @@ shown = await cards();
 ok((await floaters()).includes(off), 'a student on no team is shown as not assigned to a group');
 await page.click('[data-lock="0"]');
 const keptTeam = (await cards())[1];
+const [k1, k2] = keptTeam.members;
+const keptPair = await pairCount(k1, k2);
 await page.click('#regenerate-btn'); await settle(page, 300);
+eq(await pairCount(k1, k2), keptPair, 'Reshuffle does not count a locked project team again (it was counted for today)');
+await page.click('#regenerate-btn'); await settle(page, 300);
+eq(await pairCount(k1, k2), keptPair, 'nor on a second press');
 const after = await cards();
 same(after[1].members, keptTeam.members, 'the locked team is exactly as it was');
 eq(after[1].label, keptTeam.label, 'and keeps its name');
