@@ -72,6 +72,9 @@
   .pairing-box.active { display: block; }
   .pairing-step { font-size: .86rem; color: var(--muted); margin: 0 0 .5rem; }
   .pairing-step strong { color: var(--ink); }
+  #rejoinRow { margin: .6rem 0; }
+  #rejoinRow select { margin: 0 .4rem; }
+  .rejoin-note { display: block; font-size: .82rem; color: var(--muted); margin-top: .25rem; }
   canvas.qr { display: block; margin: 0 auto .6rem; max-width: 100%; } /* sized by QrDraw.fit(), never by a max-width here */
   textarea.code-box {
     width: 100%; font-family: Consolas, monospace; font-size: .74rem; min-height: 3.4rem;
@@ -149,6 +152,9 @@
       </div>
       <video class="scan-video" id="scanVideo" playsinline muted></video>
       <textarea class="code-box" id="answerInput" placeholder="…or paste the reply code here"></textarea>
+      <p id="rejoinRow" hidden><label for="rejoinSelect">Who is connecting?</label>
+        <select id="rejoinSelect"><option value="">A new team</option></select>
+        <span class="rejoin-note">A team whose phone reloaded or dropped picks up its own row and sheet.</span></p>
       <div class="btn-row">
         <button id="connectDeviceBtn" type="button">Connect</button>
         <button class="secondary" id="cancelPairingBtn" type="button">Cancel</button>
@@ -172,7 +178,7 @@
 
   var els = {};
   ['rosterTable', 'rosterBody', 'rosterEmpty', 'addDeviceBtn', 'pairingBox', 'offerQr', 'offerText',
-   'clockBtn', 'clockReadout', 'recordLine', 'clearRecordBtn', 'debriefRoom', 'previewDebriefBtn', 'printDebriefBtn', 'debriefNote', 'printDebriefGrid', 'boardTable', 'boardBody', 'boardEmpty', 'copyOfferBtn', 'scanAnswerBtn', 'scanVideo', 'answerInput', 'connectDeviceBtn', 'cancelPairingBtn', 'pairingStatus'
+   'clockBtn', 'clockReadout', 'recordLine', 'clearRecordBtn', 'debriefRoom', 'previewDebriefBtn', 'printDebriefBtn', 'debriefNote', 'printDebriefGrid', 'boardTable', 'boardBody', 'boardEmpty', 'copyOfferBtn', 'scanAnswerBtn', 'scanVideo', 'answerInput', 'connectDeviceBtn', 'cancelPairingBtn', 'pairingStatus', 'rejoinRow', 'rejoinSelect'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var devices = []; // { id, pc, channel, station, total, done, connected }
@@ -188,11 +194,16 @@
   // The record of the room (Path 18 P4): when each team moved off each station, by the monitor's own clock,
   // kept on this device only (never sent anywhere, never asked of a student's phone) so it outlives the page.
   // It is the run Stations.debrief reads. A device reports where a team is, not its wrong tries or hints, so
-  // none are kept. Saving replaces the last record only once a new device has moved a team off a station.
+  // none are kept. Saving writes nothing until a device has moved a team off a station. A record kept in the
+  // last two hours (a reload mid-game) is carried: its teams stay in every save, and a team that re-pairs adds
+  // to its own sheet; an older one is last class's, and the first new solve replaces it (review M7).
   var RECORD_KEY = 'escape-room-builder:monitor-record';
   var kept = window.ErBoard.cleanRecord(Store.get(RECORD_KEY, { version: 1, migrate: function (v, d) { return d; }, 'default': null }));
+  var base = window.ErBoard.carries(kept, Date.now()) ? kept : null;
+  // The start the record keeps: the last Start pressed, which Reset (it only stops the readout) does not erase.
+  var recordStart = base ? base.raceStartAt : null;
   function saveRecord() {
-    var rec = window.ErBoard.toRecord(devices, clockStart, Date.now());
+    var rec = window.ErBoard.toRecord(devices, recordStart, Date.now(), base);
     if (!rec.teams.length) return;   // nothing solved yet: leave what is kept alone
     kept = rec;
     Store.set(RECORD_KEY, rec, { version: 1 });
@@ -252,7 +263,7 @@
   });
   els.clearRecordBtn.addEventListener('click', function () {
     if (!window.confirm('Clear the kept record of this room? This cannot be undone.')) return;
-    Store.remove(RECORD_KEY); kept = null; renderRecord();
+    Store.remove(RECORD_KEY); kept = null; base = null; recordStart = clockStart; renderRecord();
   });
 
 
@@ -273,6 +284,7 @@
   }
   els.clockBtn.addEventListener('click', function () {
     clockStart = clockStart == null ? Date.now() : null;
+    if (clockStart != null) recordStart = clockStart;
     renderClock(); renderBoard(); saveRecord();
   });
   setInterval(function () { if (clockStart != null) renderClock(); }, 1000);
@@ -307,12 +319,20 @@
       var statusHtml = !d.connected
         ? '<span class="status-disconnected">Disconnected</span>'
         : (d.done ? '<span class="status-done">🏁 Finished!</span>' : 'In progress');
-      var progressText = d.total > 0 ? ('Station ' + (d.done ? d.total : d.station + 1) + ' of ' + d.total) : '—';
-      var scoreText = (typeof d.score === 'number') ? d.score : '—';
+      var progressText = d.total > 0 ? escapeText('Station ' + (d.done ? d.total : d.station + 1) + ' of ' + d.total) : '—';
+      var scoreText = (typeof d.score === 'number') ? escapeText(d.score) : '—';
       return '<tr><td><input type="text" class="team-name" data-device="' + d.id + '" value="' + escapeAttr(d.name || '') + '" placeholder="Team ' + d.id + '" aria-label="Name for the team on device ' + d.id + '"></td><td>' + progressText +
         '<div class="bar-wrap"><div class="bar-fill" style="width:' + pct + '%;"></div></div></td>' +
         '<td>' + scoreText + '</td><td>' + statusHtml + '</td></tr>';
     }).join('');
+  }
+
+  function drawRejoinChoices() {
+    var choices = window.ErBoard.rejoinChoices(devices, base);
+    els.rejoinSelect.length = 1;   // keeps "A new team"
+    choices.forEach(function (c) { var o = document.createElement('option'); o.value = c.value; o.textContent = c.label; els.rejoinSelect.appendChild(o); });
+    els.rejoinSelect.value = '';
+    els.rejoinRow.hidden = !choices.length;
   }
 
   function resetPairingBox() {
@@ -326,6 +346,7 @@
 
   function startAddDevice() {
     els.pairingBox.classList.add('active');
+    drawRejoinChoices();
     els.pairingStatus.textContent = 'Creating pairing code…';
     window.WebRTCPair.createOffer('sv-monitor').then(function (result) {
       pendingPc = result;
@@ -342,19 +363,35 @@
     if (!pendingPc || !answerPayload) return;
     els.pairingStatus.textContent = 'Connecting…';
     window.WebRTCPair.applyAnswer(pendingPc.pc, answerPayload).then(function () {
-      var device = { id: nextDeviceId++, pc: pendingPc.pc, channel: pendingPc.channel, station: 0, total: 0, done: false, connected: false, score: null };
-      devices.push(device);
-      device.channel.addEventListener('open', function () {
+      var channel = pendingPc.channel, choice = els.rejoinSelect.value;
+      var device = /^d:\d+$/.test(choice) ? devices.filter(function (d) { return 'd:' + d.id === choice; })[0] : null;
+      if (device) {   // a team coming back (review M7): the same row, leaderboard line and sheet, on the new connection
+        var oldPc = device.pc;
+        device.pc = pendingPc.pc; device.channel = channel; device.connected = false;
+        if (oldPc) { try { oldPc.close(); } catch (err) { /* already closed */ } }
+      } else {
+        device = { id: nextDeviceId++, pc: pendingPc.pc, channel: channel, station: 0, total: 0, done: false, connected: false, score: null };
+        var keptAt = /^k:\d+$/.test(choice) ? Number(choice.slice(2)) : -1;
+        if (base && base.teams[keptAt]) { device.kept = keptAt; device.name = base.teams[keptAt].name; }   // a team kept before a reload
+        devices.push(device);
+      }
+      // Each handler acts only while its channel is the device's: once a team has come back on a new connection,
+      // the old one closing late must not mark it disconnected, and must not speak for it.
+      channel.addEventListener('open', function () {
+        if (device.channel !== channel) return;
         device.connected = true;
         renderRoster();
       });
-      device.channel.addEventListener('close', function () {
+      channel.addEventListener('close', function () {
+        if (device.channel !== channel) return;
         device.connected = false;
         renderRoster();
       });
-      device.channel.addEventListener('message', function (e) {
+      channel.addEventListener('message', function (e) {
+        if (device.channel !== channel) return;
         var msg;
-        try { msg = JSON.parse(e.data); } catch (err) { return; }
+        try { msg = window.ErBoard.readMessage(JSON.parse(e.data)); } catch (err) { return; }
+        if (!msg) return;   // nothing a device sends is trusted: a station or total that is not a number is refused whole
         window.ErBoard.applyMessage(device, msg, Date.now());
         renderRoster(); saveRecord();
       });

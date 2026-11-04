@@ -123,6 +123,43 @@ function suite(src, stationsSrc) {
   eq(B.leaderboard([lo, hi], null).map(x => x.id), [6, 5], 'L: a higher score does not outrank more stations (minutes decide, score is beside it)');
   eq(B.leaderboard([], null), [], 'L: no devices, no rows');
 
+  // H3: what a device sends is read as numbers or refused whole
+  const h = dev(20, { total: 4 });
+  B.applyMessage(h, { station: 1, id: 'bbbb', total: 4 }, 10);
+  for (const bad of [{ station: '<img src=x onerror=alert(1)>', total: 4 }, { station: 1, total: '4<b>' }, { station: '1<b>', total: 4 },
+    { station: { toString: () => 2 }, total: 4 }, { station: [2], total: 4 }, { station: 1.5, total: 4 }, { station: -1, total: 4 },
+    { station: NaN, total: 4 }, { station: 1, total: Infinity }, { station: true, total: 4 }, 'x', null, [1, 4]]) {
+    eq(B.applyMessage(h, bad, 20), null, 'H: refused: ' + JSON.stringify(bad));
+  }
+  eq([h.station, h.total, h.stationId, h.lastAt], [1, 4, 'bbbb', 10], 'H: a refused message changes nothing on the device');
+  eq(B.readMessage({ station: '2', total: '4', done: 'yes', score: 'lots', id: 'x'.repeat(65) }),
+    { station: 2, total: 4, done: false, id: null, score: null }, 'H: a numeric string is a number; the rest falls back to safe values');
+  ok(typeof B.readMessage({ station: 0, total: 0 }).station === 'number', 'H: a station is always a number');
+  eq([B.readMessage({ total: 3 }), B.readMessage({ station: null, total: 3 }), B.readMessage({ station: '', total: 3 }), B.readMessage({ station: ' 1', total: 3 })], [null, null, null, null], 'H: a missing, null, empty or padded station is refused');
+
+  // M7: a record carried over a reload, and a team paired again as itself
+  const baseRec = { v: 1, at: 1000, raceStartAt: 500, teams: [
+    { name: 'Owls', code: '', marks: { aaaa: { at: 700 } }, attempts: {}, hintsUsed: {}, penaltyMs: 0 },
+    { name: 'Foxes', code: '', marks: { aaaa: { at: 800 } }, attempts: {}, hintsUsed: {}, penaltyMs: 0 }] };
+  const back = dev(1, { kept: 0, marks: { aaaa: { at: 1900 }, bbbb: { at: 2000 } } }), fresh = dev(2, { marks: { aaaa: { at: 2100 } } });
+  const merged = B.toRecord([back, fresh, dev(3)], 500, 3000, baseRec);
+  eq(merged.teams.map(t => [t.name, t.marks]), [['Owls', { aaaa: { at: 700 }, bbbb: { at: 2000 } }], ['Foxes', { aaaa: { at: 800 } }], ['Team 2', { aaaa: { at: 2100 } }]],
+    'R: kept teams stay, a team paired as a kept one adds to its sheet (its first solve of a station kept), new teams follow');
+  eq(Object.keys(merged.teams[0].marks).join(), 'aaaa,bbbb', 'R: in order');
+  eq(merged.raceStartAt, 500, 'R: the start given is the start kept');
+  back.name = 'Night Owls';
+  eq(B.toRecord([back], 500, 3000, baseRec).teams[0].name, 'Night Owls', 'R: a name typed on the device wins');
+  eq(B.toRecord([], 500, 3000, baseRec).teams.length, 2, 'R: with no device yet, nothing kept is dropped');
+  eq(B.toRecord([dev(4, { kept: 7, marks: { cccc: { at: 1 } } })], null, 1, baseRec).teams.length, 3, 'R: a kept place that is not in the record is a new team');
+  eq(baseRec.teams[0].marks, { aaaa: { at: 700 } }, 'R: the kept record is not changed by a save');
+  eq(B.toRecord([fresh], null, 1, null).teams.length, 1, 'R: no base, only the devices');
+  eq([B.carries(baseRec, 1000 + 60000), B.carries(baseRec, 1000 + B.CARRY_MS + 1), B.carries(baseRec, 999), B.carries(null, 1)], [true, false, false, false],
+    'R: a record is carried for two hours after it was kept, not from the future, and nothing is carried from nothing');
+  const ch = B.rejoinChoices([dev(1, { name: 'Owls' }), dev(2, { connected: false }), dev(3, { kept: 1 })], baseRec);
+  eq(ch.map(c => c.value), ['d:2', 'd:1', 'd:3', 'k:0'], 'J: the disconnected team first, then the rest, then the kept teams no device has taken');
+  eq(ch.map(c => c.label), ['Team 2 (disconnected)', 'Owls (still connected)', 'Team 3 (still connected)', 'Owls (kept before this page was opened)'], 'J: labels');
+  eq(B.rejoinChoices([], null), [], 'J: nothing to rejoin, no choices');
+
   eq(B.formatElapsed(83000), '1:23', 'F: minutes and seconds');
   eq(B.formatElapsed(3723000), '1:02:03', 'F: hours');
   eq(B.formatElapsed(-5), '0:00', 'F: never negative');
@@ -143,6 +180,17 @@ const MUTANTS = [
   ['a later solve overwrites the first', "if (!device.marks[wasId]) device.marks[wasId] = { at: now };", "device.marks[wasId] = { at: now };"],
   ['a stored mark with a text time is kept', "typeof m.at === 'number' && isFinite(m.at)", "m.at !== undefined"],
   ['the room is the last one with a match', "if (n > bestN) { best = name; bestN = n; }", "if (n >= bestN && n > 0) { best = name; bestN = n; }"],
+  ['a station is not checked', "var station = count(msg.station), total = count(msg.total);", "var station = msg.station || 0, total = count(msg.total);"],
+  ['a total is not checked', "var station = count(msg.station), total = count(msg.total);", "var station = count(msg.station), total = msg.total || 0;"],
+  ['an object is read with Number', "if (typeof v !== 'number' && !(typeof v === 'string' && /^[0-9]{1,6}$/.test(v))) return NaN;", ""],
+  ['a missing count is 0', "if (typeof v !== 'number' && !(typeof v === 'string' && /^[0-9]{1,6}$/.test(v))) return NaN;", "if (v == null) return 0; if (typeof v !== 'number' && typeof v !== 'string') return NaN;"],
+  ['a fraction is a count', "isFinite(n) && n >= 0 && Math.floor(n) === n ? n : NaN", "isFinite(n) && n >= 0 ? n : NaN"],
+  ['a refused message still changes the device', "if (!msg) return null;\n    var before", "if (!msg) msg = { station: 0, total: 0, done: false, id: null, score: null, team: null };\n    var before"],
+  ['the kept teams are dropped', "var teams = (base && Array.isArray(base.teams) ? base.teams : []).map(", "var teams = [].map("],
+  ['a team paired as a kept one overwrites its first solves', "return sheet(typed || t.name, copy(copy({}, t.marks), d.marks));", "return sheet(typed || t.name, copy(copy({}, d.marks), t.marks));"],
+  ['a team paired as a kept one is a second sheet', "mine.forEach(function (d) { if (!used[d.id])", "mine.forEach(function (d) { if (true)"],
+  ['a record is carried for ever', "now - record.at < CARRY_MS", "true"],
+  ['a kept team is offered twice', "if (devices.some(function (d) { return d.kept === i; })) return;", ""],
   ['the score ranks', "done: p, count: p,", "done: p + (typeof d.score === 'number' ? d.score : 0), count: p,"]
 ];
 let mutantFail = 0;

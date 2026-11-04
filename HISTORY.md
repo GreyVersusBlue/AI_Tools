@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## AI-22: a point (008) and a hall pass (001) from 005's live mode (rank 37, Path 14 P5, 2026-11-03, `CACHE_VERSION` v564)
+## AI-22: a point (008) and a hall pass (001) from 005's live mode (rank 37, Path 14 P5, 2026-11-03, `CACHE_VERSION` v565)
 
 Devon answered P5-route on 2026-11-03 (`~/projects/DEVON-ANSWERS-2026-11-03.md`, binding): 005's live mode writes 008's and 001's storage
 directly on the same device, the way 003 writes 037's. In the same answers he kept P5-menu ("No, a tap marks absent only"), P5-seat (stays and
@@ -48,6 +48,50 @@ dims), P5-redo (no buttons) and P5-003 (003's undo listed, not built).
   its old class and its next save writes over the chart's point or pass; the status tells the teacher to reload it, and nothing else handles it.
 - **Not verified.** No teacher has used it on a projector or a touch panel; no real tablet; the bar's layout on a phone-width stage was not looked at.
 
+## AI-55: 019's monitor refuses a station that is not a number, and keeps its record over a Reset, a reload and a re-pair (2026-11-03, `CACHE_VERSION` v564)
+
+Source: the AI_Tools review of 2026-11-04, findings **H3** and **M7** (audit entries AI-55 and AI-62 in the Selector's
+`BACKLOG-AUDIT-2026-11-04.md`). No ranked row; rank 51's "left" text is reworded for the reload.
+
+- **H3: a student device could run script on the teacher's monitor.** `er-board.js`'s `applyMessage` stored
+  `msg.station || 0` unchecked, and `monitor.html` put `'Station ' + (d.station + 1)` into `rosterBody.innerHTML`, so
+  `{"station":"<img src=x onerror=…>"}` from devtools on `lock.html` ran on the monitor, which shares the site's
+  localStorage. Now `ErBoard.readMessage()` reads `station` and `total` as whole numbers from 0 (`Number` and
+  `isFinite`, and only from a number or a string of digits, so an object with its own `toString` is never coerced),
+  and a message with either one wrong, missing or null is **refused whole** (`lock.html` always sends both): the device keeps what it had. The page's handler drops a
+  refused message before anything else, and the roster escapes its progress and score text as well (defence in
+  depth; the numbers are already numbers). `id` is kept only as a string of 64 characters or fewer, `score` only as a
+  finite number, `done` only as `true`.
+- **M7, Reset.** Reset was the only way to stop the readout and it saved `raceStartAt: null`, so the debrief printed
+  "—" for every "Reached at". The record now keeps the last Start pressed (`recordStart`); Reset only stops the
+  readout. Clear sets it back to the running clock, or none.
+- **M7, reload.** After a reload the first save wrote only the marks made since. A record kept **less than two hours
+  ago** is now carried (`ErBoard.carries`, `CARRY_MS`): its teams stay in every save, in their order, and new teams
+  follow. An older record is treated as last class's and the first new solve replaces it, as before. *Call made
+  here:* two hours, because a reload mid-game is minutes and a block period is 90; it is one constant to change.
+- **M7, re-pair.** A team whose phone reloaded came back as a second device, split across two sheets. The pairing box
+  now asks **Who is connecting?** (`ErBoard.rejoinChoices`): "A new team" by default, then the teams on the page
+  (disconnected first) and the kept teams from before a reload that no device has taken. Picking one moves the new
+  connection onto that row (the old connection is closed, and its handlers stop acting, so it closing late does not
+  mark the team disconnected and a message on it is not heard), or, for a kept team, links the device to that sheet
+  (`kept`) and takes its name. *Call made here, and the thing to reverse if Devon wants it automatic:* the teacher
+  says who is reconnecting, not the phone. The obvious automatic fix, a random team token that `lock.html` keeps beside
+  its progress and sends with each message, was built first and taken out before commit: rank 52 records that adding
+  fields to `lock.html`'s message is a change to the student player, held by "nothing is student-facing right now",
+  and a token would also be the first thing a device sends that the monitor trusts for identity. `lock.html` is
+  byte-for-byte unchanged.
+- **Tests.** `test:er-board` gains the hostile messages, the carried record, `rejoinChoices`, and eleven mutants (75
+  assertions, 22 mutants in all, every one caught). New `test:er-monitor-hostile` (`smoke-monitor-hostile.mjs`, port 8684) drives the
+  page's real Add device / Connect buttons and message handler through a stand-in `WebRTCPair` whose channel is an
+  EventTarget: ten hostile messages (markup in `station`, a script-shaped string, markup after a numeric total, an
+  object, `1e999`, a null or missing total, a negative, raw JSON) inject nothing and run nothing; then Reset, a reload, a three-hour-old record,
+  and a re-pair in the same session and after a reload. **Seen failing first** against the old code: the injected
+  `onerror` ran (`__pwned` was 1), the Reset cases failed, and the run stopped where the old page has no "Who is
+  connecting?" choice; a first draft of the suite showed every reload and re-pair case failing too.
+- **Not verified:** no real phone has re-paired with a real WebRTC connection (the stand-in fires `close` when asked;
+  a real `RTCPeerConnection.close()` may fire it later, which the guard is for). Not printed on paper.
+
+---
 
 ## AI-53: 002 counts a project team once a day; the rollover clears the group memory (2026-11-03, `CACHE_VERSION` v563)
 
