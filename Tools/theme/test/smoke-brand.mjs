@@ -209,7 +209,7 @@ console.log('Brand — a second tab follows live');
 // without :hover (001's `button:hover` over `button`).
 const PAIR_PAGES = (await import('node:child_process')).execSync('git ls-files "Tools/*.html"', { encoding: 'utf8' })
   .split('\n').filter(Boolean)
-  .filter(f => { const s = (awaitRead(f)); return /ink-paper\.css/.test(s) && /a11y\.js/.test(s) && !/BRAND_OPT_OUT\s*=\s*true/.test(s); })
+  .filter(f => { const s = (awaitRead(f)); return /ink-paper\.css|_shared\/theme\.css/.test(s) && /a11y\.js/.test(s) && !/BRAND_OPT_OUT\s*=\s*true/.test(s); })
   .map(f => encodeURI(f.slice('Tools/'.length)));
 function awaitRead(f) { return readFileSync(new URL('../../../' + f, import.meta.url), 'utf8'); }
 
@@ -224,20 +224,55 @@ async function tokenPairs(page) {
       }
     };
     for (const sh of document.styleSheets) { try { walk(sh.cssRules); } catch (e) {} }
-    const colorOf = sel => { for (let i = rules.length - 1; i >= 0; i--) if (rules[i].selectorText === sel && /var\(--/.test(rules[i].style.getPropertyValue('color'))) return rules[i].style.getPropertyValue('color'); return ''; };
+    const colorOf = sel => { for (let i = rules.length - 1; i >= 0; i--) if (rules[i].selectorText === sel && rules[i].style.getPropertyValue('color')) return rules[i].style.getPropertyValue('color'); return ''; };
+    // AI-65: a state or modifier rule that sets only a fill keeps the text of
+    // its base rule: `.btn-primary:hover:not(:disabled)` over `.btn-primary`,
+    // 005's `.btn.teal` over `.btn`. Each step drops one state or one class.
+    const baseColor = sel => {
+      let s = sel;
+      for (let n = 0; n < 6; n++) {
+        const next = s.replace(/:(hover|active|focus-visible|focus)\b/, '').replace(/:not\(:disabled\)/, '');
+        s = next !== s ? next : s.replace(/(\S)\.[\w-]+$/, '$1');
+        if (s === sel) return '';
+        const c = colorOf(s);
+        if (c) return c;
+      }
+      return '';
+    };
     const probe = document.createElement('div'); document.body.appendChild(probe);
-    const rgb = v => { probe.style.color = ''; probe.style.color = v; return getComputedStyle(probe).color; };
+    // Through a canvas, so an oklch() token (the Industry neutrals) comes back as sRGB: the
+    // computed style keeps oklch(), whose numbers `lum` would otherwise read as r, g and b.
+    const cx = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+    const rgb = v => {
+      probe.style.color = ''; probe.style.color = v;
+      cx.clearRect(0, 0, 1, 1); cx.fillStyle = '#000'; cx.fillStyle = getComputedStyle(probe).color; cx.fillRect(0, 0, 1, 1);
+      const [r, g, b] = cx.getImageData(0, 0, 1, 1).data; return `rgb(${r}, ${g}, ${b})`;
+    };
     const out = [];
     for (const r of rules) {
       if (/printArea|paper-sheet|print/i.test(r.selectorText)) continue;
-      const bg = r.style.getPropertyValue('background-color') || r.style.getPropertyValue('background');
+      // theme.css scopes its dark rules by a :root qualifier: one that does not
+      // match this theme is never drawn here, so it is not measured here.
+      const scope = /^:root(\[[^\]]*\]|:not\([^)]*\))+(?=\s)/.exec(r.selectorText);
+      if (scope && !document.documentElement.matches(scope[0])) continue;
+      // ...and one that does match outranks the unscoped rule it names: theme.css's dark
+      // `.btn-ghost:hover` over the Industry sheet's, 005's dark `.btn.ghost` over its own.
+      const over = scope ? null : rules.find(o => o !== r && o.selectorText.endsWith(' ' + r.selectorText) &&
+        (s => s && document.documentElement.matches(s[0]) && s[0] + ' ' + r.selectorText === o.selectorText)(/^:root(\[[^\]]*\]|:not\([^)]*\))+(?=\s)/.exec(o.selectorText)));
+      const prop = n => (over && over.style.getPropertyValue(n)) || r.style.getPropertyValue(n);
+      const bg = prop('background-color') || prop('background');
       const m = /^\s*var\((--[\w-]+)\)\s*$/.exec(bg);
       if (!m) continue;
-      let c = r.style.getPropertyValue('color');
-      if (!c && /:hover/.test(r.selectorText)) c = colorOf(r.selectorText.replace(/:hover/g, ''));
+      let c = prop('color');
+      if (!c) c = baseColor(r.selectorText);
+      // A literal text colour counts too (AI-65: the Industry pages put #fff on
+      // the branded --color-accent-* steps); it is unchanged, so the pair is
+      // measured only when the brand changed the fill under it.
       const t = /^\s*var\((--[\w-]+)\)\s*$/.exec(c);
-      if (!t) continue;
-      out.push({ sel: r.selectorText, fill: m[1], text: t[1], fillRgb: rgb(`var(${m[1]})`), textRgb: rgb(`var(${t[1]})`) });
+      const lit = !t && /^\s*(#[0-9a-f]{3,8}|white|black|rgba?\([^)]*\))\s*$/i.exec(c);
+      if (!t && !lit) continue;
+      const text = t ? t[1] : lit[1].trim();
+      out.push({ sel: r.selectorText, fill: m[1], text, fillRgb: rgb(`var(${m[1]})`), textRgb: rgb(t ? `var(${text})` : text) });
     }
     probe.remove();
     return out;
@@ -264,7 +299,8 @@ for (const theme of ['light', 'dark']) {
       for (const p of branded[k]) {
         const was = stock[k].find(q => q.sel === p.sel && q.fill === p.fill && q.text === p.text);
         if (was && was.fillRgb === p.fillRgb && was.textRgb === p.textRgb) continue; // the brand did not touch it
-        if (theme === 'light' && /^--accent(-2)?$/.test(p.text)) { owned++; continue; }
+        // The Industry pages name the same colour --color-accent (005 calls it --teal).
+        if (theme === 'light' && /^--(accent(-2)?|color-accent(-2)?|teal)$/.test(p.text)) { owned++; continue; }
         checked++;
         const r = ratio(p.fillRgb, p.textRgb);
         if (r < 4.5) bad.push(`${decodeURI(f)} ${p.sel}: ${p.text} on ${p.fill} ${r.toFixed(2)}`);
@@ -292,6 +328,27 @@ for (const f of ['044-Sub%20Plan%20Builder.html', '032-School%20Calendar%20Visua
     const [c, bg] = await page.evaluate(() => { const s = getComputedStyle(document.getElementById('probe')); return [s.color, s.backgroundColor]; });
     ok(ratio(c, bg) >= 4.5, `${decodeURI(f)} primary button on hover, gold school, ${theme}: ${c} on ${bg} is ${ratio(c, bg).toFixed(2)} to 1`);
     await page.context().close();
+  }
+}
+
+// AI-65: the Industry pages (theme.css) put literal white on the branded
+// --color-accent-* steps; gold made 005's buttons 1.9 to 1 and its tags 2.7.
+console.log('Brand — the Industry pages\' buttons read under a school colour');
+for (const [f, sel] of [[DS, '.btn'], [DS, '.btn.teal'], [DS, '.sec-tab'], ['011-image-to-pdf.html', '.btn-primary'], ['036-final_grade_checker.html', '.btn-primary']]) {
+  for (const theme of ['light', 'dark']) {
+    for (const accent of ['#ffc72c', '#ff8200']) {
+      const page = await open(f, { theme, store: { [KEY]: JSON.stringify({ v: 1, accent }) } });
+      await page.evaluate(cls => { const b = document.createElement('button'); b.className = cls.split('.').filter(Boolean).join(' ') + (cls === '.sec-tab' ? ' active' : ''); b.id = 'probe'; b.textContent = 'Save'; document.body.prepend(b); }, sel);
+      for (const state of ['rest', 'hover']) {
+        if (state === 'hover') { await page.hover('#probe'); await page.waitForTimeout(400); } // 005's .btn fades its fill over .15s
+        const [c, bg] = await page.evaluate(() => {
+          const s = getComputedStyle(document.getElementById('probe')), cx = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+          return [s.color, s.backgroundColor].map(v => { cx.clearRect(0, 0, 1, 1); cx.fillStyle = v; cx.fillRect(0, 0, 1, 1); const d = cx.getImageData(0, 0, 1, 1).data; return `rgb(${d[0]}, ${d[1]}, ${d[2]})`; }); // sRGB, not oklch()
+        });
+        ok(ratio(c, bg) >= 4.5, `${decodeURI(f)} ${sel}, ${accent}, ${theme}, ${state}: ${c} on ${bg} is ${ratio(c, bg).toFixed(2)} to 1`);
+      }
+      await page.context().close();
+    }
   }
 }
 

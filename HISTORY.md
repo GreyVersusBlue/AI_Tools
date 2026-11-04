@@ -9,6 +9,48 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-65: the Industry pages read under a school accent (AI-57 follow-up, 2026-11-04, `CACHE_VERSION` v581)
+
+AI-57's found-not-fixed: the five pages on `_shared/theme.css` (005, 011, 029, 031, 036) put literal white, and
+`--color-bg`, on the brand's `--color-accent-*` steps. With gold (#ffc72c) the Industry sheet's `.btn-primary` was 1.94
+to 1, 005's buttons 2.82, its teal button 1.56 and the tags 2.68; the extended sweep failed all eight brand/theme
+combinations against HEAD (58 pairs for gold in light), every one on those five pages.
+
+- **The steps read where the pages draw on them (`steps()` in `_shared/a11y.js`).** 700, 800 and 900 are darkened until
+  white reads on them, 800 also until it reads on the 100 tag tint, 900 on 200 (the dark tags) and under 400 (the dark ghost
+  hover). So the literal `#fff` in `_ds/.../styles.css` and 005 stays; neither file's white had to become a token. 300-500,
+  theme.css's dark-theme fills and the dark link colour, are lifted until the dark ink and the dark surface read. **600 stays
+  exactly the school colour.** **Call made:** this, rather than "leave the accent unbranded on those steps", which would have
+  left five pages without the school colour on their buttons. Its cost: for a light colour (gold) 700 and 800 come out the
+  same, so 005's and `.btn-primary`'s hover no longer changes the fill. Reverse it by dropping the `move()` calls.
+- **One new token, `--color-accent-ink`, in theme.css:** the text on `--color-accent` (600 in light, 400 in dark) and on the
+  dark `.btn-primary`. Stock it is `var(--color-bg)`, what the pages wrote, so no stock pixel moved in 011, 029, 036 or the
+  dark button. The brand sets it to `inkOn(accent)` in light and #101720 in dark. 011's checked radio label, 029's active mode
+  button, 036's student number, winner tag and active tab, and 005's `.btn.teal` take it.
+- **Stock changes, all in 005 or in dark:** 005's teal button text is `--color-bg` (neutral-50) rather than `#fff` in light,
+  and neutral-900 rather than white in dark, where white on step 400 was under 3 to 1 with no brand; its hover is white on
+  700. 005's ghost button in dark is `--teal` text, not step 800 (1.3 to 1 on the dark card with no brand). theme.css's dark
+  `.btn-ghost:hover` is step 900, not the light 100 tint (light accent text on a light patch, 2.3 to 1 with no brand).
+  005's status line fades by its text colour (`color-mix` of `--ink` at 80%), not `opacity: 0.8`: opacity faded its bold
+  step-800 words too, and gold's 800, 4.8 to 1 under white at full strength, was 3.3 faded. Those words are now full strength.
+- **Test.** `test:brand`'s sweep now reads the theme.css pages too (92), counts a literal text colour (white on a step), takes
+  a fill-only rule's text from its base rule by dropping a state or a class (`.btn.teal` from `.btn`), measures a dark-scoped
+  rule only in dark and lets it outrank the unscoped rule it names, and treats `--color-accent` and 005's `--teal` as the
+  teacher's colour in light, as `--accent` is. **It also resolves every colour through a canvas:** the Industry neutrals are
+  `oklch()`, `getComputedStyle` keeps that, and the old parser read oklch's numbers as r, g, b; a dark link measured
+  "4.46" that was really 8. Explicit probes hover 005's `.btn`, `.btn.teal`, `.sec-tab.active` and 011's and 036's
+  `.btn-primary` (gold and orange, light and dark, after 005's 0.15 s fade), resolved to sRGB the same way. Against HEAD's
+  a11y.js, theme.css and pages (a scratch worktree) the suite failed 36 assertions: all eight sweep combinations and the
+  probes. Against the fix it passed 141 to 0.
+- **AI-57's axe pass, repeated** on the five pages (scratch script, not committed; seeded with `seeds.mjs`, gold and orange,
+  light and dark): **0** colour-contrast nodes that are not there without the brand, other than the accent itself as text on
+  white (the widget's warning), against AI-57's 54. `test:a11y --only` passed for all five, `test:theme`, `test:seating` and
+  `test:image-to-pdf` passed.
+- **Found, not fixed:** 005 in dark has 8 colour-contrast nodes **with no brand** (the same 8 with one); the a11y sweep scans
+  light only, so nothing has held that page in dark.
+- **Not checked:** a real school colour on a real screen, Firefox or Safari, and states the sweep's rules do not name (a
+  page's inline style). The `_ds` sheet was not edited.
+
 ## AI-63: the review's low-severity batch (review of 2026-11-04, L1-L4, L6-L9, L13, 2026-11-04, `CACHE_VERSION` v580)
 
 Nine of the review's thirteen low findings, one commit each where the files allowed; every code fix has a case that failed

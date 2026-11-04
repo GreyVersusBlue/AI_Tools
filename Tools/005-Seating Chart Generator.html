@@ -127,8 +127,10 @@
   .btn:active{transform:translateY(1px);}
   .btn.ghost{background:var(--card); color:var(--blue); border-color:var(--line);}
   .btn.ghost:hover{background:color-mix(in srgb, var(--ink) 6%, transparent); border-color:var(--blue-soft);}
-  .btn.teal{background:var(--teal); border-color:var(--teal);}
-  .btn.teal:hover{background:var(--teal-deep); border-color:var(--teal-deep);}
+  /* --blue is step 800, dark on the dark card (1.3 to 1 stock); the dark theme's accent text is --teal (AI-65). */
+  :root[data-theme="dark"]:not(.a11y-filter-dark) .btn.ghost{color:var(--teal);}
+  .btn.teal{background:var(--teal); border-color:var(--teal); color:var(--color-accent-ink);}
+  .btn.teal:hover{background:var(--teal-deep); border-color:var(--teal-deep); color:#fff;}
   .btn.sm{padding:5px 9px; font-size:12.5px;}
   .btn.danger{background:var(--card);color:var(--warn);border-color:color-mix(in srgb, var(--warn) 35%, transparent);}
   .btn.danger:hover{background:var(--color-danger-bg);}
@@ -235,7 +237,9 @@
      layout on a desktop; they exist for the phone rules below. */
   .toolbar .tb-more, .toolbar .tb-primary{display:contents;}
   .toolbar .tb-toggle{display:none;}
-  .status{font-size:12.5px; opacity:0.8; margin-left:2px;}
+  /* The fade is the line's own text colour, not opacity: opacity also faded the accent words below, and a school
+     colour's step 800 that reads on white at full strength did not at 80% (gold, 3.3 to 1; AI-65). */
+  .status{font-size:12.5px; color:color-mix(in srgb, var(--ink) 80%, transparent); margin-left:2px;}
   .status b{color:var(--blue);}
   .status .bad{color:var(--warn); font-weight:600;}
   .status .good{color:var(--teal-deep); font-weight:600;}
