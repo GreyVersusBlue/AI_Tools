@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v568';
+const CACHE_VERSION = 'v570';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -416,6 +416,7 @@ const PRECACHE_URLS = [
   "Tools/math-drill-generator/mdg-templates.js",
   "Tools/066-math-find-the-mistake-generator.html",
   "Tools/067-music-sightreading-generator.html",
+  "Tools/music-sightreading-generator/msrg-audio.js",
   "Tools/name-picker/fonts/bungee-latin-400-normal.woff2",
   "Tools/name-picker/fonts/bungee-latin-ext-400-normal.woff2",
   "Tools/name-picker/fonts/outfit-latin-400-normal.woff2",

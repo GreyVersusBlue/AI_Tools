@@ -34,7 +34,19 @@
 
   var DEFAULT_LINE = 70;
   var WATCH_BAND = 10;
-  var MAX_ROW = /^\s*(points?|max(imum)?|possible|out\s+of|total)\b/i;
+  // The points-possible row's label is the whole first cell ("Points possible", "Max", "Out of:"),
+  // so a student called "Max Chen" or "Total Smith" is a student (AI-56).
+  var MAX_ROW = /^\s*(?:(?:max(?:imum)?|total|possible)(?:\s+(?:points?|pts\.?|score|possible))?|points?(?:\s+(?:possible|max(?:imum)?|out\s+of))?|pts\.?|out\s+of)\s*:?\s*$/i;
+  // A first cell that names a column of student names, for a header whose question labels are
+  // the numbers 1, 2, 3, ... (PasteTable's header test only takes words).
+  var NAME_HEADER = /^\s*(?:(?:student|pupil|first|last|full)?\s*names?|students?|pupils?|(?:student\s+)?id|#)\s*:?\s*$/i;
+
+  // "Name, 1, 2, 3": a name header, then question numbers counting up from 1 (at least two).
+  function numberedHeader(cells) {
+    if (!cells || cells.length < 3 || !NAME_HEADER.test(cells[0])) return false;
+    for (var i = 1; i < cells.length; i++) if (String(cells[i]).trim() !== String(i)) return false;
+    return true;
+  }
 
   function tier(pct, line) {
     var l = line == null || isNaN(line) ? DEFAULT_LINE : line;
@@ -49,6 +61,11 @@
     var line = opts && opts.line != null && !isNaN(opts.line) ? Number(opts.line) : DEFAULT_LINE;
     var res = { questions: [], order: [], students: 0, hasNames: false, maxGiven: false, problems: [], ragged: [], line: line };
     var parsed = P.parse(text, { header: 'auto' });
+    if (!parsed.header && parsed.rows.length > 1 && numberedHeader(parsed.rows[0])) {
+      parsed.header = parsed.rows.shift();
+      var headLine = parsed.lines.shift();
+      parsed.ragged = parsed.ragged.filter(function (g) { return g.line !== headLine; });
+    }
     if (!parsed.rows.length) return res;
     res.ragged = parsed.ragged;
 
@@ -60,8 +77,14 @@
     });
     res.maxGiven = !!maxRow;
 
-    var hasNames = rows.some(function (r) { return r.cells[0] !== '' && P.toNumber(r.cells[0]) === null; }) ||
-      (!!maxRow && parsed.width > 1);
+    // The first column is names when more of its cells are words than numbers: one "ab" in a
+    // column of scores is a cell to name in `problems`, not a reason to drop Q1 (AI-56).
+    var words = 0, nums = 0;
+    rows.forEach(function (r) {
+      if (r.cells[0] === '') return;
+      if (P.toNumber(r.cells[0]) === null) words++; else nums++;
+    });
+    var hasNames = (words > 0 && words > nums) || (!!maxRow && parsed.width > 1);
     res.hasNames = hasNames;
     var first = hasNames ? 1 : 0;
     var count = parsed.width - first;
