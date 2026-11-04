@@ -9,6 +9,52 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-63: the review's low-severity batch (review of 2026-11-04, L1-L4, L6-L9, L13, 2026-11-04, `CACHE_VERSION` v580)
+
+Nine of the review's thirteen low findings, one commit each where the files allowed; every code fix has a case that failed
+before it. L5 (020's second display with two teacher tabs), L10 (039 tags a Latin deponent's perfect "no form"), L11 (a German
+passive for intransitive sein verbs) and L12 (the accent inside `#printArea` in dark mode) were left as the entry said.
+
+- **L13, the homepage's "1 tools".** `build-index.mjs` writes "1 tool" for a one-row category; `test:build-index` holds every
+  heading's form and renders 0, 1 and 2 rows. `index.html` regenerated, not hand-edited.
+- **L4, 035's teacher-moves with back-to-back bells.** f2af7c9 made a zero gap "no passing time" so it would not flag every
+  move; the group check skipped it, the teacher check still flagged every room change and said "no bell times are set". **Call
+  made:** a move between two bells that are both typed, back to back, is not flagged at all, as a group's walk is not. A bell
+  with a time missing still gets the old finding and sentence. The assertion in `check.test.mjs` that pinned the old finding
+  (`z.length === 1`) now asserts none; that is the bug's own test being corrected, not a loosening. Reverse it by dropping
+  `bellTyped()` in `sv-check.js`.
+- **L7, 046's quiz memory.** `keyOf()` trims again after cutting at 80, so a key is its own key and `normalize()` keeps it.
+  A history already lost to this is not recovered (it was dropped at the earlier load).
+- **L8, the ignored `save()` failure.** One `saveQuizMemory()` in 046: when the browser refuses, the box's note says the
+  marks last until the page is closed and points at 009, and the box opens; the next save that works puts the note back.
+  **The caps were not lowered** (about 2.2M characters at the limit): the failure is now visible, and a smaller cap would
+  throw away a teacher's history to prevent a failure nobody has seen. Not measured against a real quota.
+- **L6, `bmg-geo`.** Declared on the `gvb-media` row. `registry-shape.test.mjs`'s scan resolves any bare `{ ns: NAME }` to
+  that name's literal in the same file (it knew only `NS`), fails on one it cannot resolve unless it is one of two named
+  dynamic sites (009's rollover `media.clear(ns)`, `er-image.js`'s `create(NS)` parameter), fails if either site goes, and now
+  skips dot folders: it had been reading the untracked `.offline-copy-staging/` copy, which only did not matter because the
+  copy matched.
+- **L9, 042's template keys.** A name with any letter or digit outside a-z0-9 (春, Été) gets a 7-character FNV-1a hash of the
+  whole name after its a-z part (`t-091wgps`, `t-2026-0czfw9z`); a plain a-z name gets exactly the key it always did. Saving
+  a name that is already saved reuses that template's key, so a pre-v580 `my-template` is replaced rather than duplicated.
+- **L1, 005's room marks on stage.** A mark is drawn as a picture in live mode (no drag, grip, tab stop or keys) and both
+  pointer handlers refuse while live; leaving live mode makes it movable again.
+- **L2, two students with one name.** A roster id is found by name (`Roster.idFor`), so two same-named students in a period
+  shared one absence. **Call made:** such a name gets no roster id in live mode; each seat is marked for the live session
+  only, by 005's own id, and the status line says another student has the same name. Nothing is written that another tool
+  would read as the wrong child. A point or a pass for such a name is unchanged (008 and 001 find a student by name too; not
+  in this finding).
+- **L3 and AI-22's line, the registry.** 005's row has `writes: ['behavior-points-tracker-sections', 'crh_flags_v1',
+  'hall-pass-log-sections']`, and CLAUDE.md no longer says only 006 writes the flags. `check:registry` has a fifth check,
+  **HANDOFF**: a tool that writes a key another row owns must list it in its own `writes`. Probed before writing it, it fired on
+  exactly those three keys and nothing else in the tree, so it costs no other tool a line.
+
+Checks: the guards (`check:dedupe`, `check:precache` with `--base origin/main`, `check:registry`, `check:entities`,
+`check:hidden-flex`, `check:print-clip`, `check:inline-sinks`, `check:docs-commands`, `check:index`, `check:tests`,
+`check:publisher`, `check:art`, `lint`), the a11y sweep for 005, 042 and 046, and the suites of 005's live mode and room
+marks, 042, 046, 035 and the registry. **Not run:** the full `npm test` (a `_shared/` change selects everything; CI's push
+run is the net), and nothing here was tried on a real board or with a real full storage quota.
+
 ## AI-50: 035 the recovery manager moves to sv-recovery-ui.js (rank 140, 2026-11-04, v579)
 
 Eighth increment, one piece: `RecoveryManager` (when to take a recovery point, the crash and unreadable-save banner, restore, the Settings tab's recovery list), `formatRecoveryTime()` and `RECOVERY_INTERVAL_MS` are `Tools/schedule-visualizer/sv-recovery-ui.js`, a view module like the others; the body is the page's, line for line, with `export` on the three declarations and the page's `window.RecoveryManager = RecoveryManager` line dropped, since the module script now copies the exports onto `window` (beside a `window.SVRecoveryUI`). `sv-recovery.js` stays the storage half (the IndexedDB ring and the session flag) and was not touched. **How the page reaches it, read before moving:** the ring is a module that sets `window.SVRecovery` and fires `sv-recovery-ready`, and the page's `init()` calls `RecoveryManager.init()` at once if the ring is there and on that event if not. The new module is imported in the same module script, after the ring and before the event fires, so `RecoveryManager` is on `window` exactly when `SVRecovery` is (one failed import fails the whole script, so the two cannot come apart). The four callers are unchanged: `init()` and the two capture calls before an import and before clearing the saved blueprint reach it by bare name through `window`, and `sv-autosave.js` already called `window.RecoveryManager.markDirty()` behind a guard. The module reads `serializeFullProject`, `applyFullProject`, `roomRegistry`, `AppState`, `getBlueprintLoadStatus`, `escHtml` and `showToast` by bare name at call time, as `sv-apply.js` does. `smoke-recovery-ui.mjs` (`test:layout-recovery-ui`, port 8697, 31 assertions) holds the moved wiring: the exports are on window and `api` is the ring; `init()` ran (session marker set, timer started, Settings list drawn); an unforced capture writes nothing until `markDirty()`, clears the flag, and a second capture while one is under way is refused; a capture whose serializer throws returns null and leaves the guard open; `pagehide` captures as `leaving` and clears the session marker; under Playwright's clock, five minutes with nothing changed take no point, a change four minutes in takes none yet and one at five minutes is taken; an unreadable save with an empty ring gets the banner with Dismiss and no Restore, and Dismiss hides it; a missing point says it could not be read; the list's Restore asks, does nothing on Cancel, and on OK captures the current project first and brings the rooms back; `formatRecoveryTime` gives a time today and a date before. Mutants caught, all thirteen: `markDirty()` a no-op, the dirty check dropped, the one-at-a-time guard dropped, `pagehide` not clearing the marker, `pagehide` not capturing, the interval at four minutes, `init()` not drawing the list, the banner's Restore always shown, the list's `confirm()` ignored, restore without the capture first, `formatRecoveryTime` never giving the time alone, the serializer's `catch` rethrowing (the suite crashes rather than failing an assertion, which still fails it) and Dismiss doing nothing. The existing suites that cover the rest of the claim, every suite in `Tools/schedule-visualizer/test/`, among them `smoke-recovery.mjs`, `smoke-autosave.mjs`, `smoke-apply.mjs`, `smoke-snapshots.mjs`, `smoke-trace-image.mjs`, `smoke-publish-baseline.mjs` (the Northwind golden) and `size.test.mjs`, pass unchanged. Page 265,430 to 256,755 bytes (ledger lowered, module recorded at 10,282); the inline script is now about 1,950 lines. **Found, not changed (the row said not to change what recovery does):** **restoring the oldest of three points from the Settings list fails.** `restore()` takes a forced `before restore` capture first, the ring holds three, so that capture evicts the oldest point, which is the one being restored, and the teacher is told "That recovery point could not be read." Reproduced on this branch with a three-point ring (`restore()` returned false with that toast); the lines are the page's unchanged, so it is as old as the ring. The fix is a small behaviour change (read the point before capturing, or trim after the restore) and belongs to its own row: it is recorded in rank 140's text for a later session. **Still on the page and next:** the onboarding block (`initOnboardingAndHelp()`, AI-51) and the presentation glue.
