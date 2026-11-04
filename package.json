@@ -466,6 +466,7 @@
     "test:seating-migration": "node Tools/seating-chart/test/migration.test.mjs",
     "test:seating-read": "node Tools/seating-read/test/seating-read.test.mjs",
     "test:check-entities": "node Tools/board-check/test/check-entities.test.mjs",
+    "test:check-social": "node Tools/board-check/test/check-social.test.mjs",
     "test:daily-editing-warmup": "node Tools/daily-editing-warmup-generator/test/smoke-entities.mjs",
     "test:select-suites": "node Tools/board-check/test/select-suites.test.mjs",
     "test:shard-suites": "node Tools/board-check/test/shard-suites.test.mjs",

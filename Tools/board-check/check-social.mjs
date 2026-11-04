@@ -17,15 +17,22 @@
 //     across meta description / og:description / twitter:description
 //   - a partial image group (some of og:image / og:image:width / height /
 //     alt / twitter:image but not all, or og:image != twitter:image)
+//   - (AI-43) an og:image or twitter:image, on index.html, a root page or a
+//     tool page, block or no block, that does not name a file present in
+//     assets/og/. The cards are made by Tools/board-check/make-og.mjs; a page
+//     naming a card that is not in the tree is a blank card for whoever the
+//     link is shared with, which is what every shared link was until AI-43.
 //
 // What is reported but NOT failed, because it is uniform generator output
 // rather than per-file drift — a rebuilt generator has to decide these:
 //   - two block generations coexist: an older one branded greyversusblue.com
-//     (with the guild-board og:image set) and a newer one branded
-//     AsPerMyLessonPlan.com (with no image at all)
-//   - the imageless generation still declares twitter:card
-//     "summary_large_image", which asks card renderers for an image it
-//     doesn't provide
+//     and a newer one branded AsPerMyLessonPlan.com. Since AI-43 both name
+//     the one card, https://www.aspermylessonplan.com/assets/og/toolbook.png
+//     (greyversusblue.com does not serve this tree, so the older block's own
+//     guild-board.png could never load); og:url and og:site_name still differ
+//   - a block declaring twitter:card "summary_large_image" with no image,
+//     which asks card renderers for an image it doesn't provide (none since
+//     AI-43; a new block should carry the toolbook.png group)
 //   - tools with no block at all (the generator was never run against them)
 
 import fs from 'node:fs';
@@ -35,6 +42,36 @@ import { fileURLToPath } from 'node:url';
 const SITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const TOOLS = path.join(SITE, 'Tools');
 
+const OG_DIR = path.join(SITE, 'assets', 'og');
+
+/**
+ * The image problems of one page: every og:image / twitter:image <meta> in it
+ * must name a file directly under /assets/og/ that `exists(name)` says is
+ * there. Pure, so the test can hand it fixtures. Returns messages.
+ */
+export function ogImageProblems(html, exists) {
+  const out = [];
+  for (const m of html.matchAll(/<meta [^>]*>/g)) {
+    const tag = m[0];
+    const key = attr(tag, 'property') || attr(tag, 'name');
+    if (key !== 'og:image' && key !== 'twitter:image') continue;
+    const url = attr(tag, 'content');
+    let pathname;
+    try { pathname = decodeURIComponent(new URL(url, 'https://www.aspermylessonplan.com/').pathname); }
+    catch { out.push(`${key} is not a valid URL: ${url}`); continue; }
+    const name = pathname.startsWith('/assets/og/') ? pathname.slice('/assets/og/'.length) : '';
+    if (!name || name.includes('/')) out.push(`${key} ${url} does not name a file in assets/og/`);
+    else if (!exists(name)) out.push(`${key} ${url} names assets/og/${name}, which is not in the tree (make it with Tools/board-check/make-og.mjs)`);
+  }
+  return out;
+}
+
+function attr(tag, name) {
+  const m = tag.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`));
+  return m ? m[1] : null;
+}
+
+function main() {
 const files = fs.readdirSync(TOOLS).filter(f => f.endsWith('.html')).sort();
 
 let checked = 0, failed = 0;
@@ -43,11 +80,6 @@ const problems = [];
 const origins = new Map();     // origin+brand -> [files]
 const largeCardNoImage = [];
 const problem = (file, msg) => { problems.push(`${file}: ${msg}`); };
-
-const attr = (tag, name) => {
-  const m = tag.match(new RegExp(`${name}="([^"]*)"`));
-  return m ? m[1] : null;
-};
 
 for (const file of files) {
   const html = fs.readFileSync(path.join(TOOLS, file), 'utf8');
@@ -118,6 +150,22 @@ for (const file of files) {
   if (problems.length > before) failed++;
 }
 
+// og:image files: every live page, not only tool pages with a block.
+const exists = name => fs.existsSync(path.join(OG_DIR, name)) && fs.statSync(path.join(OG_DIR, name)).isFile();
+const pages = [
+  ...fs.readdirSync(SITE).filter(f => f.endsWith('.html')).sort(),
+  ...files.map(f => `Tools/${f}`),
+];
+let imagePages = 0, imageFailed = 0;
+for (const rel of pages) {
+  const html = fs.readFileSync(path.join(SITE, rel), 'utf8');
+  if (!/property="og:image"|name="twitter:image"/.test(html)) continue;
+  imagePages++;
+  const found = ogImageProblems(html, exists);
+  if (found.length) imageFailed++;
+  for (const msg of found) problems.push(`${rel}: ${msg}`);
+}
+
 console.log(`gvb:social blocks: ${checked} tools checked, ${failed} with internal inconsistencies, ${missing.length} tools have no block\n`);
 if (problems.length) {
   console.log('problems (these fail the check):\n  ' + problems.join('\n  ') + '\n');
@@ -133,4 +181,8 @@ if (largeCardNoImage.length) {
 if (missing.length) {
   console.log(`  no gvb:social block: ${missing.length} tools (${missing.slice(0, 3).join(', ')}, …)`);
 }
-process.exit(failed ? 1 : 0);
+console.log(`og:image: ${imagePages} pages name a card, ${imageFailed} name one that is not in assets/og/`);
+process.exit(failed || imageFailed ? 1 : 0);
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

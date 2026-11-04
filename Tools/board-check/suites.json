@@ -540,6 +540,7 @@
     "Tools/schedule-visualizer/test/directions.test.mjs",
     "Tools/schedule-visualizer/test/smoke-checks.mjs",
     "Tools/board-check/test/check-entities.test.mjs",
+    "Tools/board-check/test/check-social.test.mjs",
     "Tools/board-check/test/check-publisher.test.mjs",
     "Tools/daily-editing-warmup-generator/test/smoke-entities.mjs",
     "Tools/blender-art/test/validate-art.test.mjs",
