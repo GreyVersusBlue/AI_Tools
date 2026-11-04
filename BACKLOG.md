@@ -71,615 +71,73 @@ row is open now; a future one follows the same rule.
 
 ## Where things stand — start here
 
-*Current as of huginn's local `main` after AI-sync's merge of origin's #329, 2026-10-03. **Keep this section under ~80 lines.** It is
+*Current as of huginn's local `main`, 2026-11-04 (AI-52). **Keep this section under ~80 lines.** It is
 the state of the repo and what to start — not a log. The story of each increment, what it
 found and what it did not verify, goes in `HISTORY.md` in the same commit; this header gets
 at most three lines about it. Rewrite it when your phase merges (step 6 of the definition of
 done).*
 
 **Why it is short.** It had grown to ~1,900 lines of handoffs by 2026-09-23; those moved
-verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12"). Search there for a PR number.
+verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12"). It grew to ~600 again by
+2026-11-04, and that second run moved verbatim too ("BACKLOG header handoffs, 2026-10-03 → 2026-11-04"). Search there for a PR number.
 
-**Local `main` on huginn holds origin's #329 plus six sessions' unpushed work (AI-sync, 2026-10-03, `CACHE_VERSION` v222).**
-- AI-sync merged origin `834ccd9` (#323 to #329) into local `main` with a merge commit. AI-11, AI-12, AI-08, AI-35,
-  AI-34 and AI-13 P1 are local only; their `HISTORY.md` entries say v216 to v221, labels no deployed site ever
-  carried (origin used v216 for #328). They all reach the site as **v222**. `HISTORY.md`, "AI-sync", has the map.
-- **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
+**Origin's `main` is #381** (merged 2026-11-04 03:41 ET, `CACHE_VERSION` v573): the wave of AI-22 (005's live mode marks a
+point and a hall pass, v565), AI-31 (053's ready-made Review Game Board, v566, and Devon's 2026-11-03 answers closing ranks
+36, 43, 117, 149-151), AI-36 (007's seat equity by id, v571), AI-41 (046's slices preview, v572), AI-46 (032's anchor
+letter, v573), AI-47 (067's click track, v568), AI-49 (043's trip-day view, v570), AI-53 (002's team double count, v563),
+AI-55 (019's monitor, v564), AI-56 (037 item analysis, v569), AI-58 (020 and 032 fixes, v567).
 
-**Local only, newest first (detail in `HISTORY.md`):**
-- **AI-66 (v582), AI-50's found-not-fixed; no ranked row (rank 140's note removed).** 035's Restore on the oldest of three recovery points works: `restore()` in `sv-recovery-ui.js` reads the point before its forced `before restore` capture, which used to trim that very point. An unreadable point no longer captures. `test:layout-recovery-ui` section 5b (fails 5 on the old code, 41/0 now).
-- **AI-65 (v581), AI-57's follow-up; no ranked row.** The brand darkens the Industry steps 700-900 until white reads on them and lifts 300-500 for the dark theme, keeps 600 the school colour, and re-picks theme.css's new `--color-accent-ink` (text on `--color-accent`) for 005, 011, 029, 031 and 036; 005's dark ghost button and theme.css's dark ghost hover fixed with no brand too. `test:brand` covers the five pages (92) and literal text colours.
-- **AI-63 (v580), the review's low-severity batch; no ranked row (rank 37's registry line done).** L1 005's live mode no longer moves, resizes or turns a room mark; L2 two students with one name in a period are marked absent for the live session only, never through one shared roster id; L3 005's registry row lists `crh_flags_v1` and 008's and 001's keys in `writes`, and `check:registry` has a fifth check, **HANDOFF** (a tool writing another row's key must list it); L4 035's checks no longer flag a teacher's move between back-to-back bells as "no bell times are set"; L6 the `bmg-geo` media namespace is declared and `registry-shape`'s scan resolves `{ ns: NAME }`; L7 a quiz place name cut at a space keeps its history; L8 046 says so when the browser will not store quiz marks; L9 042's non-Latin template names get keys of their own; L13 the homepage says "1 tool". L5, L10, L11, L12 not done (left as the review's). No new suite port.
-- **AI-48 (v578), rank 96 DELETED, gap not renumbered: 067's reference pitch and play-through.** The sight-reading tab has **Play reference pitch** (the range's lowest C, do for these naturals, or the first note when the range has no C, held 1.5 s), **Play the notes** (the drawn notes in order as even quarter notes at the Rhythm tab's tempo, a triangle tone, the sounding note ringed on the staff and named in text) and **Stop**; the two never sound at once and share the click track's one `AudioContext`, made inside a click. Each pitch is `positionFrequency(notePosition(note))`: the staff-position formula moved into `msrg-audio.js`, so the drawing and the sound are one sum (A4 = 440). Stops at the end, on Stop, a new pattern, the Rhythm tab and a hidden page. Suites `test:music-pitch` (pure, 25 mutants) and `test:music-pitch-smoke` (8696). **Nobody has listened to it.** Print byte-identical to v577.
-- **AI-40 (v574), rank 56 (Path 19 P3) rewritten to the small leftovers: Devon's L4 built.** A Latin deponent's perfect, pluperfect and future perfect are its participle and sum (`locūtus sum`, `locūtī sumus`, `locūtus eram`, `locūtus erō`; `deponentAs` on the three tenses), the thirteen deponents carry a typed participle (`mortuus`, `ūsus`, `passus`...), and a deponent without one is empty. 039's Fill, 079's Add a verb card and the check sheet show it with the six (no 079 starter poster is a deponent, so those are unchanged). No new suite port. Unreviewed.
-- **AI-41 (v572), rank 60 (Path 20 P4, what was left) DELETED, gap not renumbered: Path 20 P4 is whole.** 046's Time slices card has "Preview the slices" in front of "Print the slices": both put the sheet in a new `#printArea` as one `<img>`, and the kit's preview shows it on Letter (exact for the Letter shape; widescreen and custom are fitted and the title names their own page). `_shared/` unchanged; `test:blank-map-slices-smoke` and `test:preview-adopters` (046 entry) hold it.
-- **AI-47 (v568), rank 96 rewritten to the reference pitch half: 067's click track.** The tempo field ("♪ = 92") now drives a Web Audio click on the rhythm tab: Play/Stop, an optional one-measure count-in (saved in `msrg_settings_v1`, no new key), the first beat of each measure higher and louder, numbered beat circles and "Measure 2 of 4, beat 3" in text, the playing measure outlined, reduced motion respected; 30-240 bpm with a sentence when clamped, nothing played (and said) when the field has no number; stops on a new pattern, tempo or time-signature change, the other tab, a hidden page. `MsrgAudio` in `Tools/music-sightreading-generator/msrg-audio.js`. Suites `test:music-metronome` (pure, 18 mutants) and `test:music-metronome-smoke` (8688, assigned for this batch). **Nobody has listened to it.** Print unchanged.
-- **AI-22 (v565), rank 37 rewritten: a point (008) and a hall pass (001) from 005's live mode** (Devon's P5-route, 2026-11-03). A "Tap marks: Absent / A point / A hall pass" switch rides into the stage beside the chart, back on Absent every time live mode starts (his P5-menu kept: no menu on a tap); 005 writes 008's and 001's storage on this device (`seating-chart/seating-handoff.mjs`, refusing unknown or newer data, a student not on the class, a second pass), and Undo / Ctrl+Z take each back through 005's undo stack. `test:seating-handoff` (pure) and `test:seating-live-handoff` (port 8682, assigned for this batch). The switch is my reading of his two answers together, reversible (`HISTORY.md`). Left on rank 37: 003's undo (listed, not built); the registry `writes` line shipped in AI-63 (v580).
-- **AI-55 (v564), review H3 and M7 fixed on 019's monitor; no ranked row.** A device's `station` and `total` are numbers or the message is refused (`ErBoard.readMessage`; a station of markup reached the roster's `innerHTML`); Reset keeps the start in the kept record; a record kept in the last two hours is carried over a reload; the pairing box asks **Who is connecting?** so a team that dropped picks up its own row and sheet. `lock.html` unchanged. Suite `test:er-monitor-hostile` (8684), **next free suite port: 8685.**
-- **AI-31 (v538-v541), ranks 125, 129, 131 and 135 DELETED, rank 44 rewritten to step 6 only (gaps, not renumbered).** 038's chart sheet (`#chartSheet`, 1/2/4/6 to a page, Preview, in memory only; `test:chart-sheet`, 8655), 017's typed link and comment area on the QR card (`test:gallery-card-options`, 8656), 021's multi-rotation stations and sit-out groups (`test:pe-uneven`, 8657), 027's discussion assessment (`NscAssess`; `test:nsc-assess-core`, `test:nsc-assess`, 8658); 023's name and date lines were already built (no code). Rank 44 keeps only the 065/073 handoffs, which still have no receiving field. **Next free suite port: 8659.** Nothing here has been on paper. The `showNumber` box on 017 is read at print time and never saved (found, not fixed).
-- **AI-27 (v499), rank 56 (Path 19 P3) rewritten to what waits on Devon; every item the session was given is built.** A reflexive verb's command and infinitive carry their pronoun (Spanish levántate / levantémonos / levantaos / levantarme, Italian lavati / si lavi / lavarmi, French lève-toi), a French negative command (ne te lève pas), the pluperfect and compound subjunctives in Spanish, French and Italian, German Konjunktiv II proper (wäre, käme) and dative reflexives (`sich (dat.) vorstellen`), a ge- rule built on what can begin a German word (the four-name exception list is gone), and Latin's perfect / pluperfect / future perfect passive and imperative. All opt-in `extraTenses`; the six and every old cell are unchanged but reflexive commands that used to say "not built". No new suite port (**next free: 8627**). Not built because they are Devon's: a Spanish or Italian negative command (S1, I4), a deponent perfect (L4). Every table is unreviewed.
-- **AI-29 (v487), ranks 61 and 62 (Track B1 and B2) DELETED, and ranks 63 and 64 (Track V) DELETED as cut at Devon's word; ranks 77 and 84 (built by Path 19 P3 and P5) deleted too, gaps not renumbered.** The school accent: `_shared/a11y.js`'s fenced `/* === brand === */` block reads `gvb-brand:settings.v1` (`{v:1, accent, accent2?}`, a setting in 009's backup, not student data) and writes one screen-only `<style id="gvb-brand-style">` before first paint (`--accent`, `--accent-2`, `--accent-ink`, the Industry tools' ten-step `--color-accent-*` scales, an accent lifted to read on the dark paper); no key means no element and no pixel changes (001, 003, 005, 044 byte-identical in both themes; 007 is nondeterministic run to run on its own). `window.BRAND_OPT_OUT` (007), `window.Brand` (`get`/`set`/`reset`/`onChange`), live across tabs; the widget's **School branding** section (colour inputs, second colour automatic unless unticked, a warning that never blocks, Reset school colours with no reload). **No logo** (Devon, 2026-10-21). Since AI-57 (v576) the brand never sets `--status-ink`, the text on `--err`/`--good`/`--warn` fills, and sets `--accent-2-ink` for accent-2 fills. Suite `test:brand` (8622), **next free suite port: 8623.** Detail and the questions in `HISTORY.md`.
-- **AI-27 (v479-v486), rank 56 (Path 19 P3) rewritten to what is left; Path 19 is otherwise built.** Reflexive verbs in German and Italian; **tenses beyond the six** as `extraTenses` on a pack (offered in 039's menu and on the check sheet, never in a default list: Spanish present perfect, -ra subjunctive and command; German Plusquamperfekt, passive and imperative; Italian congiuntivo imperfetto and imperativo; French impératif; Latin subjunctive, passive and deponents); Latin prefix compounds and the German ge- exceptions; **079's `irregulars.js` computed from the engine** (byte-identical; the typed literals frozen in `_079-irregulars-frozen.json`); and 039, 014 and 044 on `_shared/speak.js` (`speak.js` joins `SHELL_URLS`). Suite `test:speak-adopters` (8621), **next free suite port: 8622**. Every table is still unreviewed.
-- **AI-27 (v477-v478), ranks 57 and 58 (Path 19 P4 and P5) DELETED, gaps not renumbered.** P4: four new tabs in 040 on a pure `Tools/vocab-flashcard-generator/vfg-study.js` (`VfgStudy`): a **Frayer model** page per word (blank, or the list's definition and example filled in; one or two to a page), **fill in the blank** from each word's `example` (a word bank, an answer key, and a list of the words left out and why), a **review schedule** (new words per teaching day, reviews at 1, 3, 7, 14 days by default, a plan table or one day's drill sheet with a key; dated from a typed first day with weekends skipped, otherwise only numbered), and the **word wall as a system** (a `unit:<name>` tag on the word in Word Lists; cards a unit at a time, an A-to-Z index with unit and card number, retire a unit and print a take-down list). All through `PrintKit` and its preview. P5: `_shared/speak.js` (`Speak`), a small speechSynthesis helper, used by 040's self-quiz (**Hear it**, in a language chosen per list) and by 051's word table (Hear), and teacher **recordings** in 051 (`Tools/classroom-label-maker/clm-pron.js`, MediaRecorder into `gvb-media`, namespace `labels`, per language and word; plays in 051 on this device; **not** in the label's QR). Suites `test:vocab-study-logic`, `test:vocab-study` (8619), `test:speak`, `test:label-pron` (8620), **next free suite port: 8621**. Rank 56 is untouched.
-- **AI-27 (v476), rank 56 (Path 19 P3) rewritten again, increment 3 built: German, Italian and Latin.** `_shared/conjugate-de.js`, `-it.js`, `-la.js` (loaded by 039 and 079 in Devon's order es, de, it, la, fr). German: Präsens, Perfekt, Präteritum, Futur I, Konjunktiv II as würde + infinitive, Konjunktiv I; strong/mixed/modal records, separable prefixes (`mache auf`, `aufgemacht`), haben/sein. Italian: the usual six, the -er-/-ir- future, `class: 'isc'` per verb for -isc-, masculine agreement with essere (plural for noi/voi/loro). Latin: the six active indicative tenses by principal parts (perfect stem on the record, `rec.stem` for a long vowel). Engine changes are additive; Spanish and French goldens, 079 parity and the 20 old broken copies pass unchanged, 47 new broken copies caught. Every table is unreviewed; the goldens were typed by the session, not copied from a source. No new suite port (**next free: 8619**). The questions for Devon are in the P3 bullet.
-- **AI-27 (v474-v475), rank 56 (Path 19 P3) rewritten again, increment 2 built (079 on the engine).** 079's starter posters are computed from `Conjugate` at load (a verb and a label per panel; the 29 posters print byte-identical to `golden-old-posters.json`, held by `test:verb-poster-callouts`; `test:conjugate`'s 079 parity now reads `_079-templates-frozen.json`, the old literal), and an **Add a verb** card turns a language, tense, infinitive and meaning into an ordinary panel (an unlisted verb accepted as regular and marked unchecked on screen and in the editor, not on paper; unreviewed on every add); `test:verb-poster-add-verb` (8618, **next free suite port: 8619**). German, Italian and Latin were not built: each needs engine work (see rank 56).
-- **AI-27 (v469-v473), rank 56 (Path 19 P3) rewritten to what is left, increment 1 built.** `_shared/conjugate.js` (`window.Conjugate`) with `conjugate-es.js` and `conjugate-fr.js`: six tenses each, regular patterns by class, derived spelling changes, irregular records, prefix derivation, the answer check (`match`), teacher records (`merge`, `validate`); a teacher's verb record lives on the word (`WordList.setVerb/getVerb`, `lang` on a list); **039 fills a row set from the pattern** (language and tense selects beside the free-text label, a tag on every cell that is not regular, the quiz marked by the engine: ñ/ç are letters, u for ü accepted with the ü form shown, a missing pronoun is close); `Tools/conjugate/print-corpus.mjs` writes the teacher's check sheet. **Every generated table says "unreviewed"; no table is reviewed until Devon's arranged language teacher has read it.** 079's 132 template forms and 41 irregular tables are reproduced by the engine (held by `test:conjugate`) but 079 does not call it yet. Suites `test:conjugate` (pure Node, 20 broken copies), `test:conjugate-039` (8617); **next free suite port: 8618.**
-- **AI-27 (v461-v468), ranks 54 and 55 (Path 19 P1 and P2) DELETED, gaps not renumbered.** `_shared/word-list.js` (`WordList`, key `gvb-word-lists`) and the Word Lists hub in 040 (write-through; paste, CSV and JSON import shown before storing; JSON, CSV and template downloads), then the adopters one commit each: 039, 040 (and `vfg-conjdrill-link.js` deleted), 027, 051, 052, 014. Suites `test:word-list` and `test:word-list-hub|-039|-027|-051|-052|-014` (ports 8611-8616, **next free 8617**). Rank 56 (P3) can now build its storage; no verb table is called reviewed until Devon's teacher has read it.
-- **AI-19 (v444-v446), ranks 19 and 20 (Path 10 P4 and P5) DELETED, gaps not renumbered: Path 10 is whole except one optional item.** 044 pulls a do-now from the question bank (a new `do-now` packet provider reads the teacher's questions tagged `do-now`; one picker puts "**Do now (5 min):**" first in the schedule), its `.docx` and its plain-text copy/print are drawn from one `dayModel()` (held to golden files captured before the join), and it keeps a typed "what the sub said" note per day out (`subPlanBuilder.subSaid.v1`, this device only, student data). Share-by-link already existed on 044 from the P3 share sheet. Suites `test:sub-plan-donow` (8599), `test:sub-plan-render` (8600), `test:sub-plan-said` (8601); **next free suite port: 8602.** Left, optional and not built: a QR on 076's feedback page that opens a three-field form on the sub's phone. Detail in `HISTORY.md`.
-- **AI-19 (v442), rank 18 (Path 10 P3) DELETED, gap not renumbered.** The evergreen emergency binder: 090's "Print emergency binder" (one click; `?preset=emergency`), 044's `savedOn` stamp printed under the sub plan and emergency pages, and `_shared/binder-stale.js` (`gvb-packet:evergreen.v1`: when the binder was printed and a fingerprint per source key, no data). The landing page's app bar and Command Center show one line when the binder was never printed, its details changed since, or it is 180 days old. `test:binder-stale`, `test:binder-stale-smoke` (8597);  Next on Path 10: rank 19 (P4 increment 1, v443, shipped 044's seating pull: `test:sub-plan-seating` 8598, **next free suite port 8599**; the do-now from the prompt banks and one renderer for the .docx and the print are left). Detail in `HISTORY.md`.
-- **AI-19 (v437-v441), ranks 16 and 17 (Path 10 P1 and P2) DELETED, gaps not renumbered; Packet Builder is `090`, not `087`.** `Tools/090-packet-builder.html`: tick pages, put them in order (Up/Down buttons, or drag), preview them as paper, print through the print kit, keep the order and presets (`gvb-packet:layout.v1`, `gvb-packet:presets.v1`, ids only; Sub day and Emergency binder built in). `Tools/packet-builder/sections.js` is the pure provider registry (a provider is data in, blocks out, optionally `load(ctx)`; `toHtml()` is the one place text becomes markup), `providers.js` has ten sections (sub plan, emergency information, hall pass procedure, school calendar, class rosters, seating, behavior plan, exit ticket prompts, lessons for the last absence, substitute feedback). **045 Sub Binder reads every other tool's data through those providers (no key of another tool in its script), asks 076's questions on its feedback page when the teacher has saved any, and has a share sheet** (`?binder=`, the recipe only). Suites: `test:packet-sections`, `test:packet-providers`, `test:packet-builder` (8594), `test:sub-binder-providers` (8595), `test:sub-binder-share` (8596); **next free suite port: 8597.** Detail in `HISTORY.md`.
-- **AI-14 (v435-v436), rank 28 (Path 12 P2) DELETED: Path 12 is whole; a gap, ranks not renumbered.** 019 and 018 have a Question bank card (`_shared/stations-bank.js`): tick questions from the teacher's bank or a built-in set, press Add, and each becomes a station with `bankId` set. 019: a text station (a comma in an answer becomes a space). 018: a choice station when the answer is one of two to six choices, otherwise a text station with the answer in its note. Nothing is student-facing; old rooms, hunts and codes are byte for byte as before. `test:stations-bank`, `test:stations-bank-smoke` (8593); **next free suite port: 8594.** Four new questions for Devon (66 to 69), each on a default. Detail in `HISTORY.md`.
-- **AI-28 (v434), rank 61 (Path 20 P5) deleted, the ranks after it moved up one.** 046 remembers which places a class missed, across sessions (`bmg-quiz-memory.js`, key `bmg_quiz_memory_v1`: place names and counts per map project, not student data, not in a share link; "Missed ones first", a history list, "Forget quiz history for this map"), and no longer starts a Wikimedia search when an empty project opens: nothing fetches until the teacher presses Search (Devon, 2026-10-07). `test:blank-map-quiz-memory` (20 mutants), `test:blank-map-quiz-memory-smoke` (8592); **next free suite port: 8593.** Path 20 is built apart from rows 59 and 60. Detail in `HISTORY.md`.
-- **AI-28 (v433), Path 20 P4 built, rank 60 rewritten to what is left.** 046 has time slices (`bmg-slices.js`, the Time slices card: slider, name, year, blank/copy/sort/delete, a small-multiple sheet to print or save as PDF), and the send to Timeline Builder dates each slice's places by its year. `test:blank-map-slices` (pure Node, 14 mutants), `test:blank-map-slices-smoke` (8591); **next free suite port: 8592.** Detail in `HISTORY.md`.
-- **AI-28 (v426-v432), rank 60 (Path 20 P3) deleted, the ranks after it moved up one.** 046 draws a built-in or dropped-file map from the vectors on screen, in every export, in the locator, shaded or not, and a shared map arrives drawn; since v432 it writes **no raster** for one (`buildBaseMapMeta` gives the record its size and calibration; an older cached record still loads, "Clear cached maps" is unchanged). Suites `test:blank-map-live*` (ports 8584 to 8586, 8587 to 8590); **next free suite port: 8591.** Detail in `HISTORY.md`.
-- **AI-28 (v424-v425), rank 60 (Path 20 P2) deleted, the ranks after it moved up one; rank 59 narrowed to the gazetteer.** 062's `gbq-map.js` now imports `projectPoint`/`traceFeature` from `_shared/geo-project.js` (its own adapted copy is gone; `test:geo-bee-parity` holds it to a frozen copy). A dropped GeoJSON or TopoJSON file is 046's base map: own TopoJSON decoder (no library), stored in `gvb-media` (`bmg-geo`), not the cache; ports 8583 used, **next free 8584**. Detail in `HISTORY.md`.
-- **AI-24 (v419-v423), rank 44 rewritten (Path 16 P5, steps 1 to 4 of 6); 038 for science.** Curve fits with R² on the original values (`dcb-fit.js`: linear, power, exponential, logarithmic, quadratic), base-10 log axes, multi-series scatter with a marker shape each, and an annotation layer (shaded regions, arrows, callouts in data coordinates, in the share link only); v419 repaired AI-26's registry rows (a `BrRollover` delete rule for 019's `monitor-record`, `test:registry` 51/51). Suites `test:chart-fit`, `-scatter-log`, `-scatter-series`, `-scatter-notes` (pure Node, mutants), `test:chart-builder-science` (8582); **next free suite port: 8583.** Left: the chart sheet (step 5) and the 065/073 handoffs, which have no route. Inline-sink baseline for 038 is 13.
-- **AI-24 (v416-v418), rank 43 rewritten (Path 16 P4 built except the triage handoff); 036 modelling.** Term count 2/3/4 (semesters, trimesters, quarters; default four, the page byte-for-byte as before at the default: `terms` in `grade-math.mjs`/`scenario-math.mjs` opts, one `termCount()` on the page, a stored `terms` only when it is not 4); the Scenarios card draws the class's final letters and percentage averages before and after through `ChartSvg` (`distributions()`); a roster check (`roster-join.mjs`, read-only from Class Roster Hub or typed, nothing stored; `np_rosters` added to 036's `reads`); the need tab's grading window follows the count. Suites `test:final-grade-terms-core`, `-terms` (8579), `-scenario-chart` (8580), `-roster-core`, `-roster` (8581); **next free suite port: 8582.** Found: typing in the need tab called `updateManual(NaN)` (fixed); the calendar suite's 036 break named a line this renamed (updated). Left: the triage handoff (rank 43) and Devon's persistence question.
-- **AI-24 (v411-v415), rank 43 and rank 80 deleted (Path 16 P3 whole, and 037's per-tool copy of it), the ranks after them moved up one and two; 037 item analysis.** Per-question scores through `PasteTable` into `GradeItems` (`gd-items.js`): a missed-questions chart, a ranked reteach table, a printed reteach list and "What this says" page through the print kit, section against section, small multiples of the compared assignments. Fields `items`/`itemLine` on the existing record, no new key, no name shown. Found: blank last print page, switcher hidden after reload, unlabelled compare bars (all fixed). Left on Path 16: rank 43 (P4, 036) and 44 (P5, 038). Next free suite port: 8579.
-- **AI-24 (v404-v410), rank 43 deleted again (Path 16 P2 whole), the ranks after it moved up one; `_shared/paste-table.js`.** One classic script, `window.PasteTable` (`splitLine`, `splitFixed`, `pickDelimiter`, `toNumber`, `isHeaderShape`, `parse`, `columnReport`, 046's two named-value parsers); 046, 038, 036, 037, 075 and 006 read through it, each held to a frozen copy of its old reader by a parity suite (`test:paste-table*`, no port). New notes: 038's value-column note, 037's skipped lines, 075's nameless rows, 006's short rows. Left: `Roster.splitCells` and `bulk-rows.js` keep the last two copies. Next is Path 16 P4. Next free suite port: 8579.
-- **AI-24 (v402-v403), rank 43 deleted and the ranks after it moved up one; Path 16 P1 built: `_shared/chart-svg.js`.** One classic script, `window.ChartSvg`: 037's two charts, its contrast rule (`textColorFor`), the hatch, the 2x-on-white rasterizer and the copy/download path (step 1, v402, 037's output byte-identical: `test:chart-svg-parity` against a frozen copy, `test:chart-svg` with mutants), then 038's `bar`/`line`/`pie`/`scatter`/`box`/`blankAxes` (step 2, v403: `test:chart-svg-draw-parity`, `test:chart-svg-a11y`, browser `test:chart-builder-a11y` on port 8577, **next free 8578**). 038 now has `role="img"` with `<title>` and a generated `<desc>`, a polite announcement per redraw, pie percentages in the better of ink and white, a hatch per series in grayscale mode, and its value-column checkboxes are labelled (axe found them: the empty-page sweep never reached them). **Step 3 (move `RAMPS` into the module) was judged not to fit and not done:** `bmg-choropleth.js` is an ES module that 046 and `smoke-choropleth` import, ChartSvg a classic script, so moving it would make 046 depend on a global loading first and break the pure-Node import for no gain; `chart-svg.test.mjs` now pins ChartSvg's luminance to the map's on every ramp stop so the two copies cannot drift. 037's SVGs still carry no `<title>`/`<desc>` (they are held byte-identical; adding them is P3's call). Not checked on paper or with a screen reader.
-- **AI-26 (v395-v397), rank 55 rewritten, 019's debrief.** The debrief sheet moved out of 018 into `_shared/stations-debrief.js`/`.css` (`StationsDebrief.render`, one `PrintKit.renderCards` call, `without: ['misses','hints']` for a sheet that has none); 019's monitor keeps a record of the room (`ErBoard.toRecord`/`cleanRecord`/`roomFor`, the run shape `Stations.debrief` reads; `lock.html` unchanged) and prints it with Preview. Suites: `smoke-monitor-record` (port 8575), `smoke-monitor-debrief` (8576, **next free 8577**), a 019 entry in `preview-adopters`. Not on paper; a room has no wrong-tries or hint data.
-- **AI-26 (v393-v394), ranks 54 and 55 rewritten, 018's branches on paper and the debrief print.** The teacher's answer key lists where each branched choice sends a team; a route card only warns that some stops branch. `Stations.debrief()` and 018's Print/Preview Debrief (two pages a team: path, leg times, wrong tries, hints, branch, then a reflection page); `smoke-debrief` (port 8574, **next free 8575**). The debrief is 018's only: 019 keeps no record to print. P5's write-up is in the Path 18 section for Devon.
-- **AI-26 (v391-v392), rank 54 cut, 018's per-answer branching and 019's teams/timing/leaderboard.** Branching: see the rank 54 row; `Stations.branchOf`, `branchProblems`, branches in `shareState`/`fromShare`, `smoke-branches` (port 8572), 4 stations.test mutants (430 assertions). 019's side is the teacher monitor: `er-board.js` (`applyMessage`, `leaderboard`, `formatElapsed`), `Stations.rank()` (018's sort moved there), `test:er-board` (pure Node, 6 mutants) and `smoke-monitor-board` (port 8573, drives the page through `window.__monitor`). **Next free port 8574.** Detail in `HISTORY.md`.
-- **AI-26 (v390), rank 54 cut, the required set rides in 018's share link.** `Stations.shareState`/`fromShare` carry `required` (own-station ids, repeats and unknown ids dropped, nothing added when none is starred, so older links are unchanged); 2 stations.test mutants and a link round trip in `smoke-required`. Next free port still **8572**. Detail in `HISTORY.md`.
-- **AI-26 (v389), rank 54 cut, 018's free-order required set.** A station can be starred as required (`required`, ids); `Stations.progress()` is the reader; the leaderboard, Live Run and route cards read it. `smoke-required` (port 8571, **next free 8572**). Detail in `HISTORY.md`.
-- **AI-26 (v385-v387), ranks 53/54 rewritten, Path 18 P2's two loose ends and P3's first feature.** A room's `next` is stored as the target's station id (`Stations.toDisk`; `read()` takes an id or an old position, `write()` gives positions back, so the page is unchanged in memory); 018's and 019's `getState`/`normalize*` are `Stations.shareState`/`fromShare`, held to the frozen v385 functions (`_old-share-functions.txt`) on the same inputs. 018 shows a station's picture on its preview card, QR card and clue card: `image` on the station, kept in the media namespace `scavenger-hunt` (`EscapeRoomImage.forNamespace`, so 019's clean-up never reaches it), `smoke-images` (port 8570, **next free 8571**). Not built: 018 branching/required set, 019 teams/timing/leaderboard (rank 54), the typed short code (held).
-- **AI-26 (v380-v382), rank 53 kept and cut, Path 18 P2 built except the typed short code.** 018 loads a hunt through `Stations.read`/`write` and keys its live run (marks, attempts, hints, the check-in station) by station id; 019 loads a room the same way, builds every link and code with `Stations.playPayload`/`playUrl` (`v: 2`, `ids`, `next: 'end'` kept), and a move or delete keeps a station's go-to link; `lock.html` decodes through `playRead`, saves progress keyed by id when the code has ids (index keys when it does not), honours "End here", and `monitor.html` passes the id through; both share links carry station ids. `Stations.budget()` has a body and 019 refuses a code under 4 px a module at the printed canvas by station number. `smoke-legacy-codes` (port 8569, **next free 8570**). Not built: the typed short code (student-facing).
-- **AI-26 (v378-v379), rank 53 deleted and the list renumbered, Path 18 P1 built: `_shared/stations.js` and ids on disk in 018 and 019.** The module (`read`, `write`, `ensureIds`, `playable`, `playPayload`, `playUrl`, `playRead`, `check`, `nextOf`, `reachable`, `remapRun`, `upgradeProgress`; `budget()` reserved) with `test:stations` (pure Node, parity against the pages' own functions cut out of the HTML, five mutants) and `test:stations-smoke` (port 8568, **next free 8569**); both pages call `Stations.ensureIds()` on save and on load. Nothing else in either page, `lock.html` or `monitor.html` changed. Rank 53 is now P2.
-- **AI-22 (v377), rank 37 rewritten, Path 14 P5 increment 3: live mode on 005.** Opt-in "Live mode" (Stage on the floor); a tap marks a student absent today through `_shared/student-flags.js`, a student on no roster for the session only; no tap edits the chart. `smoke-live` (port 8567, **next free 8568**). 018 and 043 decided out (a second step replaces the first). A point in 008 and a pass in 001 not built: neither tool takes anything in (design in the P5 bullet). Left on rank 37: 003 (no undo today) and the 008/001 routes, which are Devon's.
-- **AI-22 (v376), rank 37 rewritten, Path 14 P5 increment 2: `_shared/undo.js` in 002, 021 and 027.** Each walks back every step, not one snapshot (002 every shuffle, 021 every Reset / New unit, 027 every meeting delete / history reset, its button still naming the step); `smoke-undo` for each (ports 8564, 8565, 8566; **next free 8567**). 024 decided out (its stack cannot reach depth 2). Left on rank 37: 003 (no undo today), 018 and 043 (timed windows) and live mode.
-- **AI-22 (v373), rank 37 rewritten, Path 14 P5 increment 1: `_shared/undo.js` (`UndoStack`) and its first three adopters.** 005 (a port alone, no Redo), 022 (Undo last shuffle) and 020 (Undo last pick) now walk back every step, not one snapshot; the design is in the P5 bullet. `test:undo` (pure Node, 8 mutants), `smoke-undo` for 022 (port 8562) and 020 (port 8563) (**next free 8564**). Left on rank 37: adopters 002, 003, 018, 021, 024, 027, 043 and live mode.
-- **AI-22 (v370), rank 36 rewritten, what is buildable of Path 14 P4 is built (increment 3): a mark edited in place, and a zone rule that follows its mark.** 005 resizes a mark by its corner (pointer) or Shift+arrows, turns it with R or a Turn button, and relabels and sizes it from its row in the Room card (`editMark`, `footprint`); a zone rule can be "desks near a mark" (`rule.mark`, kept beside `desks`, recomputed by `syncMarkRules` whenever a mark moves, resizes, turns or goes), and every reader and the solver still read the desk list. Old desk-list zone rules are unchanged. Ports 8561 used (**next free 8562**). Rank 36 now holds only what waits on Devon. Rank 37 (P5) untouched.
-- **AI-22 (v368), rank 36 rewritten (P4 increment 2): marks dragged, printed and read.** 005 drags a mark (pointer, snapped, undoable) and moves it by arrow keys; the room's marks print on the live page, Print all and the sub packet; `SeatingRead.marksOf` / `bounds({ marks })` and 008's `layoutSeats({ marks })` put them in 010's and 008's pictures, and a reader that does not ask is unchanged. Port 8560 used (**next free 8561**). Left on rank 36: editing a mark in place, a zone rule that remembers its mark. Rank 37 (P5) untouched.
-- **AI-22 (v366), rank 36 rewritten (P4 increment 1): the room layer.** `seating-room.mjs` + a Room card on 005; a room is shared by periods through a mirror in `section.desks`, so no reader changed. Port 8559 used (**next free 8560**). Left on Path 14: the rest of rank 36 (marks dragged and printed, marks in the readers) and rank 37 (P5).
-- **AI-22 (v364), rank 35 DELETED (a gap): Path 14 P3 is whole.** 005 has the Rules block (`seating-rules.mjs`; kind, students, zone by
-  tapping desks, Must/Want, reason), Leave empty (E) and Fill the gaps, the four preferences, and rules in the share link without `why` and
-  on the sub export. No new port (**next free 8559**). **Left on Path 14: rank 36 (P4, the room) and 37 (P5, live mode, `undo.js`).**
-- **AI-21 (v357), rank 34 DELETED (a gap): Path 13 P4 is whole, and with it Path 13 but for rank 32's project teams.** 020 has
-  a second display: "Open display window" (next to Present) opens `020…html?display=1`, a read-only copy of the open
-  bracket for the projector. The teacher's `render()` posts the saved object on `BroadcastChannel` `bracket-tournament-display`
-  (`null` on the setup screen; a new window says `hello` and is answered); the display runs the page's own `render()` on it, so
-  every format draws as it does for the teacher. It never saves, reads no storage, stops every click, key and edit before any
-  handler, hides the toolbar, setup and the academic card (questions and answers never reach it), shows the Present bar, and has
-  a Fullscreen button on `Stage.mount` (`_shared/stage.js`, unchanged). **Same browser only (an extended desktop):** Path 8
-  P1/P3 (`Remote`, `Remote.display()`) are not built, so the Wi-Fi leg is not either, and was not copied from 021. New
-  `test:bracket-display` (port 8558, **next free 8559**, 33 checks, five formats, every rule also failing when broken in the
-  page). Not tried on a real projector or a second monitor. **Left of Path 13: rank 32 (project teams on 002, parked on Devon's
-  six questions); the "only if asked for" items (double-elimination re-deciding, a draw in elimination, a 3-1-0 table); the
-  Wi-Fi display, which waits for Path 8 P3.**
-- **AI-21 (v356), rank 34 (kept, rewritten), Path 13 P4 increment 1: 020 changes a decided match and allows drawn games.**
-  Click the losing slot of a decided match to give it to that side (single elimination clears the match's score and every
-  later decision that used the old winner, after a count and a `confirm()`, one Undo; the consolation bracket and the
-  third-place pick follow; round robin, pools and Swiss flip, pools discard a drawn bracket and Swiss the later rounds, each
-  after asking); "Allow drawn games" (round robin, pools, Swiss; `winner: 'draw'`, half a win, a D column once one exists).
-  `test:bracket-redecide` (port 8557, **next free 8558**), `test:bracket-engine` 46, `test:bracket-parity` 1,861 / 0;
-  `smoke-academic.mjs`'s v276 pins held by stripping the three additions, not re-recorded. The first-round consolation and
-  team rosters already existed (v284); that item is closed. **Left of Path 13: rank 32 (project teams, parked on Devon's
-  questions), rank 34 (the second-display mode via Path 8).**
-- **AI-21 (v355), rank 33 DELETED (a gap): Path 13 P3 is whole.** `Rotation.rotateNow`/`tick` gained `finishAt` (the count that
-  ends a run), and 017's station timer runs on `_shared/rotation.js` (`test:gallery-rotation-parity`, 72,000 / 0; 021's
-  64,000 unchanged). 069's circuit and 004's round-robin tab are not this arithmetic and did not move (reasons in the P3
-  bullet). No new port (**next free 8557**). **Left of Path 13: rank 32 (project teams, parked on Devon's questions), rank 34
-  (P4: the second-display mode via Path 8; re-deciding, draws, consolation, pools, Swiss and double elimination exist in 020).**
-- **AI-21 (v353–v354), rank 33 (kept, rewritten), Path 13 P3 steps 1 and 2: the shared bracket and rotation engines.**
-  `_shared/bracket.js` (020's pure code, 29 functions, v353) and `_shared/rotation.js` (021's assignment and clock, v354),
-  each a port alone behind a parity suite (`test:bracket-parity` 1,860, `test:rotation-parity` 64,000) and a unit suite whose
-  checks also fail with their rule broken (`test:bracket-engine`, `test:rotation`). 021 had no bracket, so "bracket.js from
-  020 and 021" was 020 alone. No new port (**next free 8557**). **Left of Path 13: rank 32 (project teams, parked), rank 33
-  (step 3: 017, 069, 004 adopting rotation), rank 34 (P4).**
-- **AI-21 (v352), rank 32 (kept, rewritten), Path 13 P2 increment 6: seating-aware grouping on 002.** An opt-in
-  checkbox (off, so the twelve golden classes are untouched): the Seating Chart's desk distance is the engine's `cost`,
-  and the engine now swaps members to bring it down once nothing else is broken (before, `cost` only broke ties and never
-  moved anyone). New `gtg-seating.js`; `test:seat-near` (port 8556, **next free 8557**, 26). **Project teams are parked on
-  Devon's six unanswered questions** (the P2 bullet has each with a default). **Left of Path 13: rank 32 (project teams),
-  then P3 (rank 33), P4 (rank 34).**
-- **AI-21 (v347–v351), rank 32 (kept, rewritten), Path 13 P2 increment 5: the improvements.** All five, each its own
-  commit and `CACHE_VERSION`: 002's floater fix (`sizeRule: 'floor'`, v347), `keepStrategy` (v348), `together: 'units'`
-  (v349), `restarts` for 002 and 022 (v350), `method: 'best'` for 022 and 027 (v351). The build found the engine's `floor`
-  rule and `'best'` had never run on a page and were wrong (11 by 4 made groups of 5; `'best'` took 1.5 s for 8 students and
-  12 roles): both fixed in the engine. Goldens moved only where meant (`golden-old-groupings.json`: 2, 3, 1 scenarios, each
-  with an `amended` note). `test:grouping` 93, `test:grouping-adopters` 256, no new port (**next free 8556**).
-  **Next on Path 13: rank 32 item (2)** (project teams, parked on questions), then P3 (rank 33).
-- **AI-21 (v344–v346), rank 32 (kept, rewritten), Path 13 P2 increment 4: 002, 022 and 027 keyed by roster id.**
-  `identify()` with `Roster.idsFor()`; the engine's `absorbLegacy()` reads `idNames` so a name-keyed save follows a
-  rename made before the switch; `trackRenames()` stays the detector for what each page keeps by name. No new port
-  (**next free 8556**). **Next on Path 13: rank 32's improvements**, each its own commit, then P3 (rank 33).
-- **AI-21 (v342–v343), rank 32 (kept, rewritten), Path 13 P2 increment 3: 022's and 027's role memory is
-  `groupHistory`**, the old `history` map written from it and deciding on load, keyed by name (no roster ids yet).
-  `test:grouping-adopters` 221, no new port (**next free 8556**). **002's key step was not built**: it has a gap to
-  settle first (rank 32). **Next on Path 13: rank 32 item (1), roster ids as keys**, then the improvements.
-- **AI-21 (v341), rank 32 (kept, rewritten), Path 13 P2 increment 2: 002 forms groups through the engine.** The port
-  alone; its memory is a new `groupHistory` field with `pairHistory`/`pairGen` written from it. All six splitters now
-  call `Grouping`.
-- **AI-21 (v336–v340), rank 32 (kept, rewritten), Path 13 P2 increment 1: five tools split through the engine.** 007,
-  087, 021, 027 and 022 call `Grouping` (one commit and `CACHE_VERSION` each, behaviour unchanged; 022 with keep-apart
-  pairs takes 002's repair, the measured claim). New browser suite `test:grouping-adopters` (port 8555, **next free
-  8556**). 002 followed in v341, above.
-- **AI-21 (v335), rank 31 DELETED (a gap): Path 13 P1 is built.** `_shared/grouping.js` (`Grouping`: `plan`, `formGroups`,
-  `rotateRoles`, `coverRoles`, the id-keyed memory and its mirror of the old fields) and `Roster.idsFor`; no page loads it.
-  New pure suites `test:grouping` and `test:grouping-parity`; no new port.
-- **AI-20 (v334), ranks 25 and 26 DELETED (gaps): Path 11 P6 is whole, and Path 11 with it.** Increment 3: a published
-  copy can show a Sub Plan tab (behind 035's third Settings → Publishing box, off: data and markup unchanged; ticked,
-  only the markup moves), with who is on Planning each mod, a box per mod, "Copy the plan" as text and one printed page.
-  P5 increment 2 is closed (Devon, "No"). `test:schedule-publish` 104, `test:check-publisher` 88; no new port (**next
-  free 8555**). **Path 11 has no buildable row left**: only Devon's open P3, P4 and P6 questions, on their defaults.
-- **AI-20 (v333), rank 26 (kept, cut to 1, rewritten), Path 11 P6 increment 2 of 3: a published copy can show
-  directions.** Behind 035's second Settings → Publishing box (off: a published file's data and markup are unchanged).
-  A Directions tab routes room to room on the published geometry (door cells, steps and staircase pairs added only
-  when ticked), step-free when an elevator or ramp is marked. New pure `test:schedule-directions` (42, costs held to
-  `sv-graph.js`); `test:schedule-publish` 78, `test:check-publisher` 84; no new port (**next free 8555**). Left: sub plan.
-- **AI-20 (v332), rank 26 (kept, 2+, rewritten), Path 11 P6 designed and increment 1 of 3 built: a published copy can open
-  a newer schedule file.** Behind 035's new Settings → Publishing box (off: a published file shows what it did, the new
-  pieces in it hidden). Reader `brReadSchedule()`/`brCheckSchedule()` refuses a format above `BR_READS_FORMAT`, which
-  `check:publisher` holds to the contract's `FORMAT`; baseline regenerated for the dormant bytes only; 034 untouched.
-  `test:schedule-publish` 53, `test:check-publisher` 81; no new port (**next free 8555**). Left: directions, sub plan.
-- **AI-20 (v331), rank 25 (kept, cut to ½, rewritten), Path 11 P5 increment 3 of 4: 035's suggestions.** New pure
-  `sv-suggest.js` (`suggestFor()`: swaps of a group's own slots, the teacher's other room or a teacherless room, in two
-  stages, the second through a path cache; never a move that gives a group to another teacher) and the banner's "Fix…"
-  list with "Try in What-If", which writes the change as the lab's overrides. New pure suite `test:schedule-suggest`;
-  `smoke-checks.mjs` 66 → 82; no new port (**next free 8555**). Only increment 2 was left; Devon answered "No" (v334's entry).
-- **AI-20 (v330), rank 25 (kept, 2+, rewritten), Path 11 P5 increment 4 of 4: 035's printed checks report (findings
-  and the teacher day grid), printed congestion report and "Compare with a Project File…"** (new view `sv-reports.js`;
-  pure `checksReport()`, `congestionReport()`, `compareProject()`). New pure suite `test:schedule-reports`; no new port
-  (**next free 8555**). Increment 2 waited on Devon, who answered "No" (it will not be built); increment 3 shipped (v331).
-- **AI-20 (v329), rank 25 (kept, 2+, rewritten), Path 11 P5 increment 1 of 4: 035's schedule checks.** New pure
-  `sv-check.js` (fourteen kinds: two errors, six warnings, six notes; fingerprints of names, never ids; one sentence per
-  kind) and view `sv-checks-view.js`: the Schedules tab's banner is the checks banner ("1 problem on A days", Notes and
-  Accepted folds, Show, Accept with a note), red cards, bulk-editor cells marked on every keystroke, a room's Capacity,
-  the what-if lab's checks diff, and Publish warns and goes on. One new key, `stviz_checks` (accepted findings), in the
-  registry row and the project file. Suites `test:schedule-check` (84) and `-smoke` (37, port 8554; **next free 8555**).
-- **AI-20 (v328), rank 24 (DELETED: Path 11 P4 is whole; a gap, ranks not renumbered).** 035's "Lockdown Maps" (one page
-  per floor: the plan with each room's number large, the building's note from Settings → Safety printing and each room's
-  own `lockdownNote` from its panel, as typed, or blank lines; no shelter mark of its own) and "Door Signs" (per teacher or
-  all, two to a page through `PrintKit.renderCards`: room, teacher, subject, each mod's groups) through the print kit;
-  pure `lockdownPages()`/`doorSigns()` in `sv-model.js`. Also **fixed: `groupId()` could hand out a duplicate id**
-  (clock + 4 random characters; `model.test.mjs` failed ~1 run in 15): `freshId()` adds a per-page count and checks ids
-  in use, and floor, tile-group, bulk-editor and recovery-point ids go the same way. New pure suite
-  `test:schedule-visualizer-safety-sheets`; no new port, **next free still 8554**. Path 11 left: P5 (rank 25), P6 (rank 26).
-- **AI-20 (v327), rank 24 (kept, rewritten, now 1), Path 11 P4 designed and increment 1 built: evacuation cards.** One
-  card per room on every floor through the print kit (`sv-safety.js`, pure `evacuationCards()`/`exitDoors()` in
-  `sv-routes.js`): first and second way out (to different doors), the step-free way out (no stairs, no elevator), the
-  school's exit names and assembly points, and Settings → Safety printing's plan for a room with no step-free way out
-  (blank: write-in lines). It replaces the jsPDF door cards. **Found: since v325 `#sf-print-sheet` sat inside an
-  unclosed hidden `<button>`, so the step-free report and route sheets printed blank (the preview looked right);
-  fixed, and `smoke-step-free.mjs` now holds it.** Suite `test:schedule-visualizer-evac-cards` (29, pure); no new port,
-  **next free still 8554**. Left of P4: lockdown maps and door-sign sets (rank 24); four P4 questions for Devon.
-- **AI-20 (v325–v326), rank 23 (DELETED: Path 11 P3 is whole; a gap, ranks not renumbered).** A staircase pair can be
-  an elevator (maybe out of service) or a ramp, a hallway tile a step and a door a stepped one; `sv-graph.js` builds a
-  step-free graph (none of those, an elevator costs Settings' "Elevator wait") and an evacuation graph (no elevators,
-  used by the door cards). 035 has a "Step-free routes" switch, a "Step-free Report" and, for a group marked "Needs
-  step-free routes", turn-by-turn "Step-free Route Sheets", both through the print kit (`sv-access.js`). Suites
-  `test:schedule-visualizer-step-free` (76) and `-step-free-ui` (65, port 8553). **Next free suite port 8554.** Path 11's
-  next rows: P4 (rank 24, undesigned), P5 (rank 25, designed), P6 (rank 26). Five P3 questions for Devon stay open.
-- **AI-20 (v324), rank 22 (DELETED: Path 11 P2 is whole; a gap, ranks not renumbered), increments 10–11 and the fold.**
-  035's blueprint editor and door cards are `schedule-visualizer/sv-editor.js`, its Schedules tab `sv-schedules-tab.js`
-  and its what-if lab and room search `sv-whatif.js`, all verbatim views copied onto `window`; the page is **278,920
-  bytes** (from 974,675 when P2 began), under the 300 KB line. `Tools/schedule/` is folded into
-  `Tools/schedule-visualizer/` (fonts, the publish suite, P1's contract, ledger and baseline), with a new README. New
-  `test:schedule-visualizer-editor` (port 8552). **Path 11's next rows are P3 (rank 23) and P4 (rank 24), both
-  undesigned; P5 (rank 25) is designed. The next free suite port is 8553.** (P3 has since shipped whole, v325–v326.)
-- **AI-20 (v323), rank 22 (kept, 2+), Path 11 P2 increments 7–9 of 11.** 035's Schedule Browser and its publisher are
-  `schedule-visualizer/sv-browser.js` and its Visualize tab (canvas, controls, congestion dock, export, playback bar) is
-  `sv-viz.js`, both moved verbatim with their exports copied onto `window`; the page is 522,868 bytes (from 722,664).
-  `check:publisher` follows the page's module imports, with its output unchanged and the publish baseline matching with no
-  `--update`; `check:precache` follows module imports site-wide; the offline copy ships `sv-browser.js` unbundled so its
-  Publish is source text (`offline:verify` checks it). **Next: P2 increment 10, `sv-editor.js` (the blueprint editor and
-  the door cards) with a new `smoke-editor.mjs`. The next free suite port is still 8552.**
-- **AI-20 (v322), rank 22 (kept, 2+), Path 11 P2 increments 5–6 of 11.** 035's congestion arithmetic (congestion and
-  hotspot data, travel and delay times, the what-if lab's metrics and diff) is `schedule-visualizer/sv-congestion.js`,
-  and its playback renderer (one animated frame, the collision simulation, the staircase portal effects) is
-  `sv-playback.js`; the page is 722,664 bytes (from 771,651). `test:schedule-visualizer-congestion` and `-playback` hold
-  them to answers the v321 page wrote, the renderer by every call it makes on a recording 2D context. **Next: P2
-  increment 7, `sv-browser.js` and `check:publisher`'s `sources`. No new port; the next free suite port is still 8552.**
-- **AI-20 (v321), rank 22 (kept, 2+), Path 11 P2 increments 2–4 of 11.** 035's model, pathfinding engine and routes are
-  `schedule-visualizer/sv-model.js`, `sv-graph.js` and `sv-routes.js`, reached through a `BRIDGE` section of wrappers
-  with the old names; the page is 771,651 bytes (from 817,015). Each module is held to answers the v320 page wrote
-  (`test:schedule-visualizer-model`, `-graph`, `-routes`), and `test:schedule-visualizer-bridge` fails if a top-level
-  statement reaches a wrapper at parse time or a module is missing from `PRECACHE_URLS`. **Next: P2 increment 5,
-  `sv-congestion.js`. No new port; the next free suite port is still 8552.**
-- **AI-20 (v320), rank 22 (kept, 2+), Path 11 P2 increment 1 of 11.** 035's first `<style>` block is now
-  `Tools/schedule-visualizer/sv.css`, verbatim; the page is 817,015 bytes (from 974,675). New pure-Node `npm run
-  test:schedule-visualizer-size` holds it to `size-ledger.json` (lower the line when the page shrinks). **Next: P2
-  increment 2, `sv-model.js`. No new port; the next free suite port is still 8552.**
-- **AI-20 (v319), rank 21 (DELETED: Path 11 P1 is whole; a gap, ranks not renumbered), P1 increment 2.** 035 (`TOOL_VERSION`
-  v62) publishes `format: 1` and `tool`, dates a file by the local calendar, and writes every `<` in the data `\u003c`;
-  `check:publisher` fails DATA if the escape, the format or a key goes missing. `test:schedule-publish` now also covers
-  every published piece from `file://`, reads `fixture-published-format0.json` (Northwind as v61 published it), publishes
-  a `</script><b>` school and a 23:30 Los Angeles publish, and breaks 035 itself with `page.route()`. **Path 11's next row
-  is P2 (rank 22). No new suite, so the next free suite port is still 8552.**
-- **AI-20 (no `CACHE_VERSION`), ranks 5 and 21.** Rank 5 DELETED (a gap): 035's four-palette theme is the documented
-  exception (`CLAUDE.md`; `test:theme`'s `OWN_THEME`). Rank 21 kept, now ½: Path 11 P1 increment 1, `npm run
-  check:publisher` (CI), the data contract, the 034 ledger, `test:check-publisher`, `test:schedule-publish` (port 8551)
-  with a committed baseline. (Increment 2, the entry above, finished P1.)
-- **AI-18 (v318), rank 15 (DELETED: Path 9 P4 is whole, and with it Path 9; a gap, ranks not renumbered): pasted-table
-  import in 032.** "Paste a Date Table…" reads a district PDF's date table through the new pure `readTable()` in
-  `scv-ics.js` (tabs, runs of spaces, bars; date first or last; ranges; a yearless date put in the school year; a line it
-  cannot read listed with its number and why, never guessed) and previews and adds it through `planIcsImport()`, with
-  Undo. New `npm run test:school-calendar-table`, `npm run test:school-calendar-table-page` (port 8550). **Next free
-  suite port: 8551.**
-- **AI-18 (v317), rank 15 (kept, rewritten, now ¼), Path 9 P4: `.ics` export and import, and the wall calendar.** 032's
-  `.ics` goes through the new pure `scv-ics.js` (runs of days, grading periods, optional paced lessons; an import shown
-  before it is stored that adds and never overwrites, with Undo) and prints a one-page landscape wall calendar through the
-  print kit. New `npm run test:school-calendar-ics`, `npm run test:school-calendar-ics-wall` (port 8549).
-- **AI-18 (v316), rank 14 (DELETED: Path 9 P3 is whole; a gap, ranks not renumbered), increment 3: 044 and 045 read the
-  school-year spine.** Both name the day out, its grading deadline and each course's paced lesson through new
-  `SchoolDay.lessonsOn()`/`gradingDeadline()`; 044 fills the title from a lone lesson. New `npm run test:school-day-sub-plans`
-  (port 8548).
-- **AI-18 (v315), rank 14 (kept, rewritten, now ½), Path 9 P3 increment 2: 001 and 036 read the school-year spine.** 001
-  names each trip's period at display time (history, printed log, today's log, export detail) and its long-range report
-  groups by period; 036's need tab names today's quarter and its school days left and marks it open. 037 counted done
-  (nothing to fill). New `npm run test:school-day-trips-grades` (port 8547). **Left of P3: 044/045. Next free suite port: 8548.**
-- **AI-18 (v314), rank 14 (kept, rewritten, now 1), Path 9 P3 increment 1: 004 and 010 read the school-year spine.** 004's
-  Countdown card has "Rest of this period" while 032 has a calendar on the device; 010's strip, Bell Schedule and Today
-  panels follow 032's schedule for today, its own rows the fallback and a same-named row lending its roster. Both read
-  through `SchoolDay` only (`typeLabel()` and `describe()` are new) and write nothing of 032's. New `npm run
-  test:school-day-consumers` (port 8546). **Left of P3: 001, 036/037, 044/045. Next free suite port: 8547.**
-- **AI-18 (v313), rank 13 (DELETED: Path 9 P2 is whole; a gap, ranks not renumbered): unit bands for every course.**
-  032's month grid draws each other course's units as a lane of thin bands under the shown course's (which draws as
-  before), "+N" when several units start on a day, and the day editor lists every other course's day in words. New `npm
-  run test:school-calendar-plan-bands` (port 8545). **Path 9 P3 (rank 14) and P4 (rank 15) are next. Next free suite
-  port: 8546.**
-- **AI-18 (v312), rank 13 (kept, rewritten, now ¼), Path 9 P2 increment 4: buffers, the A/B split, the new year, and the
-  printed unit table per course.** "Buffer days take a lost day" per course (off), a Buffer column, "Split into A and B…"
-  (previewed, Undo), "Start New Year" through `carryForward()`, and "Unit pacing calendar" prints a table per course with
-  Short. New `npm run test:school-calendar-plan-buffers` (port 8544). **Left then: bands for every course (built in v313).**
-- **AI-18 (v311), rank 13 (kept, rewritten), Path 9 P2 increment 3: the baseline and "behind".** Each course with
-  something planned has a line in the Courses card: on the plan, or N class days behind or ahead of it, with the lesson,
-  its two dates and the causes (lost days, bumps, lessons added, open days used); "Make this the plan" re-bases it, with
-  Undo. `scv-plan.js` has `setBaseline`, `slip` and `describeSlip`. New `npm run test:school-calendar-plan-behind` (port
-  8543). **Left: increment 4 and two page pieces (rank 13). Next free suite port: 8544.**
-- **AI-18 (v310), rank 13 (kept, rewritten), Path 9 P2 increment 2: typed units, pins, "Count for pacing", the
-  dated-unit conversion.** A course with no lessons is planned in units (class days typed, order, remove); any unit can be
-  pinned to a start date, with open days or a shortened unit before it said in the card; "Let these flow…" clears the
-  pins after the first, previewed; each school day type has "Count for pacing" and a course can override it; the dated
-  Units card is shown only while it holds units and has "Turn into a course…" (previewed, overlap refused). New `npm run
-  test:school-calendar-plan-units` (port 8542). **Left: increments 3–4 (rank 13). Next free suite port: 8543.**
-- **AI-18 (v309), rank 13 (kept, rewritten), Path 9 P2 increment 1, the page half: increment 1 is built.** 032 loads
-  `scv-plan.js`: its old lesson sequence becomes "Course 1" on load (saved only if no date moves), every save goes
-  through one commit that stamps the dates and, when lessons move, shows a notice bar with Undo (one step, the old bytes);
-  stale stamped dates on load wait for "Keep these dates". A Courses card (tabs, name, meets A/B/all, the unit table,
-  lost days, bumps) replaces Lesson Pacing; the drawer has "This lesson needs another day…" and "This class didn't
-  meet…". An empty plan is never written, so a calendar with no pacing keeps its bytes. `npm run
-  test:school-calendar-plan-page` (port 8541). **Left: increments 2–4 (rank 13). Next free suite port: 8542.**
-- **AI-18 (no `CACHE_VERSION`), rank 13 (kept, rewritten), Path 9 P2 increment 1, the module half:**
-  `Tools/school-calendar/scv-plan.js`, pure, imported by no page yet: the `cal.plan` record, `absorbLegacy()` (held to
-  `placeLessons()` on 500 seeded cases), class days per course (skip, lost dates, A/B), the placer, `stamp`,
-  `diffPlacement`/`describeDiff`. `npm run test:school-calendar-plan` (pure Node, two zones, 16 breaks). Devon's P9-1 to
-  P9-10 recorded as settled. **Left of increment 1: 032's page (rank 13).**
-- **AI-18 (v308), rank 12 (DELETED: Path 9 P1 is built; a gap, ranks not renumbered): 035 reads 032's bell schedules.**
-  035's Settings has "From the School Calendar" under its bell editor: pick 032's schedule for A and B ("Same as A Day"
-  allowed), "Use these times" fills the A/B rows by position (asks before replacing typed times), Save Settings keeps
-  them. `SchoolDay.forScheduleVisualizer()`; a seeded 032 in the a11y sweep. `npm run test:layout-bell-from-calendar`
-  (port 8540). **Left of P1: only defaults B1–B5, kept in the P1 bullet. Next free suite port: 8541.**
-- **AI-18 (v307), rank 12 (kept, rewritten), Path 9 P1 increment 1: bell schedules per day type in 032.** A Bell Schedules
-  card (named periods; which schedule the ordinary day, an A day, a B day and each day type uses; the day editor shows a
-  date's times; "Import from the Schedule Visualizer" adds 035's times). One optional field, `cal.bell`, no `__v` bump.
-  `_shared/school-day.js` (`SchoolDay`: `dayOf`, `periodAt`, `today`, `gradingPeriodOf`, `daysRemaining`, ...), read by no
-  other tool yet. `npm run test:school-day`, `test:school-calendar-bell` (port 8539). **Left of P1: ¼ (rank 12). Next free suite port: 8540.**
-- **AI-15 (v306), rank 3 (DELETED: Path 3 P5 is built; a gap, ranks not renumbered), increment 2: the flag adopters.**
-  002 and 022 leave a student marked absent today in 006 out of the groups they make (their own absent box shows it
-  checked and locked, a note says who and where to change it; never written into the config or a share link); 010's
-  Quick Call lists both flags, picks neither and names them in a note hidden on the projector. All read through
-  `StudentFlags.byName()` and `Roster.idIndex()`/`idFor()` (now exported). `npm run test:flag-adopters` (port 8538).
-  **Left of P5: only Devon's three questions, kept in the Path 3 P5 bullet. Next free suite port: 8539.**
-- **AI-15 (v305), rank 3 (kept, rewritten), Path 3 P5 increment 1: flags on the shared student record.** Two fixed
-  flags, *absent today* (a date, true only that day) and *do not cold call*, in `crh_flags_v1` by student id
-  (`_shared/student-flags.js`, `StudentFlags`). 006 has Absent / No call toggles on every row and "Clear all flags";
-  007 leaves an absent student off the board and keeps a no-call student on it, dimmed, where no pick lands. Never in a
-  link or export; the rollover deletes the key. `npm run test:student-flags`, `test:student-flags-smoke` (port 8537).
-  **Photos: closed (Devon, 2026-10-21). No accommodation note yet (a question for Devon). Next free suite port: 8538.**
-- **AI-14 (v300), rank 28 (kept, rewritten), Path 12 P2 increment 5: named sets and a Tag filter on 030.** A teacher ticks questions (from
-  the bank or a built-in set) and adds them to a named set, the teacher's own ordered list saved with the bank, a question
-  in it more than once if wanted; "Questions from" lists each set after the bank, where it is reordered (Up, Down), trimmed,
-  renamed, deleted, printed and pulled into a board whole. Storage: `sets` in the bank's envelope at `schema: 2` only while
-  a set exists, so a v265–v299 page reads but cannot overwrite them; the bank file carries them and an import adds beside,
-  never over (`_shared/question-bank.js`, NAMED SETS). `npm run test:question-bank-sets` (35 breaks caught) and
-  `test:named-sets` (port 8533), which holds the list's new **Tag** filter too. **Left of rank 28: 018 and 019 station
-  questions.** Next free port: 8534.
-- **AI-16 (v298), rank 2 (DELETED: Path 4 P5 is whole): per-tool restore as a shared card.** `_shared/restore-kit.js`
-  (`RestoreKit`) holds 009's envelope reader, record diff and the three modes, moved out of its inline script unchanged;
-  009 calls it, and 001 and 008 host `RestoreKit.mount()`: a backup file cut to the tool's own registry keys, the same
-  preview, Restore, reload. It writes no other tool's key and deletes nothing; a locked file fetches
-  `_shared/backup-crypto.js` (moved from `Tools/backup-restore/br-crypto.js`) only then. `npm run test:tool-restore`
-  (port 8531) and `test:restore-kit`. **Not tried on a phone or in Firefox.** The rank is left as a gap. Next free port: 8532.
-- **AI-14 (v289; the code commit says v288, which AI-31-025 took), rank 30 (DELETED: Path 12 P4 is whole), Path 12 P4: a question in the bank can carry a picture, and it travels in the bank file.**
-  First check: the 030 half had shipped in #302 (a clue's picture is `idb:<id>` in the media store, moved on load, in
-  Export JSON as a data URL and stored again on import), so none of that was rebuilt. What was left and is built: `media.image` on a
-  question (the same two values a clue holds, in the same store and namespace, so a picture on a clue and on a question is one
-  record); a picture picker on 030's add card and edit form; the picture on a pulled clue; "Save bank file" with each picture as a
-  data URL and an import that stores them first (same bytes, same id) and names by row any picture it leaves out (not one of four
-  types, damaged, over 4,000,000 characters, another browser's reference); a board import that names what it left out too. An SVG
-  or a `data:text/html` URL is never a picture (`QuestionBank.imageOf()` is the one reader). 040, 020 and the printed sheets show
-  words only, and say so. **Not built: a sound on a bank question; a picture on the quiz-bowl and final-round overlay or the bank's
-  printed sheets; a bank picture kept inline (no IndexedDB) is not moved later.** Seven choices that are Devon's are questions 59 to
-  65 in the Path 12 section. Left of Path 12: rank 28's leftovers and rank 92. Next free suite port: 8526.
-- **AI-14 (v286; the code commit says v285, which AI-31-015 took), rank 29 (DELETED: Path 12 P3 is whole), Path 12 P3 increment 3: spin-the-wheel on 030.** A board has
-  a **Spin the wheel** tick box, off until ticked. On, a spin (the button, or the S key) chooses the clue: one wedge for
-  every clue not yet played, **each as likely as any other**, plus one each for two extra wedges the teacher may tick
-  (**Lose a turn**, **Double points**: the next clue played is worth twice its points; a Daily Double keeps its wager).
-  **The spin is not chance at play time:** it is worked out from a seed stored on the board and the spin's number, saved
-  before the picture turns, so the same board and seed give the same spins and a reload does not re-roll; Reset game
-  draws a new seed. The picture does not turn under reduced motion and is hidden from a screen reader; the result is
-  one sentence in a status line and the focus on the chosen clue (Enter opens it), marked by a dashed line and an arrow.
-  One field on the board (`wheel`), absent until ticked, cleaned on import. Every older mode is unchanged (32 + 23 pins,
-  and 65 new pins of the final wager round and quiz-bowl taken before the page was edited). Rules in
-  `Tools/review-game-board/rgb-play.js`. `npm run test:play-wheel` (port 8522) and `test:play-modes-core`.
-  **Left of Path 12: P2's 018 and 019 station questions, 062's map questions, named sets and a tag filter on 030 (rank
-  28); P4 media (rank 30). (Since then: P4 shipped in v289, 062's map questions were closed, and named sets and the tag filter shipped in v300.) Fourteen more choices that are Devon's are questions 45 to 58 in the Path 12 section. No
-  class has spun it. The rank is left as a gap, as the other rows deleted in this sprint were. Next free suite port: 8523.**
-- **AI-14 (v284; the code commit says v283, which AI-31-016 took), rank 29 (kept, rewritten), Path 12 P3 increment 2: the final wager round and quiz-bowl on 030.**
-  Two more tick boxes in a board's options, both off until ticked, each with its rule in words under it. **Final
-  wager round:** one last question (typed on the board, or copied from the bank or a built-in set); the teacher types
-  each team's wager into a hidden box (0 to its score; **up to 100 for a team at 0 or below**), the question shows only
-  when every wager is in, then the answer, then each team is marked right or wrong (keys 1 to 9, Enter); right adds
-  the wager, wrong takes it off; the result names the winner or the tie; **Take the final round back** restores every
-  score. **Quiz-bowl round:** toss-ups from the chosen source in its order, none twice; the teacher records the buzz
-  (click or the team's number), then R or W; **a wrong answer locks that team out of the question and costs nothing
-  unless the teacher sets a cost**; a right one scores the toss-up and gives that team alone a bonus question; an
-  end-of-round summary; **Undo the last toss-up**. Both play on a new overlay (a dialog), store one field each on the
-  board (`final`, `quizBowl`; question ids, not words, in the quiz-bowl log) and nothing in the bank, and are cleaned on
-  import. A board that never ticked either box is unchanged (the 32 old-game pins, and 23 new pins of
-  every-team-answers taken before the page was edited). Rules in `Tools/review-game-board/rgb-play.js`;
-  `_shared/question-bank.js` is unchanged. `npm run test:play-rounds` (port 8519) and `test:play-modes-core`.
-  **Left of P3: the wheel. Fourteen more choices that are Devon's are questions 31 to 44 in the Path 12 section. No
-  class has played either round. Next free suite port: 8521 (8520 is 016's).**
-- **AI-14 (v281), rank 29 (kept, rewritten), Path 12 P3 increment 1: every-team-answers and the printed quiz and
-  study guide on 030.** A board has an **Every team answers** tick box, off until ticked: on, showing a clue's answer
-  shows a marking panel (Right, Wrong or No answer for each team; keys 1 to 9 and Enter) where the one-team award
-  buttons were, and Score this clue gives the points to every team marked right. The toolbar and the bank tab each
-  have **a practice quiz with its answer key** (the key starts a new page) and **a study guide** (answers beside the
-  questions). A board that never ticked the box is byte for byte what it was (32 pins from the v279 page). The code is
-  `Tools/review-game-board/rgb-play.js`; `_shared/question-bank.js` is unchanged. `npm run test:play-modes` (port 8515)
-  and `test:play-modes-core`. **030 does not print through the print kit, whatever a prompt says: the new sheets use
-  the page's own `#printArea`. Thirteen choices that are Devon's are questions 18 to 30 in the Path 12 section. Left
-  of P3: quiz-bowl, the wheel, the final wager. Next free suite port: 8518 (8516 and 8517 were handed to AI-31's workers).**
-- **AI-14 (v278), rank 28 (kept, rewritten), Path 12 P2 increment 4: 020's academic-tournament mode.** A bracket
-  of any of the five types has an **Academic tournament** card, off until ticked. On, every match that is ready gets a
-  Questions button: the teacher picks a source (their bank or a built-in set, the module's chooser, with a Unit filter)
-  and how many a match gets; a match shows its questions with each answer hidden until revealed, the teacher marks who
-  got each, and when every one is marked the two totals go into the match's score boxes and the page decides it as it
-  always has from two scores (a tie decides nothing: a tiebreak question, or a pick by name). **Print match sheets**
-  prints the ready matches for a reader, the answers on a page of their own. Stored on the bracket, as one `academic`
-  field (a seed, the settings, question ids and marks); **nothing in the bank, which 020 reads with `peek()` and never
-  writes**; a bracket that never had it on is byte for byte what it was (39 pins from the v276 page). The code is
-  `Tools/bracket-tournament-generator/bt-academic.js`; `_shared/question-bank.js` is unchanged. `npm run
-  test:bracket-academic` (port 8512) and `test:bracket-academic-core`. **Nine choices that are Devon's are questions 9
-  to 17 in the Path 12 section. Left of P2: 018 and 019 station questions, 062's map questions, named sets (named sets shipped in v300). Next free
-  suite port: 8515 (8513 and 8514 were handed to AI-31's workers).**
-- **AI-14 (v276), rank 28 (kept, rewritten), Path 12 P2 increment 3: 030's editor.** The bank tab shows and edits
-  everything a question holds: the add card has a choices editor (add, remove, move up and down, mark the right one,
-  which is the choice whose text is the answer; no new field) and tags as tokens (typed, or picked from the bank's
-  own); a row shows its tags and choices; **Edit** opens a question where it stands in the list (Save keeps its id,
-  place, first date and every field the form does not show; Escape and Cancel store nothing; a seed set's row has no
-  Edit); and a bank file, workbook or CSV is **shown before it is stored** (new, changes and which fields, already
-  there, left out and why; Add stores, by `importQuestions()`). The code is `Tools/review-game-board/rgb-bank-editor.js`;
-  `_shared/question-bank.js` is unchanged. `npm run test:bank-editor` (port 8509) and `test:bank-editor-core`.
-  **Not built: named sets, which have no storage design (question 8 in the Path 12 section), and a tag filter on the
-  list.** (Both were built in v300.) Left of P2: 018, 019, 020, 062's map questions. Next free suite port: 8512 (8510 and 8511 were handed to
-  AI-31's workers).**
-- **AI-14 (v271), rank 28 (kept, rewritten), Path 12 P2 increment 2: 040's flashcards and the question bank, both
-  ways.** 040 has a Question bank card: "Questions from" (the bank and the seed sets, the list 030's chooser shows)
-  adds ticked questions to the word list as cards, question on the front and answer on the back, and a question
-  that cannot be a card (no answer, or more than one line) is shown with the reason and cannot be ticked; "Send this
-  list to the question bank" shows what it would add and change and stores only on Add. 040 reads the bank with the
-  new `QuestionBank.peek()`, which writes nothing, so opening the page stores nothing. The mapping is
-  `Tools/vocab-flashcard-generator/vfg-bank.js`. `npm run test:vocab-bank` (port 8506) and `test:vocab-bank-logic`.
-  **Left of P2: 018, 019, 020, 030's editor. Seven questions for Devon are in the Path 12 section. Next free suite
-  port: 8509 (8507 and 8508 were handed to AI-31's workers).**
-- **AI-14 (v269), rank 1, Path 6 P4 is finished and its row is deleted (a gap; ranks not renumbered): 053 sends a
-  teacher's own trivia to 030's question bank by link.** The entry is in `_shared/handoffs.js` (a row in 053's
-  share sheet); 030 reads `?questions=` through `QuestionBank.fromLink()`, which takes eight fields as bounded text
-  and never an id, shows what arrived, and stores it only on "Add to my bank" (the same link twice adds nothing).
-  030 takes link input now: its dynamic markup sinks went from 10 to 3, all escaped (`check:inline-sinks` holds it),
-  and a clue's points and a team's score are escaped too. `npm run test:received-questions` (port 8503).
-  **A link past 7,500 characters is refused in the sheet (about fifty short questions fit); a longer list has no
-  route yet (rank 92). The bound is not measured against the live host. The next free suite port is 8506** (075's
-  `smoke-wallet-cards.mjs` moved from 8501, which 074 had, to 8505).
-- **AI-14 (v267), rank 28, Path 12 P2, increment 1 of a 2+ row (the row stays, rewritten): 053's and 062's
-  built-in questions are read-only seed sets in the question bank, and 030 plays from them.** Each tool's list
-  moved, word for word, from its inline script to a data file (`Tools/cultural-trivia-card-generator/ctcg-bank.js`,
-  `Tools/geography-bee-quiz-generator/gbq-bank.js`) that the tool reads its list from and that registers the set
-  with `QuestionBank.registerSet()` on a page that has the module (030). A set is in memory only: nothing is
-  stored until a teacher presses "Copy to my bank", and the copy is a new question of theirs (`copiedFrom` names
-  the seed). 030's bank tab has a "Questions from" chooser; a set is filtered and pulled into a board as the bank
-  is. 062's thirty map questions are not published (no reader can draw the map). `npm run test:seed-sets` (port
-  8502) and more of `test:question-bank`. **Left of P2: 018, 019, 020, and 030's editor (choices, tags, edit
-  in place); 040 shipped at v271 (above). Rank 1 (053 → 030) shipped next, at v269 (above).**
-- **AI-14 (v265), old rank 27, Path 12 P1 is finished and its row is deleted (a gap; ranks not renumbered):
-  `_shared/question-bank.js` (`QuestionBank`) is the site's one question bank, and 030 is its one adopter.**
-  The bank is the key `gvb-question-bank` (a Store envelope, version 1); 030's old key
-  `gvb-review-board-bank:entries` is read on every load and never written or removed, so an older page and a
-  backup from before v265 both still work. 030's bank tab reads and writes through the module and has a
-  "Share the bank" card (a JSON bank file, a workbook, an import that only ever adds). `npm run
-  test:question-bank` (pure Node) and `smoke-bank-file.mjs` (port 8498, in `test:review-board`). **Rank 1 (053 →
-  030) shipped at v269. Left of Path 12: P2 to P4 (ranks 28 to 30). Nothing was opened in Excel or Sheets.**
-- **AI-13 (v263), Path 7 P5 is finished, Path 7 with it, and rank 7 is deleted (a gap; ranks not renumbered):
-  all thirteen print-kit pages have the print preview.** 070, 023, 040, 018, 017 and 016 got it; on the three
-  that keep several sheets in one `#printArea` the Preview button presses its Print button with `previewFor` set,
-  and `PrintKit.preview()`'s new `onClose` puts the at-rest sheet back. 043's Ctrl+P prints the slips now (it
-  printed whichever sheet was built last). `npm run test:preview-adopters` covers all twelve after 074. **Nothing
-  of Path 7 was ever printed on paper: the list is in Path 7's Verification. The next free suite port is 8498.**
-- **AI-13 (v259), rank 7, Path 7 P5 increment 2: seven pages have the print preview now** (074, and 076, 077,
-  051, 042, 064 and 043), and the several-buttons question is settled: a Preview button in front of each Print
-  button (043 is the example; Path 7 P5, "Point 4"). The kit did not change. `npm run test:preview-adopters`
-  (port 8495). Superseded by v263 above.
-- **AI-13 (v258), rank 7, Path 7 P5 increment 1: the kit has a print preview, `PrintKit.preview()`, and 074
-  is its one adopter** ("Preview pages": the sheet cut into the pages it will print on, in a dialog, no print
-  dialog). The breaks are the browser's own, in an iframe; the count equals Chromium's PDF. `npm run
-  test:safety-label-preview` (port 8492). Finished at v263, above.
-- **AI-13 (v255), Path 7 P4 is finished and rank 6 is deleted (a gap; ranks not renumbered): every page that
-  saves a CSV or a workbook does it through `ExportKit`.** v249: 003, 008, 018, 033, 068 and 075's CSV. v252: 001
-  and 006 (CSV and workbook), 030 and 036 (workbook) and 060's CSV. v255: 035's `groups-template.csv`, the last.
-  `npm run test:csv-adopters` (port 8486), `npm run test:sheet-adopters` (port 8489). Also v255: 063's old bank
-  key is `legacy` in the registry, so `check:registry` prints no STALE. **P5, the last of Path 7, finished at v263. No
-  file was opened in a spreadsheet program.**
-- **AI-13 (v248), rank 6, Path 7 P4 increment 4: 011 makes booklets and several pages to a sheet on `ExportKit`
-  (Path 17 P4's controls, built), and 064's zip and PNG downloads are the file helpers' first adopter.** 011's
-  default output is the old page's in 120 states, to the pixel. `npm run test:image-to-pdf-impose` (port 8483).
-  **Left in rank 6: CSV and XLSX for the tools that hold a table. No booklet has been printed or folded.**
-- **AI-15 (v299 to v304), rank 4 (DELETED: Path 3 P6 is whole), the year rollover.** 009's "Start a new school year": close
-  the other tabs (`sw.js` `CLIENTS`), save the year archive with every database but the map cache, read it back from disk
-  and check it, review, then clear: `BrRollover.RULES` empties the students and keeps the setup, journalled in
-  `br_rollover_v1`, finishable from the archive if interrupted. 006's button opens that card (v303); the landing page's
-  **Clear all rosters** (v304) is a confirmation screen that leads into it, so no clear on the site skips the archive.
-  Since v304 every tool with a reduced key is opened after a rollover (`npm run test:rollover-tools`), and the registry
-  carries the `rollover:` marks and the media namespaces, held to `RULES` by `registry-shape.test.mjs`. `br-envelope.js`
-  was not extracted (no second caller; `HISTORY.md`). **No real save picker, Firefox, Safari or `file://` run; no tool
-  button pressed after a rollover.** The rank is left as a gap. Next free suite port: 8537.
-- **AI-13 (v245), rank 6, Path 7 P4 increments 1 to 3: `_shared/export.js` (`ExportKit`) is whole, 064 and 040 are
-  on it, and `_shared/duplex-print.js` is deleted.** The imposition and pagination math, `toPdf(pages, opts)` for
-  drawn pages (**not a DOM element**), `toCsv` (formula guard), `toXlsx`, `toZip`, `download`, `filename`. 064's
-  Download PDF and both tools' print pagination run on it, to the pixel. `npm run test:export` (port 8480),
-  `test:trading-card-pdf` (8481), `test:vocab-imposition` (8482). **Nothing printed, no file opened in Excel.**
-- **AI-13 (v242), old rank 6, Path 7 P3 increment 12: 016 prints through the kit, and P3 is finished and its row is
-  gone** (thirteen adopters). Three sheets as three areas of one `#printArea`: one code, the bulk grid (`{ cols }` on
-  plain paper, `{ cols, perPage }` on label stock) and the inventory. The kit changed once: `setPage()` takes two
-  margins, top and sides. One code, the plain grid and the inventory are the old page's, pixel for pixel, in 38
-  states. **Avery labels were printing a third of an inch below the die cut on the first sheet, 27 to a sheet of 30;
-  they are in place now.** `npm run test:qr-code-print` (port 8479). **Next in Path 7 is rank 6, P4. Not printed on
-  paper or on label stock.**
-- **AI-13 (v241), old rank 6, Path 7 P3 increment 11: 017 prints through the kit** (twelve adopters now), all five
-  buttons: three card sheets (`{ cols, perPage }`, as 018's), packets as kit pages and the reference table, five
-  areas inside one `#printArea`. The kit did not change. Card sizes, markup, QR codes and PDF page counts are the old
-  page's in 36 states. `npm run test:gallery-walk-print` (port 8478).
-- **AI-16 (v240), the cheap piece of Path 4 P5:** 009 now says what `rgb-audio` and `stviz-recovery` hold; their
-  registry rows had no `note`, so both showed as a bare name. Rank 2 (per-tool restore) is untouched. Open:
-  should `rgb-audio` be ticked by default? See `HISTORY.md`.
-- **AI-13 (v239), old rank 6, Path 7 P3 increment 10: 018 prints through the kit** (eleven adopters now), all six
-  buttons: five card sheets (`{ cols, perPage }`, a card a share of the width and as tall as its content) and the
-  answer key, six areas inside one `#printArea`. The kit did not change. Card sizes, markup, QR codes and PDF page
-  counts are the old page's in 40 states, **except answer sheets a page tall or taller, which no longer print a blank
-  page after each page.** `npm run test:scavenger-hunt-print` (port 8477).
-- **AI-13 (v238), old rank 6, Path 7 P3 increment 9: 064 prints through the kit** (ten adopters now): fronts and backs
-  through one `renderCards()` call (`{ cols, perPage }`, an exact-size card with the tool's own `height` and clipping).
-  The kit did not change. Card sizes, positions and markup are the old page's in 32 states; **a deck of one page of
-  cards printed three sheets and prints two now.** `npm run test:trading-card-print` (port 8476).
-- **AI-13 (v237), old rank 6, Path 7 P3 increment 8: 040 prints through the kit** (nine adopters now), both buttons:
-  every card goes through one `renderCards()` call (`{ cols, perPage }`) that draws the preview too. The kit did not
-  change. PDF pages and card sizes are the old page's in 88 states, **except the 3x5 index-card preset, which had
-  always printed a blank sheet after every page and is one sheet now.** `npm run test:vocab-print` (port 8475). **Next: 064, then 018 017 016.**
-- **AI-13 (v236), old rank 6, Path 7 P3 increment 7: 051 prints through the kit** (eight adopters now), like 074 at its
-  own label size (`{ cols: 3 }`), with its reference sheet on a second kit page. The kit did not change. PDF pages
-  and label sizes are the old page's in 24 states. **Its QR codes are drawn in whole pixels now: 4 of 120 did not
-  decode.** `npm run test:classroom-label-print` (port 8474).
-- **AI-13 (v235), old rank 6, Path 7 P3 increment 6: 074 prints through the kit** (seven adopters now) and the kit has
-  **`PrintKit.renderCards(container, items, preset, buildCard)`**: a preset name for cards that share the page (077
-  uses it now), or `{ cols }` for a grid of the tool's own height (`.pk-cards-own`, 074's labels). 074's PDF is the
-  old page's in 66 states. `npm run test:safety-label-print` (port 8473).
-- **AI-13 (v234), old rank 6, Path 7 P3 increment 5: 042 prints through the kit** (six adopters now), the first whose
-  sheet is a fixed size on purpose: `print-area.css`, `.pk-page`, `.pk-paper` and `setPage()` at 0.35 in, its own
-  sheet height kept, no `renderSet`. The kit did not change. Chromium's PDF is the old page's, pixel for pixel.
-  `npm run test:certificate-print` (port 8472). **Next: the seven card-grid tools. Not printed on paper.**
-- **AI-13 (v233), old rank 6, Path 7 P3 increment 4: 023 prints through the kit** (five adopters now), the first on
-  quarter sheets: slips are `mode: 'blank'` or `'set'` on half or quarter sheets, the reteach list is one page. The
-  kit changed twice: `.pk-quarters` holds on `#printArea`, and `.pk-paper` (white sheet, black text; 043 uses it too).
-  `npm run test:exit-ticket-print` (port 8471). **Not printed on paper; full `npm test` not run.**
-- **AI-13 (v232), old rank 6, Path 7 P3 increment 3: 043 prints through the kit** (four adopters now), the first with a
-  roster: `mode: 'set'` with the "N of M" footer on a class set of slips, the kit header on the chaperone sheet, and
-  reminder slips two to a page. The kit did not change. `npm run test:permission-slip-print` (port 8470).
-  **Next: 023, then 042. Not printed on paper.**
-- **AI-13 (v231), old rank 6, Path 7 P3 increment 2: 070 and 077 print through the kit** (three adopters now). 070 is
-  half sheets, like 076; 077 is the first on the card grids. The kit gained `renderSet`'s `cut: true` and a `4x3` card
-  preset. `npm run test:peer-feedback-print` (port 8468), `npm run test:accommodations-print` (8469). **Not printed on paper.**
-- **AI-13 (v230), old rank 6, Path 7 P3 increment 1: 076 is the print kit's first adopter.** Its print block is gone:
-  `print-area.css` + `PrintKit.renderSet` (blank mode, half sheets). Same page counts in Chromium's PDF as before
-  (`npm run test:sub-note-print`, port 8467). **The recipe for the next adopters is in Path 7's P3. Not printed on paper.**
-- **AI-13 (v229), old rank 6, Path 7 P2 increment 6: P2 is finished and its row is gone.** `_shared/print-area.css`
-  takes everything but `#printArea` out of the flow in print, so its pages (20 then, 23 now) print no blank sheets after the sheet
-  (`npm run test:print-tail`, 376 assertions). Audit TAIL is 0; what it still lists (015, 042, 046, 064) is
-  fixed-size on purpose. **Next in Path 7 is rank 6, P3 (adoption). Nothing was printed on paper.**
-- **AI-13 (v228), old rank 6, Path 7 P2 increment 5:** the 15 tools that hid their editor with `visibility` in their own
-  print block no longer print blank sheets after the sheet (`npm run test:print-tail`, Chromium's PDF per button).
-- **AI-13 (v227), old rank 6, Path 7 P2 increment 4:** 015's map sheet runs on to a second page instead of cutting a
-  long timeline off; 035's other four tabs print as documents; 004 009 010 print light from dark. New audit kind
-  TAIL.
-- **AI-13 (v226), old rank 6, Path 7 P2 increment 3:** 035's Blueprint tab prints the active floor's plan on one page
-  (`#bp-print-sheet`, suite `smoke-print.mjs`, port 8465) and none of the editor. 040 no longer prints a blank
-  sheet; seeds or prep reach every print button on 013 014 015 024 033 040 084.
-- **AI-13 (v225), old rank 6, Path 7 P2 increment 2:** the audit now reaches every sheet (not measured 18 → 0) through
-  18 new seeds, "print" tabs and `print-audit-prep.mjs`. Fixed: 061 printed blank, 023's clipped slips, 038, 051, 074.
-- **AI-13 (v224), old rank 6, Path 7 P2 increment 1:** `npm run path7:next` audits every tool in print in a browser.
-  077's clipped card, `theme.css`'s print reset and seven smaller fixes shipped.
-- **AI-10 (v223), old rank 6:** every WebRTC pairing code is drawn by `QrDraw.fit()` at 4 px per module or more,
-  and `webrtc-pair.js` writes a lossless compact code (569 → ~190 bytes). Suite `smoke-pairing-qr.mjs`, port 8463.
-  **Not scanned with a real phone, and only Chromium's SDP was seen** (parked device check 4).
-- **AI-13 (labelled v221), old rank 7, Path 7 P1:** `_shared/print-kit.css` + `print-kit.js` (`PrintKit`). **076 links it
-  since v230**; adoption (P3) finished in v242. Suites on port 8462. **Never printed on paper** (parked device check).
-- **AI-34 (v220):** no page claims a social-tag generator; precache bytes re-measured.
-- **AI-35 (v219), old rank 76:** 002, 016, 018, 038 and 044 are native on `ink-paper.css` + `a11y.js`; 007 loads
-  `a11y.js`; 010/032/046/087 link `base.css`. Every page still skipping one is a recorded exception.
-- **AI-08 (v218), old ranks 6, 7 and 81:** 014/033 load `a11y.*` once; `.share-note` and the header/back-link/card
-  rules are in `base.css`, the tint tokens in `ink-paper.css`. Rank 5 (035's theme) was Devon's call and untouched;
-  he has since made it (2026-10-03: "bless and document").
-- **AI-12 (v217):** README URL, 028's upload hint. **AI-11 (v216):** four dead trees and unused seating fonts deleted.
+**Local `main` on huginn is 23+ commits ahead of origin, unpushed, waiting on the nightly landing (v574 to v584,
+backed up on `wave/2026-11-04`).** Newest first; detail in `HISTORY.md` under each code:
+- **AI-43 (v584):** a real social card. `node Tools/board-check/make-og.mjs` writes five cards to `assets/og/` (not precached);
+  45 page heads name one; `check:social` fails a missing card.
+- **AI-51 (v583), AI-50 (v579):** rank 140 increments: 035's welcome/Help dialogs to `sv-onboarding.js`, its recovery
+  manager to `sv-recovery-ui.js`. **AI-66 (v582):** restoring the oldest of three recovery points works again.
+- **AI-65 (v581), AI-57 (v576):** the school accent leaves status-fill text alone and reads on the five `theme.css` pages
+  (`--status-ink`, `--accent-2-ink`, `--color-accent-ink`); `test:brand` sweeps 92 pages.
+- **AI-63 (v580):** the review's low batch (L1-L4, L6-L9, L13); `check:registry` holds a tool to its `writes`.
+  L5, L10, L11 and L12 were left (`HISTORY.md`, AI-63).
+- **AI-48 (v578), rank 96 deleted:** 067's reference pitch and note play-through. **AI-64 (no bump):** the
+  share-rollout suite fits a 3.5 GB cap.
+- **AI-60 (v577), AI-54 (v575), AI-40 (v574):** German separable verbs' auxiliary (review M5); a 039 set never empties
+  a 040 list (review H1); the Latin deponent perfect (`locūtus sum`, Devon's L4; rank 56 cut to small leftovers).
+- **AI-52 (no bump, docs only):** ranks 110 and 113 rewritten to what the code has not built; rank 65 deleted (every
+  tool on its list is done or decided); this header rewritten.
 
-**Last merged on origin: #328, Path 4 P5 in part (`CACHE_VERSION` v216). Rank 2 stays, cut to its last half.**
-- 009 can lock a backup with a passphrase (`backup-restore/br-crypto.js`, now `_shared/backup-crypto.js`, AES-GCM, PBKDF2 600k;
-  off by default, never on the year-end archive). The landing app bar shows "N KB saved · backed up
-  N days ago", linking to 009. Suite `smoke-encrypted.mjs`, port 8461.
-- The row's restore preview/diff had **already shipped** (`smoke-restore-diff.mjs`); the row was stale.
-- 009 had a literal NUL byte in its source, so `grep` silently printed nothing for it. Use `grep -a` on
-  any page you suspect; 009's is fixed (`'\ufffd'`, and why it cannot be `'\u0000'` is in `HISTORY.md`).
-
-**Before that, #326, which landed three sessions' work that had been committed only to huginn's local
-`main` (AI-03, AI-07, AI-09; `CACHE_VERSION` v215).** Old rank 1 (Path 21 P4, 046's shaded relief; Path 21 is
-finished), old ranks 5, 6 and 12 (the accessibility group) and old rank 8 (`check:entities` follows arrays).
-- The 14 `color-contrast` allowances are fixed in the tools and `allowlist.json` is **empty**. The sweep
-  finishes finite CSS animations before scanning, which is what made index's count 8/24/35.
-- Light `--line-strong` is `#8c897f` (3.07:1 on card-2), dark `#6e7885`; `test:theme` now asserts 3:1.
-- The sweep scans 36 pages a second time with saved state (`Tools/a11y-sweep/seeds.mjs`). It found nothing new.
-
-**Before that, #324: a new tool outside the ranked list, 088 Braille Reading Trainer (v214)**, asked for
-directly by Devon. World Language, now 8 tools. Its translator is hand-checked, not checked against liblouis.
-
-**Before that, #321** (035's trace images onto `media-db.js`, v211; Path 4 P4 is finished), **#317** (030's board art, v210), **#315** (042's seals, v209), **#313** (071's twelve starter pictures, v208: a pin on any 071 picture was lost on reload, fixed), **#311** (080's piece atlas, v207), **#308** (the landing hero, v206), **#306** (the PWA app mark, v205), **#304** (064's card photos, v204) and **#302** (030's clue images, v203).
-- `MediaDB.images({ ns, owner })` in `_shared/media-db.js` is the one copy of the shared image
-  layer (#294). A future image-bearing tool uses it and writes no new copy.
-- **The two Windows-only suite failures are fixed (AI-34 part, v213):** `.gitattributes` pins LF
-  and 067's glyph probe no longer calls Windows' music font missing. An existing Windows clone
-  needs `git rm -rq --cached .` then `git reset -q --hard` once. `HISTORY.md` has it.
-- **Path 22 is finished: P1–P14** (P6–P8 at v521–v523, P9–P10 at v524–v532, P11–P12 at v533–v535, P13 at v536 and P14 at v537, AI-32). Nothing of Devon's later asks is left; `HISTORY.md` has what each did and did not preserve.
-
-**Start here.** Path 21 is finished (046's relief was its last row, AI-03), so no row needs Blender.
-- Ranks 1 to 4 have shipped (rank 2, per-tool restore, at v298, AI-16; rank 4, the year rollover, at v304; rank 3, the
-  student flags, at v306, AI-15) and their rows are gone, and so is rank 5 (035's theme, written up as a documented
-  exception by AI-20, 2026-10-25). Start at **rank 8**.
-  A further tool that wants a restore card adds the two script tags and one `RestoreKit.mount()` line (001 and 008 are
-  the model) and a case in `smoke-tool-restore.mjs`. (Older port list, kept for the record: a new suite took port **8481** (8480 is the export kit's `smoke-export.mjs`, 8479 is 016's `smoke-print.mjs`, 8478 is 017's, 8477 is 018's, 8476 is 064's, 8475 is 040's, 8474 is 051's, 8473 is 074's, 8472 is 042's, 8471 is 023's, 8470 is 043's, 8469 is 077's `smoke-print.mjs`, 8468 is 070's, 8467 is 076's, 8466 is `smoke-print-tail.mjs`, 8465 is 035's `smoke-print.mjs`, 8464 is `audit-print.mjs`, 8459 is 046's `smoke-relief.mjs`, 8460 is 088's, 8461 is 009's
-  `smoke-encrypted.mjs`, 8462 is the print kit's `smoke-print-kit.mjs`, 8463 is `smoke-pairing-qr.mjs`).)
-- **huginn's shared checkout** (`/home/devon/projects/AI_Tools`): local `main` now contains origin's `main`
-  (AI-sync's merge) and is ahead of it by the local-only sessions above. It has not been pushed. The
-  `backup/ai-03-relief` and `backup/ai-07-ai-09-local-main` branches on origin are #326's copies of work
-  that is now on both sides.
+**Start here.** Start at **rank 8, Path 8 P1** (`_shared/remote.js`, a generic join page, reconnect on drop): it is the
+platform piece ranks 9-11, 42 (007's phone remote) and 113 (004's reconnecting mirror) all wait on.
+- Rank 140's next increment is 035's presentation glue (`initPresentationMode()`); rank 56's small leftovers are listed
+  in its row. Nothing in Tier 1 needs Blender.
+- Held, not a session's call: anything student-facing (110, 50, 52's device half), content Devon writes (136), and the
+  real-device checks (66; "Parked — needs a person" under Cross-cutting).
 - A prompt that names a row wins over the rule above.
 - **End every session by writing the prompt for the next one** (Devon, 2026-09-29): after the
   step-6 merge, put it in your final message *and* in the handoff PR's body, so it is in
   GitHub as well as the chat. See "Definition of done", step 7.
 
 **Decisions only Devon can make — surfaced, not taken.**
-- **Interleave per-tool improvements with platform work?** Standing decisions say "keep
-  platform first"; every per-tool idea sits at rank 75 or below.
+- **Interleave per-tool improvements with platform work?** Standing decisions say "keep platform first".
 - **A periodic human device check** (about 30 minutes with a phone, a laptop and a printer):
   the parked list under Cross-cutting ("Parked — needs a person").
 
-**Numbers (2026-10-03, huginn's local `main` after AI-sync's merge; re-measure, do not carry forward):**
+**Numbers (2026-11-04, huginn's local `main` at v584; re-measure, do not carry forward):**
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v265` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
-| Precache entries | **316** in `PRECACHE_URLS`, **96** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
-| Suites | **508** in `Tools/board-check/suites.json` (`check:tests`, 2026-11-01, after AI-31 ranks 44, 125, 129, 135); `expectedFailures` empty |
+| `CACHE_VERSION` | `v584` on local `main`; `v573` on origin (#381) — `check:precache -- --base origin/main` is the thing to trust |
+| Precache entries | **448** in `PRECACHE_URLS`, **150** in `SHELL_URLS` (`check:precache`) |
+| Suites | **541** in `Tools/board-check/suites.json`, 535 suite files on disk (`check:tests`); `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
-| Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
-| Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
-| Tool registry | 92 rows, **239 keys and 31 prefixes across 134 files** (`check:registry`); **55** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
+| Inline markup sinks | **448** across the 57 pages that take link input (`check:inline-sinks` baseline) |
+| Accessibility allowlist | **0** page-rule allowances (`Tools/a11y-sweep/allowlist.json`) |
+| Tool registry | 92 rows, **245 keys and 30 prefixes across 139 files** (`check:registry`); **63** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag) |
 | Shared-file adoption (of 90) | `sw-register.js` 88 · `a11y.css` 87 · `a11y.js` 87 · `ink-paper.css` 79 · `base.css` 73 · `qr-draw.js` 61 · `state-link.js` 57 · `share.js` 56 · `store.js` 45 · `roster.js` 35 · `print-area.css` 32 · `print-kit.css` 20 · `print-kit.js` 20 · `media-db.js` 18 · `export.js` 17 · `stage.js` 17 · `tool-registry.js` 14 · `qr-scan.js` 10 · `handoffs.js` 9 · `school-day.js` 9 · `sample-data.js` 8 · `webrtc-pair.js` 8 · `paste-table.js` 7 (+2 via a module) · `grouping.js` 6 · `list-sentence.js` 6 (+3 via a module) · `question-bank.js` 6 · `student-flags.js` 6 · `undo.js` 6 · `word-list.js` 6 · `speak.js` 5 · `theme.css` 5 · `chart-svg.js` 4 · `levels.js` 4 · `seating-read.js` 4 · `countdown.js` 3 · `remote-channel.js` 3 · `restore-kit.js` 3 · `binder-stale.js` 2 · `bracket.js` 2 · `conjugate-de.js` 2 · `conjugate-es.js` 2 · `conjugate-fr.js` 2 · `conjugate-it.js` 2 · `conjugate-la.js` 2 · `conjugate.js` 2 · `rotation.js` 2 · `ss-glossary.js` 2 · `stations-bank.js` 2 · `stations.js` 2 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `stations-debrief.css` 1 · `stations-debrief.js` 1 · `student-details.js` 1 (+1 via a module) · `geo-project.js` 0 (+2 via a module) |
-| Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
-| Tools | 88 (`001`–`088`); next free number **089** |
-| Tier 1 rows | **30 ranked rows, ranks to 144** (rank 86 shipped on 2026-11-03 (AI-31, v566) and leaves a gap; ranks 36, 43, 117, 149, 150 and 151 closed on 2026-11-03 by Devon's answers, nothing to build (AI-31), and leave gaps; rank 161 shipped on 2026-11-03 (AI-31) and leaves a gap; ranks 152–160 shipped on 2026-11-01 (Path 22 P6–P14) and leave gaps; ranks 19 and 20 shipped on 2026-10-29 and leave gaps, as the earlier deletions did; rank 43 shipped three times on 2026-10-28, Path 16 P1 and then P2, and the ranks after it moved up one each time; the ranks before it keep the gaps earlier deletions left). Path 21 is finished; per-tool rows start at rank **75** |
-| Art | **130** ledger entries: 046's relief (29,726 B), 030's board backdrop and tiles (5,348 B), 042's ten seals and ribbons (84,170 B), 071's twelve pictures (157,454 B), 080's piece atlas (43,318 B), 87 tool icons, the sprite (58,032 B), 4 shortcut PNGs, the 4 app-mark PNGs (14,457 B), the 4 hero WebPs (64,832 B), the test tile's light/dark pair |
-| Dark mode / fullscreen | 92 of 92 themed pages native dark (`path5:next`; 8 live pages load no `a11y.js`: 035 is the documented exception (`CLAUDE.md`), the rest are standalone on purpose); `stage.js` on 16 pages. Path 5 is finished |
-| CI | Pull requests run `--changed`; a push to `main` runs everything. Since 2026-10-26 the suites run as six parallel shard jobs (`--shard i/6`, ~21 min each by `suite-durations.json`, not yet seen on a CI run), with a `guards` job and one `test` check that is green only if all are. A PR touching `_shared/`, `index.html`, `package.json` or `Tools/board-check/` is site-wide: all 331 suites, ~121 min summed |
+| Printing | 80 tool pages call `window.print()` in their HTML; 56 contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`) |
+| Tools | 90 (`001`–`090`); next free number **091** |
+| Tier 1 rows | **27 ranked rows, ranks 8 to 144**, with gaps where rows shipped or closed; ranks are not renumbered between landings |
+| Art | **130** ledger entries, clean (`check:art`) |
+| Dark mode / fullscreen | 93 of 93 themed pages native dark, 0 on the filter (`path5:next`); `stage.js` on 17 pages, 1 still hand-rolls fullscreen. Path 5 is finished |
+| CI | Pull requests run `--changed`; a push to `main` runs everything, as six parallel shard jobs (`--shard i/6`) behind a `guards` job and one `test` check that is green only if all are |
 | Lint | clean |
 
 ### Standing decisions
@@ -824,10 +282,9 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 53 | Path 18 P5 — decide the product: two entry points on one engine, or one tool with a mode switch | 018 | ¼ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
 | 56 | Path 19 P3 — what is left (everything in the design and its polish is built, v469-v574; every question to Devon is answered: L4, the Latin deponent perfect `locūtus sum`, built in v574, and S1, I4, G4, G5, G6, S2 and I5 kept as built, 2026-11-03): the small leftovers the bullet lists (kennte / nennte / rennte, the `dé` and `sé` commands with a pronoun, the Italian short tu forms, a Latin future imperative, a German reflexive imperative). No table is called reviewed until the language teacher has read the check sheet | 079 | ¼ | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 59 | Path 20 P1, what is left — the curriculum gazetteer only if a second tool wants it (the port shipped in v401; 062's `gbq-map.js` switched to `_shared/geo-project.js` in v424) | `_shared/` | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
-| 65 | First-run "Load sample data" across the tools that open to an empty form (P15); 059, 072, 049 (v488) and 043, 042, 082, 038, 084 (v489) done; the people-content tools get no sample (Devon, 2026-11-03: kept the default) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 66 | Phone-sized layout pass beyond 005: sideways overflow is gone from all 90 pages at 360 px (v490-v491) and the three toolbars over half a 740 px screen fold behind a More button (011, 032, 054; v498, `test:phone-toolbar`); left: only that a real phone has not been tried | site | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 110 | Correlate hall-pass trips with the schedule; a student-initiated request flow | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
-| 113 | Bell-schedule awareness (reads 032's `scv_calendar_v1`; needs a registry and cross-tool decision); a reconnecting mirror (`_shared/webrtc-pair.js`, a platform edit). The multi-timer board shipped v279 | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
+| 110 | A student-initiated request flow (**held: student-facing**, Devon's "nothing is student-facing right now" stands). The schedule half is built: a Period column and a "By period" report from 032's bell schedules through `SchoolDay` (v315) | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
+| 113 | A reconnecting mirror and phone remote (a platform edit to `_shared/webrtc-pair.js`: waits on Path 8 P1's remote kit, rank 8). The multi-timer board shipped v279 and "Rest of this period" from 032's bell schedule through `SchoolDay` v314 | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
 | 118 | Per-record conflict resolution ("keep the newer of each"; needs per-record timestamps) | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
 | 136 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
 | 138 | Cycle labels beyond A and B (needs a field in `scv_calendar_v1`, which 010 reads raw); Year-grid badges and the page-per-week print shipped v292, the "Week starts on" setting (Sunday, Monday or Saturday for the month, year and wall grids; its own key `scv_week_start`, the one-week print stays Monday to Friday) v555, the anchor date taking its own letter (`ANCHOR_QUIRK` fixed) v573 | 032 | ¼ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
@@ -1256,7 +713,7 @@ short "what this is for" line. `blank-map-generator` (Recently used),
 - *Still to read:* nothing on the no-names list; if a tool is added that opens empty, give it a row here.
 - *The content is people, so no sample (Devon, 2026-11-03, 65: kept the default):* 068, 075, 036, 048, 077, 033, 027, 008, 001. A made-up name can still read as a student on a printout.
 - *Not applicable (state is the display, or no form):* 004, 005, 007, 009, 010, 011, 012, 016, 031, 034, 035, 037, 039, 040, 044, 045, 046, 050-053, 055, 057, 058, 060-062, 066, 067, 069-071, 074, 076, 079-081, 086-088, 090 (already show content or a generator with defaults).
-This list is a first read, not a per-page audit; check each form before building. Rule for every adopter: Load only while empty, never overwrites, stores only what the page's own save-as-you-go stores (say so), invented content only.
+**Rank 65 is closed (AI-52, 2026-11-04):** every class above is done or decided, so its Tier 1 row is deleted; a sample for 019 or 030 is a build of its own and gets a row only if asked for. This list is a first read, not a per-page audit; check each form before building. Rule for every adopter: Load only while empty, never overwrites, stores only what the page's own save-as-you-go stores (say so), invented content only.
 
 ---
 
@@ -9742,12 +9199,11 @@ section above and 085 appears under Path 16 P4.
 
 #### Major Features
 
-- **Skipped — deferred.** **Correlate with the schedule.** Which period, which activity, which day of
-  the week — the report a counselor or administrator actually wants when a
-  pattern is suspected (P7, using the calendar/bell schedule). *(Explicitly
-  out of scope for this round per the cross-tool dependency on School
-  Calendar Visualizer.)*
-- **Skipped — deferred.** **Student-initiated request flow** (P9). A student taps a request on a
+- **Done (AI-18, v315, Path 9 P3) — Correlate with the schedule.** Each trip shows the period it fell
+  in (a Period column in the log, history and range report, and a "By period" table in the report and its
+  workbook), read from 032 School Calendar's bell schedules through `_shared/school-day.js` at display time
+  and never stored (`periodCtx()`/`tripPeriod()`). With no calendar saved on the device the page is unchanged.
+- **Held — student-facing.** **Student-initiated request flow** (P9). A student taps a request on a
   shared classroom device or their own; it appears on the teacher's board for
   approval. Keeps the teacher from being interrupted mid-sentence, and needs
   no server. *(Explicitly out of scope for this round — nontrivial WebRTC/UX
@@ -9776,7 +9232,7 @@ room and what was happening in class at the time.
   bell schedule and the seating chart.
 - **P9 (device pairing)** — multi-teacher awareness shipped 2026-08-13
   (Hallway Sync, WebRTC peer pairing); student-initiated request flow is
-  still open.
+  held (student-facing).
 - **P1 (projector mode)** — with a genuine privacy caveat about what gets
   projected.
 
@@ -9959,10 +9415,10 @@ work, and don't promote one without Devon saying so.
 
 #### Major Features
 
-- **Bell-schedule awareness.** Read the School Calendar Visualizer's day type
-  (`scv_calendar_v1`) and/or a stored bell schedule so the timer can offer
-  "rest of this period" as a one-click duration and know that today is a half
-  day. See P7.
+- **Done (AI-18, v314, Path 9 P3) — Bell-schedule awareness.** While a 032 calendar is saved on the
+  device, the Countdown card has a "Rest of this period" button and a line naming the day and the period
+  (a half day reads its own schedule), through `_shared/school-day.js` (`periodOffer()` in
+  `Tools/classroom-timer/ct-app.js`); the page never writes the calendar. See P7.
 - **Done (2026-10-07, v279) — Multi-timer board.** A header button, "Timer board",
   swaps the single timer for two to four independent timers (label, length,
   start / pause / resume / reset, finished state each), saved as `board` inside
@@ -9974,7 +9430,7 @@ work, and don't promote one without Devon saying so.
 - **Sound design that survives a school laptop.** Ship several vendored
   alert sounds (not just three tones), allow a locally-chosen audio file, and
   fall back to Web Audio synthesis when a file won't play.
-- **Reconnecting mirror.** `webrtc-pair.js` pairing currently has to be
+- **Reconnecting mirror (a platform edit; waits on Path 8 P1's remote kit).** `webrtc-pair.js` pairing currently has to be
   redone if the connection drops. Persist the pairing and auto-reoffer, and
   let the paired device act as a *remote* (start/pause/next-segment from a
   phone while walking the room), not just a passive mirror. See P9.
