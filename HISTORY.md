@@ -9,6 +9,37 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-46: 032's A/B anchor date takes its own letter (rank 138, `ANCHOR_QUIRK` fixed, 2026-11-04, `CACHE_VERSION` v570)
+
+Devon, 2026-10-07 (answer 4.7): "you should be able to set any particular day as A or B, and then all FOLLOWING days should
+follow the a/b pattern". The old rule lined the walk up from the count of school days strictly *between* the range's first day
+and the anchor, so when that first day was itself a school day and the anchor was later, the anchor showed the other letter
+(anchor 2026-09-14 'A' showed B). The AI-31-032 worker found it on 2026-10-07 and pinned it as `ANCHOR_QUIRK`.
+
+- **The fix**, in both copies of the rule: `Tools/school-calendar/scv-weeks.js` `abLetters()` (032's month grid, year grid,
+  printed weeks and pacing) and `_shared/school-day.js` `abLetters()` (loaded by 001, 004, 010, 035, 036, 044, 045 and 090). The count
+  now runs from the first day *inclusive* up to the anchor; an anchor on a weekend or a closed day gives its letter to the next
+  school day; the dead `anchor < lo` branch went. `scv_calendar_v1` is unchanged (010 reads it raw).
+- **Who sees a change.** A saved calendar whose anchor is a later school day than its first day, and whose first day is a school
+  day: every letter of it flips. That is the fix asked for. An anchor on or before the first day, or a year whose first day is not
+  a school day, gives the same letters as before (the suite proves both halves against a copy of the old page's function).
+- **Worker call, AI-46-1 (default):** school days *before* the anchor keep the alternation, run backward from it, as they always
+  had. Devon did not say. The other answer ("no letter before the date") is one constant, `LETTERS_BEFORE_ANCHOR`, in each of
+  the two files; set both false and the walk still steps over those days, so nothing after the anchor moves. A mutant in
+  `school-day.test.mjs` ("no letter before the anchor") and the weeks-core property "school days before the anchor keep a
+  letter" fail when it is false, so switching it means changing those two on purpose.
+- **Tests.** `smoke-weeks-core.mjs`: the old-page comparison is kept where the old rule was right and becomes "every letter
+  flipped" exactly where it had the quirk (judged without the module); every year-and-anchor case also asserts the anchor (or
+  the first school day after it) has its letter; the `ANCHOR_QUIRK` pins became assertions of the new rule (later anchor, B
+  anchor, Saturday, Labor Day, last week, Feb 29 2028 open and closed, Mar 1) in UTC, New York, Havana and Auckland. Run
+  against the old module it fails (11+ lines), and against the "no letter before" mutant too. `school-day.test.mjs` gains four
+  anchor checks and two mutants (the quirk put back, no letter before the anchor), 53/53 caught; one existing mutant's text was
+  re-cut to the new line.
+- **`golden-old-views.json` was not regenerated:** its A/B capture anchors on 2026-08-31, the seeded year's first day, where the
+  old rule was already right, and `test:school-calendar-weeks` passed 386/386 with it untouched. No other suite's fixture anchors
+  later than its year's first day.
+- **Not verified:** no saved real calendar was opened; nothing printed on paper.
+
 ## AI-47: 067's click track (rank 96, the metronome half, 2026-11-03, `CACHE_VERSION` v568)
 
 (My commit says v567; AI-58 (+AI-59) took v567 on `main` first, so the merge moved mine to v568.)

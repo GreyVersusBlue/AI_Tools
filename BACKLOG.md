@@ -826,7 +826,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 113 | Bell-schedule awareness (reads 032's `scv_calendar_v1`; needs a registry and cross-tool decision); a reconnecting mirror (`_shared/webrtc-pair.js`, a platform edit). The multi-timer board shipped v279 | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
 | 118 | Per-record conflict resolution ("keep the newer of each"; needs per-record timestamps) | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
 | 136 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
-| 138 | The A/B cycle's anchor date shows the other letter when the anchor is a school day after the calendar's first school day (`scv-weeks.js`, `ANCHOR_QUIRK`; fixing it flips every letter of such a saved calendar, so it is a decision, not a quiet fix); cycle labels beyond A and B (needs a field in `scv_calendar_v1`, which 010 reads raw); Year-grid badges and the page-per-week print shipped v292, the "Week starts on" setting (Sunday, Monday or Saturday for the month, year and wall grids; its own key `scv_week_start`, the one-week print stays Monday to Friday) v555 | 032 | ¼ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
+| 138 | Cycle labels beyond A and B (needs a field in `scv_calendar_v1`, which 010 reads raw); Year-grid badges and the page-per-week print shipped v292, the "Week starts on" setting (Sunday, Monday or Saturday for the month, year and wall grids; its own key `scv_week_start`, the one-week print stays Monday to Friday) v555, the anchor date taking its own letter (`ANCHOR_QUIRK` fixed) v570 | 032 | ¼ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
 | 140 | 035 what is left: the page's inline script is still ~2,750 lines (the onboarding and presentation glue, the recovery manager's glue; the bell and subjects editors went to `sv-settings-editors.js` at v543, the snapshot manager to `sv-snapshots.js` at v550, the storage-headroom warning to `sv-storage.js` at v554, the whole autosave path (debounce, write, Saved indicator, load with its quarantine copy) to `sv-autosave.js` at v556-v558 and `applyBlueprintData` to `sv-apply.js` at v559), so the next increment is the recovery manager's glue on the page (`sv-recovery.js` holds the ring; read how the page reaches it first) or the onboarding block. Accessibility routing (Path 11 P3) is built; what is left of it is accessibility-aware *evacuation* routing (a wheelchair user's route out: step-free and no elevator), which turns on P3's Devon question about what counts as an exit, so it stays out | 035 | ½ | | [035 School Layout Visualizer](#035--school-layout-visualizer) |
 | 143 | A second language beyond Spanish (needs a translation a person has checked), including for the new parent letter; the phone/projector trip-day view | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
 | 144 | 044 what is left of references by name: the plan saying *which* section the Sub Binder prints. 045's choice is built and saved (v549); 044 reads no key of 045 and the Sub Binder's included-sections object is its own, so the line would need a packet provider or a registry `reads` entry, a Path 10 call | 044 | ¼ | | [044 Sub Plan Builder](#044--sub-plan-builder) |
@@ -11891,10 +11891,10 @@ written.
   grid, and since v292 the year grid too: each school day says its letter as
   text in a box, a closed weekday an en dash on a hatched cell, a weekend
   nothing; the letters come from one function, `scv-weeks.js` `abLetters()`,
-  that the month grid, the year grid and the printed weeks all read. Not
-  done: the anchor date can show the other letter, see the ranked index, row
-  146; and only A and B exist, the store has no field for the cycle's own
-  labels.)*
+  that the month grid, the year grid and the printed weeks all read. Since
+  v570 the anchor date always shows the letter given and the days after it
+  follow (Devon, 2026-10-07). Not done: only A and B exist, the store has no
+  field for the cycle's own labels.)*
 - **Done —** **Week-at-a-glance print** in addition to the month/year views.
   *(One week since 2026-08; since v292 "Week of" through "the week of" or
   "Every week of the year" prints a page per week, up to 60, Monday to Friday,
