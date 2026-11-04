@@ -72,7 +72,7 @@ ok((await fa()).made === 0, 'no AudioContext is made at load');
 ok(s.pressed === 'false' && /Play click track/.test(s.btn), 'the button reads Play and is not pressed');
 ok(/Nothing plays until you press Play/.test(s.status), 'the status says nothing plays until Play');
 ok(s.dots.length === 4 && s.dots.map((d) => d.n).join('') === '1234' && s.dots[0].accent && !s.dots[1].accent, '4/4 shows four numbered beats, beat 1 marked as the accent');
-ok(await page.evaluate(() => document.querySelector('label[for="tempo"]').textContent) === 'Tempo (printed, and used by the click track)', 'the tempo label no longer says "for the display only"');
+ok(await page.evaluate(() => document.querySelector('label[for="tempo"]').textContent) === 'Tempo (printed, and used by the click track and the sight-reading play-through)', 'the tempo label no longer says "for the display only"');
 ok(await page.evaluate(() => document.getElementById('metroBeats').getAttribute('aria-hidden') === 'true' && document.getElementById('metroStatus').getAttribute('aria-live') === 'polite'), 'the per-beat picture is hidden from screen readers; the status is a polite live region');
 await page.click('#newRhythmBtn'); await settle(page, 80);
 ok((await fa()).made === 0, 'a new pattern makes no AudioContext either');

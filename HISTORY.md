@@ -9,6 +9,48 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-48: 067's reference pitch and note play-through (rank 96, the other half, 2026-11-04, `CACHE_VERSION` v578)
+
+The second half of rank 96 (AI-47 built the click track, v568). Devon's word was for the metronome; this half is the row's
+other item and, like it, ships unheard.
+
+- **The module.** Added to `Tools/music-sightreading-generator/msrg-audio.js`, after the metronome so AI-47's mutant texts
+  still match first. The staff-position formula moved here: `notePosition(note, clef)` is diatonic number (octave * 7 + letter)
+  less the clef's bottom line (E4 treble, G2 bass), and the page's drawing now calls it, so a note cannot be drawn on one line
+  and sounded at another. `positionNote` is its inverse, `noteFrequency` is equal temperament on A4 = 440 (MIDI 69),
+  `positionFrequency` the two together. `referenceNote(range, notes)` picks the reference. `createNotePlayer({ ctx, freqs, bpm,
+  noteDuration, onNote, onEnd })` is the click track's look-ahead scheduler for a finite list: note k at `start + k * 60/bpm` on
+  the audio clock, `onNote` only once a note's time has come, `onEnd` once after the last note is over, `stop()` silencing what is
+  in the graph. A tone is a triangle wave, 85% of a beat, a 20 ms attack and a decay to silence. Same `audioContext()`, so the two
+  tabs share one context.
+- **The page.** On the sight-reading display card: **Play reference pitch**, **Play the notes** (`aria-pressed`) and **Stop**
+  (disabled at rest), "Note 3 of 12: E4" beside them (`aria-hidden`, as the beat text is) and a polite status line. The notes are
+  the ones on screen (not a locked print pattern), even quarter notes at the Rhythm tab's tempo field, clamped to 30-240 with a
+  sentence; a field with no number plays nothing and says where to type one. The sounding notehead is filled with the accent and
+  ringed: no movement at all, so reduced motion has nothing to remove. It stops at the end, on Stop, a second press, a new pattern
+  (so on a clef, range or count change too), the Rhythm tab, a hidden page and `pagehide`; either button cuts the other off. The
+  tempo label now reads "Tempo (printed, and used by the click track and the sight-reading play-through)" (`smoke-metronome.mjs`'s
+  assertion updated to match).
+- **What I decided.** The reference pitch is **the lowest C in the chosen range** (the notes are all naturals, so C is do), and the
+  pattern's first note when the range holds no C (D4-B4, say); the status says which and why. Held 1.5 s (`TONE.refDur`). One
+  button for each and a separate Stop, rather than AI-47's single toggle, because two things can be playing. No scale run: the row
+  said "pitch and scale play-through" in its source and "play the notes" in the audit; the notes are what a student checks against.
+  Cheap to reverse: `referenceNote` is one function.
+- **Print is unchanged.** A scratch run on `main` and on this branch (seeded `Math.random`, eight states over both clefs, names on,
+  24 notes, a locked pattern) hashed the printed area, its caption and the on-screen staff, and a print-media screenshot: identical.
+  `audit-print --check --only 067` passes.
+- **Tests.** `test:music-pitch` (pure Node: known frequencies in both clefs, all 35 naturals C2-B6 rising with exact octaves, position
+  and inverse on every note, the reference rule, and the player on a fake context and hand-turned timer; 25 mutants, every one caught).
+  `test:music-pitch-smoke` (port 8696, 51 checks: each tone checked against the pitch of the line its notehead is DRAWN on, read off
+  the SVG and worked out in the suite independently, in both clefs; the stop triggers; the shared context; print; axe on the tab
+  mid-play in light and dark). Sounding every note one step high in the page turned the smoke red on both clef checks.
+- **What went wrong.** I ran `run-suites.mjs --changed --base main --dry-run` expecting a listing; there is no `--dry-run`, and since the
+  diff touches `package.json` the selection was everything. It ran, outside the suites lock, for about ten minutes (about 06:58-07:08 ET)
+  before I stopped it; nothing was left running. A suite another worker ran in that window may have collided on a port.
+- **Not verified.** Nobody has heard it (Huginn has no speakers in the loop): whether a triangle at 0.3 gain is pleasant and loud
+  enough on a classroom speaker, whether 85% of a beat reads as separate notes at 30 and at 240, and whether C2 (65 Hz) is audible on
+  a laptop at all are for a person with ears. Safari untried.
+
 ## AI-60: German separable verbs take their own auxiliary, and an unlisted one is split (review M5, 2026-11-04, `CACHE_VERSION` v577)
 
 The 2026-11-04 review's M5 (`~/projects/AI_Tools-REVIEW-2026-11-04.md`), brought in by `1dd649b` and carried into the

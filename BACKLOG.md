@@ -87,6 +87,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-48 (v578), rank 96 DELETED, gap not renumbered: 067's reference pitch and play-through.** The sight-reading tab has **Play reference pitch** (the range's lowest C, do for these naturals, or the first note when the range has no C, held 1.5 s), **Play the notes** (the drawn notes in order as even quarter notes at the Rhythm tab's tempo, a triangle tone, the sounding note ringed on the staff and named in text) and **Stop**; the two never sound at once and share the click track's one `AudioContext`, made inside a click. Each pitch is `positionFrequency(notePosition(note))`: the staff-position formula moved into `msrg-audio.js`, so the drawing and the sound are one sum (A4 = 440). Stops at the end, on Stop, a new pattern, the Rhythm tab and a hidden page. Suites `test:music-pitch` (pure, 25 mutants) and `test:music-pitch-smoke` (8696). **Nobody has listened to it.** Print byte-identical to v577.
 - **AI-40 (v574), rank 56 (Path 19 P3) rewritten to the small leftovers: Devon's L4 built.** A Latin deponent's perfect, pluperfect and future perfect are its participle and sum (`locūtus sum`, `locūtī sumus`, `locūtus eram`, `locūtus erō`; `deponentAs` on the three tenses), the thirteen deponents carry a typed participle (`mortuus`, `ūsus`, `passus`...), and a deponent without one is empty. 039's Fill, 079's Add a verb card and the check sheet show it with the six (no 079 starter poster is a deponent, so those are unchanged). No new suite port. Unreviewed.
 - **AI-41 (v572), rank 60 (Path 20 P4, what was left) DELETED, gap not renumbered: Path 20 P4 is whole.** 046's Time slices card has "Preview the slices" in front of "Print the slices": both put the sheet in a new `#printArea` as one `<img>`, and the kit's preview shows it on Letter (exact for the Letter shape; widescreen and custom are fitted and the title names their own page). `_shared/` unchanged; `test:blank-map-slices-smoke` and `test:preview-adopters` (046 entry) hold it.
 - **AI-47 (v568), rank 96 rewritten to the reference pitch half: 067's click track.** The tempo field ("♪ = 92") now drives a Web Audio click on the rhythm tab: Play/Stop, an optional one-measure count-in (saved in `msrg_settings_v1`, no new key), the first beat of each measure higher and louder, numbered beat circles and "Measure 2 of 4, beat 3" in text, the playing measure outlined, reduced motion respected; 30-240 bpm with a sentence when clamped, nothing played (and said) when the field has no number; stops on a new pattern, tempo or time-signature change, the other tab, a hidden page. `MsrgAudio` in `Tools/music-sightreading-generator/msrg-audio.js`. Suites `test:music-metronome` (pure, 18 mutants) and `test:music-metronome-smoke` (8688, assigned for this batch). **Nobody has listened to it.** Print unchanged.
@@ -822,7 +823,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 59 | Path 20 P1, what is left — the curriculum gazetteer only if a second tool wants it (the port shipped in v401; 062's `gbq-map.js` switched to `_shared/geo-project.js` in v424) | `_shared/` | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 65 | First-run "Load sample data" across the tools that open to an empty form (P15); 059, 072, 049 (v488) and 043, 042, 082, 038, 084 (v489) done; the people-content tools get no sample (Devon, 2026-11-03: kept the default) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 66 | Phone-sized layout pass beyond 005: sideways overflow is gone from all 90 pages at 360 px (v490-v491) and the three toolbars over half a 740 px screen fold behind a More button (011, 032, 054; v498, `test:phone-toolbar`); left: only that a real phone has not been tried | site | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 96 | Reference pitch and "play the notes" on the sight-reading tab (the metronome half shipped in v568, AI-47; reuse `msrg-audio.js`) | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
 | 110 | Correlate hall-pass trips with the schedule; a student-initiated request flow | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
 | 113 | Bell-schedule awareness (reads 032's `scv_calendar_v1`; needs a registry and cross-tool decision); a reconnecting mirror (`_shared/webrtc-pair.js`, a platform edit). The multi-timer board shipped v279 | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
 | 118 | Per-record conflict resolution ("keep the newer of each"; needs per-record timestamps) | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
@@ -14340,11 +14340,12 @@ minutes, not one form submission at a time.
   rhythm tab~~ **built in v568 (AI-47)**: `Tools/music-sightreading-generator/msrg-audio.js`
   (`MsrgAudio`: `parseTempo`, a look-ahead scheduler on the audio clock, and
   `audioContext()`, made only inside a click), Play/Stop and a count-in on the
-  rhythm tab; unheard, so a person still has to listen to it. **Left:** a
-  reference pitch/scale play-through for the sight-reading tab, so students
-  can check their own accuracy without a teacher at a piano. It shares
-  `MsrgAudio.audioContext()` and the click's oscillator idiom; do not write a
-  second context helper.
+  rhythm tab; unheard, so a person still has to listen to it. ~~A reference
+  pitch and play-through for the sight-reading tab~~ **built in v578 (AI-48)**:
+  `MsrgAudio.createNotePlayer`, `referenceNote` and `positionFrequency`, on the
+  same context and scheduler; even quarter notes, naturals only, also unheard.
+  Rhythm-aware playback is the "Combined rhythm + pitch mode" above, and
+  accidentals and key signatures are their own items.
 
 #### Moonshot / North Star
 

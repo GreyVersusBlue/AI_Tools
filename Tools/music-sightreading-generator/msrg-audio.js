@@ -1,10 +1,11 @@
-// msrg-audio.js — 067's sound: the click track for the rhythm tab (AI-47).
+// msrg-audio.js — 067's sound: the click track for the rhythm tab (AI-47), and the
+// sight-reading tab's reference pitch and note play-through (AI-48).
 //
 // A classic script; it sets globalThis.MsrgAudio. Nothing here touches the DOM or
 // storage, and nothing makes a sound until the page hands it an AudioContext, which
 // the page creates only inside a Play click (`audioContext()`), so nothing autoplays.
-// The sight-reading tab's reference pitch (AI-48) is meant to share `audioContext()`
-// and the click's oscillator-and-envelope idiom from this file, not write its own.
+// Both tabs share that one context. The staff-position formula the page draws with
+// lives here too (`notePosition`), so what is drawn and what is sounded are one sum.
 //
 // The scheduler is the look-ahead pattern: a timer wakes every `interval` ms and
 // schedules every click that falls inside the next `lookahead` seconds of the AUDIO
@@ -155,6 +156,158 @@
     };
   }
 
+  /* ---------------- Pitches on the staff (AI-48) ----------------
+     The staff drawing and the sound read one formula: a note's place on the staff is
+     its diatonic number (octave * 7 + letter index, C = 0) less the clef's anchor,
+     the diatonic number of the bottom line (E4 in treble, G2 in bass). Position 0
+     is the bottom line, each step up is one line or space. The page draws with
+     notePosition() and plays with positionFrequency(), so a note cannot be drawn on
+     one line and sounded at another. Naturals only: no accidentals, no key. */
+  var LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+  var SEMITONES = [0, 2, 4, 5, 7, 9, 11];
+  var CLEF_ANCHOR = { treble: 4 * 7 + 2, bass: 2 * 7 + 4 };
+  var A4 = 440;
+
+  function diatonicNumber(note) { return note.octave * 7 + LETTERS.indexOf(note.letter); }
+  function notePosition(note, clef) { return diatonicNumber(note) - CLEF_ANCHOR[clef]; }
+
+  /** The note drawn at staff position `position` in `clef`. */
+  function positionNote(position, clef) {
+    var d = position + CLEF_ANCHOR[clef];
+    var step = ((d % 7) + 7) % 7;
+    return { letter: LETTERS[step], octave: (d - step) / 7 };
+  }
+
+  /** Equal temperament, A4 = 440 Hz; MIDI 69 is A4 and C4 is 60. */
+  function noteFrequency(note) {
+    var midi = (note.octave + 1) * 12 + SEMITONES[LETTERS.indexOf(note.letter)];
+    return A4 * Math.pow(2, (midi - 69) / 12);
+  }
+
+  function positionFrequency(position, clef) { return noteFrequency(positionNote(position, clef)); }
+
+  /** The reference pitch for a pattern: the lowest C in the range (do, since these
+   *  notes are naturals and so in C major), or, when the range holds no C, the
+   *  pattern's first note. `range` is the notes the pattern was drawn from. */
+  function referenceNote(range, notes) {
+    var cs = (range || []).filter(function (n) { return n.letter === 'C'; });
+    if (cs.length) {
+      cs.sort(function (a, b) { return diatonicNumber(a) - diatonicNumber(b); });
+      return { note: cs[0], tonic: true };
+    }
+    if (notes && notes.length) return { note: notes[0], tonic: false };
+    return null;
+  }
+
+  var TONE = { type: 'triangle', gain: 0.3, attack: 0.02, share: 0.85, refDur: 1.5 };
+
+  /** One tone at `time` lasting `dur` seconds: a triangle wave with a short attack
+   *  and a decay to silence by its end. Returns its nodes. */
+  function tone(ctx, dest, time, freq, dur) {
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = TONE.type;
+    osc.frequency.setValueAtTime(freq, time);
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.exponentialRampToValueAtTime(TONE.gain, time + TONE.attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+    osc.connect(gain);
+    gain.connect(dest);
+    osc.start(time);
+    osc.stop(time + dur + 0.02);
+    return { time: time, end: time + dur + 0.02, osc: osc, gain: gain, freq: freq };
+  }
+
+  /**
+   * createNotePlayer({ ctx, freqs, bpm, noteDuration, onNote, onEnd, onStop,
+   *                    lookahead, interval, startDelay, setTimer, clearTimer })
+   * → { start(), stop(reason), running(), scheduled(), tick() }
+   *
+   * Plays `freqs` once, one per beat at `bpm` (even quarter notes), each lasting
+   * `noteDuration` seconds (default: 85% of a beat). Same look-ahead scheduler as the
+   * click track: note k sounds at start + k * 60/bpm on the audio clock. `onNote`
+   * hears about note k once its time has come; `onEnd` once the last note is over,
+   * after which the player is no longer running. A one-note player with a longer
+   * `noteDuration` is the reference pitch.
+   */
+  function createNotePlayer(opts) {
+    var ctx = opts.ctx;
+    var freqs = opts.freqs.slice();
+    var beat = 60 / opts.bpm;
+    var noteDur = opts.noteDuration == null ? beat * TONE.share : opts.noteDuration;
+    var ahead = opts.lookahead == null ? 0.12 : opts.lookahead;
+    var every = opts.interval == null ? 25 : opts.interval;
+    var delay = opts.startDelay == null ? 0.06 : opts.startDelay;
+    var setT = opts.setTimer || function (fn, ms) { return setInterval(fn, ms); };
+    var clearT = opts.clearTimer || function (id) { clearInterval(id); };
+    var noteCb = opts.onNote || function () {};
+    var endCb = opts.onEnd || function () {};
+    var stopCb = opts.onStop || function () {};
+    var out = opts.destination || ctx.destination;
+
+    var playing = false;
+    var handle = null;
+    var t0 = 0;
+    var next = 0;
+    var due = [];      // notes scheduled whose onNote has not fired
+    var sounding = []; // tones in the graph that are not over
+
+    function halt() {
+      playing = false;
+      if (handle !== null) clearT(handle);
+      handle = null;
+    }
+
+    function wake() {
+      if (!playing) return;
+      var now = ctx.currentTime;
+      while (next < freqs.length && t0 + next * beat < now + ahead) {
+        var at = t0 + next * beat;
+        sounding.push(tone(ctx, out, at, freqs[next], noteDur));
+        due.push({ index: next, time: at, freq: freqs[next], count: freqs.length });
+        next++;
+      }
+      while (due.length && due[0].time <= now) noteCb(due.shift());
+      sounding = sounding.filter(function (n) { return n.end > now; });
+      if (next >= freqs.length && !due.length && now >= t0 + (freqs.length - 1) * beat + noteDur) {
+        halt();
+        sounding = [];
+        endCb();
+      }
+    }
+
+    function begin() {
+      if (playing || !freqs.length) return;
+      playing = true;
+      t0 = ctx.currentTime + delay;
+      next = 0;
+      due = [];
+      sounding = [];
+      handle = setT(wake, every);
+      wake();
+    }
+
+    function end(reason) {
+      if (!playing) return;
+      halt();
+      sounding.forEach(function (n) {
+        try { n.gain.disconnect(); } catch (e) { /* already gone */ }
+        try { n.osc.stop(0); } catch (e) { /* already stopped */ }
+      });
+      sounding = [];
+      due = [];
+      stopCb(reason);
+    }
+
+    return {
+      start: begin,
+      stop: end,
+      running: function () { return playing; },
+      scheduled: function () { return sounding.slice(); },
+      tick: wake
+    };
+  }
+
   var shared = null;
   /** The page's one AudioContext, made on first call. Call it only from a click
    *  handler: a context made before a gesture starts suspended. Null when the
@@ -180,6 +333,16 @@
     beatInfo: beatInfo,
     click: click,
     createMetronome: createMetronome,
+    LETTERS: LETTERS,
+    CLEF_ANCHOR: CLEF_ANCHOR,
+    TONE: TONE,
+    notePosition: notePosition,
+    positionNote: positionNote,
+    noteFrequency: noteFrequency,
+    positionFrequency: positionFrequency,
+    referenceNote: referenceNote,
+    tone: tone,
+    createNotePlayer: createNotePlayer,
     audioContext: audioContext
   };
 })(globalThis);
