@@ -712,8 +712,9 @@ files must be added there too.
   load-bearing. Add a new theme at the end.
 - **A flag on a student is `_shared/student-flags.js`** (`StudentFlags`, Path 3 P5, v305): a fixed set,
   *absent today* (a local date, true only that day) and *do not cold call*, in `crh_flags_v1` by the stable id
-  from `crh_students_v1`, never in that sidecar's records (they are rebuilt in ten places). Only 006 writes it;
-  a tool that honours it reads `StudentFlags.read()` and finds the id with `lookupId()`, as 007 does. No share
+  from `crh_students_v1`, never in that sidecar's records (they are rebuilt in ten places). 006 writes it, and
+  since v377 005's live mode writes *absent today* too (by roster id, never for a name two students share; it is
+  in 005's registry `writes`, which check:registry's HANDOFF check holds); a tool that honours it reads `StudentFlags.read()` and finds the id with `lookupId()`, as 007 does. No share
   link, export or handoff carries it, and the rollover deletes it. `npm run test:student-flags`,
   `npm run test:student-flags-smoke`.
 - **Restoring a backup is `_shared/restore-kit.js`** (`RestoreKit`, Path 4 P5, v298): the reader, the

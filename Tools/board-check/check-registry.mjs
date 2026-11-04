@@ -58,7 +58,7 @@
 //                                name in the tool's `dynamic` list, so that a
 //                                human has looked at it once.
 //
-// Four checks:
+// Five checks:
 //
 //   1. UNREGISTERED — a key or prefix the tree writes that no registry row
 //                     declares. This is the one the whole file exists for.
@@ -69,6 +69,8 @@
 //   4. SHAPE        — every row has slug/title/file/category, every `file`
 //                     exists, no two rows OWN the same key or prefix, and
 //                     every numbered tool page has a row.
+//   5. HANDOFF      — a tool that writes a key another row owns lists it in
+//                     its own `writes` (since AI-63).
 //
 // Ownership is decided by who WRITES, not who touches: twelve tools read
 // np_rosters and none of them owns it. A handful of tools legitimately write
@@ -561,6 +563,18 @@ for (const [t, agg] of [...byTool].sort()) {
   for (const p of [...agg.prefixes].sort()) {
     if (!coveredPrefix(p)) {
       problems.push(`UNREGISTERED ${p}*\n            a key prefix built in ${where}, declared by no registry row`);
+    }
+  }
+  /* 5. HANDOFF: a tool that writes a key another row owns lists it in its own
+     `writes` (AI-63: 005's live mode wrote 008's, 001's and the flags key with
+     no line, and nothing noticed). */
+  if (row) {
+    const mine = k => (row.keys || []).some(e => e.k === k) || (row.prefixes || []).some(e => k.startsWith(e.p));
+    const listed = k => (row.writes || []).some(w => k === w || k.startsWith(w));
+    for (const k of [...agg.keys].sort()) {
+      if (!coveredKey(k) || mine(k) || listed(k)) continue;
+      const owner = claimedKey.get(k) || (REG.tools.find(r => (r.prefixes || []).some(e => k.startsWith(e.p))) || {}).slug;
+      problems.push(`HANDOFF     ${k}\n            written by ${where}, owned by ${owner}; add it to ${row.slug}'s "writes" list`);
     }
   }
   const acked = new Set((row && row.dynamic) || []);
