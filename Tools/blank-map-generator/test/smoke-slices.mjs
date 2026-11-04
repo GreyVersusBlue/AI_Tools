@@ -7,7 +7,8 @@
 // between slices and each keeps its own labels; names are unique and years must be whole numbers; copy starts
 // from the slice it was made from; sort puts the dated first; delete asks first and the last slice stays; the
 // slices survive a reload; a share link's slices are cleaned on arrival; the PDF sheet holds a different map
-// in each panel; and the slice send to Timeline Builder (see smoke-slices-handoff.mjs) is separate.
+// in each panel; "Preview the slices" opens the print kit's preview of the sheet (one Letter page, Print and Close, #printArea
+// emptied after) and "Print the slices" prints the same #printArea; and the slice send to Timeline Builder (see smoke-slices-handoff.mjs) is separate.
 // Nothing is requested off-site by these steps.
 
 import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
@@ -168,6 +169,94 @@ ok(hashes.length === 3 && hashes[0] === hashes[1] && hashes[0] !== hashes[2], 't
 eq((await shown()).join('|'), 'Louisiana Purchase|Missouri', 'building the sheet leaves the map as it was');
 d = await data();
 ok(d.labels.length === 2 && d.slices.active === 's1', 'and the saved slice is still slice 1: ' + JSON.stringify([d.labels.map(l => l.text), d.slices.active, d.slices.list.map(s => s.id + ':' + (s.content ? s.content.labels.length : 'live'))]));
+
+// the print preview (AI-41): "Preview the slices" shows the sheet in the print kit's preview, on Letter, one page, and
+// prints nothing; closing it empties #printArea; its Print prints that sheet once; "Print the slices" prints the same
+// #printArea, and afterprint empties it. Nothing is saved by either beyond what the sheet's own build saves.
+await page.evaluate(() => { window.__printCalls = 0; window.print = () => { window.__printCalls++; }; });
+// the sheet's build saves once (its existing guard), which moves updatedAt and nothing else
+const savedNow = () => page.evaluate(() => localStorage.getItem('bmg_workspace_v1').replace(/"updatedAt":\d+/, ''));
+const savedBefore = await savedNow();
+const sheetState = () => page.evaluate(() => ({
+  imgs: document.querySelectorAll('#printArea img').length,
+  cls: document.body.classList.contains('printing-slices'),
+  stage: document.getElementById('printExportStage').children.length,
+  prints: window.__printCalls,
+  dialogs: document.querySelectorAll('dialog.pk-preview').length,
+}));
+const openSlicePreview = async () => {
+  await page.click('#btnSlicePreview');
+  await page.waitForSelector('dialog.pk-preview[data-pk-pages]', { timeout: 40000 });
+  await settle(page, 200);
+  return page.evaluate(() => {
+    const dlg = document.querySelector('dialog.pk-preview');
+    const d = dlg.querySelector('iframe').contentDocument;
+    const img = d.querySelector('#printArea img');
+    const r = img && img.getBoundingClientRect();
+    return {
+      pages: Number(dlg.getAttribute('data-pk-pages')),
+      title: dlg.querySelector('.pk-preview-title').textContent,
+      status: dlg.querySelector('.pk-preview-status').textContent,
+      paper: [dlg.querySelector('.pk-preview-sheet').style.width, dlg.querySelector('.pk-preview-sheet').style.height],
+      img: img ? { w: Math.round(r.width), h: Math.round(r.height), loaded: img.complete && img.naturalWidth > 1000 } : null,
+      print: !!dlg.querySelector('.pk-preview-print'),
+      focusIn: dlg.contains(document.activeElement),
+    };
+  });
+};
+const tag = await page.evaluate(() => { const b = document.getElementById('btnSlicePreview'); return [b.tagName, b.type, b.textContent, b.nextElementSibling && b.nextElementSibling.id]; });
+eq(tag.join('|'), 'BUTTON|button|Preview the slices|btnSlicePrint', 'a "Preview the slices" button sits right before "Print the slices"');
+let pv = await openSlicePreview();
+eq(pv.pages, 1, 'the preview of a Letter sheet is one page');
+eq(pv.status, 'Page 1 of 1', 'and says so');
+eq(pv.paper.join('x'), '816pxx1056px', 'on Letter, the way round the sheet is');
+ok(pv.img && pv.img.loaded && pv.img.w === 816 && pv.img.h === 1056, 'the sheet is the whole page in the preview: ' + JSON.stringify(pv.img));
+eq(pv.title, 'Print preview: time slices', 'the title says what it is');
+ok(pv.print && pv.focusIn, 'it has its own Print, and the focus is inside it');
+let st = await sheetState();
+ok(st.imgs === 1 && st.cls && st.prints === 0 && st.stage === 0, 'while it is open the sheet is in #printArea, nothing printed, the map export stage untouched: ' + JSON.stringify(st));
+await page.keyboard.press('Escape');
+await settle(page, 200);
+st = await sheetState();
+ok(st.dialogs === 0 && st.imgs === 0 && !st.cls && st.prints === 0, 'Escape closes it and empties #printArea, so Ctrl+P prints the map again: ' + JSON.stringify(st));
+eq(await page.evaluate(() => document.activeElement.id), 'btnSlicePreview', 'and the focus is back on the button');
+ok(!(await page.evaluate(() => !!document.getElementById('pk-page-style'))), 'the kit leaves no @page rule of its own: the page is 046\'s');
+await openSlicePreview();
+await page.click('.pk-preview-close');
+await settle(page, 200);
+st = await sheetState();
+ok(st.dialogs === 0 && st.imgs === 0 && !st.cls && st.prints === 0, 'Close does the same: ' + JSON.stringify(st));
+await openSlicePreview();
+await page.click('.pk-preview-print');
+await settle(page, 200);
+st = await sheetState();
+ok(st.dialogs === 0 && st.prints === 1 && st.imgs === 1 && st.cls, 'its Print closes it and prints the sheet once: ' + JSON.stringify(st));
+const pdfPages = buf => (buf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+eq(pdfPages(await page.pdf({ preferCSSPageSize: true })), 1, 'Chromium\'s PDF of that print is one page, the count the preview gave');
+await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+st = await sheetState();
+ok(st.imgs === 0 && !st.cls, 'afterprint empties it: ' + JSON.stringify(st));
+await page.click('#btnSlicePrint');
+await page.waitForFunction(() => window.__printCalls === 2, null, { timeout: 40000 });
+st = await sheetState();
+ok(st.imgs === 1 && st.cls && st.stage === 0 && st.dialogs === 0, '"Print the slices" prints the same #printArea, with no preview: ' + JSON.stringify(st));
+await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+eq((await sheetState()).imgs, 0, 'and afterprint empties it');
+eq(await savedNow(), savedBefore, 'previewing and printing change nothing saved but the time');
+eq((await shown()).join('|'), 'Louisiana Purchase|Missouri', 'and the map is as it was');
+// a widescreen page: the sheet's own page is 11 x 6.19 in, shown fitted to Letter turned, and the title says so
+await page.selectOption('#pageFormatSelect', 'widescreen');
+await settle(page, 400);
+pv = await openSlicePreview();
+eq(pv.paper.join('x'), '1056pxx816px', 'a widescreen sheet is shown on Letter turned');
+eq(pv.pages, 1, 'still one page');
+ok(/shown on Letter \(it prints on its own 11 × 6\.19 in page\)/.test(pv.title), 'and the title says what page it prints on: ' + pv.title);
+ok(pv.img && pv.img.w === 1056 && pv.img.h === 816, 'the sheet is fitted into it: ' + JSON.stringify(pv.img));
+await page.keyboard.press('Escape');
+await settle(page, 200);
+await page.selectOption('#pageFormatSelect', 'letter');
+await settle(page, 400);
+eq((await data()).pageFormat.type, 'letter', 'back on Letter');
 
 // the send to Timeline Builder: every slice, each dated by its slice's year; or only the slice on the map
 await page.click('#btnLabelSets');

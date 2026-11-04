@@ -177,7 +177,7 @@ function checks(S) {
     eq(S.abLetters(c), weeksLetters(c), `abLetters matches 032 with the anchor at ${anchorDate} ${anchorLetter}`);
   }
   {
-    // the anchor takes its letter, wherever in the year it is (AI-46; before v572 a school-day anchor after
+    // the anchor takes its letter, wherever in the year it is (AI-46; before v573 a school-day anchor after
     // meta.start showed the other letter, ANCHOR_QUIRK)
     const at = (anchorDate, anchorLetter) => { const c = clone(ab); c.abCycle = { enabled: true, anchorDate, anchorLetter }; return S.abLetters(c); };
     eq([at('2026-12-02', 'B')['2026-12-02'], at('2026-12-02', 'B')['2026-12-03']], ['B', 'A'], 'anchored on Dec 2 as B: Dec 2 is B, Dec 3 is A');

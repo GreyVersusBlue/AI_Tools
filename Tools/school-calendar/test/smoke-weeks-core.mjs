@@ -14,7 +14,7 @@
 //      of the page's OLD function (local-time Date arithmetic exactly as the page had it): the
 //      two agree wherever the old rule was right, and differ by every letter exactly where it
 //      had ANCHOR_QUIRK.
-//   2. ANCHOR_QUIRK, fixed in v572 (AI-46), is pinned by name the other way round: the
+//   2. ANCHOR_QUIRK, fixed in v573 (AI-46), is pinned by name the other way round: the
 //      calendars that had it now show the anchor with its own letter.
 //   3. Dates are calendar dates. Every date is checked against integer arithmetic that never
 //      touches Date, and the file runs itself again under four zones, two of which change
@@ -261,8 +261,8 @@ eq(W.abLetters(makeCal({ ...YEARS['a leap year (Feb 29, 2028 a school day)'], an
   ok(noLeap['2028-02-29'] === undefined && noLeap['2028-02-28'] !== noLeap['2028-03-01'], 'with Feb 29 closed, Mar 1 follows Feb 28 in the cycle');
 }
 
-/* ── 2. ANCHOR_QUIRK, fixed (v572, AI-46) ───────────────────────────────── */
-// Before v572, when the range's first day was a school day and the anchor fell LATER in it, the
+/* ── 2. ANCHOR_QUIRK, fixed (v573, AI-46) ───────────────────────────────── */
+// Before v573, when the range's first day was a school day and the anchor fell LATER in it, the
 // anchor date showed the opposite of the letter given. Devon asked for it fixed (2026-10-07):
 // the anchor takes its letter and the days after it follow.
 {
