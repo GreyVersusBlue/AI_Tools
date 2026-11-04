@@ -22,6 +22,8 @@
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
+<!-- The print kit, for its print preview of the time-slices sheet only (Path 20 P4); nothing else on this page prints through it. -->
+<link rel="stylesheet" href="../_shared/print-kit.css">
 <style>
   /* The hidden attribute is only display:none in the UA stylesheet; any rule
      that sets display beats it (#mapImg, #scaleBar and .loadMoreRow all did).
@@ -459,6 +461,10 @@
      matching the page format selected above the map. */
   #printExportStage { display: none; }
   #printExportStage img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  /* The time-slices sheet (Path 20 P4) prints the same way from #printArea, under body.printing-slices, so that the
+     print kit's preview, which copies #printArea, shows exactly what prints. */
+  #printArea { display: none; }
+  #printArea img { display: block; width: 100%; height: 100%; object-fit: contain; }
 
   /* Worksheet printing is multi-page (a worksheet page per version, each
      optionally followed by its answer key), so it can't use the single
@@ -473,6 +479,10 @@
     body.printing-worksheet .wrap { display: none !important; }
     body.printing-worksheet #worksheetPages { display: block; }
     body.printing-map-export .wrap { display: none !important; }
+    body.printing-slices .wrap { display: none !important; }
+    body.printing-slices #printArea {
+      display: block !important; position: fixed; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0;
+    }
     body.printing-map-export #printExportStage {
       display: block !important; position: fixed; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0;
     }
@@ -596,6 +606,7 @@
         <button id="btnSliceCopy" class="small" title="A new slice that starts as a copy of this one, for a border that moved a little">Copy this slice</button>
         <button id="btnSliceSort" class="small" title="Puts the slices in order of year">Sort by year</button>
         <button id="btnSliceDelete" class="small" title="Deletes this slice and what it holds">Delete slice</button>
+        <button type="button" class="secondary small" id="btnSlicePreview" title="The sheet as it will print, page by page, without printing">Preview the slices</button>
         <button id="btnSlicePrint" class="small primary" title="One small map per slice on a single sheet">Print the slices</button>
         <button id="btnSlicePdf" class="small primary" title="The same sheet as a PDF">Save the slices as PDF</button>
       </div>
@@ -887,6 +898,9 @@
 
 <div id="printExportStage" aria-hidden="true"></div>
 <div id="worksheetPages" aria-hidden="true"></div>
+<!-- The time-slices sheet, one <img> of the canvas, which "Print the slices" prints and "Preview the slices" shows in
+     the print kit's preview. Empty and hidden until one of them fills it; emptied again on afterprint or on closing the preview. -->
+<div id="printArea" class="pk-paper" aria-hidden="true"></div>
 
 <script src="../_shared/vendor/jspdf/jspdf.umd.min.js"></script>
 <!-- The share sheet (Path 6): state-link.js encodes the link, the vendored
@@ -904,6 +918,7 @@
      an adapter over it. A classic script, so it has to be loaded before the
      module below reads window.MediaDB. -->
 <script src="../_shared/media-db.js"></script>
+<script src="../_shared/print-kit.js"></script>
 <script type="module">
 import { createStore } from './blank-map-generator/bmg-store.js';
 import { searchMaps, searchByRegion, fetchMapImage } from './blank-map-generator/bmg-commons.js';
@@ -4142,6 +4157,7 @@ window.addEventListener('afterprint', () => {
     document.body.classList.remove('printing-map-export');
     el('printExportStage').innerHTML = '';
   }
+  if (document.body.classList.contains('printing-slices')) clearSlicesSheet();
   if (document.body.classList.contains('printing-worksheet')) {
     document.body.classList.remove('printing-worksheet');
     el('worksheetPages').innerHTML = '';
@@ -5060,18 +5076,44 @@ async function withSlices(btn, busy, fn) {
     } catch (err) { alert(`Couldn't build the slices sheet (${err.message}).`); }
   });
 }
-el('btnSlicePrint').addEventListener('click', () => withSlices(el('btnSlicePrint'), 'Preparing…', async (canvas, wIn, hIn) => {
-  const stage = el('printExportStage');
-  stage.innerHTML = '';
+/** Puts the slices sheet in #printArea as one <img> and sizes the printed page to it; Print and Preview both start here. */
+async function showSlicesSheet(canvas, wIn, hIn) {
+  const area = el('printArea');
+  area.innerHTML = '';
   const img = document.createElement('img');
   img.alt = '';
   const loaded = new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
   img.src = canvas.toDataURL('image/png');
-  stage.appendChild(img);
+  area.appendChild(img);
   setPrintPageSize(wIn, hIn);
   await loaded;
-  document.body.classList.add('printing-map-export');
+  document.body.classList.add('printing-slices');
+}
+function clearSlicesSheet() {
+  document.body.classList.remove('printing-slices');
+  el('printArea').innerHTML = '';
+}
+el('btnSlicePrint').addEventListener('click', () => withSlices(el('btnSlicePrint'), 'Preparing…', async (canvas, wIn, hIn) => {
+  await showSlicesSheet(canvas, wIn, hIn);
   window.print();
+}));
+// The print kit's preview (Path 7 P5) of the same sheet. Its paper is one of the kit's named sizes, so the sheet is shown on
+// Letter turned to the sheet's way round: exact for the Letter page shape, and for a widescreen or custom shape (whose page
+// is its own size, 11 in on the long edge) the sheet is fitted to Letter and the title says what the printed page is. The
+// kit's @page rule is taken out again at once: the page 046 prints on is setPrintPageSize()'s, never the kit's.
+el('btnSlicePreview').addEventListener('click', () => withSlices(el('btnSlicePreview'), 'Preparing…', async (canvas, wIn, hIn) => {
+  await showSlicesSheet(canvas, wIn, hIn);
+  window.PrintKit.setPage({ paper: 'letter', orientation: wIn > hIn ? 'landscape' : 'portrait', margin: 0 });
+  const kitPage = document.getElementById('pk-page-style');
+  if (kitPage) kitPage.remove();
+  const { w: rw, h: rh } = getPageRatio();
+  const letter = rw * 11 === rh * 8.5 || rh * 11 === rw * 8.5;
+  const inches = n => String(Math.round(n * 100) / 100);
+  const title = letter ? 'Print preview: time slices' : `Print preview: time slices, shown on Letter (it prints on its own ${inches(wIn)} × ${inches(hIn)} in page)`;
+  let printing = false;
+  // onClose runs before onPrint, so the sheet is cleared only once it is known that nothing is printing it.
+  const closed = () => { setTimeout(() => { if (!printing) clearSlicesSheet(); }, 0); };
+  window.PrintKit.preview({ area: el('printArea'), trigger: el('btnSlicePreview'), title, onClose: closed, onPrint: () => { printing = true; window.print(); } });
 }));
 el('btnSlicePdf').addEventListener('click', () => withSlices(el('btnSlicePdf'), 'Building PDF…', async (canvas, wIn, hIn) => {
   const { jsPDF } = window.jspdf;
