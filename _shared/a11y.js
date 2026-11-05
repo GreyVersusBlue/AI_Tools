@@ -228,7 +228,13 @@
       steps('accent', b.accent) + steps('accent-2', a2) + '--color-accent-ink:' + inkOn(b.accent) + '}' +
       'html:root[data-theme="dark"]:not(.a11y-filter-dark){--accent:' + da + ';--accent-2:' + da2 +
       ';--accent-ink:' + inkOnAll([da, da2]) + ';--accent-2-ink:' + inkOn(da2) +
-      ';--color-accent-ink:' + BRAND_INDUSTRY_DARK_INK + '}}';
+      ';--color-accent-ink:' + BRAND_INDUSTRY_DARK_INK + '}' +
+      // L12: a sheet of paper in dark mode (ink-paper.css re-points its tokens at the light values, stock
+      // accent included) is read on white like any light page, so it gets the light-theme accent, not the
+      // lifted one. The selectors repeat ink-paper.css's own and add the brand's html, so they win.
+      'html:root[data-theme="dark"]:not(.a11y-filter-dark) #printArea:not(.paper-sheet-off),' +
+      'html:root[data-theme="dark"]:not(.a11y-filter-dark) .paper-sheet:not(.paper-sheet-off){--accent:' + b.accent +
+      ';--accent-2:' + a2 + ';--accent-ink:' + inkOnAll([b.accent, a2]) + ';--accent-2-ink:' + inkOn(a2) + '}}';
   }
 
   function applyBrand() {

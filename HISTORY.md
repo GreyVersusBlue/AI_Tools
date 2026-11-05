@@ -9,6 +9,21 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-71: the school colour reaches a sheet of paper in the dark theme (review L12, 2026-11-04, `CACHE_VERSION` v589)
+
+`ink-paper.css` keeps a `#printArea` / `.paper-sheet` light in dark by pointing its tokens at the `-light` values, stock navy
+accent included. The brand's dark rule sets `--accent` on `<html>`, which that per-element re-declaration overrides, so a
+school's colour showed everywhere on a dark page except the sheet (003's live preview: the "4 pts" labels stayed `#2e6b8f`).
+
+- **Fix, in `a11y.js`'s `brandCss` only.** A third rule inside the same `@media screen` block, under the brand's own dark
+  selector extended with the sheet's (`#printArea:not(.paper-sheet-off)`, `.paper-sheet:not(.paper-sheet-off)`, so it
+  outranks ink-paper's), sets `--accent`, `--accent-2`, `--accent-ink`, `--accent-2-ink` to the **light-theme** values:
+  the school's colour as chosen, not the lifted dark step, because the sheet is read on white (`#fff`, `#fafaf8`, the
+  light tints) like any light page. A pale choice there is the case the widget's existing "pale choice" warning covers.
+  `.paper-sheet-off` keeps the lifted screen accent; print and the no-brand page are unchanged.
+- **Test.** `test:brand` probes a `.paper-sheet`, a `#printArea` and a `.paper-sheet-off` in dark under a red school
+  colour (accent, derived accent-2, white ink, the opt-out, print back at stock navy).
+
 ## AI-67: 005 Seating Chart reads in the dark theme (AI-65's found-not-fixed, 2026-11-04, `CACHE_VERSION` v588)
 
 AI-65 found 005 in dark with eight `color-contrast` nodes, school colour or none, and the sweep only scanned light. Reproduced
