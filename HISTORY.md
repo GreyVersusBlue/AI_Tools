@@ -9,6 +9,74 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-71: the school colour reaches a sheet of paper in the dark theme (review L12, 2026-11-04, `CACHE_VERSION` v589)
+
+`ink-paper.css` keeps a `#printArea` / `.paper-sheet` light in dark by pointing its tokens at the `-light` values, stock navy
+accent included. The brand's dark rule sets `--accent` on `<html>`, which that per-element re-declaration overrides, so a
+school's colour showed everywhere on a dark page except the sheet (003's live preview: the "4 pts" labels stayed `#2e6b8f`).
+
+- **Fix, in `a11y.js`'s `brandCss` only.** A third rule inside the same `@media screen` block, under the brand's own dark
+  selector extended with the sheet's (`#printArea:not(.paper-sheet-off)`, `.paper-sheet:not(.paper-sheet-off)`, so it
+  outranks ink-paper's), sets `--accent`, `--accent-2`, `--accent-ink`, `--accent-2-ink` to the **light-theme** values:
+  the school's colour as chosen, not the lifted dark step, because the sheet is read on white (`#fff`, `#fafaf8`, the
+  light tints) like any light page. A pale choice there is the case the widget's existing "pale choice" warning covers.
+  `.paper-sheet-off` keeps the lifted screen accent; print and the no-brand page are unchanged.
+- **Test.** `test:brand` probes a `.paper-sheet`, a `#printArea` and a `.paper-sheet-off` in dark under a red school
+  colour (accent, derived accent-2, white ink, the opt-out, print back at stock navy).
+
+## AI-67: 005 Seating Chart reads in the dark theme (AI-65's found-not-fixed, 2026-11-04, `CACHE_VERSION` v588)
+
+AI-65 found 005 in dark with eight `color-contrast` nodes, school colour or none, and the sweep only scanned light. Reproduced
+with axe on an empty page and on one seeded with a chart (`seating-chart/test/fixtures/saved-v357.json`); the seeded
+page showed more (22 in dark, 3 in light), none of it in `_shared/theme.css`, so the fix is the page's own.
+
+- **Cause.** Text in the accent used `--teal-deep` (step 700) and `--blue` (step 800), which are the dark steps in the dark
+  theme: the h1, the five panel headings, the status line's bold words and "good" notes, and the pool heading were 1.35 to
+  1.92 to 1 on the dark card. The shared save bar's Reset button was the browser's ButtonFace (#6b6b6b in dark) under red
+  text, because `gvb-save.js` styles nothing and the `--gvb-btn-*` custom properties 005 set are read by no one. Seated desks
+  used `--teal-soft` (step 100) under light text, 1.1 to 1. Empty-seat labels (ink at 40%) and the roster count (opacity
+  .65 over the teal heading) were under 4.5 in light as well.
+- **Fix, all in 005's `<style>`.** Two tokens, `--teal-ink` and `--blue-ink`: steps 700/800 in light as before, the theme's
+  accent (`--teal`, step 400, lifted for a school colour by AI-65) in dark; `--teal-soft` is step 900 in dark. The save bar
+  buttons get an explicit `--card` background, border and `--blue-ink` text. Empty-seat labels are ink at 70%; the roster
+  count is ink at 75% in place of `opacity`. Stock light pixels move only for those two last text colours.
+- **Test.** `smoke-a11y-sweep.mjs` gained `DARK_PAGES` (005): `[dark]`, `[seeded, dark]` and `[seeded, light]` scans, with
+  the chart kept in the sweep file, not `seeds.mjs`, which `audit-print` and `print-kit` also read. Against HEAD's page the
+  three fail; with the fix `--only 005` is 10 passed, 0 failed. No allowlist line. Other pages stay light only.
+- **Not verified:** hover and focus states, the room editor and print preview in dark (axe sees the page as loaded), and
+  005 in dark under a school colour (`test:brand` covers it in light and dark for the pairs it names).
+## AI-69: 020's second display no longer flips between two teacher tabs (2026-11-04, `CACHE_VERSION` v587)
+
+Review L5 (057a6be): with two 020 teacher tabs open, every tab answered a new display's "hello" and the last answer
+won, so the display flipped between one bracket and the other (or "Waiting..."). Each teacher tab now has a random tab
+id and posts it with `at`, the time of its own last change (a render; an answer to "hello" re-sends the old time).
+The display follows the newest change: a message from a different tab with an older `at` is ignored. A display
+opened later therefore settles on the tab that changed last whatever order the tabs answer in. A message without
+`at` (an older cached teacher page) is still accepted as before. No "two tabs" note was added; following is enough.
+
+- **Test.** `smoke-display.mjs` gained a `twoTabs` scenario (display after tab B, then tab A changes and the display
+  follows and stays, then a late display) and a break that removes the follow rule; 38 passed, 0 failed.
+
+## AI-68: 037's item analysis no longer reads a first-name student "Max" as the points-possible row (2026-11-04, `CACHE_VERSION` v586)
+
+Source: the AI_Tools review's finding **R1** (audit entry AI-68), the gap AI-56 left. AI-56 anchored the label so "Max Chen" is a student,
+but a first cell that is exactly "Max", "Total" or "Possible" was still the points row wherever it stood, so in a class listed by first
+names a student called Max set every question's points possible.
+
+- **Rule (`gd-items.js`).** A row whose whole first cell is a label is the points-possible row only when it is the first or last data row
+  (where a teacher puts one), or, in the middle, when no student's score beats it in any column (compared where both cells are numbers).
+  A middle "Max" that scored below a classmate is a student. A middle label row is skipped, not given up on: a real "Total" row at the foot
+  is still found. The label list and the whole-cell anchor are unchanged.
+- **Decision (mine, cheap to reverse):** the entry offered "first or last row, **or** every value at least the students'", and this takes
+  both. The cost: a student called exactly "Max" who is listed first or last in a first-name-only paste is still read as the points row, since
+  nothing separates him from a real one there (a "Possible" row above a score is still reported "over the points possible", not guessed).
+  Requiring both would have turned a real points row with one over-scored student into a silent student row.
+- **Tests, seen failing first.** `test:gd-items` case 18 ("Name/Q1/Q2, Ana 2 2, Max 1 0, Bo 2 1" and the Total twin read as students; a
+  last, first, and middle-above-every-score row still read; a middle Max beside a real last "Total" row; "Max Chen" first or last), plus two
+  mutants (middle label row always the points row; first or last only). Its existing mutant for the points row was re-aimed at the new line.
+  `test:gd-items-smoke` 75/75. `sw.js` `CACHE_VERSION` v585 to v586, because `gd-items.js` is precached.
+- **Not verified.** No real gradebook export with a first-name "Max" was pasted.
+
 ## AI-44: README.md's tools table is generated from index-rows.json (2026-11-04, no `CACHE_VERSION` bump)
 
 AI-30 made index.html's tool rows a render of `Tools/board-check/index-rows.json`, and its second session named the gap

@@ -577,9 +577,15 @@
   })();
   var displayBc = null;
   try { if ('BroadcastChannel' in window) displayBc = new BroadcastChannel('bracket-tournament-display'); } catch (e) { displayBc = null; }
-  function postDisplay() {
+  /* Two teacher tabs share the channel, so each post carries its tab's id and `at`, the time that tab last changed
+     (a render, not an answer to "hello"). The display follows the tab that changed last: an answer to "hello" from
+     another tab is ignored unless it is newer than what the display already shows, so the display no longer flips. */
+  var tabId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  var lastChangeAt = 0;
+  function postDisplay(isReply) {
     if (isDisplay || !displayBc) return;
-    try { displayBc.postMessage({ type: 'bracket', state: state ? JSON.parse(JSON.stringify(state)) : null }); } catch (e) { /* the display is a bonus */ }
+    if (!isReply || !lastChangeAt) lastChangeAt = Date.now();
+    try { displayBc.postMessage({ type: 'bracket', tab: tabId, at: lastChangeAt, state: state ? JSON.parse(JSON.stringify(state)) : null }); } catch (e) { /* the display is a bonus */ }
   }
 
   var state = null; // { name, slots: [ [round0...], [round1...], ... ] }
@@ -3245,10 +3251,15 @@
       }, true);
     });
     if (window.Stage) Stage.mount(els.bracketCard, { button: els.displayFsBtn });
+    var followTab = null, followAt = 0;
     if (displayBc) {
       displayBc.onmessage = function (e) {
         var msg = e && e.data;
         if (!msg || msg.type !== 'bracket') return;
+        if (typeof msg.at === 'number') {
+          if (msg.tab !== followTab && msg.at < followAt) return;   // an older tab's answer: keep following the newest change
+          followTab = msg.tab; followAt = Math.max(followAt, msg.at);
+        }
         var next = msg.state;
         if (!next || typeof next !== 'object' || (!next.slots && !next.rounds && !next.pools && !next.matches)) {
           state = null;
@@ -3266,7 +3277,7 @@
     }
   }
   if (displayBc && !isDisplay) {
-    displayBc.onmessage = function (e) { if (e && e.data && e.data.type === 'hello') postDisplay(); };
+    displayBc.onmessage = function (e) { if (e && e.data && e.data.type === 'hello') postDisplay(true); };
   }
 
   /* ---------- boot ---------- */

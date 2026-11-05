@@ -104,6 +104,21 @@ console.log('Brand — a good key paints before first paint');
   const page = await open(INK, { store: { [KEY]: good }, theme: 'dark' });
   const c = await accent(page);
   ok(/^#[0-9a-f]{6}$/.test(c) && c !== '#a31f34' && c !== '#7fb2e5', 'dark: the accent is lifted to read on the dark paper: ' + c);
+  // L12: a sheet of paper in dark is read on white, so it takes the school colour itself, not the lifted one
+  // and not ink-paper.css's stock navy; .paper-sheet-off is the screen again.
+  const sheet = await page.evaluate(() => {
+    const mk = (tag, cls, id) => { const d = document.createElement(tag); d.className = cls; if (id) d.id = id; d.textContent = 'x'; document.body.append(d); return d; };
+    const a = mk('div', 'paper-sheet'), off = mk('div', 'paper-sheet paper-sheet-off'), pa = mk('div', '', 'printArea');
+    const g = (el, n) => getComputedStyle(el).getPropertyValue(n).trim();
+    return { sheet: g(a, '--accent'), sheet2: g(a, '--accent-2'), ink: g(a, '--accent-ink'), area: g(pa, '--accent'), off: g(off, '--accent') };
+  });
+  eq(sheet.sheet, '#a31f34', 'dark: .paper-sheet takes the school colour');
+  eq(sheet.area, '#a31f34', 'dark: #printArea takes the school colour');
+  ok(/^#[0-9a-f]{6}$/.test(sheet.sheet2) && sheet.sheet2 !== '#2e6b8f', 'dark: .paper-sheet gets the derived accent-2: ' + sheet.sheet2);
+  eq(sheet.ink, '#ffffff', 'dark: text on the sheet\'s accent fill is white');
+  eq(sheet.off, c, 'dark: .paper-sheet-off keeps the lifted screen accent');
+  await page.emulateMedia({ media: 'print' });
+  eq(await page.evaluate(() => getComputedStyle(document.querySelector('.paper-sheet')).getPropertyValue('--accent').trim()), '#1f3550', 'dark: the sheet is unchanged in print');
   await page.context().close();
 }
 {
