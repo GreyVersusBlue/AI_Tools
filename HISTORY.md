@@ -9,6 +9,18 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-69: 020's second display no longer flips between two teacher tabs (2026-11-04, `CACHE_VERSION` v586)
+
+Review L5 (057a6be): with two 020 teacher tabs open, every tab answered a new display's "hello" and the last answer
+won, so the display flipped between one bracket and the other (or "Waiting..."). Each teacher tab now has a random tab
+id and posts it with `at`, the time of its own last change (a render; an answer to "hello" re-sends the old time).
+The display follows the newest change: a message from a different tab with an older `at` is ignored. A display
+opened later therefore settles on the tab that changed last whatever order the tabs answer in. A message without
+`at` (an older cached teacher page) is still accepted as before. No "two tabs" note was added; following is enough.
+
+- **Test.** `smoke-display.mjs` gained a `twoTabs` scenario (display after tab B, then tab A changes and the display
+  follows and stays, then a late display) and a break that removes the follow rule; 38 passed, 0 failed.
+
 ## AI-44: README.md's tools table is generated from index-rows.json (2026-11-04, no `CACHE_VERSION` bump)
 
 AI-30 made index.html's tool rows a render of `Tools/board-check/index-rows.json`, and its second session named the gap
