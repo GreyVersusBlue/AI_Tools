@@ -93,6 +93,8 @@ backed up on `wave/2026-11-04`).** Newest first; detail in `HISTORY.md` under ea
   45 page heads name one; `check:social` fails a missing card.
 - **AI-51 (v583), AI-50 (v579):** rank 140 increments: 035's welcome/Help dialogs to `sv-onboarding.js`, its recovery
   manager to `sv-recovery-ui.js`. **AI-66 (v582):** restoring the oldest of three recovery points works again.
+- **AI-67 (v586):** 005 Seating Chart reads in dark (the eight contrast failures AI-65 found, and the ones a seeded chart showed);
+  the a11y sweep now scans 005 in dark and seeded.
 - **AI-65 (v581), AI-57 (v576):** the school accent leaves status-fill text alone and reads on the five `theme.css` pages
   (`--status-ink`, `--accent-2-ink`, `--color-accent-ink`); `test:brand` sweeps 92 pages.
 - **AI-63 (v580):** the review's low batch (L1-L4, L6-L9, L13); `check:registry` holds a tool to its `writes`.

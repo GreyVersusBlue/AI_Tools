@@ -32,6 +32,9 @@
 // pass alone could not see any of those. A seeded page has its own allowlist
 // entry, "<page> [seeded]", so the two states are judged separately.
 //
+// 005 Seating Chart is scanned a third and fourth time in the dark theme (empty, and seeded with a chart) and seeded in
+// light, as "[dark]", "[seeded, dark]" and "[seeded, light]" (DARK_PAGES below); every other page is still light only.
+//
 // What this does not cover, on purpose: states behind a click (a modal, a
 // second tab of a tool, a mode the tool always opens out of — seeds.mjs names
 // the ones it knows), which are per-tool suite territory; moderate and
@@ -82,11 +85,30 @@ const seedFor = p => {
   if (!own && !rosterPages.has(p) && num !== '009') return null;
   return { ...ROSTERS, ...(own || {}) };
 };
+// Pages that are also scanned in the dark theme (gvb-a11y-prefs {theme:'dark'} written before the first script), empty
+// and seeded. The sweep otherwise reads light only, so 005's eight dark-only contrast failures (AI-65 found them, AI-67
+// fixed them) had nothing holding them. 005's seed is a chart, kept here and not in seeds.mjs because audit-print and
+// print-kit read that file and a chart there would change what they scan. A page joins this list once its dark theme is
+// clean, with no allowlist line; the keys are "<page> [dark]" and "<page> [seeded, dark]".
+const DARK_PAGES = {
+  '005': { 'seating-chart-v1': fs.readFileSync(path.join(HERE, '..', '..', 'seating-chart', 'test', 'fixtures', 'saved-v357.json'), 'utf8') },
+};
+for (const num of Object.keys(DARK_PAGES)) {
+  if (!pages.some(p => p.startsWith(`Tools/${num}-`))) { console.error(`smoke-a11y-sweep: DARK_PAGES names ${num}, which is no page`); process.exit(1); }
+}
 const scans = [];
 for (const p of selected) {
   scans.push({ p, key: p, seed: null });
   const seed = emptyOnly ? null : seedFor(p);
   if (seed) scans.push({ p, key: `${p} [seeded]`, seed });
+  const dark = DARK_PAGES[(p.match(/^Tools\/(\d{3})-/) || [])[1]];
+  if (dark) {
+    scans.push({ p, key: `${p} [dark]`, seed: null, theme: 'dark' });
+    if (!emptyOnly) {
+      scans.push({ p, key: `${p} [seeded, light]`, seed: dark, theme: 'light' });
+      scans.push({ p, key: `${p} [seeded, dark]`, seed: dark, theme: 'dark' });
+    }
+  }
 }
 
 // Jump every finite CSS animation to its end before scanning. index.html fades
@@ -112,8 +134,11 @@ const started = Date.now();
 const advisory = [];
 
 try {
-  for (const { p, key, seed } of scans) {
+  for (const { p, key, seed, theme } of scans) {
     const page = await prepPage(browser, BASE, { width: 1280, height: 900 });
+    if (theme) {
+      await page.addInitScript(t => { try { localStorage.setItem('gvb-a11y-prefs', JSON.stringify({ theme: t, textScale: 100, dyslexic: false })); } catch (e) {} }, theme);
+    }
     if (seed) {
       await page.addInitScript(entries => {
         if (sessionStorage.getItem('__a11ySeeded')) return;

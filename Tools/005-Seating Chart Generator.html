@@ -59,6 +59,16 @@
     --shadow: var(--shadow-sm);
     --radius: 0px;
     --fscale:1;
+    /* Text in the accent: step 700 / 800 read on the light card, and are dark on the dark card (1.3 to 2 to 1, AI-67). */
+    --teal-ink: var(--teal-deep);
+    --blue-ink: var(--blue);
+  }
+  /* Dark: accent text is the dark theme's own accent (step 400, lifted for a school colour), and the tint is the
+     deep step, not the light 100 that put light text on a light desk. */
+  :root[data-theme="dark"]:not(.a11y-filter-dark){
+    --teal-ink: var(--teal);
+    --blue-ink: var(--teal);
+    --teal-soft: var(--color-accent-900);
   }
   *{box-sizing:border-box;}
   html,body{margin:0;height:100%;}
@@ -94,18 +104,18 @@
     height:100vh; position:sticky; top:0;
   }
   .brand{padding:18px 20px 14px; border-bottom:1px solid var(--line);}
-  .brand h1{font-size:21px; color:var(--blue); letter-spacing:.2px;}
+  .brand h1{font-size:21px; color:var(--blue-ink); letter-spacing:.2px;}
   .brand p{margin:4px 0 0; font-size:12.5px; opacity:0.65;}
   .side-scroll{overflow-y:auto; padding:16px 20px 28px; flex:1;}
 
   .block{margin-bottom:22px;}
   .block > h2{
     font-size:14px; text-transform:uppercase; letter-spacing:.9px;
-    color:var(--teal-deep); font-family: var(--font-body); font-weight:700;
+    color:var(--teal-ink); font-family: var(--font-body); font-weight:700;
     margin-bottom:9px; display:flex; align-items:center; gap:8px;
   }
   .block > h2 .count{
-    font-weight:600; opacity:0.65; background:var(--color-surface); border:1px solid var(--line); border-radius:0;
+    font-weight:600; color:color-mix(in srgb, var(--ink) 75%, transparent); background:var(--color-surface); border:1px solid var(--line); border-radius:0;
     padding:1px 9px; font-size:11.5px; letter-spacing:.3px;
   }
 
@@ -221,7 +231,7 @@
   /* ---------- seating history / rotation ---------- */
   .hist-checks{font-size:12px; margin-top:9px; line-height:1.6;}
   .hist-checks .bad{color:var(--warn); font-weight:600;}
-  .hist-checks .good{color:var(--teal-deep); font-weight:600;}
+  .hist-checks .good{color:var(--teal-ink); font-weight:600;}
 
   /* ---------- main / floor ---------- */
   .main{flex:1; display:flex; flex-direction:column; min-width:0; height:100vh;}
@@ -240,9 +250,9 @@
   /* The fade is the line's own text colour, not opacity: opacity also faded the accent words below, and a school
      colour's step 800 that reads on white at full strength did not at 80% (gold, 3.3 to 1; AI-65). */
   .status{font-size:12.5px; color:color-mix(in srgb, var(--ink) 80%, transparent); margin-left:2px;}
-  .status b{color:var(--blue);}
+  .status b{color:var(--blue-ink);}
   .status .bad{color:var(--warn); font-weight:600;}
-  .status .good{color:var(--teal-deep); font-weight:600;}
+  .status .good{color:var(--teal-ink); font-weight:600;}
   [hidden]{display:none !important;}
   .why-panel{flex:0 0 100%; font-size:13px; border:1px solid var(--line, #cdd6d2); border-radius:8px; padding:6px 12px; background:var(--card, #fff);}
   .why-panel ul{margin:0; padding-left:18px;}
@@ -255,11 +265,12 @@
     --gvb-btn-border:var(--line); --gvb-btn-radius:0px;
     gap:6px;
   }
-  #saveBar button{font-size:12.5px; font-weight:600; letter-spacing:0; padding:5px 9px;}
+  /* gvb-save.js styles nothing: without a background the button is the browser's ButtonFace, #6b6b6b in dark (AI-67). */
+  #saveBar button{background:var(--card); color:var(--blue-ink); border:1px solid var(--line); border-radius:0; cursor:pointer; font-size:12.5px; font-weight:600; letter-spacing:0; padding:5px 9px;}
   #saveBar button:hover{filter:none; background:color-mix(in srgb, var(--ink) 6%, transparent); border-color:var(--blue-soft);}
   #saveBar button[data-gvb="reset"]{color:var(--warn); border-color:color-mix(in srgb, var(--warn) 35%, transparent);}
   #saveBar button[data-gvb="reset"]:hover{background:var(--color-danger-bg);}
-  #saveBar .gvb-save-msg{font-size:12px; opacity:1; color:var(--teal-deep);}
+  #saveBar .gvb-save-msg{font-size:12px; opacity:1; color:var(--teal-ink);}
 
   /* cursor: the floor is draggable to pan (see wirePan() in the script);
      desks and chips override it with their own grab cursor. */
@@ -306,7 +317,7 @@
     width:26px; height:26px; border-radius:50%; object-fit:cover;
     border:1px solid var(--blue-soft); pointer-events:none;
   }
-  .desk.empty .seat{font-size:11.5px; font-weight:500; color:color-mix(in srgb, var(--ink) 40%, transparent); cursor:pointer;}
+  .desk.empty .seat{font-size:11.5px; font-weight:500; color:color-mix(in srgb, var(--ink) 70%, transparent); cursor:pointer;}
   .desk .selnote{position:absolute; bottom:-6px; left:50%; transform:translateX(-50%);
     background:var(--gold); color:#fff; font-size:9px; font-weight:700; padding:1px 6px; border-radius:0; display:none;}
   .desk.selected .selnote{display:block;}
@@ -348,7 +359,7 @@
   /* unassigned pool */
   .pool-wrap{border-top:1px solid var(--line); background:var(--card); padding:12px 22px; max-height:160px; overflow-y:auto;}
   .pool-head{display:flex; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap;}
-  .pool-head h3{font-size:14px; color:var(--blue);}
+  .pool-head h3{font-size:14px; color:var(--blue-ink);}
   .pool-head .pc{font-size:12px; opacity:0.65; background:var(--color-surface); border:1px solid var(--line); padding:1px 9px; border-radius:0;}
   .pool{display:flex; flex-wrap:wrap; gap:7px; min-height:34px;}
   .chip{

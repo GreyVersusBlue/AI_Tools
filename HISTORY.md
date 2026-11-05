@@ -9,6 +9,28 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-67: 005 Seating Chart reads in the dark theme (AI-65's found-not-fixed, 2026-11-04, `CACHE_VERSION` v586)
+
+AI-65 found 005 in dark with eight `color-contrast` nodes, school colour or none, and the sweep only scanned light. Reproduced
+with axe on an empty page and on one seeded with a chart (`seating-chart/test/fixtures/saved-v357.json`); the seeded
+page showed more (22 in dark, 3 in light), none of it in `_shared/theme.css`, so the fix is the page's own.
+
+- **Cause.** Text in the accent used `--teal-deep` (step 700) and `--blue` (step 800), which are the dark steps in the dark
+  theme: the h1, the five panel headings, the status line's bold words and "good" notes, and the pool heading were 1.35 to
+  1.92 to 1 on the dark card. The shared save bar's Reset button was the browser's ButtonFace (#6b6b6b in dark) under red
+  text, because `gvb-save.js` styles nothing and the `--gvb-btn-*` custom properties 005 set are read by no one. Seated desks
+  used `--teal-soft` (step 100) under light text, 1.1 to 1. Empty-seat labels (ink at 40%) and the roster count (opacity
+  .65 over the teal heading) were under 4.5 in light as well.
+- **Fix, all in 005's `<style>`.** Two tokens, `--teal-ink` and `--blue-ink`: steps 700/800 in light as before, the theme's
+  accent (`--teal`, step 400, lifted for a school colour by AI-65) in dark; `--teal-soft` is step 900 in dark. The save bar
+  buttons get an explicit `--card` background, border and `--blue-ink` text. Empty-seat labels are ink at 70%; the roster
+  count is ink at 75% in place of `opacity`. Stock light pixels move only for those two last text colours.
+- **Test.** `smoke-a11y-sweep.mjs` gained `DARK_PAGES` (005): `[dark]`, `[seeded, dark]` and `[seeded, light]` scans, with
+  the chart kept in the sweep file, not `seeds.mjs`, which `audit-print` and `print-kit` also read. Against HEAD's page the
+  three fail; with the fix `--only 005` is 10 passed, 0 failed. No allowlist line. Other pages stay light only.
+- **Not verified:** hover and focus states, the room editor and print preview in dark (axe sees the page as loaded), and
+  005 in dark under a school colour (`test:brand` covers it in light and dark for the pairs it names).
+
 ## AI-44: README.md's tools table is generated from index-rows.json (2026-11-04, no `CACHE_VERSION` bump)
 
 AI-30 made index.html's tool rows a render of `Tools/board-check/index-rows.json`, and its second session named the gap
