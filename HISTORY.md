@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## AI-67: 005 Seating Chart reads in the dark theme (AI-65's found-not-fixed, 2026-11-04, `CACHE_VERSION` v586)
+## AI-67: 005 Seating Chart reads in the dark theme (AI-65's found-not-fixed, 2026-11-04, `CACHE_VERSION` v588)
 
 AI-65 found 005 in dark with eight `color-contrast` nodes, school colour or none, and the sweep only scanned light. Reproduced
 with axe on an empty page and on one seeded with a chart (`seating-chart/test/fixtures/saved-v357.json`); the seeded
@@ -30,6 +30,37 @@ page showed more (22 in dark, 3 in light), none of it in `_shared/theme.css`, so
   three fail; with the fix `--only 005` is 10 passed, 0 failed. No allowlist line. Other pages stay light only.
 - **Not verified:** hover and focus states, the room editor and print preview in dark (axe sees the page as loaded), and
   005 in dark under a school colour (`test:brand` covers it in light and dark for the pairs it names).
+## AI-69: 020's second display no longer flips between two teacher tabs (2026-11-04, `CACHE_VERSION` v587)
+
+Review L5 (057a6be): with two 020 teacher tabs open, every tab answered a new display's "hello" and the last answer
+won, so the display flipped between one bracket and the other (or "Waiting..."). Each teacher tab now has a random tab
+id and posts it with `at`, the time of its own last change (a render; an answer to "hello" re-sends the old time).
+The display follows the newest change: a message from a different tab with an older `at` is ignored. A display
+opened later therefore settles on the tab that changed last whatever order the tabs answer in. A message without
+`at` (an older cached teacher page) is still accepted as before. No "two tabs" note was added; following is enough.
+
+- **Test.** `smoke-display.mjs` gained a `twoTabs` scenario (display after tab B, then tab A changes and the display
+  follows and stays, then a late display) and a break that removes the follow rule; 38 passed, 0 failed.
+
+## AI-68: 037's item analysis no longer reads a first-name student "Max" as the points-possible row (2026-11-04, `CACHE_VERSION` v586)
+
+Source: the AI_Tools review's finding **R1** (audit entry AI-68), the gap AI-56 left. AI-56 anchored the label so "Max Chen" is a student,
+but a first cell that is exactly "Max", "Total" or "Possible" was still the points row wherever it stood, so in a class listed by first
+names a student called Max set every question's points possible.
+
+- **Rule (`gd-items.js`).** A row whose whole first cell is a label is the points-possible row only when it is the first or last data row
+  (where a teacher puts one), or, in the middle, when no student's score beats it in any column (compared where both cells are numbers).
+  A middle "Max" that scored below a classmate is a student. A middle label row is skipped, not given up on: a real "Total" row at the foot
+  is still found. The label list and the whole-cell anchor are unchanged.
+- **Decision (mine, cheap to reverse):** the entry offered "first or last row, **or** every value at least the students'", and this takes
+  both. The cost: a student called exactly "Max" who is listed first or last in a first-name-only paste is still read as the points row, since
+  nothing separates him from a real one there (a "Possible" row above a score is still reported "over the points possible", not guessed).
+  Requiring both would have turned a real points row with one over-scored student into a silent student row.
+- **Tests, seen failing first.** `test:gd-items` case 18 ("Name/Q1/Q2, Ana 2 2, Max 1 0, Bo 2 1" and the Total twin read as students; a
+  last, first, and middle-above-every-score row still read; a middle Max beside a real last "Total" row; "Max Chen" first or last), plus two
+  mutants (middle label row always the points row; first or last only). Its existing mutant for the points row was re-aimed at the new line.
+  `test:gd-items-smoke` 75/75. `sw.js` `CACHE_VERSION` v585 to v586, because `gd-items.js` is precached.
+- **Not verified.** No real gradebook export with a first-name "Max" was pasted.
 
 ## AI-44: README.md's tools table is generated from index-rows.json (2026-11-04, no `CACHE_VERSION` bump)
 

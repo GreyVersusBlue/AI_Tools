@@ -162,6 +162,25 @@ function check(G) {
   ok(!r.hasNames && r.questions.length === 3 && r.questions[0].label === 'Q1', 'Q1 kept, not turned into names: ' + r.questions.map(q => q.label).join());
   ok(r.problems.length === 1 && r.problems[0].line === 2 && r.problems[0].label === 'Q1' && r.questions[0].n === 3, 'the ab is named in Q1, not guessed');
   ok(G.analyze('Ada\t1\nBo\t0\n7\t1').hasNames, 'mostly names: still a name column');
+
+  // (the label must be the whole cell even where a points row may stand: first or last)
+  ok(!G.analyze('Name\tQ1\nMax Chen\t1\nBo\t2').maxGiven && !G.analyze('Name\tQ1\nBo\t2\nMax Chen\t1').maxGiven, 'Max Chen first or last is a student');
+  // 18. (AI-68, R1) a student called exactly "Max" in the middle of a first-name list is a student
+  r = G.analyze('Name,Q1,Q2\nAna,2,2\nMax,1,0\nBo,2,1');
+  ok(!r.maxGiven && r.students === 3 && r.problems.length === 0, 'middle Max is a student: ' + JSON.stringify(r.problems));
+  ok(r.questions[0].max === 2 && r.questions[0].n === 3 && near(r.questions[0].pct, 5 / 6) && r.questions[1].n === 3 && near(r.questions[1].pct, 0.5), 'Q1 out of 2 and Q2 out of 2 over three students');
+  r = G.analyze('Name,Q1,Q2\nAna,2,2\nTotal,1,0\nBo,2,1');
+  ok(!r.maxGiven && r.students === 3, 'middle Total is a student too');
+  // ... but a labelled row last, or first, or in the middle above every score, is still the points row
+  r = G.analyze('Name,Q1,Q2\nAna,2,1\nBo,1,1\nMax,4,2');
+  ok(r.maxGiven && r.students === 2 && r.questions[0].max === 4 && r.questions[1].max === 2, 'last Max row is read as points possible');
+  r = G.analyze('Name,Q1,Q2\nAna,2,1\nMax,4,2\nBo,1,1');
+  ok(r.maxGiven && r.students === 2 && r.questions[0].max === 4, 'middle Max row above every score is read as points possible');
+  r = G.analyze('Name,Q1,Q2\nMax,4,2\nAna,2,1\nBo,1,1');
+  ok(r.maxGiven && r.students === 2, 'first Max row is read as points possible');
+  // a middle student "Max" is skipped for a real "Total" row at the foot
+  r = G.analyze('Name,Q1\nAna,2\nMax,1\nBo,2\nTotal,3');
+  ok(r.maxGiven && r.students === 3 && r.questions[0].max === 3, 'a middle Max is a student while the last Total row is the points row');
   return bad;
 }
 
@@ -173,7 +192,9 @@ const MUTANTS = [
   ['over-maximum kept', s => s.replace('if (stated && x.v > max) {', 'if (false) {')],
   ['band 5 not 10', s => s.replace('var WATCH_BAND = 10;', 'var WATCH_BAND = 5;')],
   ['at the line is reteach', s => s.replace('if (p < l) return', 'if (p <= l) return')],
-  ['points row is a student', s => s.replace('MAX_ROW.test(r.cells[0]) &&', 'false &&')],
+  ['middle label row always the points row (AI-68)', s => s.replace('if (i !== 0 && i !== rows.length - 1 && !dominates(r)) return false;', '')],
+  ['label row only when first or last (AI-68)', s => s.replace('!dominates(r)) return false;', 'true) return false;')],
+  ['points row is a student', s => s.replace('if (!MAX_ROW.test(r.cells[0]) || P.toNumber(r.cells[0]) !== null) return false;', 'return false;')],
   ['chart shows percent correct', s => s.replace('(1 - q.pct) * 1000', 'q.pct * 1000')],
   ['name column not detected', s => s.replace('var first = hasNames ? 1 : 0;', 'var first = 0;')],
   ['gap not flagged', s => s.replace('gap >= GAP_FLAG', 'gap > 100')],

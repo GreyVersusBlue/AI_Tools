@@ -105,6 +105,33 @@ const SCENARIOS = {
     await late.close();
     return out;
   },
+  async twoTabs(teacher) {
+    // Two teacher tabs on one browser: the display follows the tab that changed last, and a window opened later
+    // is not flipped by the other tab's answer to "hello".
+    const out = [];
+    const tabB = await teacher.context().newPage();
+    tabB.on('dialog', (d) => d.accept());
+    tabB.on('pageerror', (e) => errors.push(String(e)));
+    tabB.mutation = teacher.mutation;
+    await mutate(tabB);
+    await tabB.goto(URL_PAGE, { waitUntil: 'load' });
+    await settle(tabB, 300);
+    await make(teacher, { name: 'TabA', names: ['A1', 'A2', 'A3', 'A4'] });
+    await make(tabB, { name: 'TabB', names: ['B1', 'B2', 'B3', 'B4'] });
+    const display = await displayOf(teacher);
+    await settle(display, 300);
+    out.push(['a display opened after tab B changed last shows tab B', /B1/.test(await view(display)) && !/A1/.test(await view(display))]);
+    await teacher.evaluate(() => document.querySelectorAll('#bracketView > .bracket > .round')[0].querySelectorAll('.match')[0].querySelectorAll('.slot')[0].click());
+    await settle(teacher, 300); await settle(display, 300);
+    const want = await view(teacher);
+    out.push(['after tab A changes, the display follows tab A', (await view(display)) === want]);
+    await settle(display, 600);
+    out.push(['and stays there (no flip back to tab B)', (await view(display)) === want]);
+    const late = await displayOf(teacher);
+    await settle(late, 500);
+    out.push(['a window opened later shows the tab that changed last, whatever order the tabs answer', (await view(late)) === want]);
+    return out;
+  },
   async readOnly(teacher) {
     const out = [];
     const display = await displayOf(teacher);
@@ -147,7 +174,8 @@ const SCENARIOS = {
 // Each rule, broken in the page, must be noticed by the scenario that guards it.
 const BREAKS = [
   ['formats', [["if (isDisplay) {\n    startDisplay();", "if (false) {\n    startDisplay();"]]],
-  ['follows', [["try { displayBc.postMessage({ type: 'bracket', state:", "try { 0 && displayBc.postMessage({ type: 'bracket', state:"]]],
+  ['follows', [["try { displayBc.postMessage({ type: 'bracket', tab:", "try { 0 && displayBc.postMessage({ type: 'bracket', tab:"]]],
+  ['twoTabs', [["if (msg.tab !== followTab && msg.at < followAt) return;", ""]]],
   ['readOnly', [["body.display-mode #bracketView { pointer-events: none; }", ""]]],
   ['readOnly', [["        e.stopPropagation(); e.preventDefault();\n      }, true);", "      }, true);"], ["body.display-mode #bracketView { pointer-events: none; }", ""]]],
   // the academic card is kept off the display twice (not drawn, and hidden by CSS); either alone holds, so both go
