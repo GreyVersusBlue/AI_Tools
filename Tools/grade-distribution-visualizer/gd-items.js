@@ -35,7 +35,8 @@
   var DEFAULT_LINE = 70;
   var WATCH_BAND = 10;
   // The points-possible row's label is the whole first cell ("Points possible", "Max", "Out of:"),
-  // so a student called "Max Chen" or "Total Smith" is a student (AI-56).
+  // so a student called "Max Chen" or "Total Smith" is a student (AI-56); a first-name "Max" in the middle of the
+  // list is a student too unless the row beats every score (AI-68).
   var MAX_ROW = /^\s*(?:(?:max(?:imum)?|total|possible)(?:\s+(?:points?|pts\.?|score|possible))?|points?(?:\s+(?:possible|max(?:imum)?|out\s+of))?|pts\.?|out\s+of)\s*:?\s*$/i;
   // A first cell that names a column of student names, for a header whose question labels are
   // the numbers 1, 2, 3, ... (PasteTable's header test only takes words).
@@ -71,10 +72,26 @@
 
     var rows = parsed.rows.map(function (r, i) { return { cells: r, line: parsed.lines[i] }; });
     var maxRow = null;
-    rows = rows.filter(function (r) {
-      if (!maxRow && MAX_ROW.test(r.cells[0]) && P.toNumber(r.cells[0]) === null) { maxRow = r; return false; }
+    // A label alone is not enough: in a class listed by first names, "Max" is a student (AI-68). A
+    // labelled row is the points-possible row when it is the first or last data row (where a teacher
+    // puts one), or, anywhere else, when no student's score beats it in any column.
+    function dominates(r) {
+      return rows.every(function (o) {
+        if (o === r) return true;
+        for (var k = 1; k < r.cells.length; k++) {
+          var a = P.toNumber(r.cells[k]), b = P.toNumber(o.cells[k]);
+          if (a !== null && b !== null && b > a) return false;
+        }
+        return true;
+      });
+    }
+    rows.some(function (r, i) {
+      if (!MAX_ROW.test(r.cells[0]) || P.toNumber(r.cells[0]) !== null) return false;
+      if (i !== 0 && i !== rows.length - 1 && !dominates(r)) return false;
+      maxRow = r;
       return true;
     });
+    if (maxRow) rows = rows.filter(function (r) { return r !== maxRow; });
     res.maxGiven = !!maxRow;
 
     // The first column is names when more of its cells are words than numbers: one "ab" in a
