@@ -9,6 +9,19 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-72: 020's `twoTabs` mutant is caught every time (2026-11-06, test only, no `CACHE_VERSION` change)
+
+Main CI run 41997144989 failed `smoke-display.mjs` with "twoTabs did not notice the broken rule". With AI-69's follow
+rule removed, a new display ends on whichever tab answers "hello" last; the test left that to the browser, so the
+mutant was caught only when the older tab happened to answer second. The page had no ordering bug.
+
+- **Fix.** Before the late display opens, tab B (the older change) has `BroadcastChannel.postMessage` delayed 400 ms, so
+  it is always the last answer; the settle after it is 1000 ms. Assertions unchanged. With the rule the display ignores B;
+  without it, it ends on B and the case fails.
+- **Checked.** `run-suites.mjs --repeat 20 --only bracket-tournament-generator` : 15 full passes of all 12 suites (smoke-display included, with its mutants), 0 failures; the run was cut off by the background time limit in pass 16.
+
+---
+
 ## AI-71: the school colour reaches a sheet of paper in the dark theme (review L12, 2026-11-04, `CACHE_VERSION` v589)
 
 `ink-paper.css` keeps a `#printArea` / `.paper-sheet` light in dark by pointing its tokens at the `-light` values, stock navy
