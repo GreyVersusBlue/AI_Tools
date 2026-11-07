@@ -127,8 +127,15 @@ const SCENARIOS = {
     out.push(['after tab A changes, the display follows tab A', (await view(display)) === want]);
     await settle(display, 600);
     out.push(['and stays there (no flip back to tab B)', (await view(display)) === want]);
+    // Fix the order the tabs answer "hello" in: tab B (the older change) answers 400 ms after tab A, so it is always
+    // the LAST answer the new display hears. Without the follow rule the display would end on tab B; left to timing
+    // this only happened when the browser happened to schedule B second (CI run 41997144989).
+    await tabB.evaluate(() => {
+      const post = BroadcastChannel.prototype.postMessage;
+      BroadcastChannel.prototype.postMessage = function (m) { setTimeout(() => post.call(this, m), 400); };
+    });
     const late = await displayOf(teacher);
-    await settle(late, 500);
+    await settle(late, 1000);
     out.push(['a window opened later shows the tab that changed last, whatever order the tabs answer', (await view(late)) === want]);
     return out;
   },
