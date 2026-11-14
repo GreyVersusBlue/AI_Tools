@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## AI-73: 091 Student Data Anonymizer, a new tool (Devon's request, 2026-11-13, `CACHE_VERSION` v590)
+## AI-73: 091 Student Data Anonymizer, a new tool (Devon's request, 2026-11-13, #385, `CACHE_VERSION` v590)
 
 Devon asked for a page that takes a student data file and returns the same file with no student in it, plus a key.
 Devon answered the design questions in the session: every student detail is removed by default, with a toggle each;
