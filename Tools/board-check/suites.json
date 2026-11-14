@@ -557,7 +557,10 @@
     "Tools/packet-builder/test/smoke-binder-stale.mjs",
     "Tools/sub-binder-generator/test/smoke-binder-providers.mjs",
     "Tools/sub-binder-generator/test/smoke-seating-choice.mjs",
-    "Tools/sub-binder-generator/test/smoke-binder-share.mjs"
+    "Tools/sub-binder-generator/test/smoke-binder-share.mjs",
+    "Tools/student-anonymizer/test/sda-core.test.mjs",
+    "Tools/student-anonymizer/test/sda-pdf.test.mjs",
+    "Tools/student-anonymizer/test/smoke-anonymizer.mjs"
   ],
   "expectedFailures": []
 }

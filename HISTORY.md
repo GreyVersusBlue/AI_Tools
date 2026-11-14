@@ -9,6 +9,67 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-73: 091 Student Data Anonymizer, a new tool (Devon's request, 2026-11-13, `CACHE_VERSION` v590)
+
+Devon asked for a page that takes a student data file and returns the same file with no student in it, plus a key.
+Devon answered the design questions in the session: every student detail is removed by default, with a toggle each;
+teacher names are always kept; a code is `XX-XX` from 32 characters (I, O, 0 and 1 left out, so 1,048,576 codes);
+there is an "existing key" upload that keeps codes and adds new students; there is a reverse mode; input is PDF, CSV,
+XLS or XLSX and output is XLSX with a PDF toggle; the page remembers nothing.
+
+- **Files.** `Tools/091-student-data-anonymizer.html`; `Tools/student-anonymizer/sda-core.js` (codes, names, column
+  roles, who is one person, matching against a key, the anonymized copy, the leak check, the key file, reverse),
+  `sda-pdf.js` (pdf.js extraction and the TAC reader), `sda-io.js` (SheetJS in, xlsx and jsPDF out). Registry row with
+  `keys: []`. Not in `SHELL_URLS`.
+- **Readers, from Devon's five samples.** ESP Reporting Center "Attendance Totals by Marking Period" (ID, full name,
+  `GRADE`); Performance Matters "BBCard" (name only, no ID, first and last name only); a Performance Matters assessment
+  export (four sheets, headings on row 2 or 3 under class-average rows, one sheet with `78.0%` where its "Test Score %"
+  heading should be); TAC "Student Detail Report" PDFs (one student a page, name in the title, no ID). A spreadsheet
+  needs no layout of its own: the heading row is found by a student ID or name heading and every column gets a guessed
+  role the teacher can change. The named layouts only label the file.
+- **Decisions taken in the build, reversible.** (1) A student detail is a column whose heading reads as one (grade
+  level, birth date, gender, race, ELL, IEP/504, FARMS, address, phone, email, parent, homeroom, counselor); scores,
+  absences and "Letter Grade" are data and always kept; course, period, school and any heading with "teacher" are
+  always kept. (2) Matching order: ID, then last + first name ignoring middle names, suffixes, accents, hyphens and
+  case, only when exactly one key entry fits. A name that fits an entry with a different ID, or several entries, is a
+  conflict the page asks about; until answered it gets a new code (a split student is fixable in the key, a merged one
+  is not). No spelling is close enough: Devon confirmed "Brittany" and "Britney" in the samples are two students.
+  (3) Within one run, a name-only row joins a person seen on another sheet by last + first name (the BBCard's
+  "Aguilar, Alison" is the attendance file's "Aguilar, Alison Sofia"), never two rows of the same sheet. (4) Student
+  rows are sorted by code, because an export in alphabetical order lines up with a roster even without names.
+  (5) A new key entry is named by its fullest spelling, and every other spelling is kept on it. (6) Cells are copied
+  with their number format, so `ExportKit.toXlsx()` is not used: it writes values without formats, and a copy showing
+  0.625 where the export showed 62.50% is not the same information. (7) The PDF toggle draws a new table PDF of the
+  anonymized sheets; nothing is blacked out on the original, since a box drawn over text leaves the text under it.
+  (8) Reverse reads spreadsheets only; a saved PDF is for reading.
+- **The TAC strikethrough.** Devon: a line through a cell means *not included*, usually no grade entered yet (not
+  "excused"). The report draws it as a solid 0.45-0.5 pt line across one cell; the cell borders are dashed, and the one
+  solid border (under "Extra credit: overall average") runs along a row edge across three columns. A strike is a solid
+  line inside one column and inside a row's grey cell, not on its edge; the struck cells are named in
+  "Not included (line through)". Column edges are the header's filled cells, not word positions: a left-aligned name
+  and a right-aligned score sit a few points apart. 089 Progress Report Parser reads the same report with fixed x
+  positions and does not see strikes; it was not changed, and a shared reader for both is not built.
+- **What was checked against the real samples** (in the session only; they are not in the repo, which is public, and
+  they hold student IDs): all 18 students and 234 assignment rows of the 18-page PDF, wrapped assignment names joined,
+  the struck EXC and all 18 struck Grade Bump rows found and nothing else struck; the three spreadsheets together gave
+  790 students, the 151 BBCard students all joined to their attendance rows with no conflict, `GRADE` dropped by
+  default, the leak check clean on all four outputs; the key reused on the PDF matched 17 of 18 by name (the 18th is
+  not in the attendance file); a PDF → anonymized → names back round trip restored every row and added the IDs learned
+  from the attendance file. Its first run found a real bug: "Extra credit: overall average" matched the end-of-table
+  pattern and cut the Grade Bump row and the totals (now `overall average is`).
+- **Tests.** `test:anonymizer-core` (67 checks, 14 mutants), `test:anonymizer-pdf` (33 checks on synthetic pages with
+  the real report's geometry and decoy lines, 8 mutants), `test:anonymizer` (port 8702: made-up XLSX, CSV and a jsPDF
+  TAC-style PDF through the real pdf.js; downloads, toggles, key reuse, a conflict, reverse, no storage, axe light and
+  dark). Every name and ID in them is invented.
+- **Not verified.** No file was opened in Excel or another spreadsheet program (SheetJS read them back). XLS (the old
+  binary format) was not tried with a real export, only through SheetJS's reader. Only the TAC PDF layout exists; any
+  other PDF is refused in words. A TAC report with a retake ("R") or dropped ("*") mark, a wrapped category in the
+  totals table, or a student running onto a second page was only tested synthetically. The leak check looks for IDs and
+  "Last First" / "First Last" names; a nickname or a first name alone in a comment would pass it. SheetJS logs "Bad
+  uncompressed size" to the console when it reads the Performance Matters export; the file reads correctly.
+
+---
+
 ## AI-72: 020's `twoTabs` mutant is caught every time (2026-11-06, test only, no `CACHE_VERSION` change)
 
 Main CI run 41997144989 failed `smoke-display.mjs` with "twoTabs did not notice the broken rule". With AI-69's follow

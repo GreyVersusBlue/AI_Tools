@@ -267,6 +267,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
+| 7 | **091 Student Data Anonymizer** (Devon's direct request, 2026-11-13): file in (PDF, CSV, XLS, XLSX from ESP, Performance Matters, TAC), an anonymized xlsx/PDF and a key out; `XX-XX` codes, reuse a key, reverse. Nothing stored | 091 | 1 | `AI-73` 2026-11-14 04:30 UTC | (this row; detail in `HISTORY.md` once shipped) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
