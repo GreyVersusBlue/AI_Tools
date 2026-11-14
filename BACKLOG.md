@@ -71,7 +71,7 @@ row is open now; a future one follows the same rule.
 
 ## Where things stand — start here
 
-*Current as of huginn's local `main`, 2026-11-04 (AI-52). **Keep this section under ~80 lines.** It is
+*Current as of `main` at #385, 2026-11-14 (AI-73). **Keep this section under ~80 lines.** It is
 the state of the repo and what to start — not a log. The story of each increment, what it
 found and what it did not verify, goes in `HISTORY.md` in the same commit; this header gets
 at most three lines about it. Rewrite it when your phase merges (step 6 of the definition of
@@ -81,31 +81,15 @@ done).*
 verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12"). It grew to ~600 again by
 2026-11-04, and that second run moved verbatim too ("BACKLOG header handoffs, 2026-10-03 → 2026-11-04"). Search there for a PR number.
 
-**Origin's `main` is #381** (merged 2026-11-04 03:41 ET, `CACHE_VERSION` v573): the wave of AI-22 (005's live mode marks a
-point and a hall pass, v565), AI-31 (053's ready-made Review Game Board, v566, and Devon's 2026-11-03 answers closing ranks
-36, 43, 117, 149-151), AI-36 (007's seat equity by id, v571), AI-41 (046's slices preview, v572), AI-46 (032's anchor
-letter, v573), AI-47 (067's click track, v568), AI-49 (043's trip-day view, v570), AI-53 (002's team double count, v563),
-AI-55 (019's monitor, v564), AI-56 (037 item analysis, v569), AI-58 (020 and 032 fixes, v567).
-
-**Local `main` on huginn is 23+ commits ahead of origin, unpushed, waiting on the nightly landing (v574 to v584,
-backed up on `wave/2026-11-04`).** Newest first; detail in `HISTORY.md` under each code:
-- **AI-43 (v584):** a real social card. `node Tools/board-check/make-og.mjs` writes five cards to `assets/og/` (not precached);
-  45 page heads name one; `check:social` fails a missing card.
-- **AI-51 (v583), AI-50 (v579):** rank 140 increments: 035's welcome/Help dialogs to `sv-onboarding.js`, its recovery
-  manager to `sv-recovery-ui.js`. **AI-66 (v582):** restoring the oldest of three recovery points works again.
-- **AI-71 (v589):** on a dark page, a `#printArea` / `.paper-sheet` takes the school colour (review L12); `test:brand` checks it.
-- **AI-67 (v588):** 005 Seating Chart reads in dark (the eight contrast failures AI-65 found, and the ones a seeded chart showed);
-  the a11y sweep now scans 005 in dark and seeded.
-- **AI-65 (v581), AI-57 (v576):** the school accent leaves status-fill text alone and reads on the five `theme.css` pages
-  (`--status-ink`, `--accent-2-ink`, `--color-accent-ink`); `test:brand` sweeps 92 pages.
-- **AI-63 (v580):** the review's low batch (L1-L4, L6-L9, L13); `check:registry` holds a tool to its `writes`.
-  L5, L10 and L11 were left (`HISTORY.md`, AI-63); L12 is AI-71.
-- **AI-48 (v578), rank 96 deleted:** 067's reference pitch and note play-through. **AI-64 (no bump):** the
-  share-rollout suite fits a 3.5 GB cap.
-- **AI-60 (v577), AI-54 (v575), AI-40 (v574):** German separable verbs' auxiliary (review M5); a 039 set never empties
-  a 040 list (review H1); the Latin deponent perfect (`locūtus sum`, Devon's L4; rank 56 cut to small leftovers).
-- **AI-52 (no bump, docs only):** ranks 110 and 113 rewritten to what the code has not built; rank 65 deleted (every
-  tool on its list is done or decided); this header rewritten.
+**`main` is #385** (merged 2026-11-14, `CACHE_VERSION` v590): **AI-73, a new tool, 091 Student Data Anonymizer** (Devon's
+direct request, 2026-11-13). A PDF, CSV, XLS or XLSX export in; the same file with every student's name and ID replaced by
+an `XX-XX` code, plus a key; existing-key reuse, conflicts asked never guessed, reverse, XLSX or PDF out, nothing stored.
+Readers for ESP attendance totals, Performance Matters BBCard and assessment exports, and TAC Student Detail PDFs (a line
+through a cell = not included). `HISTORY.md`, AI-73, has the decisions and what was not verified. Devon will add sources
+later: **a new export is a reader in `Tools/student-anonymizer/`** (a layout label in `sda-io.js`, or a PDF parser beside
+`parseTac`), plus a case in `test:anonymizer-pdf` or `test:anonymizer`; never commit a real export (the repo is public).
+- Before it, the nightly landings #382-#384 (2026-11-04 to 11-07) brought the huginn-local commits to origin: v574 to v589.
+  Their detail is in `HISTORY.md` under each code; the header list of them that stood here is gone.
 
 **Start here.** Start at **rank 8, Path 8 P1** (`_shared/remote.js`, a generic join page, reconnect on drop): it is the
 platform piece ranks 9-11, 42 (007's phone remote) and 113 (004's reconnecting mirror) all wait on.
@@ -123,20 +107,20 @@ platform piece ranks 9-11, 42 (007's phone remote) and 113 (004's reconnecting m
 - **A periodic human device check** (about 30 minutes with a phone, a laptop and a printer):
   the parked list under Cross-cutting ("Parked — needs a person").
 
-**Numbers (2026-11-04, huginn's local `main` at v584; re-measure, do not carry forward):**
+**Numbers (2026-11-14, `main` at v590; re-measure, do not carry forward):**
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v584` on local `main`; `v573` on origin (#381) — `check:precache -- --base origin/main` is the thing to trust |
-| Precache entries | **448** in `PRECACHE_URLS`, **150** in `SHELL_URLS` (`check:precache`) |
-| Suites | **541** in `Tools/board-check/suites.json`, 535 suite files on disk (`check:tests`); `expectedFailures` empty |
+| `CACHE_VERSION` | `v590` (#385) — `check:precache -- --base origin/main` is the thing to trust |
+| Precache entries | **454** in `PRECACHE_URLS`, **150** in `SHELL_URLS` (`check:precache`) |
+| Suites | **546** in `Tools/board-check/suites.json`, 540 suite files on disk (`check:tests`); `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **448** across the 57 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0** page-rule allowances (`Tools/a11y-sweep/allowlist.json`) |
-| Tool registry | 92 rows, **245 keys and 30 prefixes across 139 files** (`check:registry`); **63** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag) |
-| Shared-file adoption (of 90) | `sw-register.js` 88 · `a11y.css` 87 · `a11y.js` 87 · `ink-paper.css` 79 · `base.css` 73 · `qr-draw.js` 61 · `state-link.js` 57 · `share.js` 56 · `store.js` 45 · `roster.js` 35 · `print-area.css` 32 · `print-kit.css` 20 · `print-kit.js` 20 · `media-db.js` 18 · `export.js` 17 · `stage.js` 17 · `tool-registry.js` 14 · `qr-scan.js` 10 · `handoffs.js` 9 · `school-day.js` 9 · `sample-data.js` 10 · `webrtc-pair.js` 8 · `paste-table.js` 7 (+2 via a module) · `grouping.js` 6 · `list-sentence.js` 6 (+3 via a module) · `question-bank.js` 6 · `student-flags.js` 6 · `undo.js` 6 · `word-list.js` 6 · `speak.js` 5 · `theme.css` 5 · `chart-svg.js` 4 · `levels.js` 4 · `seating-read.js` 4 · `countdown.js` 3 · `remote-channel.js` 3 · `restore-kit.js` 3 · `binder-stale.js` 2 · `bracket.js` 2 · `conjugate-de.js` 2 · `conjugate-es.js` 2 · `conjugate-fr.js` 2 · `conjugate-it.js` 2 · `conjugate-la.js` 2 · `conjugate.js` 2 · `rotation.js` 2 · `ss-glossary.js` 2 · `stations-bank.js` 2 · `stations.js` 2 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `stations-debrief.css` 1 · `stations-debrief.js` 1 · `student-details.js` 1 (+1 via a module) · `geo-project.js` 0 (+2 via a module) |
+| Tool registry | 93 rows (091's has `keys: []`), **245 keys and 30 prefixes across 139 files** (`check:registry`); **65** lines carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag) |
+| Shared-file adoption (of 91) | `sw-register.js` 89 · `a11y.css` 88 · `a11y.js` 88 · `ink-paper.css` 80 · `base.css` 74 · `qr-draw.js` 61 · `state-link.js` 57 · `share.js` 56 · `store.js` 45 · `roster.js` 35 · `print-area.css` 32 · `print-kit.css` 20 · `print-kit.js` 20 · `export.js` 18 · `media-db.js` 18 · `stage.js` 17 · `tool-registry.js` 14 · `qr-scan.js` 10 · `sample-data.js` 10 · `handoffs.js` 9 · `school-day.js` 9 · `webrtc-pair.js` 8 · `paste-table.js` 7 (+2 via a module) · `grouping.js` 6 · `list-sentence.js` 6 (+3 via a module) · `question-bank.js` 6 · `student-flags.js` 6 · `undo.js` 6 · `word-list.js` 6 · `speak.js` 5 · `theme.css` 5 · `chart-svg.js` 4 · `levels.js` 4 · `seating-read.js` 4 · `countdown.js` 3 · `remote-channel.js` 3 · `restore-kit.js` 3 · `binder-stale.js` 2 · `bracket.js` 2 · `conjugate-de.js` 2 · `conjugate-es.js` 2 · `conjugate-fr.js` 2 · `conjugate-it.js` 2 · `conjugate-la.js` 2 · `conjugate.js` 2 · `rotation.js` 2 · `ss-glossary.js` 2 · `stations-bank.js` 2 · `stations.js` 2 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `stations-debrief.css` 1 · `stations-debrief.js` 1 · `student-details.js` 1 (+1 via a module) · `geo-project.js` 0 (+2 via a module) |
 | Printing | 80 tool pages call `window.print()` in their HTML; 56 contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`) |
-| Tools | 90 (`001`–`090`); next free number **091** |
+| Tools | 91 (`001`–`091`); next free number **092** |
 | Tier 1 rows | **27 ranked rows, ranks 8 to 144**, with gaps where rows shipped or closed; ranks are not renumbered between landings |
 | Art | **130** ledger entries, clean (`check:art`) |
 | Dark mode / fullscreen | 93 of 93 themed pages native dark, 0 on the filter (`path5:next`); `stage.js` on 17 pages, 1 still hand-rolls fullscreen. Path 5 is finished |
@@ -267,7 +251,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 7 | **091 Student Data Anonymizer** (Devon's direct request, 2026-11-13): file in (PDF, CSV, XLS, XLSX from ESP, Performance Matters, TAC), an anonymized xlsx/PDF and a key out; `XX-XX` codes, reuse a key, reverse. Nothing stored | 091 | 1 | `AI-73` 2026-11-14 04:30 UTC | (this row; detail in `HISTORY.md` once shipped) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
