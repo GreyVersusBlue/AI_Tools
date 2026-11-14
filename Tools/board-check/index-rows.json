@@ -546,6 +546,25 @@
      "gradeTitle": "Comment: one packet, in the order you want it.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
      "readme": "Choose which pages go in one printed packet, put them in order, preview the pages and print it. Every page is a section read live from the tool that holds it (substitute information and emergency information from Sub Plan Builder to start; a section with nothing saved yet is greyed with a link to the tool that fills it in), so nothing is copied and nothing goes stale. Two built-in presets (Sub day, Emergency binder) and your own, saved as lists of section names only. Print goes through the shared print kit; works offline."
+    },
+    {
+     "d": "1460ms",
+     "href": "Tools/091-student-data-anonymizer.html",
+     "tool": "student-data-anonymizer",
+     "tags": "anonymize anonymizer de-identify deidentify student data privacy ferpa names ids code key reverse attendance gradebook assessment performance matters teacher access center esp reporting center pdf csv xlsx export",
+     "filterTags": "grades export",
+     "per": "91",
+     "name": "Student Data Anonymizer",
+     "pitch": "Give it an attendance, gradebook or assessment export and get back the same file with each student's name and ID replaced by a code, plus a key that turns the codes back into names. Nothing is uploaded or saved.",
+     "comment": "Share the data, not the names.",
+     "chips": [
+      "grades",
+      "export"
+     ],
+     "grade": "A",
+     "gradeTitle": "Comment: share the data, not the names.",
+     "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
+     "readme": "Give it a PDF, CSV, XLS or XLSX export (ESP Reporting Center attendance totals, Performance Matters baseball cards and assessment results, Teacher Access Center Student Detail Reports, or any spreadsheet with a name or ID column) and get back the same file with every student's name and ID replaced by a random XX-XX code, saved as Excel or PDF, plus a key. Student details such as grade level are removed unless ticked; teacher names and scores are kept. Several files at once share codes, an earlier key keeps each student's code and adds the new ones, a name the key cannot place is asked about, never guessed, and the key puts the names back. A line through a TAC score is recorded as not included. Nothing is uploaded or saved; works offline."
     }
    ]
   },
@@ -2067,6 +2086,7 @@
   "braille-reading-trainer",
   "progress-report-parser",
   "packet-builder",
+  "student-data-anonymizer",
   "fitness-skill-assessment-tracker",
   "art-portfolio-label-maker",
   "music-sightreading-generator",

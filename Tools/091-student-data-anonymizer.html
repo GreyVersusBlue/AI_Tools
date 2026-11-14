@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="../manifest.json">
+<title>Student Data Anonymizer</title>
+<meta name="description" content="Give it a gradebook, attendance or assessment export (PDF, CSV, XLS or XLSX) and get back the same file with every student's name and ID replaced by a code, plus a key that turns the codes back into names. Runs in the browser; nothing is uploaded or saved.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M8 10h16M8 16h9M8 22h12' stroke='%231f3a5f' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<!-- 091 Student Data Anonymizer (AI-73, Devon's request of 2026-11-13).
+
+     The rules are in student-anonymizer/sda-core.js (codes, names, the key,
+     column roles, anonymize, reverse, the leak check), PDF reading in
+     sda-pdf.js and files in and out in sda-io.js. This page only wires them
+     to the screen.
+
+     NOTHING IS STORED. No localStorage, no IndexedDB, no link state: student
+     data lives in this tab's memory and is gone when it closes. A key the
+     teacher saved earlier is seen only when they choose it again. The tool's
+     row in _shared/tool-registry.js therefore has no keys.
+
+     The libraries (SheetJS, pdf.js, jsPDF + AutoTable) are the vendored
+     copies, loaded on first use; all are precached. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
+<script src="../_shared/a11y.js"></script>
+<script src="../_shared/export.js"></script>
+<script src="student-anonymizer/sda-core.js"></script>
+<script src="student-anonymizer/sda-io.js"></script>
+<script src="student-anonymizer/sda-pdf.js"></script>
+<link rel="stylesheet" href="../_shared/ink-paper.css">
+<link rel="stylesheet" href="../_shared/a11y.css">
+<link rel="stylesheet" href="../_shared/base.css">
+<style>
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 16px 80px; line-height: 1.45;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h2 { font-size: 1.1rem; margin: 0 0 .5rem; }
+  h3 { font-size: .98rem; margin: 1rem 0 .4rem; }
+  p { margin: .35rem 0; }
+  .hint { color: var(--muted); font-size: .85rem; }
+  .privacy { border-left: 4px solid var(--accent); padding: .55rem .8rem; background: var(--card); border-radius: 0 8px 8px 0; margin: 0 0 1rem; }
+  .modes { display: flex; gap: .5rem; flex-wrap: wrap; margin: 0 0 1rem; }
+  .modes button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
+    border-radius: 7px; padding: .5rem .95rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+  .pick { display: grid; gap: .3rem; margin: .4rem 0 .9rem; }
+  .pick label { font-weight: 600; }
+  input[type="file"] { font: inherit; color: var(--ink); max-width: 100%; }
+  select, input[type="number"] {
+    font: inherit; font-size: .88rem; color: var(--ink); background: var(--card);
+    border: 1px solid var(--line-strong); border-radius: 6px; padding: .25rem .4rem; max-width: 100%;
+  }
+  .status { min-height: 1.3em; font-size: .9rem; }
+  .status.err, .err { color: var(--err); }
+  .ok { color: var(--good); }
+  .warn { color: var(--warn); }
+  .files { list-style: none; margin: .3rem 0; padding: 0; }
+  .files li { padding: .45rem 0; border-top: 1px solid var(--line); }
+  .files li:first-child { border-top: 0; }
+  .files .fname { font-weight: 600; overflow-wrap: anywhere; }
+  .checks { display: grid; gap: .3rem; margin: .3rem 0; }
+  .checks label { display: flex; gap: .5rem; align-items: flex-start; font-weight: 400; }
+  .checks input { margin-top: .25rem; flex: none; }
+  .tablewrap { overflow-x: auto; margin: .3rem 0 .8rem; }
+  table.cols { border-collapse: collapse; width: 100%; font-size: .86rem; }
+  table.cols th, table.cols td { border-bottom: 1px solid var(--line); padding: .3rem .4rem; text-align: left; vertical-align: middle; }
+  table.cols td.sample { color: var(--muted); max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  details { margin: .5rem 0; }
+  summary { cursor: pointer; font-weight: 600; }
+  .conflict { border: 1px solid var(--warn); border-radius: 8px; padding: .5rem .7rem; margin: .4rem 0; }
+  .conflict p { margin: 0 0 .35rem; }
+  .stat { font-variant-numeric: tabular-nums; }
+  .downloads { display: grid; gap: .5rem; margin: .5rem 0; }
+  ul.plain { margin: .3rem 0; padding-left: 1.2rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Student Data Anonymizer</h1>
+      <p class="sub">Replace every student's name and ID with a code, keep the rest of the file, and save a key that turns the codes back into names.</p>
+    </div>
+  </div>
+
+  <p class="privacy"><strong>Nothing leaves this computer.</strong> Files are read here, in this tab. Nothing is uploaded, and nothing is saved: close the tab and it is all gone. The page only sees an old key when you choose one.</p>
+
+  <div class="modes" role="group" aria-label="What to do">
+    <button type="button" id="modeAnon" aria-pressed="true">Anonymize a file</button>
+    <button type="button" id="modeBack" class="secondary" aria-pressed="false">Put names back</button>
+  </div>
+
+  <!-- ============ Anonymize ============ -->
+  <section id="anonPane" aria-labelledby="anonTitle">
+    <div class="card">
+      <h2 id="anonTitle">1. Choose the files</h2>
+      <div class="pick">
+        <label for="anonFiles">Files to anonymize</label>
+        <input type="file" id="anonFiles" multiple accept=".pdf,.csv,.xls,.xlsx,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        <span class="hint">PDF, CSV, XLS or XLSX. Read so far: ESP Reporting Center attendance totals, Performance Matters baseball cards and assessment results, and Teacher Access Center Student Detail Reports (PDF). Other spreadsheets work too: check the columns it picks. Choose several files at once and a student gets the same code in all of them.</span>
+      </div>
+      <div class="pick">
+        <label for="anonKey">Use an existing key (optional)</label>
+        <input type="file" id="anonKey" accept=".xlsx,.xls,.csv">
+        <span class="hint">A key this page saved before. A student it already lists keeps their code; anyone new gets a new one, and the key you save adds them.</span>
+        <div><button type="button" class="secondary" id="anonKeyClear" hidden>Stop using this key</button></div>
+      </div>
+      <p class="status" id="anonStatus" role="status" aria-live="polite"></p>
+    </div>
+
+    <div id="anonResult" hidden>
+      <div class="card">
+        <h2>2. What was found</h2>
+        <ul class="files" id="fileList"></ul>
+        <p class="stat" id="matchSummary"></p>
+        <div id="conflicts"></div>
+      </div>
+
+      <div class="card">
+        <h2>3. Student details to keep</h2>
+        <p class="hint">Names and IDs are always replaced by the code, and teacher names, courses and scores are always kept. Everything below is about the student and is <strong>removed unless you tick it</strong>: keep only what you are analyzing.</p>
+        <div class="checks" id="detailChecks"></div>
+        <details id="colsDetails">
+          <summary>Check the columns</summary>
+          <p class="hint">How each column was read. Change one if it is wrong: a column holding a student's name or ID must say so, or it will be copied as it is.</p>
+          <div id="colsTables"></div>
+        </details>
+      </div>
+
+      <div class="card">
+        <h2>4. Save</h2>
+        <p id="leakNote"></p>
+        <div class="checks">
+          <label><input type="checkbox" id="asPdf"> Save the anonymized file as a PDF instead of Excel</label>
+        </div>
+        <div class="downloads" id="anonDownloads"></div>
+        <p class="hint"><strong>Keep the key somewhere safe.</strong> It lists every student by name next to their code, so it is the one file that is not anonymous. Without it the codes cannot be turned back into names.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Put names back ============ -->
+  <section id="backPane" aria-labelledby="backTitle" hidden>
+    <div class="card">
+      <h2 id="backTitle">Put names back</h2>
+      <p class="hint">Choose an anonymized spreadsheet and the key it was made with. You get the same file with a Student ID and a Student Name column in front of the codes.</p>
+      <div class="pick">
+        <label for="backFiles">Anonymized files</label>
+        <input type="file" id="backFiles" multiple accept=".csv,.xls,.xlsx">
+        <span class="hint">CSV, XLS or XLSX. A PDF this page saved is for reading; put names back into the Excel copy.</span>
+      </div>
+      <div class="pick">
+        <label for="backKey">The key</label>
+        <input type="file" id="backKey" accept=".xlsx,.xls,.csv">
+      </div>
+      <p class="status" id="backStatus" role="status" aria-live="polite"></p>
+      <div id="backResult" hidden>
+        <ul class="files" id="backList"></ul>
+        <div class="downloads" id="backDownloads"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var C = window.SdaCore, IO = window.SdaIo, P = window.SdaPdf;
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---- libraries, on first use ------------------------------------------------
+  var LIBS = {
+    sheet: ['../_shared/vendor/xlsx/xlsx.full.min.js'],
+    pdfin: ['../_shared/vendor/pdfjs/pdf.min.js', '../_shared/vendor/pdfjs/pdf.worker.min.js'],
+    pdfout: ['../_shared/vendor/jspdf/jspdf.umd.min.js', '../_shared/vendor/jspdf/jspdf.plugin.autotable.min.js']
+  };
+  var loaded = {};
+  function loadScript(src) {
+    if (loaded[src]) return loaded[src];
+    loaded[src] = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = function () { delete loaded[src]; reject(new Error('Could not load ' + src.split('/').pop() + '. Reload the page and try again.')); };
+      document.head.appendChild(s);
+    });
+    return loaded[src];
+  }
+  async function need(which) { for (var i = 0; i < LIBS[which].length; i++) await loadScript(LIBS[which][i]); }
+
+  // ---- small helpers ----------------------------------------------------------
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      if (k === 'text') n.textContent = attrs[k];
+      else if (k === 'class') n.className = attrs[k];
+      else n.setAttribute(k, attrs[k]);
+    });
+    (kids || []).forEach(function (k) { if (k != null) n.appendChild(typeof k === 'string' ? document.createTextNode(k) : k); });
+    return n;
+  }
+  function say(id, msg, isErr) { var s = $(id); s.textContent = msg || ''; s.className = 'status' + (isErr ? ' err' : ''); }
+  function today() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function rng() { var a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] / 4294967296; }
+  function base(name) { return String(name).replace(/\.[^.]+$/, ''); }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); }
+  var XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+  async function readDoc(file) {
+    var bytes = new Uint8Array(await file.arrayBuffer());
+    if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') {
+      await need('pdfin');
+      var pdf = await window.pdfjsLib.getDocument({ data: bytes, isEvalSupported: false }).promise;
+      var pages = [];
+      for (var i = 1; i <= pdf.numPages; i++) pages.push(await P.extractPage(await pdf.getPage(i), window.pdfjsLib.OPS));
+      if (!P.isTac(pages)) throw new Error(file.name + ' is not a PDF this page can read yet. It reads Teacher Access Center Student Detail Reports; for anything else, export a spreadsheet instead.');
+      return P.parseTac(pages, file.name);
+    }
+    await need('sheet');
+    return IO.readDocument(bytes, file.name, window.XLSX);
+  }
+  async function readKeyFile(file) {
+    await need('sheet');
+    var sheets = IO.readSheets(new Uint8Array(await file.arrayBuffer()), file.name, window.XLSX);
+    return C.readKey(sheets);
+  }
+
+  // ---- mode switch ------------------------------------------------------------
+  function setMode(back) {
+    $('anonPane').hidden = back;
+    $('backPane').hidden = !back;
+    $('modeAnon').setAttribute('aria-pressed', String(!back));
+    $('modeBack').setAttribute('aria-pressed', String(back));
+    $('modeAnon').className = back ? 'secondary' : '';
+    $('modeBack').className = back ? '' : 'secondary';
+  }
+  $('modeAnon').addEventListener('click', function () { setMode(false); });
+  $('modeBack').addEventListener('click', function () { setMode(true); });
+
+  // ---- anonymize ----------------------------------------------------------------
+  var A = { docs: [], key: null, keyName: '', keep: {}, decisions: {}, sessionCodes: {}, run: null };
+
+  $('anonFiles').addEventListener('change', async function () {
+    var files = Array.from(this.files || []);
+    A.docs = []; A.keep = {}; A.decisions = {};
+    if (!files.length) { render(); return; }
+    var problems = [];
+    for (var i = 0; i < files.length; i++) {
+      say('anonStatus', 'Reading ' + files[i].name + '…');
+      try { A.docs.push(await readDoc(files[i])); } catch (e) { problems.push(e.message || String(e)); }
+    }
+    say('anonStatus', problems.length ? problems.join(' ') : '', problems.length > 0);
+    render();
+  });
+  $('anonKey').addEventListener('change', async function () {
+    var f = this.files && this.files[0];
+    A.key = null; A.keyName = ''; A.decisions = {};
+    if (f) {
+      try { A.key = await readKeyFile(f); A.keyName = f.name; say('anonStatus', 'Using the key ' + f.name + ': ' + plural(A.key.length, 'student') + ' in it.'); }
+      catch (e) { say('anonStatus', e.message || String(e), true); this.value = ''; }
+    }
+    $('anonKeyClear').hidden = !A.key;
+    render();
+  });
+  $('anonKeyClear').addEventListener('click', function () {
+    A.key = null; A.keyName = ''; A.decisions = {}; $('anonKey').value = ''; this.hidden = true;
+    say('anonStatus', 'Not using a key: every student gets a new code.');
+    render();
+  });
+  $('asPdf').addEventListener('change', renderDownloads);
+
+  function compute() {
+    var list = C.people(A.docs);
+    var res = C.assign(list, A.key || [], { rng: rng, decisions: A.decisions, today: today(), sessionCodes: A.sessionCodes });
+    var outs = A.docs.map(function (d, i) {
+      var o = C.anonymize(d, i, list, A.keep[i] || {});
+      o.name = base(d.name).slice(0, 64).replace(/[ ._-]+$/, '') + ' - anonymized';
+      return o;
+    });
+    var leaks = [];
+    outs.forEach(function (o) { C.leaks(o, list).forEach(function (l) { leaks.push(o.name + ': ' + l.where + ' still holds ' + l.what); }); });
+    A.run = { list: list, res: res, outs: outs, leaks: leaks };
+  }
+
+  function render() {
+    var focusId = document.activeElement && document.activeElement.id;
+    renderAll();
+    if (focusId && $(focusId) && document.activeElement !== $(focusId)) $(focusId).focus();
+  }
+  function renderAll() {
+    $('anonResult').hidden = !A.docs.length;
+    if (!A.docs.length) { A.run = null; return; }
+    compute();
+    var run = A.run;
+
+    // What was found.
+    var ul = $('fileList'); ul.textContent = '';
+    A.docs.forEach(function (d, di) {
+      var n = run.list.filter(function (p) { return p.rows.some(function (r) { return r.doc === di; }); }).length;
+      var sheetsNoStudent = d.sheets.filter(function (s) { return !s.cols.some(function (c) { return C.IDENTITY[c.role]; }) && s.rows.length; });
+      ul.appendChild(el('li', null, [
+        el('div', { class: 'fname', text: d.name }),
+        el('div', { class: 'hint', text: d.layout.label }),
+        el('div', { text: plural(n, 'student') + ' on ' + plural(d.sheets.length, 'sheet') + '.' }),
+        sheetsNoStudent.length ? el('div', { class: 'warn', text: 'No name or ID column was found on ' + sheetsNoStudent.map(function (s) { return '“' + s.name + '”'; }).join(', ') + ', so it is copied as it is. If it lists students, set its heading row and columns under “Check the columns”.' }) : null
+      ]));
+    });
+    var counts = { id: 0, name: 0, chosen: 0, 'new': 0 };
+    run.res.assigned.forEach(function (a) { counts[a.how] = (counts[a.how] || 0) + 1; });
+    var total = run.list.length;
+    var line = plural(total, 'student') + ' in all.';
+    if (A.key) line += ' From the key: ' + counts.id + ' by ID, ' + counts.name + ' by name' + (counts.chosen ? ', ' + counts.chosen + ' you matched' : '') + '. New codes: ' + counts['new'] + '.';
+    else line += ' Each gets a new code. To keep the codes from an earlier file, choose its key above.';
+    $('matchSummary').textContent = line;
+
+    // Conflicts.
+    var box = $('conflicts'); box.textContent = '';
+    if (run.res.conflicts.length) {
+      box.appendChild(el('h3', { text: 'Check ' + plural(run.res.conflicts.length, 'student') + ' the key could not place' }));
+      box.appendChild(el('p', { class: 'hint', text: 'These were not guessed. Until you choose, each gets a new code: a student split in two can be fixed in the key later, two students merged into one cannot.' }));
+      run.res.conflicts.forEach(function (cf, n) {
+        var p = cf.person, who = (p.names[0] && p.names[0].written) || '(no name)';
+        var why = cf.reason === 'other-id'
+          ? 'The key has a student with this name but a different ID (' + (cf.candidates[0].id || 'none') + ').'
+          : 'The key has ' + cf.candidates.length + ' students this name could be.';
+        var sel = el('select', { id: 'cf' + n, 'aria-label': 'Which student is ' + who + '?' });
+        sel.appendChild(el('option', { value: 'new', text: 'A different student: give a new code' }));
+        cf.candidates.forEach(function (e) {
+          sel.appendChild(el('option', { value: e.code, text: 'The same student as ' + e.code + ': ' + e.written + (e.id ? ' (ID ' + e.id + ')' : '') }));
+        });
+        sel.value = A.decisions[cf.index] || 'new';
+        sel.addEventListener('change', function () { A.decisions[cf.index] = sel.value; render(); });
+        box.appendChild(el('div', { class: 'conflict' }, [
+          el('p', null, [el('strong', { text: who }), p.ids.length ? ' (ID ' + p.ids.join(', ') + ')' : '', '. ' + why]),
+          sel
+        ]));
+      });
+    }
+
+    // Detail toggles.
+    var checks = $('detailChecks'); checks.textContent = '';
+    var any = false;
+    A.docs.forEach(function (d, di) {
+      C.detailColumns(d).forEach(function (dc) {
+        any = true;
+        var cb = el('input', { type: 'checkbox', id: 'keep' + di + '_' + dc.key.replace(':', '_') });
+        cb.checked = !!(A.keep[di] && A.keep[di][dc.key]);
+        cb.addEventListener('change', function () { (A.keep[di] = A.keep[di] || {})[dc.key] = cb.checked; render(); });
+        var where = A.docs.length > 1 || d.sheets.length > 1 ? ' (' + (A.docs.length > 1 ? d.name + ', ' : '') + dc.sheet + ')' : '';
+        checks.appendChild(el('label', null, [cb, el('span', { text: 'Keep “' + dc.header.replace(/\s+/g, ' ') + '”' + where })]));
+      });
+    });
+    if (!any) checks.appendChild(el('p', { class: 'hint', text: 'No other student details were found in these files: only the name and ID, which are replaced.' }));
+
+    renderColumns();
+    renderLeaks();
+    renderDownloads();
+  }
+
+  function renderColumns() {
+    var wrap = $('colsTables'); wrap.textContent = '';
+    A.docs.forEach(function (d, di) {
+      d.sheets.forEach(function (sh, si) {
+        if (!sh.rows.length) return;
+        var title = (A.docs.length > 1 ? d.name + ' — ' : '') + sh.name;
+        wrap.appendChild(el('h3', { text: title }));
+        var hr = el('input', { type: 'number', min: '1', max: String(sh.rows.length), value: String(sh.headerRow + 1 || ''), id: 'hr' + di + '_' + si });
+        hr.addEventListener('change', function () {
+          var v = parseInt(hr.value, 10) - 1;
+          if (v >= 0 && v < sh.rows.length) { C.setHeaderRow(sh, v); A.keep[di] = {}; render(); }
+        });
+        wrap.appendChild(el('div', { class: 'row' }, [el('label', { for: 'hr' + di + '_' + si, text: 'Heading row' }), hr,
+          sh.headerRow < 0 ? el('span', { class: 'warn', text: 'No heading row found. Type the number of the row with the column names.' }) : null]));
+        if (sh.headerRow < 0) return;
+        var tbody = el('tbody');
+        sh.cols.forEach(function (c) {
+          var sample = '';
+          for (var r = sh.headerRow + 1; r < sh.rows.length && !sample; r++) sample = IO.shown((sh.rows[r] || [])[c.index], window.XLSX);
+          var sel = el('select', { id: 'role' + di + '_' + si + '_' + c.index, 'aria-label': 'What column ' + C.colName(c.index) + ' (' + (c.header || 'no heading') + ') holds' });
+          C.ROLES.forEach(function (role) { sel.appendChild(el('option', { value: role, text: C.ROLE_LABELS[role] })); });
+          sel.value = c.role;
+          sel.addEventListener('change', function () { c.role = sel.value; render(); });
+          tbody.appendChild(el('tr', null, [el('td', { text: C.colName(c.index) }), el('td', { text: (c.header || '').replace(/\s+/g, ' ') }),
+            el('td', { class: 'sample', text: sample }), el('td', null, [sel])]));
+        });
+        var table = el('table', { class: 'cols' }, [el('thead', null, [el('tr', null, ['Column', 'Heading', 'First value', 'Holds'].map(function (h) { return el('th', { scope: 'col', text: h }); }))]), tbody]);
+        wrap.appendChild(el('div', { class: 'tablewrap' }, [table]));
+      });
+    });
+  }
+
+  function renderLeaks() {
+    var n = $('leakNote'); n.textContent = '';
+    if (!A.run.leaks.length) {
+      n.className = 'ok';
+      n.textContent = 'Checked: no student name or ID from these files is left anywhere in the anonymized copy.';
+      return;
+    }
+    n.className = 'err';
+    n.appendChild(document.createTextNode('A student’s name or ID is still in the anonymized copy. Fix the columns under “Check the columns” before you share it:'));
+    var ul = el('ul', { class: 'plain' });
+    A.run.leaks.slice(0, 12).forEach(function (l) { ul.appendChild(el('li', { text: l })); });
+    if (A.run.leaks.length > 12) ul.appendChild(el('li', { text: 'and ' + (A.run.leaks.length - 12) + ' more' }));
+    n.appendChild(ul);
+  }
+
+  function renderDownloads() {
+    var box = $('anonDownloads'); box.textContent = '';
+    if (!A.run) return;
+    var asPdf = $('asPdf').checked;
+    A.run.outs.forEach(function (o) {
+      var label = 'Save ' + ExportKit.filename(o.name, asPdf ? 'pdf' : 'xlsx');
+      var b = el('button', { type: 'button', text: label });
+      b.addEventListener('click', function () { saveOut(o, asPdf, b); });
+      box.appendChild(el('div', null, [b]));
+    });
+    var k = el('button', { type: 'button', class: 'secondary', text: 'Save the key (' + plural(A.run.res.entries.length, 'student') + ')' });
+    k.addEventListener('click', saveKey);
+    box.appendChild(el('div', null, [k]));
+  }
+
+  async function saveOut(o, asPdf, btn) {
+    btn.disabled = true;
+    try {
+      await need('sheet');
+      if (asPdf) {
+        await need('pdfout');
+        ExportKit.download(IO.writePdf(o, window.jspdf, window.XLSX, o.name), ExportKit.filename(o.name, 'pdf'), 'application/pdf');
+      } else {
+        ExportKit.download(IO.writeXlsx(o, window.XLSX), ExportKit.filename(o.name, 'xlsx'), XLSX_MIME);
+      }
+    } catch (e) { say('anonStatus', e.message || String(e), true); }
+    btn.disabled = false;
+  }
+  async function saveKey() {
+    try {
+      await need('sheet');
+      var rows = C.keyRows(A.run.res.entries).map(function (r) { return r.map(function (v) { return v === '' ? null : { t: 's', v: String(v) }; }); });
+      var doc = { name: 'key', sheets: [{ name: 'Key', rows: rows, headerRow: 0 }] };
+      var name = 'Student key ' + today() + (A.key ? ' (updated)' : '');
+      ExportKit.download(IO.writeXlsx(doc, window.XLSX), ExportKit.filename(name, 'xlsx'), XLSX_MIME);
+    } catch (e) { say('anonStatus', e.message || String(e), true); }
+  }
+
+  // ---- put names back -----------------------------------------------------------
+  var B = { docs: [], key: null };
+  async function backRun() {
+    $('backResult').hidden = true;
+    if (!B.docs.length || !B.key) {
+      if (B.docs.length && !B.key) say('backStatus', 'Now choose the key.');
+      return;
+    }
+    var ul = $('backList'), box = $('backDownloads');
+    ul.textContent = ''; box.textContent = '';
+    B.docs.forEach(function (d) {
+      var r = C.reverse(d, B.key);
+      var lines = [el('div', { class: 'fname', text: d.name }), el('div', { text: plural(r.restored, 'row') + ' given a name back.' })];
+      if (r.unknown.length) lines.push(el('div', { class: 'warn', text: plural(r.unknown.length, 'code') + ' not in this key, left without a name: ' + r.unknown.slice(0, 15).join(', ') + (r.unknown.length > 15 ? ' …' : '') + '. Is this the key the file was made with?' }));
+      if (r.sheetsWithout.length) lines.push(el('div', { class: 'hint', text: 'No codes on ' + r.sheetsWithout.map(function (s) { return '“' + s + '”'; }).join(', ') + '; copied as it is.' }));
+      ul.appendChild(el('li', null, lines));
+      var name = base(d.name).replace(/ - anonymized$/, '').slice(0, 64).replace(/[ ._-]+$/, '') + ' - with names';
+      var b = el('button', { type: 'button', text: 'Save ' + ExportKit.filename(name, 'xlsx') });
+      b.addEventListener('click', function () {
+        try { ExportKit.download(IO.writeXlsx(r.doc, window.XLSX), ExportKit.filename(name, 'xlsx'), XLSX_MIME); }
+        catch (e) { say('backStatus', e.message || String(e), true); }
+      });
+      box.appendChild(el('div', null, [b]));
+    });
+    say('backStatus', '');
+    $('backResult').hidden = false;
+  }
+  $('backFiles').addEventListener('change', async function () {
+    var files = Array.from(this.files || []);
+    B.docs = [];
+    var problems = [];
+    for (var i = 0; i < files.length; i++) {
+      if (/\.pdf$/i.test(files[i].name)) { problems.push(files[i].name + ' is a PDF: choose the Excel copy instead.'); continue; }
+      try { await need('sheet'); B.docs.push(IO.readDocument(new Uint8Array(await files[i].arrayBuffer()), files[i].name, window.XLSX)); }
+      catch (e) { problems.push(files[i].name + ': ' + (e.message || e)); }
+    }
+    say('backStatus', problems.join(' '), problems.length > 0);
+    backRun();
+  });
+  $('backKey').addEventListener('change', async function () {
+    var f = this.files && this.files[0];
+    B.key = null;
+    if (f) {
+      try { B.key = await readKeyFile(f); }
+      catch (e) { say('backStatus', e.message || String(e), true); this.value = ''; return; }
+    }
+    backRun();
+  });
+})();
+</script>
+<script src="../_shared/sw-register.js" defer></script>
+</body>
+</html>

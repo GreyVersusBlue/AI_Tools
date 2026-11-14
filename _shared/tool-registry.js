@@ -1679,6 +1679,16 @@
       ],
     },
     {
+      slug: 'student-data-anonymizer',
+      title: 'Student Data Anonymizer',
+      file: 'Tools/091-student-data-anonymizer.html',
+      category: 'assessment-grading',
+      /* Nothing at all, on purpose (Devon, 2026-11-13): the files, the students
+         and the key are held in the tab's memory and gone when it closes. A key
+         is seen only when the teacher chooses the file again. */
+      keys: [],
+    },
+    {
       slug: 'pe-tournament-station-rotation',
       title: 'Tournament Bracket & Station Rotation',
       file: 'Tools/021-pe-tournament-stations.html',
