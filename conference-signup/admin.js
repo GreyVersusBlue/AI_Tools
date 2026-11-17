@@ -3,7 +3,7 @@
    conference exception, and export the schedule as a workbook. Everything staff do
    goes through the same rules a family's booking does (core.js); the PIN only
    unlocks the extra operations. */
-import { call, demo, DEMO_PIN } from './api.js';
+import { call, demo, DEMO_PIN } from './api.js?v=3';
 
 const $ = (id) => document.getElementById(id);
 const PK = 'conf-admin-pin';
