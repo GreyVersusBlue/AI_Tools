@@ -9,6 +9,18 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-75 (selector line code): the index stops linking v1-v4, the five old pages get noindex, 035's help scroll box takes focus (site audit ML-12 + ML-21, 2026-11-17, `CACHE_VERSION` v594)
+
+- **index.html** no longer links `v1-inbox.html` (the "Inbox edition" comment code C6 is gone). `ideas-backlog.html` stays linked: it is a 25 KB public list of ideas by category, not an empty placeholder (the audit's "empty" was wrong), so it only gained noindex and stays precached.
+- **`<meta name="robots" content="noindex">`** is on all five pages. `v1-v4` lost their `@font-face` blocks (4/4/3/5 of them), which asked for `assets/fonts/`, a folder that does not exist; their stacks already name system fallbacks. Nothing was deleted: the four pages still link each other in a ring (v1 to v2 to v3 to v4 to index) for anyone who finds one.
+- **sw.js**: v1-v4 left `PRECACHE_URLS`, so offline they 404; that is the price of the audit's ask. `check-precache.mjs` now lists them in `PAGE_EXEMPT` (as the old design folders are) because they still link each other and its MISSING pass would otherwise demand them back. `make-offline-copy.mjs` lost its patch for the removed C6 link (it asserted exactly one and would have failed the build).
+- **035**: the help dialog's `.modal-body` has `tabindex="0"`, `role="region"` and `aria-label="Help and tips"` (axe `scrollable-region-focusable`).
+- **The `DEV NOTES — deferred, do not lose:` comment** moved verbatim to the end of `BACKLOG.md`, under "Deferred notes moved from index.html (AI-75)". Its rule 4 (bump memo-date and rev on every revision) is no longer on the page; nothing enforced it.
+- **What I did not fix: the index's "3 elements at 4.49:1".** I could not reproduce it at rest: axe's `color-contrast` is clean on the index in light and dark, at 1280 and 375 wide, with every category open, after hover, focus and a search. It does fire during the entrance animation (the rows fade in over opacity and flash `--good-soft`; the stamp scales in), where readings of 4.3 to 4.47 appear on `.open`, `.lbl`, `.stamp b`; a scan taken before the page settles will find some value just under 4.5 on whichever elements it catches. If a later audit still reports it, scan after about 3 s or with reduced motion before chasing a colour.
+- Checked: `check:index`, `check:precache --base origin/main`, `check:social`, `lint`, `check:tests`, `check:dedupe`, `check:docs-commands`, `check:entities`, `check:hidden-flex`, `test:a11y` (292 passed), `test:sw-tiers`, `test:theme`. Not checked on a real device or on the live site.
+
+---
+
 ## AI-74 (selector line code): og:url on 11 tools named a dead site, no canonical links, invisible focus on index rows (site audit ML-16 + ML-17, 2026-11-17, `CACHE_VERSION` v593)
 
 **ML-16.** 002, 004, 005, 007, 011, 016, 018, 034, 035, 036 and 038 carried `og:url` on `https://greyversusblue.com/Tools/...` (a 404; the

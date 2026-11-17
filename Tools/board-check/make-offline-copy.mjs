@@ -435,10 +435,9 @@ function walkHtmlFiles(dir) {
   return out;
 }
 
-// index.html itself links to two things this trimmed copy excludes: a
-// "Prefer a different look?" comment-code link that points at the alternate
-// v1-inbox.html landing-page theme, and 3 "ideas backlog" mentions pointing
-// at ideas-backlog.html. Left alone, both would be dead links on the one
+// index.html links to something this trimmed copy excludes: 3 "ideas backlog"
+// mentions pointing at ideas-backlog.html (the old "Inbox edition" link was
+// removed from the page in AI-75). Left alone they would be dead links on the one
 // page every recipient is guaranteed to open — worse than not having them
 // at all.
 function sanitizeEntryPoint(html) {
@@ -447,10 +446,6 @@ function sanitizeEntryPoint(html) {
   // spec's template-literal line-terminator normalization), but index.html
   // on disk may still be CRLF (e.g. on a Windows checkout).
   html = html.replace(/\r\n/g, '\n');
-  const themeSwitch = `Prefer a different look? Try the <a href="v1-inbox.html">Inbox edition</a>.`;
-  assertExactlyOne(html, themeSwitch, 'index.html theme-switch link');
-  html = html.replace(themeSwitch, 'Prefer a different look? The Inbox edition isn&rsquo;t included in this offline copy.');
-
   const ideasLink = `<a href="ideas-backlog.html">ideas backlog</a>`;
   const ideasCount = html.split(ideasLink).length - 1;
   if (ideasCount < 1) {
