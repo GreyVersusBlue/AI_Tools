@@ -46,6 +46,10 @@ async function open(saved) {
       if (!sessionStorage.getItem('seeded')) { localStorage.setItem(k, v); sessionStorage.setItem('seeded', '1'); }
     }, [STORE_KEY, JSON.stringify(saved)]);
   }
+  /* Each card prints today's date. On the 17th or 23rd that date contains a
+     score from SCORES, and the "no other student's score" check fails, so the
+     clock is fixed on a day whose numbers match no score. */
+  await page.clock.setFixedTime(new Date('2026-11-05T12:00:00-05:00'));
   await page.goto(URL_PAGE, { waitUntil: 'networkidle' });
   await settle(page, 300);
   await page.evaluate(() => { window.__printed = 0; window.print = () => { window.__printed++; }; });
