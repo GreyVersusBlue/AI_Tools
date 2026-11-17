@@ -9,6 +9,25 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-74 (selector line code): og:url on 11 tools named a dead site, no canonical links, invisible focus on index rows (site audit ML-16 + ML-17, 2026-11-17, `CACHE_VERSION` v593)
+
+**ML-16.** 002, 004, 005, 007, 011, 016, 018, 034, 035, 036 and 038 carried `og:url` on `https://greyversusblue.com/Tools/...` (a 404; the
+site is `https://www.aspermylessonplan.com/`), and 067's og:url named `music-warmup-generator.html`, a file that does not exist (067 has no
+`gvb:social` block, so `check:social`'s path rule never read it). All 12 now name their own file in the `www.aspermylessonplan.com/Tools/<name>`
+form (spaces as `%20`, as before). **Every one of the 83 tool pages that has an og:url now has `<link rel="canonical">` with the same URL**,
+on the line after it (no generator writes these tags: `check-social.mjs` only reads them, `build-index` does not touch tool heads, so it was
+a hand edit by a one-off script). **Guard:** `canonicalProblems()` in `Tools/board-check/check-social.mjs`, run over every tool page with an
+og:url or canonical (block or no block): host must be `https://www.aspermylessonplan.com`, a page with one of the two needs the other, and
+the two must be equal. Pinned by ten fixtures plus a real-tree pass in `test:check-social`. Broken once on purpose (002's canonical put back on
+greyversusblue.com): `002-group-team-generator.html: canonical https://greyversusblue.com/Tools/002-group-team-generator.html is not on
+https://www.aspermylessonplan.com/` and `... differs from og:url https://www.aspermylessonplan.com/Tools/002-group-team-generator.html`, exit 1.
+**Left alone:** 11 blocks still say `og:site_name "greyversusblue"` (the older generation; the host is right now, the brand name is Devon's
+call), and the 8 tool pages with no og:url have no canonical (the guard does not demand one). **ML-17.** `index.html` `.row:focus-visible` had
+`outline:none`, leaving only the hover tint (about 1.1:1). It is now `outline:2px solid var(--accent);outline-offset:-2px` (inset so the list
+cannot clip it); the hover background is unchanged. Measured in Chromium on a Tab-focused row: light ring `rgb(39,100,159)` is 5.02:1
+against the row's tint, dark `rgb(127,178,229)` 5.85:1. Index is not generated for its CSS (`build-index` renders only the rows), so the
+CSS was edited directly and `check:index` is still OK. **Not verified:** nothing was shared to a real card renderer or search engine.
+
 ## AI-73 (selector line code): 044 Sub Plan Builder no longer ships Devon's details as defaults (site audit ML-10, 2026-11-17, `CACHE_VERSION` v592)
 
 (The selector's AI-73 is not the in-repo AI-73 above; the line codes are separate.) `Tools/044-Sub Plan Builder.html` shipped Devon's
