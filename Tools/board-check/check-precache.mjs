@@ -88,6 +88,11 @@ const SITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
    them would grow the install for nothing. */
 const PAGE_EXEMPT = ['Tools/Old Designs/', 'Tools/New Designs/', 'index_backup.html'];
 
+/* Targets that are online-only by design. conference-signup/ talks to a
+   Worker for shared bookings, so sw.js deliberately never caches or serves it
+   (CLAUDE.md, the conference-signup exception); a link to it is not MISSING. */
+const ONLINE_ONLY = ['conference-signup/'];
+
 const problems = [];
 const warnings = [];
 
@@ -225,7 +230,7 @@ for (const page of livePages()) {
     );
     if (!resolved || resolved.startsWith('..')) continue;
     if (!fs.existsSync(path.join(SITE, resolved))) continue;   // a real 404 is a different bug
-    if (listedSet.has(resolved)) continue;
+    if (listedSet.has(resolved) || ONLINE_ONLY.some(x => resolved.startsWith(x))) continue;
     if (!missing.has(resolved)) missing.set(resolved, new Set());
     missing.get(resolved).add(page);
   }
