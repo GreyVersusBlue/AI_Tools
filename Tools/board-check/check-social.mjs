@@ -17,6 +17,9 @@
 //     across meta description / og:description / twitter:description
 //   - a partial image group (some of og:image / og:image:width / height /
 //     alt / twitter:image but not all, or og:image != twitter:image)
+//   - (AI-74) an og:url or <link rel="canonical"> whose host is not
+//     www.aspermylessonplan.com, a page with one and not the other, or a
+//     canonical that differs from its og:url
 //   - (AI-43) an og:image or twitter:image, on index.html, a root page or a
 //     tool page, block or no block, that does not name a file present in
 //     assets/og/. The cards are made by Tools/board-check/make-og.mjs; a page
@@ -63,6 +66,36 @@ export function ogImageProblems(html, exists) {
     if (!name || name.includes('/')) out.push(`${key} ${url} does not name a file in assets/og/`);
     else if (!exists(name)) out.push(`${key} ${url} names assets/og/${name}, which is not in the tree (make it with Tools/board-check/make-og.mjs)`);
   }
+  return out;
+}
+
+export const SITE_HOST = 'www.aspermylessonplan.com';
+
+/**
+ * (AI-74) The address problems of one page: an og:url or <link rel="canonical">
+ * must be on https://www.aspermylessonplan.com/, and when both are present they
+ * must be the same URL. 11 tool pages carried an og:url on greyversusblue.com
+ * (a 404) and no page had a canonical link. Pure, so the test can hand it
+ * fixtures. Returns messages.
+ */
+export function canonicalProblems(html) {
+  const out = [];
+  let ogUrl = null, canonical = null;
+  for (const m of html.matchAll(/<(?:meta|link) [^>]*>/g)) {
+    const tag = m[0];
+    if (/^<meta /.test(tag) && attr(tag, 'property') === 'og:url') ogUrl = attr(tag, 'content');
+    else if (/^<link /.test(tag) && /^canonical$/i.test(attr(tag, 'rel') || '')) canonical = attr(tag, 'href');
+  }
+  for (const [label, url] of [['og:url', ogUrl], ['canonical', canonical]]) {
+    if (url === null) continue;
+    try {
+      const u = new URL(url);
+      if (u.protocol !== 'https:' || u.host !== SITE_HOST) out.push(`${label} ${url} is not on https://${SITE_HOST}/`);
+    } catch { out.push(`${label} is not a valid URL: ${url}`); }
+  }
+  if (ogUrl !== null && canonical === null) out.push(`og:url ${ogUrl} has no <link rel="canonical"> beside it`);
+  else if (ogUrl === null && canonical !== null) out.push(`canonical ${canonical} has no og:url to match`);
+  else if (ogUrl !== null && canonical !== ogUrl) out.push(`canonical ${canonical} differs from og:url ${ogUrl}`);
   return out;
 }
 
@@ -166,6 +199,16 @@ for (const rel of pages) {
   for (const msg of found) problems.push(`${rel}: ${msg}`);
 }
 
+// og:url / canonical host and agreement: every tool page, block or no block.
+let addressFailed = 0;
+for (const file of files) {
+  const html = fs.readFileSync(path.join(TOOLS, file), 'utf8');
+  if (!/property="og:url"|rel="canonical"/.test(html)) continue;
+  const found = canonicalProblems(html);
+  if (found.length) addressFailed++;
+  for (const msg of found) problems.push(`${file}: ${msg}`);
+}
+
 console.log(`gvb:social blocks: ${checked} tools checked, ${failed} with internal inconsistencies, ${missing.length} tools have no block\n`);
 if (problems.length) {
   console.log('problems (these fail the check):\n  ' + problems.join('\n  ') + '\n');
@@ -182,7 +225,8 @@ if (missing.length) {
   console.log(`  no gvb:social block: ${missing.length} tools (${missing.slice(0, 3).join(', ')}, …)`);
 }
 console.log(`og:image: ${imagePages} pages name a card, ${imageFailed} name one that is not in assets/og/`);
-process.exit(failed || imageFailed ? 1 : 0);
+console.log(`address: ${addressFailed} pages with an og:url or canonical off https://${SITE_HOST}/ or disagreeing`);
+process.exit(failed || imageFailed || addressFailed ? 1 : 0);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
