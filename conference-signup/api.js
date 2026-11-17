@@ -6,7 +6,10 @@
    tried (and two tabs act as two families) before any server exists. */
 import { handle, newState } from './core.js';
 
-const BASE = String(window.CONF_API || '').replace(/\/+$/, '');
+/* `?demo` in the address forces demo mode even when config.js names the Worker,
+   so the landing page can link a safe example: nothing reaches the real bookings. */
+export const exampleOnly = new URLSearchParams(location.search).has('demo');
+const BASE = exampleOnly ? '' : String(window.CONF_API || '').replace(/\/+$/, '');
 export const demo = !BASE;
 export const DEMO_PIN = '1234';
 

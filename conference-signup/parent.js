@@ -1,7 +1,7 @@
 /* parent.js — the family page. State of truth is the server: the bag is simply the
    holds the server says this browser owns (view.mine), so a reload, a second tab or
    a dropped connection cannot make the page disagree with what is actually held. */
-import { call, demo, myToken, serverNow } from './api.js';
+import { call, demo, exampleOnly, myToken, serverNow } from './api.js?v=3';
 import { ticketPdf, ticketName } from './ticket.js';
 
 const $ = (id) => document.getElementById(id);
@@ -323,18 +323,21 @@ async function checkout() {
 /* ---------- the confirmation ---------- */
 
 const RK = 'conf-receipts';
+/* The `?demo` example keeps its confirmations for this tab only, so a made-up
+   booking never shows up later beside a family's real ones on the live page. */
+const receipts = exampleOnly ? sessionStorage : localStorage;
 function remember(rc) {
   try {
-    const list = JSON.parse(localStorage.getItem(RK) || '[]').filter((x) => x.code !== rc.code);
+    const list = JSON.parse(receipts.getItem(RK) || '[]').filter((x) => x.code !== rc.code);
     list.unshift(rc);
-    localStorage.setItem(RK, JSON.stringify(list.slice(0, 8)));
+    receipts.setItem(RK, JSON.stringify(list.slice(0, 8)));
   } catch (e) {
     /* storage blocked: the confirmation on screen is still real */
   }
 }
 const remembered = () => {
   try {
-    return JSON.parse(localStorage.getItem(RK) || '[]');
+    return JSON.parse(receipts.getItem(RK) || '[]');
   } catch (e) {
     return [];
   }
