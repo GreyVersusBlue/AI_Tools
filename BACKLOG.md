@@ -859,7 +859,7 @@ them data.
 
   | Key | Tool | Student field | Clear writes | Trap |
   |---|---|---|---|---|
-  | `subPlanBuilder.standingDetails.v1` | 044 | `medicalAlerts` (free text; the placeholder names a student's EpiPen) | `''` | 045 reads it too. Deleting the whole key brings back hard-coded defaults, so never delete it |
+  | `subPlanBuilder.standingDetails.v1` | 044 | `medicalAlerts` (free text; the placeholder names a student's EpiPen) | `''` | 045 reads it too. Deleting the whole key brings back the page's neutral (empty) defaults and loses the teacher's details, so never delete it |
   | `gvb-certificate-maker:data:*`, and the legacy `gvb-certificate-maker:last` | 042 | `studentName`, `batchNames` (one string, a name and its reason per line) | `''` for both | must be `''`, not removed: `batchNames.split` throws on `undefined`. `reason`, `qrUrl` are kind E |
   | `crcg:data:*`, and the legacy `crcg_roles_v1` | 050 | `roles[].students` | `[]`, what the tool's own "Clear names" writes | the legacy key is re-migrated when `crcg:list` is empty, so it gets the same rule |
   | `gvb-review-board:data:*` | 030 | `teams[].name` when it is `Team N: <names>` (a roster split), `teams[].score`, `clues[].used` | name back to `Team N`, score `0`, `used` `false` (question 9) | `teams` must stay an array: `renderBoard` calls `forEach` on it. A typed team name is kind E |

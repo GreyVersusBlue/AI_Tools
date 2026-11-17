@@ -9,6 +9,24 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-73 (selector line code): 044 Sub Plan Builder no longer ships Devon's details as defaults (site audit ML-10, 2026-11-17, `CACHE_VERSION` v592)
+
+(The selector's AI-73 is not the in-repo AI-73 above; the line codes are separate.) `Tools/044-Sub Plan Builder.html` shipped Devon's
+name, the school's nurse/counseling/support numbers and "blue substitute folder" as its first-visit defaults and as placeholders, and printed
+his name on a plan whose name field was empty. **Done:** `DEFAULTS` now holds empty strings for the name, sign-off, the three locations, the
+four phone fields and `phoneOther`; periods are a neutral 1/2/3; the placeholders read "Your name" / "e.g. sub folder on the desk" / "e.g. on the
+teacher desk"; the two `|| 'Devon Moore'` fallbacks are `|| ''` (no name printed; the sign-off already falls back to the teacher name). The
+attendance default lost its "attendance chip" sentence, which was Devon's classroom routine, not a default. **Not touched:** the storage key
+`subPlanBuilder.standingDetails.v1` and its shape; nobody's saved details are read differently, since `Object.assign(DEFAULTS, parsed)` lets a
+stored value win. A visitor who had never saved anything, and so was seeing the old defaults, now sees blanks. **Guard:**
+`Tools/sub-plan-builder/test/check-no-personal-defaults.mjs` (`npm run test:sub-plan-no-personal`, pure Node, in `suites.json`) fails if the page
+contains "Devon Moore" or "647-22"; it was broken once on purpose and printed `FAIL 044 html line 246 contains "Devon Moore"`, exit 1. The four
+golden files in `Tools/sub-plan-builder/test/golden/` were regenerated with `--update` (the diff is the removed defaults only).
+**Hits outside 044, left alone:** `v1-inbox.html`, `v2-subplans.html`, `v3-bellboard.html`, `v4-riso.html` carry "Built by Devon Moore + Claude" as an
+authorship credit (v1-inbox also has a sample memo from "Devon Moore"); `Tools/a11y-sweep/seeds.mjs` seeds 044 with "posted on the filing cabinet",
+no name or number. Whether those credits stay is Devon's call. **Not verified:** nothing was opened in Word; an empty name leaves "Teacher: " and
+"Substitute Plan — " with nothing after them in the plan and its header.
+
 ## AI-73: 091 Student Data Anonymizer, a new tool (Devon's request, 2026-11-13, #385, `CACHE_VERSION` v590)
 
 Devon asked for a page that takes a student data file and returns the same file with no student in it, plus a key.
