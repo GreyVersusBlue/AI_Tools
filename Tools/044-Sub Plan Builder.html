@@ -243,7 +243,7 @@
     <div class="row-2">
       <div>
         <label for="teacherName">Your name</label>
-        <input type="text" id="teacherName" placeholder="Devon Moore">
+        <input type="text" id="teacherName" placeholder="Your name">
       </div>
       <div>
         <label for="roomNumber">Room number <span class="opt">(shown on the Sub Binder cover page)</span></label>
@@ -258,7 +258,7 @@
     <div class="row-2">
       <div>
         <label for="rosterLocation">Rosters / seating charts location</label>
-        <input type="text" id="rosterLocation" placeholder="blue substitute folder">
+        <input type="text" id="rosterLocation" placeholder="e.g. sub folder on the desk">
         <label class="check" style="display:flex; gap:6px; align-items:flex-start; margin-top:6px;">
           <input type="checkbox" id="binderRefs" style="margin-top:3px;">
           <span>Name the classes whose seating chart and roster the Sub Binder prints, in Important Notes</span>
@@ -267,11 +267,11 @@
       </div>
       <div>
         <label for="absenceLocation">Absence slips location</label>
-        <input type="text" id="absenceLocation" placeholder="blue substitute folder">
+        <input type="text" id="absenceLocation" placeholder="e.g. sub folder on the desk">
       </div>
     </div>
     <label for="emergencyLocation">Emergency / substitute folder location</label>
-    <input type="text" id="emergencyLocation" placeholder="on my laptop podium">
+    <input type="text" id="emergencyLocation" placeholder="e.g. on the teacher desk">
 
     <label for="attendanceText">Morning attendance instructions</label>
     <textarea id="attendanceText" rows="3"></textarea>
@@ -314,7 +314,7 @@
     </fieldset>
 
     <label for="signOffName">Sign-off name</label>
-    <input type="text" id="signOffName" placeholder="Devon Moore">
+    <input type="text" id="signOffName" placeholder="Your name (defaults to the name above)">
 
     <p class="save-note" id="saveNote">&nbsp;</p>
 
@@ -498,28 +498,27 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   const STORAGE_KEY = "subPlanBuilder.standingDetails.v1";
 
   const DEFAULTS = {
-    teacherName: "Devon Moore",
+    teacherName: "",
     roomNumber: "",
     periods: [
-      { label: "2", time: "", _id: "p0" },
-      { label: "3", time: "", _id: "p1" },
-      { label: "6", time: "", _id: "p2" },
-      { label: "7", time: "", _id: "p3" }
+      { label: "1", time: "", _id: "p0" },
+      { label: "2", time: "", _id: "p1" },
+      { label: "3", time: "", _id: "p2" }
     ],
-    rosterLocation: "blue substitute folder",
-    absenceLocation: "blue substitute folder",
-    emergencyLocation: "on my laptop podium",
-    attendanceText: "Students pull their “attendance chip” in the morning. Please make a quick statement like, “Is anyone actually not here?” before recording attendance. Absence slips can be found in the location noted above.",
+    rosterLocation: "",
+    absenceLocation: "",
+    emergencyLocation: "",
+    attendanceText: "Please take attendance at the start of class. Absence slips can be found in the location noted above.",
     behaviorVariant: "long",
     behaviorCustom: "",
     referralLines: "4",
     binderRefs: false,
-    phoneNurse: "647-2223",
-    phoneCounseling: "647-2222",
-    phoneSupport: "647-2256",
-    phoneOther: "posted on the filing cabinet",
+    phoneNurse: "",
+    phoneCounseling: "",
+    phoneSupport: "",
+    phoneOther: "",
     includeCallingOut: true,
-    signOffName: "Devon Moore",
+    signOffName: "",
     // Emergency info — a standing, always-included block (fix per platform theme P6/quick win).
     fireRoute: "",
     lockdownProcedure: "",
@@ -1104,7 +1103,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   //   gap    a blank line                                table  the Period / Time / Notes grid (rows)
   // A `image` section is the seating chart: a picture in Word, one sentence in text.
   function dayModel(dateStr, dp, dayIndex, totalDays) {
-    const teacherName = el('teacherName').value.trim() || 'Devon Moore';
+    const teacherName = el('teacherName').value.trim() || '';
     const signOff = el('signOffName').value.trim() || teacherName;
     const dateDisplay = dateStr ? new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '';
     const sections = [];
@@ -1850,7 +1849,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
 
   async function generateDocx() {
     const hasImage = !!seatingChartImage;
-    const teacherName = el('teacherName').value.trim() || 'Devon Moore';
+    const teacherName = el('teacherName').value.trim() || '';
     const zip = new JSZip();
     zip.file('[Content_Types].xml', buildContentTypesXml(hasImage));
     zip.file('_rels/.rels', buildRootRelsXml());

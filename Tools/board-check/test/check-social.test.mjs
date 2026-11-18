@@ -11,7 +11,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { ogImageProblems } from '../check-social.mjs';
+import { ogImageProblems, canonicalProblems } from '../check-social.mjs';
 import { SITE } from '../harness.mjs';
 
 let passed = 0, failed = 0;
@@ -44,6 +44,26 @@ check('a nested path under assets/og/ fails', og('https://www.aspermylessonplan.
 check('an empty content fails', '<meta property="og:image" content="">', 1);
 check('attribute order does not matter', '<meta content="https://www.aspermylessonplan.com/assets/og/gone.png" property="og:image">', 1);
 
+// (AI-74) og:url + canonical.
+const U = 'https://www.aspermylessonplan.com/Tools/001-hall-pass-log.html';
+const ou = u => `<meta property="og:url" content="${u}">`;
+const cl = u => `<link rel="canonical" href="${u}">`;
+const addr = (label, html, want) => {
+  const got = canonicalProblems(html);
+  if (got.length === want) passed++;
+  else { failed++; console.log(`  FAIL ${label}: ${got.length} problems (want ${want})${got.length ? '\n    ' + got.join('\n    ') : ''}`); }
+};
+addr('matching og:url and canonical on the site', ou(U) + cl(U), 0);
+addr('a page with neither is not this rule', '<title>x</title>', 0);
+addr('the old greyversusblue host fails both tags', ou(U.replace('www.aspermylessonplan.com', 'greyversusblue.com')) + cl(U.replace('www.aspermylessonplan.com', 'greyversusblue.com')), 2);
+addr('the apex domain is not the canonical host', ou(U.replace('www.', '')) + cl(U.replace('www.', '')), 2);
+addr('http is not https', ou(U.replace('https', 'http')) + cl(U.replace('https', 'http')), 2);
+addr('a canonical that differs fails', ou(U) + cl(U.replace('001-hall-pass-log', '002-group-team-generator')), 1);
+addr('og:url with no canonical fails', ou(U), 1);
+addr('canonical with no og:url fails', cl(U), 1);
+addr('a wrong-host og:url beside a right canonical fails twice', ou('https://greyversusblue.com/x.html') + cl(U), 2);
+addr('attribute order and rel case do not matter', `<link href="${U}" rel="Canonical"><meta content="${U}" property="og:url">`, 0);
+
 // The real tree: every page that names a card names one that is there.
 const OG = path.join(SITE, 'assets', 'og');
 const real = n => fs.existsSync(path.join(OG, n));
@@ -60,6 +80,18 @@ for (const rel of pages) {
 }
 if (naming >= 45) passed++;
 else { failed++; console.log(`  FAIL only ${naming} pages name a card (AI-43 left 45)`); }
+
+const toolDir = path.join(SITE, 'Tools');
+let withUrl = 0;
+for (const f of fs.readdirSync(toolDir).filter(x => x.endsWith('.html'))) {
+  const html = fs.readFileSync(path.join(toolDir, f), 'utf8');
+  if (!/property="og:url"/.test(html)) continue;
+  withUrl++;
+  const got = canonicalProblems(html);
+  if (got.length) { failed++; console.log(`  FAIL Tools/${f}: ${got.join('; ')}`); }
+}
+if (withUrl >= 83) passed++;
+else { failed++; console.log(`  FAIL only ${withUrl} tool pages have an og:url (AI-74 left 83)`); }
 
 console.log(`check-social: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

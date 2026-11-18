@@ -32,91 +32,6 @@
 <script src="_shared/a11y.js"></script>
 <link rel="stylesheet" href="_shared/a11y.css">
 
-<!--
-  DEV NOTES — deferred, do not lose:
-
-  1. LIVE PREVIEW THUMBNAILS ON CARD HOVER
-     Mini rendered snapshot per tool (fake seating chart, a schedule row, a
-     name-picker spin). Deferred to a later pass. Hook: each .row already has
-     data-tool="<slug>"; a preview panel can key off that.
-
-  2. INDIVIDUAL TOOL PAGE REDESIGNS
-     Restyle the six tool files (034-schedule-browser.html, seating chart generator,
-     etc.) to match this design system. Deferred — the six tool files were NOT
-     touched in this pass, only this landing shell. Tokens to reuse live in
-     :root below.
-
-  3. REAL USAGE COUNTER
-     Deferred. Requires a lightweight third-party hit-counter script (free
-     public API-based counter) added to each of the six tool pages individually,
-     incrementing a real shared per-tool count. Not implementable as a
-     static-only change to this landing page. Revisit as a follow-up once the
-     tool-page redesign pass (2) happens.
-
-  4. ALWAYS UPDATE ON EVERY REVISION
-     Any pass that changes this file — content, layout, or code — must also:
-       a) bump the memo <dd id="memo-date"> in the header to the date of the change,
-       b) bump the footer <span id="rev"> date (in .report .meta) to match, and
-       c) add a new <li> at the TOP of .log (the "Progress report" changelog below)
-          describing what changed, using the same date and the existing date/entry
-          format, and bump the "N recent entries" tally in the <summary> to match.
-          KEEP IT SHORT: a <b>Title.</b> lead plus 1-2 sentences, no more. The
-          full detail of a pass belongs in the git commit, not the changelog.
-     Do this every time, even for small tweaks. Do not skip it and do not remove
-     this note in future passes.
-
-  5. THE TOOL ROWS ARE GENERATED (AI-30, 2026-10-30)
-     The category blocks below (every <details class="cat"> except the
-     JS-filled "My Tools" shell) are written by Tools/board-check/build-index.mjs
-     from Tools/board-check/index-rows.json. Do NOT edit a row, a category's
-     "N tools" count, or the "N records" / "N files" text by hand: change the
-     data and run `npm run build:index` (`npm run check:index` fails CI if the
-     two disagree). The counts are counted from the data. The page itself is
-     still plain static HTML, so it works from file:// and needs no script to
-     list its tools. See note 6 for what a row carries.
-
-  6. CATEGORY SECTIONS, TAGS, AND PINS (rewritten 2026-08-17; the former
-     single "general" catch-all was split into 5 function categories —
-     replaces the retired "coming soon" placeholder note — all placeholders
-     graduated)
-     #rows contains 12 <details class="cat" data-cat="..."> category wrappers
-     (classroom-mgmt, scheduling-subs, assessment-grading, games-rewards,
-     docs-comm, math, ela, science, social-studies, world-language, arts-pe,
-     platform), each with a <summary class="section-head"> (caret + name +
-     "N tools" count) and that category's <a class="row ink"> entries, plus a
-     JS-populated <details id="pinnedCat"> "My Tools" section at the top. The
-     first 5 are function categories (no shared subject); the rest are
-     subject categories plus "platform" for site-wide tools.
-       - A NEW TOOL ROW goes inside whichever category fits best (a subject
-         category if it teaches one, otherwise the closest-fitting function
-         category) — add its object to that category in index-rows.json
-         (note 5; the "N tools" count follows by itself; note 4 still applies). Don't let a function category regrow
-         past ~10-12 tools without considering a further split.
-       - Every row carries TWO tag attributes: data-tags (free-text search
-         keywords for the live filter + Cmd+K — legacy vocabulary, fine to
-         extend) and data-filter-tags (curated canonical tags that drive the
-         "Filter by tag" panel; taxonomy = 8 subject tags + function tags like
-         timer/printable/review-game + output tags). Give a new tool 2–6
-         data-filter-tags; subject tag LAST (function-category tools get
-         none). The panel is built at runtime from these attributes — no list
-         to update.
-       - The 3 visible chips in .tags must be <span data-tag="x">x</span>
-         using the row's FIRST THREE data-filter-tags, in order — they are
-         click-to-filter shortcuts, so chip text and filter tags must match.
-       - Each row's .per cell contains a pin star: a span[role=button] with
-         data-pin (spans, not <button>, because buttons are invalid inside
-         the row <a>; this nested-interactive setup is deliberate). The
-         number in .per b is a permanent per-tool "add order" badge (matches
-         the tool's original addition sequence, not its position in the
-         DOM) — never renumber it when moving a row between categories.
-       - localStorage: gvb-home-cats (per-category open state; all categories
-         ship closed in markup EXCEPT "classroom-mgmt", which ships open as
-         the first-visit default — the JS default state mirrors this),
-         gvb-home-pins (array of data-tool slugs).
-     The old .row.soon placeholder convention is retired; BACKLOG.md at the repo
-     root and ideas-backlog.html still track future ideas.
--->
-
 <style>
   :root{
     color-scheme:light;
@@ -458,7 +373,8 @@
   .row:nth-child(even){background:var(--panel-alt);}
   .row:last-child{border-bottom:none;}
   .row:hover,.row:focus-visible{background:var(--accent-soft);}
-  .row:focus-visible{outline:none;}
+  /* ML-17 (AI-74): the hover tint alone was ~1.1:1; a 2px inset accent ring (inset, so the list's own clipping can't cut it). */
+  .row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
 
   /* signature hover: active spreadsheet cell — selection border + fill handle */
   .row::after{
@@ -2825,8 +2741,7 @@
       <span class="k">C2</span> Unofficial. Not affiliated with any school, district, or SIS vendor.<br>
       <span class="k">C3</span> A pleasure to have in your bookmarks bar.<br id="c4-br" hidden>
       <span class="k" id="c4-k" hidden>C4</span><span id="c4-txt" hidden> Filed under &ldquo;creative liberty.&rdquo;</span><br>
-      <span class="k">C5</span> Curious what&rsquo;s next? See the <a href="ideas-backlog.html">ideas backlog</a>. Reminder: coming soon means not right now.<br>
-      <span class="k">C6</span> Prefer a different look? Try the <a href="v1-inbox.html">Inbox edition</a>.
+      <span class="k">C5</span> Curious what&rsquo;s next? See the <a href="ideas-backlog.html">ideas backlog</a>. Reminder: coming soon means not right now.
     </div>
     <div class="meta">
       <span>Questions, bugs, contributions &mdash; email <span class="handle">@dsmoore</span>. Please advise.</span>

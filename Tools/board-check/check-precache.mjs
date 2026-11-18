@@ -85,8 +85,11 @@ const SITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 
 /* Pages that are shipped and reachable. Archived design folders are excluded:
    they are kept for reference, are not linked from anywhere live, and precaching
-   them would grow the install for nothing. */
-const PAGE_EXEMPT = ['Tools/Old Designs/', 'Tools/New Designs/', 'index_backup.html'];
+   them would grow the install for nothing. The four v1-v4 design-direction pages
+   joined them in AI-75 (v594): index.html no longer links them, they carry
+   noindex, and they are not precached; they still link each other. */
+const PAGE_EXEMPT = ['Tools/Old Designs/', 'Tools/New Designs/', 'index_backup.html',
+  'v1-inbox.html', 'v2-subplans.html', 'v3-bellboard.html', 'v4-riso.html'];
 
 /* Targets that are online-only by design. conference-signup/ talks to a
    Worker for shared bookings, so sw.js deliberately never caches or serves it

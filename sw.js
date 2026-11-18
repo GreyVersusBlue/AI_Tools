@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v591';
+const CACHE_VERSION = 'v594';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -699,11 +699,7 @@ const PRECACHE_URLS = [
   "assets/screenshots/name-picker-narrow.png",
   "ideas-backlog.html",
   "index.html",
-  "manifest.json",
-  "v1-inbox.html",
-  "v2-subplans.html",
-  "v3-bellboard.html",
-  "v4-riso.html"
+  "manifest.json"
 ];
 
 /* ── install: the shell tier only ─────────────────────────────────────── */

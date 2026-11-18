@@ -213,6 +213,7 @@
     "test:sub-plan-donow": "node Tools/sub-plan-builder/test/smoke-do-now-pull.mjs",
     "test:sub-plan-render": "node Tools/sub-plan-builder/test/smoke-one-renderer.mjs",
     "test:sub-plan-said": "node Tools/sub-plan-builder/test/smoke-sub-said.mjs",
+    "test:sub-plan-no-personal": "node Tools/sub-plan-builder/test/check-no-personal-defaults.mjs",
     "test:binder-stale": "node Tools/packet-builder/test/binder-stale.test.mjs",
     "test:binder-stale-smoke": "node Tools/packet-builder/test/smoke-binder-stale.mjs",
     "test:packet-sections": "node Tools/packet-builder/test/sections.test.mjs",

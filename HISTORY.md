@@ -9,6 +9,55 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-75 (selector line code): the index stops linking v1-v4, the five old pages get noindex, 035's help scroll box takes focus (site audit ML-12 + ML-21, 2026-11-17, `CACHE_VERSION` v594)
+
+- **index.html** no longer links `v1-inbox.html` (the "Inbox edition" comment code C6 is gone). `ideas-backlog.html` stays linked: it is a 25 KB public list of ideas by category, not an empty placeholder (the audit's "empty" was wrong), so it only gained noindex and stays precached.
+- **`<meta name="robots" content="noindex">`** is on all five pages. `v1-v4` lost their `@font-face` blocks (4/4/3/5 of them), which asked for `assets/fonts/`, a folder that does not exist; their stacks already name system fallbacks. Nothing was deleted: the four pages still link each other in a ring (v1 to v2 to v3 to v4 to index) for anyone who finds one.
+- **sw.js**: v1-v4 left `PRECACHE_URLS`, so offline they 404; that is the price of the audit's ask. `check-precache.mjs` now lists them in `PAGE_EXEMPT` (as the old design folders are) because they still link each other and its MISSING pass would otherwise demand them back. `make-offline-copy.mjs` lost its patch for the removed C6 link (it asserted exactly one and would have failed the build).
+- **035**: the help dialog's `.modal-body` has `tabindex="0"`, `role="region"` and `aria-label="Help and tips"` (axe `scrollable-region-focusable`).
+- **The `DEV NOTES — deferred, do not lose:` comment** moved verbatim to the end of `BACKLOG.md`, under "Deferred notes moved from index.html (AI-75)". Its rule 4 (bump memo-date and rev on every revision) is no longer on the page; nothing enforced it.
+- **What I did not fix: the index's "3 elements at 4.49:1".** I could not reproduce it at rest: axe's `color-contrast` is clean on the index in light and dark, at 1280 and 375 wide, with every category open, after hover, focus and a search. It does fire during the entrance animation (the rows fade in over opacity and flash `--good-soft`; the stamp scales in), where readings of 4.3 to 4.47 appear on `.open`, `.lbl`, `.stamp b`; a scan taken before the page settles will find some value just under 4.5 on whichever elements it catches. If a later audit still reports it, scan after about 3 s or with reduced motion before chasing a colour.
+- Checked: `check:index`, `check:precache --base origin/main`, `check:social`, `lint`, `check:tests`, `check:dedupe`, `check:docs-commands`, `check:entities`, `check:hidden-flex`, `test:a11y` (292 passed), `test:sw-tiers`, `test:theme`. Not checked on a real device or on the live site.
+
+---
+
+## AI-74 (selector line code): og:url on 11 tools named a dead site, no canonical links, invisible focus on index rows (site audit ML-16 + ML-17, 2026-11-17, `CACHE_VERSION` v593)
+
+**ML-16.** 002, 004, 005, 007, 011, 016, 018, 034, 035, 036 and 038 carried `og:url` on `https://greyversusblue.com/Tools/...` (a 404; the
+site is `https://www.aspermylessonplan.com/`), and 067's og:url named `music-warmup-generator.html`, a file that does not exist (067 has no
+`gvb:social` block, so `check:social`'s path rule never read it). All 12 now name their own file in the `www.aspermylessonplan.com/Tools/<name>`
+form (spaces as `%20`, as before). **Every one of the 83 tool pages that has an og:url now has `<link rel="canonical">` with the same URL**,
+on the line after it (no generator writes these tags: `check-social.mjs` only reads them, `build-index` does not touch tool heads, so it was
+a hand edit by a one-off script). **Guard:** `canonicalProblems()` in `Tools/board-check/check-social.mjs`, run over every tool page with an
+og:url or canonical (block or no block): host must be `https://www.aspermylessonplan.com`, a page with one of the two needs the other, and
+the two must be equal. Pinned by ten fixtures plus a real-tree pass in `test:check-social`. Broken once on purpose (002's canonical put back on
+greyversusblue.com): `002-group-team-generator.html: canonical https://greyversusblue.com/Tools/002-group-team-generator.html is not on
+https://www.aspermylessonplan.com/` and `... differs from og:url https://www.aspermylessonplan.com/Tools/002-group-team-generator.html`, exit 1.
+**Left alone:** 11 blocks still say `og:site_name "greyversusblue"` (the older generation; the host is right now, the brand name is Devon's
+call), and the 8 tool pages with no og:url have no canonical (the guard does not demand one). **ML-17.** `index.html` `.row:focus-visible` had
+`outline:none`, leaving only the hover tint (about 1.1:1). It is now `outline:2px solid var(--accent);outline-offset:-2px` (inset so the list
+cannot clip it); the hover background is unchanged. Measured in Chromium on a Tab-focused row: light ring `rgb(39,100,159)` is 5.02:1
+against the row's tint, dark `rgb(127,178,229)` 5.85:1. Index is not generated for its CSS (`build-index` renders only the rows), so the
+CSS was edited directly and `check:index` is still OK. **Not verified:** nothing was shared to a real card renderer or search engine.
+
+## AI-73 (selector line code): 044 Sub Plan Builder no longer ships Devon's details as defaults (site audit ML-10, 2026-11-17, `CACHE_VERSION` v592)
+
+(The selector's AI-73 is not the in-repo AI-73 above; the line codes are separate.) `Tools/044-Sub Plan Builder.html` shipped Devon's
+name, the school's nurse/counseling/support numbers and "blue substitute folder" as its first-visit defaults and as placeholders, and printed
+his name on a plan whose name field was empty. **Done:** `DEFAULTS` now holds empty strings for the name, sign-off, the three locations, the
+four phone fields and `phoneOther`; periods are a neutral 1/2/3; the placeholders read "Your name" / "e.g. sub folder on the desk" / "e.g. on the
+teacher desk"; the two `|| 'Devon Moore'` fallbacks are `|| ''` (no name printed; the sign-off already falls back to the teacher name). The
+attendance default lost its "attendance chip" sentence, which was Devon's classroom routine, not a default. **Not touched:** the storage key
+`subPlanBuilder.standingDetails.v1` and its shape; nobody's saved details are read differently, since `Object.assign(DEFAULTS, parsed)` lets a
+stored value win. A visitor who had never saved anything, and so was seeing the old defaults, now sees blanks. **Guard:**
+`Tools/sub-plan-builder/test/check-no-personal-defaults.mjs` (`npm run test:sub-plan-no-personal`, pure Node, in `suites.json`) fails if the page
+contains "Devon Moore" or "647-22"; it was broken once on purpose and printed `FAIL 044 html line 246 contains "Devon Moore"`, exit 1. The four
+golden files in `Tools/sub-plan-builder/test/golden/` were regenerated with `--update` (the diff is the removed defaults only).
+**Hits outside 044, left alone:** `v1-inbox.html`, `v2-subplans.html`, `v3-bellboard.html`, `v4-riso.html` carry "Built by Devon Moore + Claude" as an
+authorship credit (v1-inbox also has a sample memo from "Devon Moore"); `Tools/a11y-sweep/seeds.mjs` seeds 044 with "posted on the filing cabinet",
+no name or number. Whether those credits stay is Devon's call. **Not verified:** nothing was opened in Word; an empty name leaves "Teacher: " and
+"Substitute Plan — " with nothing after them in the plan and its header.
+
 ## AI-73: 091 Student Data Anonymizer, a new tool (Devon's request, 2026-11-13, #385, `CACHE_VERSION` v590)
 
 Devon asked for a page that takes a student data file and returns the same file with no student in it, plus a key.
