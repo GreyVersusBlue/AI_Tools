@@ -260,7 +260,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 44 | Path 16 P5, what is left — only step 6: the 065/073 handoffs, which have no route to use until those tools take a figure (listed in the bullet); step 5, the chart sheet, shipped v538 | 065, 073 | ½ | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
 | 45 | Path 17 P1 — thumbnail-grid reordering, crop/straighten, real-photo validation of the retry presets | 011 | 1 | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 46 | Path 17 P2 — scanner mode: quadrilateral detection, perspective warp, adaptive threshold. **Designed, not built (AI-25, 2026-10-06): the design is under the P2 bullet; P1 is not built and the design says what P2 needs from it** | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
-| 47 | Path 17 P3 — PDF in: vendor `pdf.js`, merge/insert/extract/rotate existing PDFs | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
+| 47 | Path 17 P3 — PDF in. **Built (AI-25, v598): a `.pdf` chosen or dropped on 011 adds each page (up to 100, 1600 px wide) to the queue as a PNG entry; pdf.js loads only then.** Left: crop/extract by page range, a page-thumbnail picker before adding, and 031's "PDF export of the merged docx" (no row) | 011 | ¼ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 48 | Path 17 P4 — imposition. **Built (AI-13, v248, under Path 7 P4): 011 has booklet, 2/4/6/9 pages to a side with cut marks, either flip edge, creep.** Left: print and fold a 16-page booklet once and record it; then, only if asked for, a preset for a one-sided printer (fronts, then backs) and signatures for a thick booklet, both already in `ExportKit` | 011 | ¼ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 49 | Path 17 P5 — OCR, decision first: a vendored Tesseract build against the offline promise | 011 | ½ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 50 | Path 18 P2, what is left: the printed short-code fallback typed into `lock.html` (**held: student-facing, Devon's "nothing is student-facing right now" stands**). **Shipped (v380-v386):** both tools on `Stations.read`/`write`, 018's run keyed by id, 019's codes from `playPayload`/`playUrl`, `lock.html` reading `playRead`, `budget()` and its refusal in 019, `er-match.js` folded in, a room's go-to stored as the target's id on disk (`Stations.toDisk`, v385), and both pages' `getState`/`normalize*` now `Stations.shareState`/`fromShare` (v386) | 018 | ¼ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
@@ -6564,7 +6564,7 @@ perspective correction, thresholding — all canvas math, no library. PDF in / P
 a complete local document-assembly story. Print-shop presets (booklet imposition,
 N-up with cut marks) are something teachers need that no free local tool does well.
 
-**Status.** P4's controls are built (AI-13, v248, under Path 7 P4); the paper check is what is left of it. P2 is designed, not built (AI-25, 2026-10-06): the design is in its bullet. P1, P3 and P5 not started.
+**Status.** P4's controls are built (AI-13, v248, under Path 7 P4); the paper check is what is left of it. P2 is designed, not built (AI-25, 2026-10-06): the design is in its bullet. P3's pages-in-as-images increment is built (AI-25, v598). P1 and P5 not started.
 
 **Phases.**
 
@@ -6788,11 +6788,16 @@ N-up with cut marks) are something teachers need that no free local tool does we
   figure is a guess, marked as one. No real photograph was opened; the fixtures do not yet exist. Nothing about
   `<dialog>` on iOS Safari, pointer events on a handle under a thumb, or the Worker in the service worker's
   precache has been tried on this site.
-- **P3 — PDF in.** Accept PDFs as input (render pages via a vendored `pdf.js` —
-  a new `_shared/vendor/` entry with the README, SHA and precache bookkeeping;
-  weigh its size against the precache in Path 1), so merge/insert/extract/rotate
-  work on existing PDFs. 031 gains "PDF export of the merged docx" via the same
-  layer where feasible.
+- **P3 — PDF in. First increment built (AI-25, v598).** 011's file input and drop zone take a `.pdf`; each page is
+  drawn by the vendored pdf.js (`_shared/vendor/pdfjs`, the 089 copy, no new vendor entry; both files were already in
+  `PRECACHE_URLS`) at 1600 px wide onto a white canvas and added to the queue as a PNG entry named `<file> pN.png`, so
+  merge, reorder, delete, rotate and the quality ladder already work on them. pdf.js is injected as two script tags
+  only when a PDF is chosen. At most 100 pages (it says so when a PDF has more), a locked or unreadable PDF is refused
+  with a sentence, the same PDF twice adds nothing, and the help text says a text PDF becomes pictures. Numeric sort's
+  tie-break became numeric so `p2` sorts before `p10`. `npm run test:image-to-pdf-pdfin` (port 8667). **Not
+  verified:** a real multi-page scanned or text PDF from a school (the suite's fixtures are flat-grey jsPDF pages),
+  memory on a 100-page PDF on a phone, and iPad Safari. **Left:** a page-range picker or thumbnails before adding,
+  extract a range into a new PDF, and 031's "PDF export of the merged docx" via the same layer where feasible.
 - **P4 — Imposition (Fable).** Booklet (saddle-stitch page order), N-up with cut
   marks, two-sided presets, in the shared export layer of Path 7 so every printing
   tool can use them. **The math shipped in Path 7 P4's first increment (AI-13, v243):

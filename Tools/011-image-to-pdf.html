@@ -159,10 +159,11 @@
   <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
   <div class="card-title">1 · Select Files</div>
   <div id="drop-zone">
-    <input type="file" id="file-input" accept=".png,.jpg,.jpeg,.webp,.svg" multiple aria-label="Choose PNG, JPG, WEBP, or SVG image files">
+    <input type="file" id="file-input" accept=".png,.jpg,.jpeg,.webp,.svg,.pdf,application/pdf" multiple aria-label="Choose PNG, JPG, WEBP, SVG image files or PDF files">
     <span class="icon">📂</span>
     <div class="label">Drop files here or click to browse</div>
-    <div class="sublabel">Accepts .png, .jpg/.jpeg, .webp, and .svg · No file size limit</div>
+    <div class="sublabel">Accepts .png, .jpg/.jpeg, .webp, .svg, and .pdf · No file size limit</div>
+    <div class="sublabel" id="pdf-help">A PDF is turned into one picture per page (up to 100 pages, drawn about 1600 px wide), so each page can be reordered, rotated, removed or merged with other files. Its text becomes part of the picture and can no longer be selected or searched.</div>
   </div>
 </div>
 
@@ -559,6 +560,8 @@
 
   // ── File ingestion ─────────────────────────────────────────────────────────
   function handleFiles(files) {
+    const pdfs    = files.filter(isPdfFile);
+    files         = files.filter(f => !isPdfFile(f));
     const valid   = files.filter(f => VALID_EXT.test(f.name));
     const invalid = files.filter(f => !VALID_EXT.test(f.name));
 
@@ -577,6 +580,106 @@
       clearMsg();
     }
     renderList();
+    if (pdfs.length) addPdfs(pdfs);
+  }
+
+  // ── PDF in: each page becomes a PNG entry in the queue ─────────────────────
+  // pdf.js (about 1.4 MB) is loaded only when a PDF is chosen. It is the one
+  // vendored copy in _shared/vendor/pdfjs; as in 089, the worker script is a
+  // plain script tag that defines the in-page worker, so no workerSrc is set.
+  const PDF_MAX_PAGES = 100;
+  const PDF_RENDER_WIDTH = 1600;
+  let pdfjsLoading = null;
+
+  function isPdfFile(f) {
+    return /\.pdf$/i.test(f.name) || f.type === 'application/pdf';
+  }
+
+  function loadScriptOnce(src) {
+    return new Promise((res, rej) => {
+      const el = document.createElement('script');
+      el.src = src;
+      el.onload = () => res();
+      el.onerror = () => rej(new Error('script failed'));
+      document.head.appendChild(el);
+    });
+  }
+
+  function loadPdfJs() {
+    if (window.pdfjsLib) return Promise.resolve();
+    if (!pdfjsLoading) {
+      pdfjsLoading = loadScriptOnce('../_shared/vendor/pdfjs/pdf.min.js')
+        .then(() => loadScriptOnce('../_shared/vendor/pdfjs/pdf.worker.min.js'))
+        .catch(() => { pdfjsLoading = null; throw new Error("The PDF reader didn't load. Reload the page and try again."); });
+    }
+    return pdfjsLoading;
+  }
+
+  async function addPdfs(pdfs) {
+    const notes = [];
+    let added = 0;
+    for (const file of pdfs) {
+      try {
+        added += await addPdfPages(file, notes);
+      } catch (err) {
+        notes.push(`${file.name} — ${err.message}`);
+      }
+    }
+    renderList();
+    const tail = notes.length ? '\n' + notes.join('\n') : '';
+    if (added > 0) showMsg(`Added ${added} page${added === 1 ? '' : 's'} from PDF.` + tail, notes.length ? 'warn' : 'info');
+    else if (notes.length) showMsg(notes.join('\n'), 'error');
+  }
+
+  async function addPdfPages(file, notes) {
+    const stem = file.name.replace(/\.pdf$/i, '');
+    if (loadedFiles.some(e => e.pdfFrom === file.name)) {
+      notes.push(`${file.name} — already in the queue.`);
+      return 0;
+    }
+    showMsg(`Reading ${file.name}…`, 'warn');
+    await loadPdfJs();
+    let doc;
+    try {
+      const data = new Uint8Array(await file.arrayBuffer());
+      doc = await window.pdfjsLib.getDocument({ data, isEvalSupported: false }).promise;
+    } catch (err) {
+      const pw = err && err.name === 'PasswordException';
+      throw new Error(pw
+        ? 'this PDF is locked with a password, so it can\u2019t be opened here. Open it in a PDF viewer, save an unlocked copy, and add that.'
+        : 'this PDF couldn\u2019t be read (it may be damaged or not a real PDF).');
+    }
+    const total = doc.numPages;
+    const take = Math.min(total, PDF_MAX_PAGES);
+    let count = 0;
+    try {
+      for (let n = 1; n <= take; n++) {
+        showMsg(`Reading ${file.name}: page ${n} of ${take}…`, 'warn');
+        const page = await doc.getPage(n);
+        const base = page.getViewport({ scale: 1 });
+        const vp = page.getViewport({ scale: PDF_RENDER_WIDTH / base.width });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(vp.width));
+        canvas.height = Math.max(1, Math.round(vp.height));
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+        canvas.width = canvas.height = 0;
+        if (!blob) throw new Error('could not draw a page');
+        const png = new File([blob], `${stem} p${n}.png`, { type: 'image/png' });
+        loadedFiles.push({ id: nextId++, file: png, thumbUrl: URL.createObjectURL(png), rotation: 0, caption: '', pdfFrom: file.name });
+        count++;
+      }
+    } catch (err) {
+      if (!count) throw new Error('its pages couldn\u2019t be drawn (' + err.message + ').');
+      notes.push(`${file.name} — stopped after page ${count}: ${err.message}.`);
+    } finally {
+      doc.destroy();
+    }
+    if (total > take) notes.push(`${file.name} has ${total} pages; only the first ${PDF_MAX_PAGES} were added.`);
+    return count;
   }
 
   // ── Numeric sort: extract leading number from filename ─────────────────────
@@ -600,7 +703,7 @@
     if (mode === 'custom') return [...loadedFiles];
     const copy = [...loadedFiles];
     if (mode === 'numeric') {
-      copy.sort((a, b) => extractLeadingNumber(a.file.name) - extractLeadingNumber(b.file.name) || a.file.name.localeCompare(b.file.name));
+      copy.sort((a, b) => extractLeadingNumber(a.file.name) - extractLeadingNumber(b.file.name) || a.file.name.localeCompare(b.file.name, undefined, { numeric: true }));
     } else {
       copy.sort((a, b) => a.file.name.localeCompare(b.file.name, undefined, { numeric: true, sensitivity: 'base' }));
     }
