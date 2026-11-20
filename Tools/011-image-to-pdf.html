@@ -132,6 +132,20 @@
   .scan-tile img { display: block; width: 100%; height: auto; }
   .scan-tile svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   .scan-tile .scan-tile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Queue view (Path 17 P1): the same <li>s as tiles. Only a class on the <ul> changes. */
+  #view-bar { display: flex; gap: var(--space-2); align-items: center; margin: 0 0 var(--space-2); font-size: 12.5px; }
+  #view-bar .toggle-group { flex: 0 0 auto; }
+  #view-bar .toggle-group button { padding: var(--space-2) var(--space-3); min-height: 2.3rem; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 500; opacity: 0.65; cursor: pointer; }
+  #view-bar .toggle-group button[aria-pressed="true"] { background: var(--color-accent); color: var(--color-accent-ink); opacity: 1; }
+  #file-list.grid { max-height: 520px; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-2); padding: var(--space-2); }
+  #file-list.grid li { flex-direction: column; align-items: stretch; border: 1px solid var(--color-divider); position: relative; padding: var(--space-2); }
+  #file-list.grid li:last-child { border-bottom: 1px solid var(--color-divider); }
+  #file-list.grid .thumb { width: 100%; height: 120px; object-fit: contain; align-self: center; }
+  #file-list.grid .seq { position: absolute; top: 4px; left: 4px; min-width: 0; padding: 0 5px; background: var(--color-bg); border: 1px solid var(--color-divider); opacity: 1; font-weight: 700; font-size: 11px; }
+  #file-list.grid .filename { flex: none; min-width: 0; font-size: 11.5px; }
+  #file-list.grid .row-actions { flex-wrap: wrap; }
+  #file-list.grid .caption-input { margin-left: 0; max-width: none; flex-basis: auto; }
+  #file-list.grid li.drop-before { box-shadow: -4px 0 0 var(--color-accent); }
   #scan-note { font-size: 12px; opacity: 0.65; margin: 0 0 var(--space-3); }
 
   /* Scan dialog (scan-ui.js builds the markup) */
@@ -405,6 +419,10 @@
   </div>
   <div id="scan-review" hidden aria-live="polite"></div>
   <p id="scan-note" hidden>Scan finds the sheet in a photo of a page, pulls it flat and upright, and evens out the light and the shadows. Each row's Scan button opens the photo so you can move the four corners yourself; Scan all does it for the photos not yet scanned and shows each page in a strip with the corners it found drawn on it, and marks the ones it was not sure of &ldquo;Check the corners&rdquo;; press a picture in the strip to open it. A scanned page is saved as an image (black and white as a PNG), so its text is not selectable. A scan is kept only until you leave or reload this page.</p>
+  <div id="view-bar" role="group" aria-label="Queue view">
+    <span class="toggle-group"><button type="button" id="view-list" aria-pressed="true">List</button><button type="button" id="view-grid" aria-pressed="false">Thumbnails</button></span>
+    <span id="view-hint" hidden>Drag a thumbnail to reorder it, or use the arrows on it (arrows work on a phone).</span>
+  </div>
   <ul id="file-list"></ul>
 </div>
 
@@ -472,6 +490,7 @@
   // page-size/orientation/quality every time — persist just those three (not
   // the file queue, sort order, or per-image rotations).
   const SETTINGS_KEY = 'image-to-pdf-settings';
+  let queueView = 'list';   // 'list' or 'grid'; a habit, stored only once it is grid
   let scanMode = 'color';   // the habit only: how a scan looks, never whether scanning is on
   const pageSizeSel  = document.getElementById('page-size');
   const qualitySel   = document.getElementById('quality');
@@ -506,6 +525,7 @@
     });
     if (typeof imp.marks === 'boolean') document.getElementById('impose-marks').checked = imp.marks;
     if (typeof imp.creep === 'boolean') document.getElementById('impose-creep').checked = imp.creep;
+    if (raw.view === 'grid') queueView = 'grid';
     if (raw.scan && ['color', 'gray', 'bw'].includes(raw.scan.mode)) scanMode = raw.scan.mode;
     // Deliberately NOT persisted: targetSize. A forgotten target quietly
     // downgrading every future PDF's quality is worse than re-typing it.
@@ -526,6 +546,7 @@
           creep: document.getElementById('impose-creep').checked
         }
       };
+      if (queueView === 'grid') saved.view = 'grid';
       if (scanMode !== 'color') saved.scan = { mode: scanMode };   // only once it differs from the default
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(saved));
     } catch (e) { /* storage full/blocked */ }
@@ -950,6 +971,11 @@
     renderPortfolioPreview();
     renderImposeUi();
     fileList.innerHTML = '';
+    const isGrid = queueView === 'grid';
+    fileList.classList.toggle('grid', isGrid);
+    document.getElementById('view-list').setAttribute('aria-pressed', String(!isGrid));
+    document.getElementById('view-grid').setAttribute('aria-pressed', String(isGrid));
+    document.getElementById('view-hint').hidden = !isGrid;
     const ordered = getOrderedEntries();
     const scannable = ordered.some(e => extOf(e.file.name) !== 'svg');
     scanBar.hidden = scanNote.hidden = !scannable;
@@ -986,8 +1012,8 @@
         <span class="filename">${safeName}</span>${scanBadge}
         <span class="row-actions">
           ${isSvg ? '' : `<button type="button" class="scan-btn" data-act="scan" aria-label="Scan ${safeName}: find the page and straighten it">Scan</button>`}
-          <button type="button" data-act="up" aria-label="Move ${safeName} up" ${i === 0 ? 'disabled' : ''}>&#8593;</button>
-          <button type="button" data-act="down" aria-label="Move ${safeName} down" ${i === ordered.length - 1 ? 'disabled' : ''}>&#8595;</button>
+          <button type="button" data-act="up" aria-label="Move ${safeName} ${isGrid ? 'earlier' : 'up'}" ${i === 0 ? 'disabled' : ''}>${isGrid ? '&#8592;' : '&#8593;'}</button>
+          <button type="button" data-act="down" aria-label="Move ${safeName} ${isGrid ? 'later' : 'down'}" ${i === ordered.length - 1 ? 'disabled' : ''}>${isGrid ? '&#8594;' : '&#8595;'}</button>
           <button type="button" data-act="rotate" aria-label="Rotate ${safeName} 90° (currently ${rotation}°)">&#8635;</button>
           <button type="button" data-act="remove" aria-label="Remove ${safeName}">&#10005;</button>
         </span>
@@ -1025,6 +1051,17 @@
       fileList.appendChild(li);
     });
   }
+
+  document.getElementById('view-list').setAttribute('aria-pressed', String(queueView === 'list'));
+  document.getElementById('view-grid').setAttribute('aria-pressed', String(queueView === 'grid'));
+  document.getElementById('view-hint').hidden = queueView !== 'grid';
+  fileList.classList.toggle('grid', queueView === 'grid');
+  ['list', 'grid'].forEach(v => document.getElementById('view-' + v).addEventListener('click', () => {
+    if (queueView === v) return;
+    queueView = v;
+    saveSettingsPrefs();
+    renderList();
+  }));
 
   // ── Clear ──────────────────────────────────────────────────────────────────
   btnClear.addEventListener('click', () => {
