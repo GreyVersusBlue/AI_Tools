@@ -14675,17 +14675,11 @@ These were an HTML comment at the top of `index.html`, removed in AI-75 (2026-11
      static-only change to this landing page. Revisit as a follow-up once the
      tool-page redesign pass (2) happens.
 
-  4. ALWAYS UPDATE ON EVERY REVISION
-     Any pass that changes this file — content, layout, or code — must also:
-       a) bump the memo <dd id="memo-date"> in the header to the date of the change,
-       b) bump the footer <span id="rev"> date (in .report .meta) to match, and
-       c) add a new <li> at the TOP of .log (the "Progress report" changelog below)
-          describing what changed, using the same date and the existing date/entry
-          format, and bump the "N recent entries" tally in the <summary> to match.
-          KEEP IT SHORT: a <b>Title.</b> lead plus 1-2 sentences, no more. The
-          full detail of a pass belongs in the git commit, not the changelog.
-     Do this every time, even for small tweaks. Do not skip it and do not remove
-     this note in future passes.
+  4. THE DATES ARE GENERATED (AI-76, 2026-11-19; replaces the old "bump on every revision" rule)
+     The memo <dd id="memo-date"> and the footer <span id="rev"> are written by
+     `npm run build:index` from the newest dated "## " heading of HISTORY.md. Do not type
+     them. The "Progress report" changelog is gone from the page (its newest entry was Oct 2,
+     and nothing kept it current); HISTORY.md is the changelog.
 
   5. THE TOOL ROWS ARE GENERATED (AI-30, 2026-10-30)
      The category blocks below (every <details class="cat"> except the

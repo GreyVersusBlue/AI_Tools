@@ -1,7 +1,7 @@
 # CLAUDE.md — repo conventions
 
-This is the East Middle Staff Toolkit (aspermylessonplan.com): a static GitHub
-Pages PWA of small, self-contained classroom tools. No build step, no server,
+This is the East Middle Staff Toolkit (aspermylessonplan.com): a static PWA
+(served from Devon's own server behind Cloudflare) of small, self-contained classroom tools. No build step, no server,
 no accounts — every tool runs entirely in the browser and must keep working
 offline once the site has been visited. These conventions exist to stop
 copy-paste drift across the 86 tools; follow them for every new tool and

@@ -507,44 +507,6 @@
   }
   .row.soon .open{color:var(--faint);}
 
-  /* ============ progress report (changelog) ============ */
-  .news{
-    margin-top:1.5rem;
-    border:1px solid var(--line);border-radius:6px;
-    background:var(--panel);overflow:hidden;
-  }
-  .news summary{
-    list-style:none;cursor:pointer;
-    display:flex;align-items:center;gap:.6rem;
-    padding:.85rem 1.1rem;
-    font-family:var(--mono);font-size:.7rem;letter-spacing:.11em;text-transform:uppercase;
-    color:var(--dim);transition:color .2s var(--ease);
-  }
-  .news summary::-webkit-details-marker{display:none;}
-  .news summary:hover{color:var(--ink);}
-  .news summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
-  .news .caret{color:var(--accent);transition:transform .25s var(--ease);display:inline-flex;}
-  .news[open] .caret{transform:rotate(90deg);}
-  .news[open] summary{color:var(--ink);border-bottom:1px solid var(--line);}
-  .news summary .tally{margin-left:auto;color:var(--faint);letter-spacing:.03em;text-transform:none;}
-
-  .log{padding:.4rem 1.1rem 1.1rem;}
-  .log li{
-    list-style:none;
-    display:grid;grid-template-columns:6.4rem 1fr;gap:1rem;
-    padding:.66rem 0;border-bottom:1px dashed var(--line);
-    font-size:.89rem;
-  }
-  .log li:last-child{border-bottom:none;}
-  .log time{font-family:var(--mono);font-size:.72rem;color:var(--dim);padding-top:.12rem;}
-  .log b{font-weight:700;}
-  .log a{color:var(--accent);}
-  .log code{
-    font-family:var(--mono);font-size:.82rem;color:var(--ink);
-    background:var(--paper);border:1px solid var(--line);border-radius:3px;
-    padding:.02rem .3rem;
-  }
-
   /* ============ report-card footer ============ */
   .report{
     margin-top:2.2rem;
@@ -694,7 +656,6 @@
     .grade{grid-column:3;grid-row:1;align-self:start;width:2.1rem;height:2.1rem;font-size:.86rem;}
     .tags{grid-column:2/4;grid-row:2;justify-content:flex-start;}
     .open{display:none;}
-    .log li{grid-template-columns:1fr;gap:.15rem;}
     .report .meta{flex-direction:column;align-items:flex-start;}
   }
 
@@ -711,7 +672,7 @@
 <main class="wrap" id="main">
 
   <div class="app-bar ink" style="--d:40ms">
-    <span><span class="wordmark">ASPERMYLESSONPLAN<span class="tld">.COM</span></span> · Unofficial Toolbook · Term 2026–27 · Q1</span>
+    <span><span class="wordmark">ASPERMYLESSONPLAN<span class="tld">.COM</span></span> · Unofficial Toolbook · Term 2026–27</span>
     <span class="rhs"><span class="dot" aria-hidden="true"></span>91 records · local only · nothing syncs<span class="offline-status" id="offlineStatus" data-sw-offline-status role="status" aria-live="polite" hidden></span><a class="backup-status" id="backupStatus" href="Tools/009-backup-restore.html" hidden></a><a class="backup-status stale" id="binderStatus" href="Tools/090-packet-builder.html?preset=emergency" hidden></a><button type="button" class="clear-rosters" id="clearRostersBtn" aria-haspopup="dialog" aria-controls="clearRostersDlg" hidden>Clear all rosters</button><button type="button" class="cmdk-hint" id="cmdkOpenBtn" aria-haspopup="dialog" aria-controls="cmdkOverlay" aria-label="Open quick jump search (Control or Command plus K)"><span aria-hidden="true">&#8984;K</span> Quick jump</button></span>
   </div>
 
@@ -723,10 +684,13 @@
     <div class="hero-grid">
       <div class="hero-main">
         <h1 class="ink" style="--d:140ms"><span class="re-pre" aria-hidden="true">RE:</span>Tools for the parts of the job that <span class="accent">aren&rsquo;t teaching.</span></h1>
+        <p class="lede ink" style="--d:200ms">
+          <strong>Free classroom tools for teachers, built to run in your browser.</strong>
+          No accounts, nothing uploaded, and they keep working offline.
+        </p>
         <p class="lede ink" style="--d:240ms">
           Single-file web apps for rosters, seating, schedules, and grade math.
-          <strong>No install, no account, no upload</strong> &mdash; open the file and use it.
-          Works offline once loaded.
+          <strong>No install</strong> &mdash; open the file and use it.
         </p>
         <p class="hero-link ink" style="--d:290ms">
           <a href="conference-signup/index.html?demo">Try the parent conference sign-up &rarr;</a>
@@ -737,7 +701,7 @@
           <dl class="memo ink" style="--d:100ms">
             <dt>To</dt><dd>All staff</dd>
             <dt>From</dt><dd>D. Moore</dd>
-            <dt>Date</dt><dd id="memo-date">2026-10-02</dd>
+            <dt>Date</dt><dd id="memo-date">2026-11-19</dd>
             <dt>CC</dt><dd>Whoever asked for the link again</dd>
             <dt>Attach</dt><dd>91 files <span class="note">(browser-only, nothing to install)</span></dd>
           </dl>
@@ -2449,291 +2413,6 @@
     Marked absent. No tool matches that &mdash; try <code>seating</code>, <code>grades</code>, or <code>rooms</code>.
   </p>
 
-  <!-- Placeholder entries. Drop real ones in as <li> at the top of .log; keep the date format. -->
-  <details class="news ink" style="--d:920ms">
-    <summary>
-      <span class="caret" aria-hidden="true">
-        <svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </span>
-      <h2>Progress report</h2>
-      <span class="tally">68 recent entries</span>
-    </summary>
-    <ul class="log">
-      <li>
-        <time datetime="2026-10-02">Oct 2, 2026</time>
-        <span><b>New tool: Braille Reading Trainer.</b> Learn to read braille by sight, a few minutes a day: 86 short lessons from the alphabet to every Unified English Braille contraction, review that brings back the signs you are about to forget, a 60-second sprint, and a reading room that times you on passages contracted as far as you have learned. Works offline.</span>
-      </li>
-      <li>
-        <time datetime="2026-09-29">Sep 29, 2026</time>
-        <span><b>A classroom up top.</b> The landing page has a small rendered classroom beside the heading, in a light and a dark version that follow the theme. It is decoration only, and it is cached for offline use like the rest of the page.</span>
-      </li>
-      <li>
-        <time datetime="2026-09-25">Sep 25, 2026</time>
-        <span><b>One timer underneath.</b> Command Center&rsquo;s timer and Class Screen&rsquo;s now run on the same shared countdown, and Classroom Timer shares its display. A timer that ran out while the page was closed comes back finished and quiet on all of them.</span>
-      </li>
-      <li>
-        <time datetime="2026-09-25">Sep 25, 2026</time>
-        <span><b>Run Class Screen from your phone.</b> Pair a phone over the classroom Wi-Fi by scanning a code, then switch screens, run the timer, pick names, make groups and set the light from across the room. No app, no account, no server.</span>
-      </li>
-      <li>
-        <time datetime="2026-09-25">Sep 25, 2026</time>
-        <span><b>Class Screen follows the bell.</b> Link a screen to a period from Command Center&rsquo;s bell times and the board switches when the period starts. Six starter screens, and a screen can be exported to a file and imported on another computer.</span>
-      </li>
-      <li>
-        <time datetime="2026-09-25">Sep 25, 2026</time>
-        <span><b>Class Screen: six more widgets.</b> Work symbols, a noise meter (the microphone never leaves the page), a drawing pad, pictures, QR codes and a group maker, plus a background for each screen.</span>
-      </li>
-      <li>
-        <time datetime="2026-09-25">Sep 25, 2026</time>
-        <span><b>New tool: Class Screen.</b> A projector board you build from widgets &mdash; timers, a stopwatch, a clock, text, YouTube, a traffic light, a name picker and dice &mdash; placed anywhere and saved as one screen per class. Everything but YouTube works offline.</span>
-      </li>
-      <li>
-        <time datetime="2026-09-03">Sep 3, 2026</time>
-        <span><b>Faster first visit, and it says when you&rsquo;re offline-ready.</b> The service worker now installs the shell and the ten front-of-room tools first and quietly caches the rest in the background; the app bar shows &ldquo;Offline: N of 86 tools ready.&rdquo; Installed as an app, the home screen gets shortcuts to Name Picker, Timer, Seating Chart and Command Center, and a shared CSV lands in Class Roster Hub.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-23">Aug 23, 2026</time>
-        <span><b>New tool: Wiki Race.</b> Seed-phrase Wikipedia races for social studies &mdash; the whole class gets the identical start&rarr;target matchup, with a live timer, click count, and verifiable finish codes. Ships as a single standalone file you can hand straight to students.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-17">Aug 17, 2026</time>
-        <span><b>General category split.</b> The 35-tool "General / Classroom Logistics" catch-all is now 5 focused sections &mdash; Classroom Management &amp; Engagement, Scheduling &amp; Substitute Planning, Assessment &amp; Grading, Games/Review &amp; Rewards, and Documents &amp; Communication. Open state, tags, and pins are unaffected.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-15">Aug 15, 2026</time>
-        <span><b>Four new tools.</b> Citation Generator (MLA/APA/Chicago), a Propaganda &amp; Persuasion Analysis Worksheet Generator, Socratic Seminar Prep &amp; Tracker, and a Parent Communication Template Generator joined the toolkit.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-15">Aug 15, 2026</time>
-        <span><b>Progress report condensed.</b> Every changelog entry now fits in a sentence or two; the full detail of each pass lives in git history. New house rule: entries stay this short.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-15">Aug 15, 2026</time>
-        <span><b>Legibility pass.</b> Every text color on this page now meets WCAG AA contrast, the smallest labels got a size bump, and a dark theme arrived via the same accessibility widget the tools use. The General category starts open, search easter eggs no longer eat real results, 15 tools got their missing &ldquo;&larr; Toolkit&rdquo; link, and the &ldquo;Try: Inbox&rdquo; pill retired to comment code C6.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Home screen reorganized.</b> The 81-row list is now grouped into collapsible category sections with a &ldquo;Filter by tag&rdquo; panel, clickable tag chips, and a star that pins tools to a &ldquo;My Tools&rdquo; section &mdash; open state, tags, and pins all remembered on this device.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>PE Warm-Up Circuit Card Generator.</b> Build a station circuit (or use the default 8-station set) and print large station cards to post around the gym. Closes out the &ldquo;coming soon&rdquo; list &mdash; 81 real tools, 0 ideas left.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Music Sight-Reading / Rhythm Warm-Up Generator.</b> Randomized rhythm patterns and treble/bass staff sight-reading drills, for the projector or a printed handout.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Student Art Portfolio Label &amp; QR Tag Maker.</b> Print portfolio labels with a thumbnail and a QR code that carries the artist statement itself &mdash; nothing hosted, so any scanner reads it offline.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Fitness &amp; Skill Assessment Tracker.</b> Enter fitness-test results in a per-student grid with live class stats, and print a clean report.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Cognates &amp; False Friends Reference List Builder.</b> Spanish and French starter lists split into true cognates and false friends, printed as a two-section reference sheet.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Picture-Prompt Speaking/Writing Task Generator.</b> Pair uploaded images with editable task prompts and step through them on the projector, or print image-plus-prompt cards for stations.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Cultural Trivia Card Generator.</b> A 30-question bank across three culture categories, projected with a reveal button or printed as front/back trivia cards, plus a teacher-editable custom bank.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Classroom Label Maker (Target Language).</b> Paste a vocabulary list and print small labels whose QR codes link to browser-built text-to-speech pronunciation pages &mdash; no server or hosted audio.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Geography Bee / Map Skills Quiz Generator.</b> A 30-question bank across capitals, landmarks, and map skills, projected or printed with an answer key, plus a custom bank.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Government/Civics Simulation Role Card Generator.</b> Mock Trial, Debate, and Legislative starter templates with editable positions and talking points, printed as a card grid.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Historical Figure / Country Trading Card Maker.</b> Batch-build cards with an image, stats, and back-of-card facts, printed as matching front and back grids.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>DBQ / Source Packet Builder.</b> Assemble text or image sources with citations and guiding questions into one printable packet &mdash; pairs with the Primary Source Analysis Generator.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Dichotomous Key Builder.</b> Build numbered couplets that branch to further steps or final answers, printed as a classify-the-specimens worksheet with an answer key.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Science Fair Project Tracker.</b> Six editable milestones with a per-student checkbox grid, live progress stats, and a printable &ldquo;still missing&rdquo; chase-list.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Scientific Method / Experiment Design Planner.</b> A guided pre-lab worksheet &mdash; question, hypothesis, variables, materials, procedure &mdash; printable as a fillable packet.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Science Safety Symbol &amp; Equipment Label Maker.</b> Ten hazard and equipment icons with custom label text and copy counts, printed as storage-bin labels.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Story Elements / Plot Diagram Builder.</b> A five-stage plot-mountain diagram plus a characters/setting/conflict/theme summary, printable or projectable.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Grammar Mad Libs Generator.</b> Built-in story templates (or your own with placeholder tags), with a projector reveal and a printable worksheet with word banks.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Book Tasting Menu Generator.</b> Add books with blurbs and covers, then print a restaurant-style menu or fold-in-half table tents.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Fraction&ndash;Decimal&ndash;Percent Conversion Drill Generator.</b> Randomized conversion rows across three difficulty tiers with a matching answer key.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Math &ldquo;Find the Mistake&rdquo; Warm-Up Generator.</b> Worked solutions each hiding one deliberate error, revealed on the projector or printed with an explanation key.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Virtual Manipulatives Board.</b> Draggable base-ten blocks, fraction tiles, and algebra tiles plus a number line, each with one-click PNG snapshots.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Testing Accommodations Reference Card Generator.</b> A roster-by-accommodation grid with per-student notes, printed as small reference cards &mdash; entirely local.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Sub Note / Feedback Slip Generator.</b> Editable prompts printed as repeated half-sheets a substitute fills out by hand before leaving.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Duty Roster Builder.</b> Editable duty locations and staff with round-robin auto-fill, printed as a Monday&ndash;Friday grid for the workroom board.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Art Critique Worksheet Generator.</b> A describe/analyze/interpret/judge worksheet with editable prompts, printed as repeated half-sheets. Closed out a 10-tool backlog batch.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Verb Conjugation Reference Poster Generator.</b> Spanish and French starter templates with editable panels, printed as a large-font wall poster.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Current Events Discussion Guide Generator.</b> Paste an article to auto-pull a summary starter and vocabulary, then print a discussion guide with critical-thinking questions.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Lab Report Template Builder.</b> Four subject-flavored templates covering hypothesis through conclusion, printed as a fillable packet per lab.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Peer Feedback / Editing Checklist Generator.</b> Four starter templates with editable checklist items, printed as repeated half-sheets for a whole class.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Daily Editing / DOL Warm-Up Generator.</b> A 24-sentence bank of grammar slip-ups with a projector reveal, a printable worksheet with key, and a custom sentence bank.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Unit Conversion Reference Chart Builder.</b> Check off the unit sets you want, add custom lines, and print a one-page reference chart.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Word Problem Warm-Up Generator.</b> Randomized word problems by operation and grade band, projected one at a time or printed with an answer key.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Staff Directory / Quick-Reference Builder.</b> Add or paste a staff list, sort and search it, and print a one-page directory.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Parent/Guardian Contact Log.</b> Log calls, emails, and notes home per student with a filterable history and one-click prints for conferences.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-09">Aug 9, 2026</time>
-        <span><b>Big ideas backlog expansion.</b> 28 more &ldquo;coming soon&rdquo; placeholders across every category, four new platform-wide big swings, and the enhancement list grew from 12 to 33 rows.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-09">Aug 9, 2026</time>
-        <span><b>Ideas backlog refresh, retired the tool improvement plan.</b> Seven new &ldquo;coming soon&rdquo; ideas and a freshly ranked enhancement list; the ideas backlog became the single working list.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Live Student-View Sync.</b> Classroom Timer&rsquo;s &ldquo;Mirror to a device&rdquo; pairs two devices over WebRTC using QR codes as the serverless handshake &mdash; it works between devices that can already reach each other, like the same classroom Wi-Fi.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Cross-Tool Shareable State Links.</b> A shared helper encodes a tool&rsquo;s current board into the URL itself, wired into Seating Chart, Bracket Generator, and Rubric Builder first; shared links import as new copies, never overwriting.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Sitewide Accessibility Pass.</b> A floating &ldquo;Aa&rdquo; widget with adjustable text size, a dark theme, a dyslexia-friendly font, and read-aloud, sharing one saved preference across tools.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Full Offline Install (PWA).</b> A manifest and service worker make the toolkit installable and cache every visited page, so anything loaded once keeps working offline.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Landing Page Command Palette.</b> Press <code>Ctrl</code>/<code>&#8984;</code>+<code>K</code> anywhere on this page (or click &ldquo;Quick jump&rdquo;) for a fuzzy-search jump box over every tool.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Lab Safety Contract Tracker, Primary Source Analysis Worksheet Generator, Immersion Roleplay Scenario Generator, and Tournament Bracket &amp; Station Rotation.</b> Four more off the backlog: signed/not-signed contract tracking with a missing-list, OPTIC/SOAPSTone source worksheets, 38 roleplay dialogue scenarios with vocabulary cards, and a station-rotation timer paired with a tournament bracket.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Sub Binder / Day Bundle Generator, Number Talks / Mental Math Routine Board, and Novel Study / Reading Circles Manager.</b> Three more off the backlog: a two-page sub packet built from Sub Plan Builder and Seating Chart data, a 56-prompt number-talks board with one-expression-at-a-time reveals, and reading circles with rotating roles and per-meeting checkpoints.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Command Center, Field Trip Permission Slip Generator, and Digital Escape Room / Puzzle Lock Builder.</b> Three more off the backlog: a projector dashboard (timer, today&rsquo;s calendar entry, quick-call picker), signature-ready permission slips printable per student or in batch, and QR-code puzzle stations that carry the whole activity inside the codes themselves.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Class Roster Hub, Digital Hall Pass / Sign-Out Log, and Exit Ticket / Bell Ringer Generator.</b> Three more off the backlog: a shared roster store now readable across seven tools, a live who&rsquo;s-out-of-the-room board with history and reports, and a nearly-100-prompt warm-up bank with projector and half-sheet print modes.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Backup &amp; Restore.</b> Scans everything any tool has saved in this browser and downloads it as one <code>.json</code> file; restoring previews new-versus-overwrite before merging it back in.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Behavior &amp; Points Tracker.</b> Arm a behavior chip and tap student cards to award points, with live totals, undo, a daily archive-and-reset, and printable reports.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Six more ideas-backlog tools, a full site-wide bug pass, and a big backlog refresh.</b> Shipped Gallery Walk QR Codes, Vocab &amp; Conjugation Drill Generator, Grade Distribution Visualizer, Rubric Builder, SSR Log Tracker, and Lab Group &amp; Role Randomizer, then audited every tool on the site and fixed what turned up &mdash; including seven tools that printed a blank page. Also added a wave of new ideas to the <a href="ideas-backlog.html">ideas backlog</a>, from a Class Roster Hub to six platform-wide big swings.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-07">Aug 7, 2026</time>
-        <span><b>13 new tools, eight Blank Map Generator upgrade passes, and subject sections.</b> Shipped a 12-tool batch off the backlog plus the Blank Map Generator, which grew through eight upgrade passes the same day. Also grouped the toolkit into subject sections and introduced the <a href="ideas-backlog.html">ideas backlog</a>.</span>
-      </li>
-      <li>
-        <time datetime="2026-08-06">Aug 6, 2026</time>
-        <span><b>School Calendar Visualizer, Classroom Timer, and a header layout pass.</b> A full-year calendar with tagged day types and pacing notes, a five-mode timer with big digits for the back row, and a reworked memo header with corrected record counts.</span>
-      </li>
-      <li>
-        <time datetime="2026-07-30">Jul 30, 2026</time>
-        <span><b>New landing page.</b> Filterable tool list, priority ordering, and this changelog.</span>
-      </li>
-      <li>
-        <time datetime="2026-07-22">Jul 22, 2026</time>
-        <span><b>Seating Chart Generator.</b> Reshuffling now keeps locked seats where you put them.</span>
-      </li>
-      <li>
-        <time datetime="2026-07-14">Jul 14, 2026</time>
-        <span><b>Schedule Browser.</b> Fixed mirrored floors in the route-tracing view.</span>
-      </li>
-    </ul>
-  </details>
-
   <footer class="report ink" style="--d:1000ms">
     <div class="codes">
       <h2 class="legend">Comment codes</h2>
@@ -2745,7 +2424,7 @@
     </div>
     <div class="meta">
       <span>Questions, bugs, contributions &mdash; email <span class="handle">@dsmoore</span>. Please advise.</span>
-      <span class="rhs">Built by D. Moore + Claude · rev <span id="rev">2026-09-29</span></span>
+      <span class="rhs">Built by D. Moore + Claude · rev <span id="rev">2026-11-19</span></span>
     </div>
   </footer>
 

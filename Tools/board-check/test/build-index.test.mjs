@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { render, renderRow, renderCategory, renderReadme, renderReadmeTable, decodeEntities, README_START, README_END } from '../build-index.mjs';
+import { render, renderRow, renderCategory, renderReadme, renderReadmeTable, decodeEntities, README_START, README_END, historyStamp, renderSitemap, robotsOk } from '../build-index.mjs';
 
 const site = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const html = fs.readFileSync(path.join(site, 'index.html'), 'utf8');
@@ -81,5 +81,21 @@ const m5 = JSON.parse(JSON.stringify(data)); delete m5.categories[2].rows[0].rea
 ok(throws(() => renderReadmeTable(m5)), 'mutant: a row with no readme text is an error');
 ok(throws(() => renderReadme(md.replace(README_END, ''), data)), 'a README without its end marker is an error');
 ok(render(html, data) === html, 'the README fields leave index.html unchanged');
+// AI-76: generated dates, sitemap, robots
+const hist = fs.readFileSync(path.join(site, 'HISTORY.md'), 'utf8');
+const stamp = historyStamp(hist);
+ok(/^20\d\d-\d\d-\d\d$/.test(stamp), 'the stamp is a date: ' + stamp);
+ok(render(html, data, stamp) === html, 'index.html carries the HISTORY stamp in memo-date and rev');
+ok(html.includes('<dd id="memo-date">' + stamp + '</dd>') && html.includes('<span id="rev">' + stamp + '</span>'), 'both dates are the stamp');
+ok(render(html, data, '2001-01-01') !== html, 'mutant: another stamp changes the render');
+ok(historyStamp('## a 2026-01-02\n## b 2026-03-04 x\n## c\ntext 2030-01-01') === '2026-03-04', 'the stamp is the newest dated ## heading, not body text');
+ok(throws(() => historyStamp('## none\n')), 'no dated heading is an error');
+const sm = renderSitemap(data);
+ok(sm === fs.readFileSync(path.join(site, 'sitemap.xml'), 'utf8'), 'sitemap.xml is the render of the data');
+ok((sm.match(/<loc>/g) || []).length === total + 1, 'the sitemap has the index and every row');
+const m6 = JSON.parse(JSON.stringify(data)); m6.categories[0].rows.pop();
+ok(renderSitemap(m6) !== sm, 'mutant: a removed row changes the sitemap');
+ok(robotsOk(fs.readFileSync(path.join(site, 'robots.txt'), 'utf8')), 'robots.txt allows all and names the sitemap');
+ok(!robotsOk('User-agent: *\nDisallow: /\n'), 'mutant: a robots.txt that blocks everything fails');
 console.log(`build-index: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
