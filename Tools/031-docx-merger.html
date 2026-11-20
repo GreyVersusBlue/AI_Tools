@@ -14,9 +14,7 @@
 <script src="../_shared/vendor/jszip/jszip.min.js"></script>
 <script src="docx-merger/dm-frame.js"></script>
 <style>
-  body { max-width: 900px; margin: 0 auto; padding: 0 var(--space-4) var(--space-8); }
-  h1 { font-size: 32px; margin-bottom: var(--space-1); }
-  .sub { color: var(--color-text); opacity: 0.65; margin: 0 0 var(--space-6); font-size: 15px; }
+  body { max-width: 900px; margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-8); }
 
   .section-card { margin-bottom: var(--space-6); padding: var(--space-6); }
 
@@ -121,20 +119,14 @@
 </head>
 <body>
 
-<style>/* phones: drop the decorative brand text so the functional Toolkit link fits without wrapping the nav taller */
-@media (max-width:520px){ .tools-nav .nav-brand{display:none} }</style>
-<header class="nav tools-nav">
-  <span class="nav-brand">Classroom Tools</span>
-  <a href="../index.html">&larr; Toolkit</a>
-  <a href="031-docx-merger.html" aria-current="page">Doc Merger</a>
-  <a href="036-final_grade_checker.html">Grade Checker</a>
-  <a href="011-image-to-pdf.html">Image → PDF</a>
-  <a href="029-prompt-builder.html">Prompt Builder</a>
-  <a href="005-Seating Chart Generator.html">Seating Chart</a>
-</header>
 
-<h1>Word Doc Merger</h1>
-<p class="sub">Combine a big stack of .docx files into one document, in whatever order you like. Everything runs in your browser — files never leave your computer.</p>
+<header class="app-header">
+  <div>
+    <a class="back-link" href="../index.html">&larr; Toolkit</a>
+    <h1>Word Doc Merger</h1>
+    <p class="sub">Combine a big stack of .docx files into one document, in whatever order you like. Everything runs in your browser — files never leave your computer.</p>
+  </div>
+</header>
 
 <div id="resumeBanner">
   <div class="msg">

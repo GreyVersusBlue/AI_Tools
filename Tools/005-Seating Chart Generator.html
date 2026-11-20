@@ -375,6 +375,8 @@
   .pool-empty{opacity:0.7; font-size:13px; font-style:italic;}
 
   .legend{font-size:12px; opacity:0.65; display:flex; gap:16px; align-items:center; margin-left:auto; flex-wrap:wrap;}
+  /* the page is one screen tall now that the old nav bar is gone, so it no longer scrolls and gets no .a11y-reserve block: keep clear of the fixed Aa button */
+  .legend{padding-right:64px;}
   .legend span{display:inline-flex; align-items:center; gap:6px;}
   .sw{width:13px; height:13px; border-radius:0; display:inline-block;}
 
@@ -527,17 +529,6 @@
 </head>
 <body>
 
-<style>/* phones: drop the decorative brand text so the functional Toolkit link fits without wrapping the nav taller */
-@media (max-width:520px){ .tools-nav .nav-brand{display:none} }</style>
-<header class="nav tools-nav no-print">
-  <span class="nav-brand">Classroom Tools</span>
-  <a href="../index.html">&larr; Toolkit</a>
-  <a href="031-docx-merger.html">Doc Merger</a>
-  <a href="036-final_grade_checker.html">Grade Checker</a>
-  <a href="011-image-to-pdf.html">Image → PDF</a>
-  <a href="029-prompt-builder.html">Prompt Builder</a>
-  <a href="005-Seating Chart Generator.html" aria-current="page">Seating Chart</a>
-</header>
 
 <p class="boot-warn" id="bootWarn" hidden>
   <b>This page could not load its scripts.</b> The Seating Chart Generator is built
@@ -550,6 +541,7 @@
   <!-- ================= SIDEBAR ================= -->
   <aside class="sidebar">
     <div class="brand">
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
       <h1>Seating Chart Generator</h1>
       <p>Build it once, shuffle it whenever you like.</p>
     </div>
