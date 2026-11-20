@@ -93,15 +93,25 @@ export function makeSolidPng(width, height, [r, g, b]) {
  * dependency, reproducible across runs).
  */
 export function makeNoisePng(width, height, seed = 1) {
-  // xorshift32 — bitwise-only, so it stays exact in JS's 32-bit int ops
-  // (unlike a classic LCG, whose multiply overflows float64's 53-bit mantissa
-  // and quietly degrades into a much less random, more-compressible stream).
+  const next32 = xorshift32(seed);
+  const next = () => next32() & 0xFF;
+  return makePng(width, height, () => [next(), next(), next()]);
+}
+
+/**
+ * The seeded generator makeNoisePng runs on, exported so make-scan-fixtures.mjs
+ * draws its photo noise from the same one. Returns a function giving the next
+ * unsigned 32-bit value. xorshift32 — bitwise-only, so it stays exact in JS's
+ * 32-bit int ops (unlike a classic LCG, whose multiply overflows float64's
+ * 53-bit mantissa and quietly degrades into a much less random,
+ * more-compressible stream).
+ */
+export function xorshift32(seed = 1) {
   let s = seed >>> 0 || 1;
-  const next = () => {
+  return () => {
     s ^= s << 13; s >>>= 0;
     s ^= s >>> 17;
     s ^= s << 5;  s >>>= 0;
-    return s & 0xFF;
+    return s;
   };
-  return makePng(width, height, () => [next(), next(), next()]);
 }

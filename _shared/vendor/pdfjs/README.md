@@ -9,8 +9,8 @@ Mozilla PDF.js, the text-extraction build used to read PDFs in the browser.
 
 Source: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/ (Apache-2.0).
 
-Consumers: `Tools/089-progress-report-parser.html`. It loads both files with
-plain `<script>` tags; the worker script defines the in-page fallback worker, so
+Consumers: `Tools/089-progress-report-parser.html` (loads both files with
+plain `<script>` tags at page load) and `Tools/011-image-to-pdf.html` (adds the same two script tags only when a PDF is chosen). The worker script defines the in-page fallback worker, so
 no `workerSrc` is set.
 
 Update: replace both files together (they must be the same version), update the

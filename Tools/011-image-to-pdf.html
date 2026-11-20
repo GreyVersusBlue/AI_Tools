@@ -39,9 +39,7 @@
     display: flex; flex-direction: column; align-items: center;
     padding: 0 var(--space-4) 4rem;
   }
-  header.page-head { text-align: center; margin: var(--space-8) 0 var(--space-6); }
-  header.page-head h1 { font-size: 34px; }
-  header.page-head p { opacity: 0.65; font-size: 14px; margin-top: var(--space-1); }
+  header.app-header { margin: var(--space-8) 0 var(--space-6); }
 
   .card-title {
     font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
@@ -120,6 +118,64 @@
   .row-actions button:hover:not(:disabled) { background: var(--color-surface); opacity: 1; }
   .row-actions button:disabled { opacity: 0.25; cursor: not-allowed; }
   #file-list li.dragging { opacity: 0.4; }
+  .row-actions button.scan-btn { padding: 0 10px; font-size: 12px; }
+  .scan-badge { font-size: 10px; padding: 1px 5px; font-weight: 700; background: var(--color-success-bg); color: var(--color-success); }
+  .scan-badge.check { background: var(--color-warn-bg); color: var(--color-warn); }
+  #scan-bar { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; margin: 0 0 var(--space-3); }
+  #scan-bar label { font-size: 12.5px; display: flex; gap: 6px; align-items: center; }
+  #scan-review { margin: 0 0 var(--space-3); }
+  #scan-review h3 { font-size: 13px; margin: 0 0 var(--space-2); display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+  #scan-review ul { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .scan-tile { position: relative; display: flex; flex-direction: column; gap: 4px; width: 128px; padding: 4px; text-align: left; font: inherit; font-size: 11px; color: inherit; background: var(--color-bg); border: 1px solid var(--color-divider); cursor: pointer; }
+  .scan-tile.check { border-color: var(--color-warn); border-width: 2px; }
+  .scan-tile .scan-tile-pic { position: relative; display: block; width: 100%; background: #888; }
+  .scan-tile img { display: block; width: 100%; height: auto; }
+  .scan-tile svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .scan-tile .scan-tile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Queue view (Path 17 P1): the same <li>s as tiles. Only a class on the <ul> changes. */
+  #view-bar { display: flex; gap: var(--space-2); align-items: center; margin: 0 0 var(--space-2); font-size: 12.5px; }
+  #view-bar .toggle-group { flex: 0 0 auto; }
+  #view-bar .toggle-group button { padding: var(--space-2) var(--space-3); min-height: 2.3rem; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 500; opacity: 0.65; cursor: pointer; }
+  #view-bar .toggle-group button[aria-pressed="true"] { background: var(--color-accent); color: var(--color-accent-ink); opacity: 1; }
+  #file-list.grid { max-height: 520px; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-2); padding: var(--space-2); }
+  #file-list.grid li { flex-direction: column; align-items: stretch; border: 1px solid var(--color-divider); position: relative; padding: var(--space-2); }
+  #file-list.grid li:last-child { border-bottom: 1px solid var(--color-divider); }
+  #file-list.grid .thumb { width: 100%; height: 120px; object-fit: contain; align-self: center; }
+  #file-list.grid .seq { position: absolute; top: 4px; left: 4px; min-width: 0; padding: 0 5px; background: var(--color-bg); border: 1px solid var(--color-divider); opacity: 1; font-weight: 700; font-size: 11px; }
+  #file-list.grid .filename { flex: none; min-width: 0; font-size: 11.5px; }
+  #file-list.grid .row-actions { flex-wrap: wrap; }
+  #file-list.grid .caption-input { margin-left: 0; max-width: none; flex-basis: auto; }
+  #file-list.grid li.drop-before { box-shadow: -4px 0 0 var(--color-accent); }
+  #scan-note { font-size: 12px; opacity: 0.65; margin: 0 0 var(--space-3); }
+
+  /* Scan dialog (scan-ui.js builds the markup) */
+  .scan-dialog { width: min(960px, 96vw); max-height: 96vh; overflow: auto; padding: var(--space-4); background: var(--color-bg); color: inherit; border: 1px solid var(--color-divider); }
+  .scan-dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
+  .scan-dialog .scan-title { font-size: 16px; margin: 0 0 var(--space-2); overflow-wrap: anywhere; }
+  .scan-dialog .scan-help { font-size: 12.5px; opacity: 0.75; margin: 0 0 var(--space-3); }
+  .scan-body { display: flex; gap: var(--space-4); flex-wrap: wrap; align-items: flex-start; }
+  .scan-stage { position: relative; flex: 1 1 420px; min-width: 240px; touch-action: none; user-select: none; }
+  .scan-stage .scan-photo { display: block; width: 100%; height: auto; background: #888; }
+  .scan-stage .scan-poly { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .scan-poly-back { fill: none; stroke: #fff; stroke-width: 5; vector-effect: non-scaling-stroke; }
+  .scan-poly-line { fill: rgba(0, 120, 255, 0.12); stroke: #0a50c8; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+  .scan-handle { position: absolute; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; transform: translate(-50%, -50%); cursor: grab; touch-action: none; }
+  .scan-handle::after { content: ''; position: absolute; inset: 14px; border-radius: 50%; background: #fff; border: 3px solid #0a50c8; box-shadow: 0 0 0 1px #fff; }
+  .scan-handle:focus-visible { outline: 3px solid var(--color-accent); outline-offset: -2px; border-radius: 50%; }
+  .scan-handle:disabled { cursor: default; opacity: 0.5; }
+  .scan-loupe { position: absolute; top: 8px; left: 8px; width: 150px; height: 150px; border: 3px solid #fff; box-shadow: 0 0 0 1px #000; pointer-events: none; }
+  .scan-loupe.scan-loupe-right { left: auto; right: 8px; }
+  .scan-after { margin: 0; flex: 0 1 360px; }
+  .scan-after canvas { display: block; max-width: 100%; height: auto; background: #fff; border: 1px solid var(--color-divider); }
+  .scan-after figcaption { font-size: 11px; opacity: 0.6; }
+  .scan-controls { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; margin-top: var(--space-3); }
+  .scan-controls .scan-spacer { flex: 1; }
+  .scan-controls .scan-mode { font-size: 12.5px; display: flex; gap: 6px; align-items: center; }
+  .scan-status { font-size: 12.5px; min-height: 1.4em; margin: var(--space-2) 0 0; }
+  @media (max-width: 600px) {
+    .scan-dialog { width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; margin: 0; padding: var(--space-3); }
+    .scan-stage { flex-basis: 100%; }
+  }
   #file-list li[draggable="true"] { cursor: grab; }
 
   /* Student portfolio preview */
@@ -147,21 +203,13 @@
 </head>
 <body>
 
-<style>/* phones: drop the decorative brand text so the functional Toolkit link fits without wrapping the nav taller */
-@media (max-width:520px){ .tools-nav .nav-brand{display:none} }</style>
-<header class="nav tools-nav" style="width:100%; max-width:700px;">
-  <span class="nav-brand">Classroom Tools</span>
-  <a href="../index.html">&larr; Toolkit</a>
-  <a href="031-docx-merger.html">Doc Merger</a>
-  <a href="036-final_grade_checker.html">Grade Checker</a>
-  <a href="011-image-to-pdf.html" aria-current="page">Image → PDF</a>
-  <a href="029-prompt-builder.html">Prompt Builder</a>
-  <a href="005-Seating Chart Generator.html">Seating Chart</a>
-</header>
 
-<header class="page-head">
-  <h1>Image → PDF Assembler</h1>
-  <p>Combine photos and images into a single PDF — runs entirely in your browser</p>
+<header class="app-header">
+  <div>
+    <a class="back-link" href="../index.html">&larr; Toolkit</a>
+    <h1>Image → PDF Assembler</h1>
+    <p class="sub">Combine photos and images into a single PDF — runs entirely in your browser</p>
+  </div>
 </header>
 
 <!-- Drop zone -->
@@ -169,10 +217,11 @@
   <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
   <div class="card-title">1 · Select Files</div>
   <div id="drop-zone">
-    <input type="file" id="file-input" accept=".png,.jpg,.jpeg,.webp,.svg" multiple aria-label="Choose PNG, JPG, WEBP, or SVG image files">
+    <input type="file" id="file-input" accept=".png,.jpg,.jpeg,.webp,.svg,.pdf,application/pdf" multiple aria-label="Choose PNG, JPG, WEBP, SVG image files or PDF files">
     <span class="icon">📂</span>
     <div class="label">Drop files here or click to browse</div>
-    <div class="sublabel">Accepts .png, .jpg/.jpeg, .webp, and .svg · No file size limit</div>
+    <div class="sublabel">Accepts .png, .jpg/.jpeg, .webp, .svg, and .pdf · No file size limit</div>
+    <div class="sublabel" id="pdf-help">A PDF is turned into one picture per page (up to 100 pages, drawn about 1600 px wide), so each page can be reordered, rotated, removed or merged with other files. Its text becomes part of the picture and can no longer be selected or searched.</div>
   </div>
 </div>
 
@@ -361,6 +410,19 @@
   <div class="card-title">5 · File Queue</div>
   <div id="file-count" aria-live="polite">Load files above to see the sort order preview.</div>
   <p style="font-size:12px; opacity:0.6; margin:0 0 var(--space-2);">Add an optional caption to print under an image — useful for documentation packets and lab photo series.</p>
+  <div id="scan-bar" hidden>
+    <button type="button" id="btn-scan-all" class="btn btn-secondary">Scan all photos</button>
+    <button type="button" id="btn-scan-cancel" class="btn btn-secondary" hidden>Cancel scan</button>
+    <label for="scan-mode">Look <select class="input" id="scan-mode">
+      <option value="color">Color</option><option value="gray">Grey</option><option value="bw">Black and white</option>
+    </select></label>
+  </div>
+  <div id="scan-review" hidden aria-live="polite"></div>
+  <p id="scan-note" hidden>Scan finds the sheet in a photo of a page, pulls it flat and upright, and evens out the light and the shadows. Each row's Scan button opens the photo so you can move the four corners yourself; Scan all does it for the photos not yet scanned and shows each page in a strip with the corners it found drawn on it, and marks the ones it was not sure of &ldquo;Check the corners&rdquo;; press a picture in the strip to open it. A scanned page is saved as an image (black and white as a PNG), so its text is not selectable. A scan is kept only until you leave or reload this page.</p>
+  <div id="view-bar" role="group" aria-label="Queue view">
+    <span class="toggle-group"><button type="button" id="view-list" aria-pressed="true">List</button><button type="button" id="view-grid" aria-pressed="false">Thumbnails</button></span>
+    <span id="view-hint" hidden>Drag a thumbnail to reorder it, or use the arrows on it (arrows work on a phone).</span>
+  </div>
   <ul id="file-list"></ul>
 </div>
 
@@ -419,11 +481,17 @@
   const progressBar  = document.getElementById('progress-bar');
   const progressLabel = document.getElementById('progress-label');
   const msg        = document.getElementById('msg');
+  const scanBar    = document.getElementById('scan-bar');
+  const scanNote   = document.getElementById('scan-note');
+  const scanReview = document.getElementById('scan-review');
+  let reviewIds = [];   // see renderReview()
 
   // Assembling several packets in a row shouldn't require re-picking the same
   // page-size/orientation/quality every time — persist just those three (not
   // the file queue, sort order, or per-image rotations).
   const SETTINGS_KEY = 'image-to-pdf-settings';
+  let queueView = 'list';   // 'list' or 'grid'; a habit, stored only once it is grid
+  let scanMode = 'color';   // the habit only: how a scan looks, never whether scanning is on
   const pageSizeSel  = document.getElementById('page-size');
   const qualitySel   = document.getElementById('quality');
   const gridDensitySel = document.getElementById('grid-density');
@@ -457,13 +525,15 @@
     });
     if (typeof imp.marks === 'boolean') document.getElementById('impose-marks').checked = imp.marks;
     if (typeof imp.creep === 'boolean') document.getElementById('impose-creep').checked = imp.creep;
+    if (raw.view === 'grid') queueView = 'grid';
+    if (raw.scan && ['color', 'gray', 'bw'].includes(raw.scan.mode)) scanMode = raw.scan.mode;
     // Deliberately NOT persisted: targetSize. A forgotten target quietly
     // downgrading every future PDF's quality is worse than re-typing it.
   })();
 
   function saveSettingsPrefs() {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+      const saved = {
         pageSize: pageSizeSel.value,
         orient: document.querySelector('input[name="orient"]:checked').value,
         quality: qualitySel.value,
@@ -475,7 +545,10 @@
           marks: document.getElementById('impose-marks').checked,
           creep: document.getElementById('impose-creep').checked
         }
-      }));
+      };
+      if (queueView === 'grid') saved.view = 'grid';
+      if (scanMode !== 'color') saved.scan = { mode: scanMode };   // only once it differs from the default
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(saved));
     } catch (e) { /* storage full/blocked */ }
   }
   pageSizeSel.addEventListener('change', saveSettingsPrefs);
@@ -569,6 +642,8 @@
 
   // ── File ingestion ─────────────────────────────────────────────────────────
   function handleFiles(files) {
+    const pdfs    = files.filter(isPdfFile);
+    files         = files.filter(f => !isPdfFile(f));
     const valid   = files.filter(f => VALID_EXT.test(f.name));
     const invalid = files.filter(f => !VALID_EXT.test(f.name));
 
@@ -587,6 +662,106 @@
       clearMsg();
     }
     renderList();
+    if (pdfs.length) addPdfs(pdfs);
+  }
+
+  // ── PDF in: each page becomes a PNG entry in the queue ─────────────────────
+  // pdf.js (about 1.4 MB) is loaded only when a PDF is chosen. It is the one
+  // vendored copy in _shared/vendor/pdfjs; as in 089, the worker script is a
+  // plain script tag that defines the in-page worker, so no workerSrc is set.
+  const PDF_MAX_PAGES = 100;
+  const PDF_RENDER_WIDTH = 1600;
+  let pdfjsLoading = null;
+
+  function isPdfFile(f) {
+    return /\.pdf$/i.test(f.name) || f.type === 'application/pdf';
+  }
+
+  function loadScriptOnce(src) {
+    return new Promise((res, rej) => {
+      const el = document.createElement('script');
+      el.src = src;
+      el.onload = () => res();
+      el.onerror = () => rej(new Error('script failed'));
+      document.head.appendChild(el);
+    });
+  }
+
+  function loadPdfJs() {
+    if (window.pdfjsLib) return Promise.resolve();
+    if (!pdfjsLoading) {
+      pdfjsLoading = loadScriptOnce('../_shared/vendor/pdfjs/pdf.min.js')
+        .then(() => loadScriptOnce('../_shared/vendor/pdfjs/pdf.worker.min.js'))
+        .catch(() => { pdfjsLoading = null; throw new Error("The PDF reader didn't load. Reload the page and try again."); });
+    }
+    return pdfjsLoading;
+  }
+
+  async function addPdfs(pdfs) {
+    const notes = [];
+    let added = 0;
+    for (const file of pdfs) {
+      try {
+        added += await addPdfPages(file, notes);
+      } catch (err) {
+        notes.push(`${file.name} — ${err.message}`);
+      }
+    }
+    renderList();
+    const tail = notes.length ? '\n' + notes.join('\n') : '';
+    if (added > 0) showMsg(`Added ${added} page${added === 1 ? '' : 's'} from PDF.` + tail, notes.length ? 'warn' : 'info');
+    else if (notes.length) showMsg(notes.join('\n'), 'error');
+  }
+
+  async function addPdfPages(file, notes) {
+    const stem = file.name.replace(/\.pdf$/i, '');
+    if (loadedFiles.some(e => e.pdfFrom === file.name)) {
+      notes.push(`${file.name} — already in the queue.`);
+      return 0;
+    }
+    showMsg(`Reading ${file.name}…`, 'warn');
+    await loadPdfJs();
+    let doc;
+    try {
+      const data = new Uint8Array(await file.arrayBuffer());
+      doc = await window.pdfjsLib.getDocument({ data, isEvalSupported: false }).promise;
+    } catch (err) {
+      const pw = err && err.name === 'PasswordException';
+      throw new Error(pw
+        ? 'this PDF is locked with a password, so it can\u2019t be opened here. Open it in a PDF viewer, save an unlocked copy, and add that.'
+        : 'this PDF couldn\u2019t be read (it may be damaged or not a real PDF).');
+    }
+    const total = doc.numPages;
+    const take = Math.min(total, PDF_MAX_PAGES);
+    let count = 0;
+    try {
+      for (let n = 1; n <= take; n++) {
+        showMsg(`Reading ${file.name}: page ${n} of ${take}…`, 'warn');
+        const page = await doc.getPage(n);
+        const base = page.getViewport({ scale: 1 });
+        const vp = page.getViewport({ scale: PDF_RENDER_WIDTH / base.width });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(vp.width));
+        canvas.height = Math.max(1, Math.round(vp.height));
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+        canvas.width = canvas.height = 0;
+        if (!blob) throw new Error('could not draw a page');
+        const png = new File([blob], `${stem} p${n}.png`, { type: 'image/png' });
+        loadedFiles.push({ id: nextId++, file: png, thumbUrl: URL.createObjectURL(png), rotation: 0, caption: '', pdfFrom: file.name });
+        count++;
+      }
+    } catch (err) {
+      if (!count) throw new Error('its pages couldn\u2019t be drawn (' + err.message + ').');
+      notes.push(`${file.name} — stopped after page ${count}: ${err.message}.`);
+    } finally {
+      doc.destroy();
+    }
+    if (total > take) notes.push(`${file.name} has ${total} pages; only the first ${PDF_MAX_PAGES} were added.`);
+    return count;
   }
 
   // ── Numeric sort: extract leading number from filename ─────────────────────
@@ -610,7 +785,7 @@
     if (mode === 'custom') return [...loadedFiles];
     const copy = [...loadedFiles];
     if (mode === 'numeric') {
-      copy.sort((a, b) => extractLeadingNumber(a.file.name) - extractLeadingNumber(b.file.name) || a.file.name.localeCompare(b.file.name));
+      copy.sort((a, b) => extractLeadingNumber(a.file.name) - extractLeadingNumber(b.file.name) || a.file.name.localeCompare(b.file.name, undefined, { numeric: true }));
     } else {
       copy.sort((a, b) => a.file.name.localeCompare(b.file.name, undefined, { numeric: true, sensitivity: 'base' }));
     }
@@ -721,10 +896,15 @@
   // ── Reorder / remove ────────────────────────────────────────────────────────
   function indexOfId(id) { return loadedFiles.findIndex(e => e.id === id); }
 
+  function revokeEntryUrls(e) {
+    URL.revokeObjectURL(e.thumbUrl);
+    if (e.scanUrl) URL.revokeObjectURL(e.scanUrl);
+  }
+
   function removeFile(id) {
     const i = indexOfId(id);
     if (i === -1) return;
-    URL.revokeObjectURL(loadedFiles[i].thumbUrl);
+    revokeEntryUrls(loadedFiles[i]);
     loadedFiles.splice(i, 1);
     renderList();
   }
@@ -791,7 +971,15 @@
     renderPortfolioPreview();
     renderImposeUi();
     fileList.innerHTML = '';
+    const isGrid = queueView === 'grid';
+    fileList.classList.toggle('grid', isGrid);
+    document.getElementById('view-list').setAttribute('aria-pressed', String(!isGrid));
+    document.getElementById('view-grid').setAttribute('aria-pressed', String(isGrid));
+    document.getElementById('view-hint').hidden = !isGrid;
     const ordered = getOrderedEntries();
+    const scannable = ordered.some(e => extOf(e.file.name) !== 'svg');
+    scanBar.hidden = scanNote.hidden = !scannable;
+    renderReview();
     if (ordered.length === 0) {
       fileCount.innerHTML = 'Load files above to see the sort order preview.';
       btnGen.disabled = true;
@@ -806,9 +994,13 @@
     const isCustom = getSortMode() === 'custom';
 
     ordered.forEach((entry, i) => {
-      const { id, file, thumbUrl, rotation, caption } = entry;
+      const { id, file, rotation, caption } = entry;
+      const thumbUrl = entry.scanUrl || entry.thumbUrl;
+      const isSvg = extOf(file.name) === 'svg';
       const li = document.createElement('li');
       const ext = badgeExt(file.name);
+      const scanBadge = !entry.scan ? '' : entry.scan.confidence < 0.6 && !entry.scan.manual
+        ? '<span class="scan-badge check">Check the corners</span>' : '<span class="scan-badge">Scanned</span>';
       const safeName = escapeHtml(file.name);
       li.dataset.id = String(id);
       li.draggable = isCustom;
@@ -817,10 +1009,11 @@
         <span class="seq">${i + 1}</span>
         <img class="thumb" src="${thumbUrl}" alt="" loading="lazy" style="transform: rotate(${rotation}deg);">
         <span class="type-badge badge-${ext}">${ext.toUpperCase()}</span>
-        <span class="filename">${safeName}</span>
+        <span class="filename">${safeName}</span>${scanBadge}
         <span class="row-actions">
-          <button type="button" data-act="up" aria-label="Move ${safeName} up" ${i === 0 ? 'disabled' : ''}>&#8593;</button>
-          <button type="button" data-act="down" aria-label="Move ${safeName} down" ${i === ordered.length - 1 ? 'disabled' : ''}>&#8595;</button>
+          ${isSvg ? '' : `<button type="button" class="scan-btn" data-act="scan" aria-label="Scan ${safeName}: find the page and straighten it">Scan</button>`}
+          <button type="button" data-act="up" aria-label="Move ${safeName} ${isGrid ? 'earlier' : 'up'}" ${i === 0 ? 'disabled' : ''}>${isGrid ? '&#8592;' : '&#8593;'}</button>
+          <button type="button" data-act="down" aria-label="Move ${safeName} ${isGrid ? 'later' : 'down'}" ${i === ordered.length - 1 ? 'disabled' : ''}>${isGrid ? '&#8594;' : '&#8595;'}</button>
           <button type="button" data-act="rotate" aria-label="Rotate ${safeName} 90° (currently ${rotation}°)">&#8635;</button>
           <button type="button" data-act="remove" aria-label="Remove ${safeName}">&#10005;</button>
         </span>
@@ -831,6 +1024,8 @@
       li.querySelector('[data-act="down"]').addEventListener('click', () => moveFile(id, 1));
       li.querySelector('[data-act="rotate"]').addEventListener('click', () => rotateFile(id));
       li.querySelector('[data-act="remove"]').addEventListener('click', () => removeFile(id));
+      const scanBtn = li.querySelector('[data-act="scan"]');
+      if (scanBtn) scanBtn.addEventListener('click', () => openScan(id));
       li.querySelector('[data-act="caption"]').addEventListener('input', e => {
         const idx = indexOfId(id);
         if (idx !== -1) loadedFiles[idx].caption = e.target.value;
@@ -857,9 +1052,20 @@
     });
   }
 
+  document.getElementById('view-list').setAttribute('aria-pressed', String(queueView === 'list'));
+  document.getElementById('view-grid').setAttribute('aria-pressed', String(queueView === 'grid'));
+  document.getElementById('view-hint').hidden = queueView !== 'grid';
+  fileList.classList.toggle('grid', queueView === 'grid');
+  ['list', 'grid'].forEach(v => document.getElementById('view-' + v).addEventListener('click', () => {
+    if (queueView === v) return;
+    queueView = v;
+    saveSettingsPrefs();
+    renderList();
+  }));
+
   // ── Clear ──────────────────────────────────────────────────────────────────
   btnClear.addEventListener('click', () => {
-    loadedFiles.forEach(e => URL.revokeObjectURL(e.thumbUrl));
+    loadedFiles.forEach(revokeEntryUrls);
     loadedFiles = [];
     fileInput.value = '';
     renderList();
@@ -1237,7 +1443,7 @@
           pxW = svg.w;
           pxH = svg.h;
         } else {
-          const raster = await processRaster(file, extOf(file.name), qualityMode);
+          const raster = await processRaster(file, extOf(file.name), qualityMode, ordered[i].scan);
           embedDataURL = raster.dataURL;
           embedFormat  = raster.format;
           pxW = raster.naturalW;
@@ -1795,7 +2001,8 @@
     return el ? el.value : 'off';
   }
 
-  async function processRaster(file, ext, qualityMode) {
+  async function processRaster(file, ext, qualityMode, scan) {
+    if (scan && scan.processed) return processScanned(scan, qualityMode);
     const srcDataURL = await fileToDataURL(file);
     const img = await loadImageElement(srcDataURL);
     const naturalW = img.naturalWidth, naturalH = img.naturalHeight;
@@ -1840,6 +2047,161 @@
     }
     return { dataURL: canvas.toDataURL('image/jpeg', jpegQuality), format: 'JPEG', naturalW, naturalH };
   }
+
+  // A scanned page: decode the finished page instead of the photo. It is already
+  // flattened and (for black and white) thresholded, so enhanceCanvas is skipped;
+  // the quality preset still sets the size and the JPEG quality. A black-and-white
+  // page goes out as PNG (two-level pixels ring as JPEG, and the PNG is smaller),
+  // so the target-size ladder can only shrink it, not lower its quality.
+  async function processScanned(scan, qualityMode) {
+    const url = URL.createObjectURL(scan.processed.blob);
+    try {
+      const img = await loadImageElement(url);
+      const naturalW = img.naturalWidth, naturalH = img.naturalHeight;
+      const preset = QUALITY_PRESETS[qualityMode];
+      const maxDim = preset ? preset.maxDim : Infinity;
+      const k = Math.min(1, maxDim / Math.max(naturalW, naturalH));
+      const cw = Math.max(1, Math.round(naturalW * k)), ch = Math.max(1, Math.round(naturalH * k));
+      const canvas = document.createElement('canvas');
+      canvas.width = cw; canvas.height = ch;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.drawImage(img, 0, 0, cw, ch);
+      if (scan.mode === 'bw') return { dataURL: canvas.toDataURL('image/png'), format: 'PNG', naturalW: cw, naturalH: ch };
+      return { dataURL: canvas.toDataURL('image/jpeg', preset ? preset.q : 0.95), format: 'JPEG', naturalW: cw, naturalH: ch };
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  // ── Scan: find the page in a photo, pull it flat, clean it ─────────────────
+  // scan.js (the arithmetic), scan-ui.js (the dialog and the Worker) load only
+  // when Scan is first pressed. An entry gains `scan` (see scan-ui.js) and
+  // `scanUrl`, the finished page for the thumbnail; the File is never changed.
+  let scanUiLoading = null;
+  function loadScanUi() {
+    if (window.ScanUI) return Promise.resolve();
+    if (!scanUiLoading) {
+      scanUiLoading = loadScriptOnce('image-to-pdf/scan-ui.js')
+        .catch(() => { scanUiLoading = null; throw new Error("The scanner didn't load. Reload the page and try again."); });
+    }
+    return scanUiLoading;
+  }
+
+  function applyScan(entry, rec) {
+    if (entry.scanUrl) URL.revokeObjectURL(entry.scanUrl);
+    entry.scan = rec;
+    entry.scanUrl = URL.createObjectURL(rec.processed.blob);
+  }
+
+  async function openScan(id) {
+    const entry = loadedFiles[indexOfId(id)];
+    if (!entry || scanBusy) return;
+    try {
+      await loadScanUi();
+    } catch (err) { showMsg(err.message, 'error'); return; }
+    scanBusy = true;
+    try {
+      const rec = await window.ScanUI.open({ url: entry.thumbUrl, name: entry.file.name, scan: entry.scan, mode: scanMode });
+      if (rec && indexOfId(id) !== -1) {
+        applyScan(entry, rec);
+        scanMode = rec.mode;
+        saveSettingsPrefs();
+        renderList();
+      }
+    } finally {
+      scanBusy = false;
+      const b = fileList.querySelector(`li[data-id="${id}"] [data-act="scan"]`);
+      if (b) b.focus();
+    }
+  }
+
+  let scanBusy = false, scanAbort = false;
+  // The review strip: the photos Scan all just did, each with the corners it found
+  // drawn over it. It holds ids only; a tile reads the entry, so a hand edit, a
+  // delete or Clear shows at the next renderList().
+  function renderReview() {
+    const tiles = reviewIds.map(id => loadedFiles[indexOfId(id)]).filter(e => e && e.scan && e.scan.pw && e.scan.quad);
+    scanReview.textContent = '';
+    scanReview.hidden = !tiles.length;
+    if (!tiles.length) return;
+    // the unsure first, so the ones that need a look are the first thing seen
+    const unsure = e => e.scan.confidence < window.ScanUI.LOW_CONFIDENCE && !e.scan.manual;
+    tiles.sort((a, b) => unsure(b) - unsure(a));
+    const n = tiles.filter(unsure).length;
+    const h = document.createElement('h3');
+    h.append(n ? `Review: ${n} of ${tiles.length} ${n === 1 ? 'needs' : 'need'} a look` : `Review: ${tiles.length} scanned, all sure`);
+    const close = document.createElement('button');
+    close.type = 'button'; close.className = 'btn btn-secondary'; close.textContent = 'Hide review';
+    close.addEventListener('click', () => { reviewIds = []; renderReview(); });
+    h.append(close);
+    const ul = document.createElement('ul');
+    for (const e of tiles) {
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'scan-tile' + (unsure(e) ? ' check' : '');
+      b.dataset.id = e.id;
+      b.setAttribute('aria-label', `${e.file.name}: ${unsure(e) ? 'check the corners' : 'scanned'}. Open to move the corners.`);
+      const pic = document.createElement('span'); pic.className = 'scan-tile-pic';
+      const img = document.createElement('img'); img.src = e.thumbUrl; img.alt = '';
+      const NS = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(NS, 'svg');
+      svg.setAttribute('viewBox', `0 0 ${e.scan.pw} ${e.scan.ph}`);
+      svg.setAttribute('aria-hidden', 'true');
+      const pts = e.scan.quad.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+      for (const cls of ['scan-poly-back', 'scan-poly-line']) {
+        const pg = document.createElementNS(NS, 'polygon');
+        pg.setAttribute('class', cls); pg.setAttribute('points', pts); svg.append(pg);
+      }
+      pic.append(img, svg);
+      const name = document.createElement('span'); name.className = 'scan-tile-name'; name.textContent = e.file.name;
+      const badge = document.createElement('span'); badge.className = 'scan-badge' + (unsure(e) ? ' check' : '');
+      badge.textContent = unsure(e) ? 'Check the corners' : 'Scanned';
+      b.append(pic, name, badge);
+      b.addEventListener('click', () => openScan(e.id));
+      li.append(b); ul.append(li);
+    }
+    scanReview.append(h, ul);
+  }
+  const btnScanAll = document.getElementById('btn-scan-all');
+  const btnScanCancel = document.getElementById('btn-scan-cancel');
+  const scanModeSel = document.getElementById('scan-mode');
+  scanModeSel.value = scanMode;
+  scanModeSel.addEventListener('change', () => { scanMode = scanModeSel.value; saveSettingsPrefs(); });
+  btnScanCancel.addEventListener('click', () => { scanAbort = true; btnScanCancel.disabled = true; });
+
+  btnScanAll.addEventListener('click', async () => {
+    if (scanBusy) return;
+    const todo = getOrderedEntries().filter(e => extOf(e.file.name) !== 'svg' && !e.scan);
+    if (!todo.length) { showMsg('Every photo in the queue has been scanned already. Press Scan on a row to change one.', 'warn'); return; }
+    try { await loadScanUi(); } catch (err) { showMsg(err.message, 'error'); return; }
+    scanBusy = true; scanAbort = false; reviewIds = [];
+    btnScanAll.disabled = true; btnScanCancel.hidden = false; btnScanCancel.disabled = false; btnGen.disabled = true;
+    progressWrap.classList.add('visible');
+    let done = 0, flagged = 0, failed = 0;
+    for (let i = 0; i < todo.length && !scanAbort; i++) {
+      const e = todo[i];
+      setProgress(Math.round(i / todo.length * 100), `Scanning ${i + 1} / ${todo.length}: ${e.file.name}`);
+      try {
+        const rec = await window.ScanUI.autoScan(e.thumbUrl, { mode: scanMode });
+        if (indexOfId(e.id) === -1) continue;
+        applyScan(e, rec);
+        reviewIds.push(e.id);
+        done++;
+        if (rec.confidence < window.ScanUI.LOW_CONFIDENCE) flagged++;
+      } catch (err) { failed++; }
+    }
+    setProgress(100, scanAbort ? 'Scan cancelled' : 'Scan finished');
+    scanBusy = false;
+    btnScanAll.disabled = false; btnScanCancel.hidden = true;
+    renderList();
+    const bits = [`Scanned ${done} photo${done === 1 ? '' : 's'}.`];
+    if (flagged) bits.push(`${flagged} ${flagged === 1 ? 'was' : 'were'} not sure: marked "Check the corners". Press Scan on ${flagged === 1 ? 'it' : 'each'} to move the corners.`);
+    if (failed) bits.push(`${failed} could not be read.`);
+    if (scanAbort) bits.push('Cancelled; the rest were left as they are.');
+    showMsg(bits.join(' '), failed || flagged || scanAbort ? 'warn' : 'info');
+  });
 
   // SVG → { dataURL, w, h } via canvas rasterization. No external library needed.
   async function processSVG(file) {

@@ -258,9 +258,9 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 37 | Path 14 P5 — what is left: `_shared/undo.js` for 003 (no undo today, so a new feature; Devon 2026-11-03: leave it listed, not built). Live mode, absent today, the point (008) and the pass (001): built (v377, v565); 005's registry `writes` line for them, held by `check:registry`'s HANDOFF check: built (AI-63, v580) | 005 | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 42 | Path 15 P5 — the phone remote, the one piece of P5 left (Team Draft's teams to 002 and 020 and the theme packs are built, v459-v460); it needs `_shared/remote.js`, which waits on Path 8 P1, so nothing to build until that lands | 007 | ½ | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
 | 44 | Path 16 P5, what is left — only step 6: the 065/073 handoffs, which have no route to use until those tools take a figure (listed in the bullet); step 5, the chart sheet, shipped v538 | 065, 073 | ½ | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
-| 45 | Path 17 P1 — thumbnail-grid reordering, crop/straighten, real-photo validation of the retry presets | 011 | 1 | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
-| 46 | Path 17 P2 — scanner mode: quadrilateral detection, perspective warp, adaptive threshold. **Designed, not built (AI-25, 2026-10-06): the design is under the P2 bullet; P1 is not built and the design says what P2 needs from it** | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
-| 47 | Path 17 P3 — PDF in: vendor `pdf.js`, merge/insert/extract/rotate existing PDFs | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
+| 45 | Path 17 P1 — **thumbnail grid built (AI-25, v601: a List / Thumbnails toggle on 011's queue; crop/straighten is P2's corner handles).** Left: real-photo validation of the `compact`/`min` retry presets (Devon's blank-sheet photo) | 011 | 1 | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
+| 46 | Path 17 P2 — scanner mode: quadrilateral detection, perspective warp, adaptive threshold. **Designed (AI-25, 2026-10-06); engine built (AI-38, AI-39); the Scan dialog, Worker and queue integration are built (AI-25, v599: a Scan button per row, Scan all with Cancel, "Scanned" / "Check the corners" badges, black and white as PNG). Review strip built (AI-25, v600); the thumbnail grid is built too (v601). Left: a real phone photo of a worksheet (Devon's), and the paper and iPad checks** | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
+| 47 | Path 17 P3 — PDF in. **Built (AI-25, v598): a `.pdf` chosen or dropped on 011 adds each page (up to 100, 1600 px wide) to the queue as a PNG entry; pdf.js loads only then.** Left: crop/extract by page range, a page-thumbnail picker before adding, and 031's "PDF export of the merged docx" (no row) | 011 | ¼ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 48 | Path 17 P4 — imposition. **Built (AI-13, v248, under Path 7 P4): 011 has booklet, 2/4/6/9 pages to a side with cut marks, either flip edge, creep.** Left: print and fold a 16-page booklet once and record it; then, only if asked for, a preset for a one-sided printer (fronts, then backs) and signatures for a thick booklet, both already in `ExportKit` | 011 | ¼ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 49 | Path 17 P5 — OCR, decision first: a vendored Tesseract build against the offline promise | 011 | ½ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 50 | Path 18 P2, what is left: the printed short-code fallback typed into `lock.html` (**held: student-facing, Devon's "nothing is student-facing right now" stands**). **Shipped (v380-v386):** both tools on `Stations.read`/`write`, 018's run keyed by id, 019's codes from `playPayload`/`playUrl`, `lock.html` reading `playRead`, `budget()` and its refusal in 019, `er-match.js` folded in, a room's go-to stored as the target's id on disk (`Stations.toDisk`, v385), and both pages' `getState`/`normalize*` now `Stations.shareState`/`fromShare` (v386) | 018 | ¼ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
@@ -6564,11 +6564,11 @@ perspective correction, thresholding — all canvas math, no library. PDF in / P
 a complete local document-assembly story. Print-shop presets (booklet imposition,
 N-up with cut marks) are something teachers need that no free local tool does well.
 
-**Status.** P4's controls are built (AI-13, v248, under Path 7 P4); the paper check is what is left of it. P2 is designed, not built (AI-25, 2026-10-06): the design is in its bullet. P1, P3 and P5 not started.
+**Status.** P4's controls are built (AI-13, v248, under Path 7 P4); the paper check is what is left of it. P2 is designed and built, review strip included (AI-38 pixel operations, AI-39 detector, then AI-25's dialog, Worker and queue integration, `Tools/image-to-pdf/scan.js`, `scan-ui.js`, `scan-worker.js`, v599, 2026-11-19); nothing of it has been tried on a real photo. P3's pages-in-as-images increment is built (AI-25, v598). P1's thumbnail grid is built (AI-25, v601); only its real-photo preset validation is left. P5 not started.
 
 **Phases.**
 
-- **P1 — Reorder and crop.** Thumbnail-grid reordering (the list is unusable at 40
+- **P1 — Reorder and crop.** *Built (AI-25, v601): the queue has a List / Thumbnails toggle (`#view-grid`, a class on the same `<ul>`, so drag, arrows, rotate, remove, caption and Scan work unchanged; arrows read earlier/later in the grid; the choice is `view: 'grid'` in `image-to-pdf-settings`, stored only once it is grid; `test:image-to-pdf-grid`). Crop/straighten is P2's corner handles. Left: the real-photo validation below.* Thumbnail-grid reordering (the list is unusable at 40
   photos), crop/straighten per page, and real-photo validation of the existing
   `compact`/`min` retry presets, which have only ever been tested against synthetic
   fixtures.
@@ -6576,7 +6576,7 @@ N-up with cut marks) are something teachers need that no free local tool does we
   on a downscaled canvas), draggable corner handles, perspective warp, adaptive
   threshold / grayscale / color modes, per-page and batch. *Fable for the CV math
   and its failure handling on low-contrast phone photos.*
-  **Designed, not built (AI-25, 2026-10-06; a design pass, no code, no `CACHE_VERSION`). The row stays.** What
+  **Designed (AI-25, 2026-10-06). Engine built (AI-38 pixel half and AI-39 detector, 2026-11-19, no `CACHE_VERSION`: no page loads it): `Tools/image-to-pdf/scan.js` has `toGray`, `gray`, `homography`, `apply`, `rectify`, `flatten`, `threshold`, `orderCorners`, `downscale`, `detect`, `refine`, `outputSize`, `clean` and `process`, held by `test:image-to-pdf-scan` (design checks 1 to 7) on `make-scan-fixtures.mjs`; the dialog (`scan-ui.js`, loaded when Scan is first pressed), the Worker (`scan-worker.js`, `detect` and `process` jobs, one at a time, with a main-thread fallback when a Worker cannot start) and the queue integration (`scan`, `scanUrl` on an entry; `processScanned()` in the page; the `scan: { mode }` habit in `image-to-pdf-settings`, written only once it is not `color`) are built (AI-25, v599, `test:image-to-pdf-scan-ui`, 53 checks). The review strip is built too (AI-25, v600: after Scan all, `#scan-review` shows a tile per photo that run scanned, the unsure first, the found quad drawn over the photo, "Check the corners" or "Scanned", a press opens the dialog, Hide review closes it; `scan` gains `pw`/`ph`, the photo's size the quad is in). Not built: a spoken or visible confidence number. The row stays for the real-photo, paper and iPad checks and P1.** What
   follows is the whole of P2 as it would be built, written against 011 as it is on `main` at v255 (the enhance pass,
   the portfolios, the target-size ladder and, since AI-13's v248, booklets and pages per sheet on `ExportKit`, which
   is this path's P4). Nothing here ran in a browser; the only thing measured is the arithmetic, in Node, below.
@@ -6783,16 +6783,33 @@ N-up with cut marks) are something teachers need that no free local tool does we
   the one-adopter rule? (7) `bw` pages as PNG, with the size ladder then only shrinking them: acceptable for the
   "under 5 MB for Schoology" case? (8) The output resolution cap for "original" quality (4000 px proposed; a 12 Mpx
   photo can give more). (9) Whether P1 should be built first at all, or P2 take its crop and straighten.
-  **Not verified.** No detector exists; the thresholds in it are starting values and the error bounds in the tests
-  are targets, not results. The probe measured arithmetic on synthetic data, one thread, one machine; the phone
-  figure is a guess, marked as one. No real photograph was opened; the fixtures do not yet exist. Nothing about
+  **Not verified.** The detector's numbers are tuned to the synthetic fixtures and to nothing else; the AI-39 entry in
+  HISTORY.md says what moved from the design and why. **Measured (AI-39, huginn, one thread, Node 22):** on the 1600 x 1200
+  fixtures `detect` is within 2.3 px of the truth at worst (keystone; the bound is 24 px), `refine` within 0.7 px at worst
+  (shadowBand; the bound is 8 px), and on the 4032 x 3024 `centred`, `keystone`, `rot15` and `noisy` 2.5 px and 1.1 px
+  (bounds 60 and 20); confidence is 0.94 to 0.99 on every fixture with a page, 0.37 on `oneEdgeOut` (its left side on
+  the frame) and 0 on `noPage` (a fallback). **12 Mpx `--bench`, ms:** detect about 1,000 (downscale, blur, Sobel,
+  Hough, 400 seeds fitted, pairing; it varies 500 to 1,500 with the picture), refine 70 to 100, rectify to 1700 x 2200
+  120 to 150, flatten of that page 250 to 350, threshold 160 to 190, `process` colour 180 to 250 and black and white 230 to
+  310 on top of that; a phone will be several times slower, which is the Worker's reason. Held by nothing: the
+  span filter (`minSpan`) is pinned only by `noPage`; the polarity check on `refine` by `darkOnLight`; the 12 Mpx
+  accuracy above is a one-off run of a scratch script, not in the suite. The AI-38 notes still stand (`Scan.flatten` is
+  within a mean 1.2 levels, worst 6, of today's `enhanceCanvas`, not byte-identical). The probe measured arithmetic on
+  synthetic data, one thread, one machine; the phone figure is a guess, marked as one. No real photograph was opened:
+  a ruled or lined sheet, a patterned desk, a hand across an edge and a sheet on a dark desk with its own shadow are
+  all untested, and the design lists them as the cases that fail. Nothing about
   `<dialog>` on iOS Safari, pointer events on a handle under a thumb, or the Worker in the service worker's
   precache has been tried on this site.
-- **P3 — PDF in.** Accept PDFs as input (render pages via a vendored `pdf.js` —
-  a new `_shared/vendor/` entry with the README, SHA and precache bookkeeping;
-  weigh its size against the precache in Path 1), so merge/insert/extract/rotate
-  work on existing PDFs. 031 gains "PDF export of the merged docx" via the same
-  layer where feasible.
+- **P3 — PDF in. First increment built (AI-25, v598).** 011's file input and drop zone take a `.pdf`; each page is
+  drawn by the vendored pdf.js (`_shared/vendor/pdfjs`, the 089 copy, no new vendor entry; both files were already in
+  `PRECACHE_URLS`) at 1600 px wide onto a white canvas and added to the queue as a PNG entry named `<file> pN.png`, so
+  merge, reorder, delete, rotate and the quality ladder already work on them. pdf.js is injected as two script tags
+  only when a PDF is chosen. At most 100 pages (it says so when a PDF has more), a locked or unreadable PDF is refused
+  with a sentence, the same PDF twice adds nothing, and the help text says a text PDF becomes pictures. Numeric sort's
+  tie-break became numeric so `p2` sorts before `p10`. `npm run test:image-to-pdf-pdfin` (port 8667). **Not
+  verified:** a real multi-page scanned or text PDF from a school (the suite's fixtures are flat-grey jsPDF pages),
+  memory on a 100-page PDF on a phone, and iPad Safari. **Left:** a page-range picker or thumbnails before adding,
+  extract a range into a new PDF, and 031's "PDF export of the merged docx" via the same layer where feasible.
 - **P4 — Imposition (Fable).** Booklet (saddle-stitch page order), N-up with cut
   marks, two-sided presets, in the shared export layer of Path 7 so every printing
   tool can use them. **The math shipped in Path 7 P4's first increment (AI-13, v243):
@@ -8484,7 +8501,7 @@ ranked against anything else. Moving them up is a re-rank, which is his call.
 - **P13 — shipped (v536, AI-32).** 004's phase (countdown, transition, round robin, agenda) does its start, pause,
   resume, station or segment change and tick on `_shared/countdown.js` through `Tools/classroom-timer/ct-engine.js`;
   the saved `ct_running_v1` keeps its `endAt` / `remainingAtPause` shape, so the strip window and an older tab read
-  it as before. A suite of 152 checks on a fake clock (`smoke-engine.mjs`, port 8654) was written and passed on the
+  it as before. A suite of 153 checks on a fake clock (`smoke-engine.mjs`, port 8654) was written and passed on the
   old code first and passes unchanged; `engine.test.mjs` compares every engine function with the frozen old formulas.
   Overtime, the instant just past zero and an "Until" target over 24 h keep the old sums (a Countdown state is never
   negative and caps at 24 h). `countdown.js` itself was not changed.
@@ -14675,17 +14692,11 @@ These were an HTML comment at the top of `index.html`, removed in AI-75 (2026-11
      static-only change to this landing page. Revisit as a follow-up once the
      tool-page redesign pass (2) happens.
 
-  4. ALWAYS UPDATE ON EVERY REVISION
-     Any pass that changes this file — content, layout, or code — must also:
-       a) bump the memo <dd id="memo-date"> in the header to the date of the change,
-       b) bump the footer <span id="rev"> date (in .report .meta) to match, and
-       c) add a new <li> at the TOP of .log (the "Progress report" changelog below)
-          describing what changed, using the same date and the existing date/entry
-          format, and bump the "N recent entries" tally in the <summary> to match.
-          KEEP IT SHORT: a <b>Title.</b> lead plus 1-2 sentences, no more. The
-          full detail of a pass belongs in the git commit, not the changelog.
-     Do this every time, even for small tweaks. Do not skip it and do not remove
-     this note in future passes.
+  4. THE DATES ARE GENERATED (AI-76, 2026-11-19; replaces the old "bump on every revision" rule)
+     The memo <dd id="memo-date"> and the footer <span id="rev"> are written by
+     `npm run build:index` from the newest dated "## " heading of HISTORY.md. Do not type
+     them. The "Progress report" changelog is gone from the page (its newest entry was Oct 2,
+     and nothing kept it current); HISTORY.md is the changelog.
 
   5. THE TOOL ROWS ARE GENERATED (AI-30, 2026-10-30)
      The category blocks below (every <details class="cat"> except the

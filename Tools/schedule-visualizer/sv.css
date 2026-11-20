@@ -289,7 +289,7 @@
     /* ── PANEL TOGGLE BUTTONS ── */
     .panel-toggle-btn {
       position: absolute; top: 50%; transform: translateY(-50%);
-      width: 18px; height: 48px; border: 1px solid var(--slate-200);
+      width: 24px; height: 48px; border: 1px solid var(--slate-200);
       background: var(--white); cursor: pointer; z-index: 10;
       display: flex; align-items: center; justify-content: center;
       box-shadow: var(--shadow-sm); transition: background 0.12s, border-color 0.12s;
@@ -2493,7 +2493,7 @@
       display: flex; align-items: center; gap: var(--sp-2); font-size: 12.5px;
       color: var(--slate-500); cursor: pointer; user-select: none;
     }
-    .onb-dont-show input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+    .onb-dont-show input { width: 24px; height: 24px; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; }
 
     /* Help modal content reuses onb-steps; add shortcut list */
     .help-section-title { font-size: 11px; font-weight: 600; letter-spacing: 0.07em;
@@ -2767,13 +2767,16 @@
     #pres-legend-list .viz-legend-empty { font-size: 14px; }
 
     /* ── Reduced-motion respect ── */
+    /* WCAG 2.2 target size (AI-78) */
+    #trace-image-file { min-height: 28px; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
         transition-duration: 0.001ms !important; scroll-behavior: auto !important;
       }
     }
-      #app-header .back-link{color:inherit;opacity:.75;text-decoration:none;font-size:12px;white-space:nowrap;margin-right:10px;}
+      #app-header .back-link{color:inherit;opacity:.75;text-decoration:none;font-size:12px;white-space:nowrap;margin-right:10px;display:inline-block;min-height:24px;line-height:24px;}
+    
     #app-header .back-link:hover{opacity:1;}
 
     /* ── Print: the visualizer on paper ──

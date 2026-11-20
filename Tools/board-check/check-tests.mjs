@@ -137,6 +137,10 @@ const NOT_A_SUITE = {
     'fixture data, imported by the suites that use it',
   'Tools/image-to-pdf/test/make-fixtures.mjs':
     'writes the PNG fixtures smoke.mjs feeds to the file input; run once, output committed',
+  'Tools/image-to-pdf/test/make-scan-fixtures.mjs':
+    'synthetic photos of a sheet (Path 17 P2), imported by scan.test.mjs and the scan suites after it',
+  'Tools/image-to-pdf/test/record-enhance-golden.mjs':
+    "writes golden-enhance.json from Chromium's own enhanceCanvas(); needs a browser, run by hand when enhanceCanvas changes",
   'Tools/schedule-visualizer/test/publish.mjs':
     'a regression-baseline generator taking an output path in argv, not an assertion suite',
   'Tools/schedule-visualizer/test/published-contract.mjs':

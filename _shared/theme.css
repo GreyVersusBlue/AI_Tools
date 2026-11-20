@@ -68,6 +68,13 @@
 html { background: var(--color-bg); }
 body { transition: background 0.15s ease, color 0.15s ease; }
 
-/* — shared suite header — */
-.tools-nav { border-bottom: 1px solid var(--color-divider); margin-bottom: var(--space-8); }
-.tools-nav a[aria-current="page"] { color: var(--color-accent); }
+/* — shared page header — the same markup and shape as base.css's `.app-header`
+   (back link, h1, one-line sub) on the Industry tokens, which base.css cannot use
+   because it reads ink-paper's --muted/--card. AI-79 replaced the old "Classroom
+   Tools" cross-link bar (`.tools-nav`) on 005, 011, 029, 031 and 036 with it. */
+.app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: var(--space-6); }
+.app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+.app-header .sub { color: color-mix(in srgb, var(--color-text) 75%, transparent); font-size: .88rem; margin: 0; }
+.back-link { display: block; margin-bottom: var(--space-1); color: color-mix(in srgb, var(--color-text) 75%, transparent); text-decoration: none; font-size: .88rem; }
+.back-link:hover { color: var(--color-accent); }
+@media (max-width: 480px) { .app-header { min-width: 0; max-width: 100%; } }

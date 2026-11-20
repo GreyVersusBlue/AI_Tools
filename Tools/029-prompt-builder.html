@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="../manifest.json">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ctext x='16' y='21.5' font-family='Georgia,serif' font-size='15' font-weight='700' text-anchor='middle' fill='%232A6DB0'%3EA%3C/text%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%23C43A2F' stroke-width='2.2'/%3E%3C/svg%3E">
 <title>Prompt Builder</title>
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
@@ -18,16 +19,15 @@
 <style>
   *{ box-sizing: border-box; }
   html{ scroll-behavior: smooth; }
-  body{ padding: 0 var(--space-4) 4rem; }
+  body{ padding: var(--space-6) var(--space-4) 4rem; }
 
   @media (prefers-reduced-motion: reduce){
     *{ transition: none !important; animation: none !important; }
   }
 
-  header.page-head{ padding: var(--space-8) 0 var(--space-6); text-align: center; }
-  header.page-head h1{ font-size: 40px; }
-  header.page-head p:not(.privacy-banner){ margin: 0 auto; max-width: 40em; opacity: 0.65; font-size: 15px; line-height: 1.55; }
-  header.page-head .tag{
+  header.app-header{ max-width: 1180px; margin: 0 auto var(--space-6); }
+  .app-header .sub{ max-width: 40em; line-height: 1.55; }
+  .app-header .tag{
     display: inline-block; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
     color: var(--color-accent); border: 1px solid var(--color-accent); padding: 3px 10px; margin-bottom: var(--space-3);
   }
@@ -149,7 +149,7 @@
   .strength-hint{ font-size: 12px; opacity: 0.65; margin: var(--space-1) 0 0; line-height: 1.4; }
 
   .privacy-banner{
-    max-width: 40em; margin: var(--space-3) auto 0; font-size: 12.5px; line-height: 1.5;
+    max-width: 40em; margin: var(--space-3) 0 0; font-size: 12.5px; line-height: 1.5;
     color: var(--color-danger); background: var(--color-danger-bg); border: 1px solid var(--color-danger);
     border-radius: 4px; padding: var(--space-2) var(--space-3); text-align: left;
   }
@@ -200,23 +200,15 @@
 </head>
 <body class="mode-simple">
 
-<style>/* phones: drop the decorative brand text so the functional Toolkit link fits without wrapping the nav taller */
-@media (max-width:520px){ .tools-nav .nav-brand{display:none} }</style>
-<header class="nav tools-nav">
-  <span class="nav-brand">Classroom Tools</span>
-  <a href="../index.html">&larr; Toolkit</a>
-  <a href="031-docx-merger.html">Doc Merger</a>
-  <a href="036-final_grade_checker.html">Grade Checker</a>
-  <a href="011-image-to-pdf.html">Image → PDF</a>
-  <a href="029-prompt-builder.html" aria-current="page">Prompt Builder</a>
-  <a href="005-Seating Chart Generator.html">Seating Chart</a>
-</header>
 
-<header class="page-head">
-  <span class="tag">No AI required to run this</span>
-  <h1>Prompt Builder</h1>
-  <p>Answer what applies to you, skip what doesn't. The card on the right fills itself in as you type &mdash; then copy it and take it to whatever AI tool you use.</p>
-  <p class="privacy-banner">Unlike the rest of this site, this prompt leaves your browser &mdash; you're the one sending it, when you paste it into Claude, ChatGPT, or wherever you go next. Leave out student names, grades, or anything else identifying before you do.</p>
+<header class="app-header">
+  <div>
+    <a class="back-link" href="../index.html">&larr; Toolkit</a>
+    <span class="tag">No AI required to run this</span>
+    <h1>Prompt Builder</h1>
+    <p class="sub">Answer what applies to you, skip what doesn't. The card on the right fills itself in as you type &mdash; then copy it and take it to whatever AI tool you use.</p>
+    <p class="privacy-banner">Unlike the rest of this site, this prompt leaves your browser &mdash; you're the one sending it, when you paste it into Claude, ChatGPT, or wherever you go next. Leave out student names, grades, or anything else identifying before you do.</p>
+  </div>
 </header>
 
 <main>

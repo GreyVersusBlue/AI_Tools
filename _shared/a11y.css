@@ -72,6 +72,13 @@ html.a11y-dyslexic button {
 }
 .a11y-widget * { box-sizing: border-box; }
 
+/* Room after the content for the fixed Aa button, so the last controls can scroll clear of it
+   (AI-78). a11y.js adds the block only to a page that scrolls; print never sees it. */
+.a11y-reserve { display: none; }
+@media screen {
+  .a11y-reserve { display: block; flex: 0 0 72px; width: 100%; height: 72px; grid-column: 1 / -1; }
+}
+
 .a11y-toggle {
   display: inline-flex;
   align-items: center;

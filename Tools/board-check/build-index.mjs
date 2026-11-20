@@ -16,6 +16,9 @@
 // mark is data too; copy one from a neighbour. Everything outside the category blocks (the head, the
 // pinned "My Tools" shell, the progress log, the scripts) is still edited by hand in index.html.
 //
+// AI-76: the same data renders sitemap.xml (the landing page and every row's page); the memo date and the footer's
+// rev are the newest dated "## " heading of HISTORY.md; --check also holds robots.txt to "allow all + the sitemap".
+//
 // Fields of a row: d (entrance delay, optional), href, tool (slug), tags, filterTags, per (the number),
 // name, pitch, comment (raw HTML text: write &amp; and &rsquo; as the page does), chips (the three
 // visible tag spans), grade, gradeTitle, scribble (the grade circle's path), and optionally pin (when
@@ -35,6 +38,10 @@ const SITE = path.join(here, '..', '..');
 const INDEX = path.join(SITE, 'index.html');
 const DATA = path.join(here, 'index-rows.json');
 const README = path.join(SITE, 'README.md');
+const HISTORY = path.join(SITE, 'HISTORY.md');
+const SITEMAP = path.join(SITE, 'sitemap.xml');
+const ROBOTS = path.join(SITE, 'robots.txt');
+export const ORIGIN = 'https://www.aspermylessonplan.com';
 
 const CARET = '      <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>\n';
 const STAR = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>';
@@ -72,7 +79,15 @@ export function renderCategory(c) {
     `    </details>\n`;
 }
 
-export function render(html, data) {
+// AI-76 (ML-13): the memo's "Date" and the footer's "rev" are the newest date in a HISTORY.md "## " heading, read
+// at build time, never typed. A heading with no date is skipped; no dated heading at all is an error.
+export function historyStamp(history) {
+  const dates = history.split('\n').filter(l => l.startsWith('## ')).flatMap(l => l.match(/\b20\d\d-\d\d-\d\d\b/g) || []);
+  if (!dates.length) throw new Error('build-index: HISTORY.md has no "## " heading carrying a YYYY-MM-DD date');
+  return dates.sort().pop();
+}
+
+export function render(html, data, stamp) {
   const first = html.indexOf('    <details class="cat" data-cat="' + data.categories[0].key + '"');
   const endMark = '\n  </div>\n';
   const lastCat = html.lastIndexOf('    </details>\n', html.indexOf(endMark, first));
@@ -81,8 +96,20 @@ export function render(html, data) {
   const total = data.categories.reduce((n, c) => n + c.rows.length, 0);
   let out = html.slice(0, first) + data.categories.map(renderCategory).join('\n') + html.slice(end);
   out = out.replace(/\d+ records( · local only)/, total + ' records$1').replace(/<dd>\d+ files /, '<dd>' + total + ' files ');
+  if (stamp) {
+    out = out.replace(/(<dd id="memo-date">)[^<]*/, '$1' + stamp).replace(/(<span id="rev">)[^<]*/, '$1' + stamp);
+  }
   return out;
 }
+
+// AI-76 (ML-19): sitemap.xml lists the landing page and every row's page, from the same data as the rows.
+const xmlEsc = u => u.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+export function renderSitemap(data) {
+  const urls = [ORIGIN + '/'].concat(data.categories.flatMap(c => c.rows.map(r => ORIGIN + '/' + r.href)));
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+    urls.map(u => '  <url><loc>' + xmlEsc(u) + '</loc></url>\n').join('') + '</urlset>\n';
+}
+export const robotsOk = txt => /^User-agent:\s*\*\s*$/mi.test(txt) && /^Allow:\s*\/\s*$/mi.test(txt) && txt.includes('Sitemap: ' + ORIGIN + '/sitemap.xml');
 
 export const README_START = '<!-- tools-table:start (generated from Tools/board-check/index-rows.json; edit the data, then run npm run build:index) -->';
 export const README_END = '<!-- tools-table:end -->';
@@ -126,7 +153,9 @@ const firstDiff = (a, b) => { let i = 0; while (i < a.length && a[i] === b[i]) i
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const data = JSON.parse(fs.readFileSync(DATA, 'utf8'));
   const html = fs.readFileSync(INDEX, 'utf8');
-  const out = render(html, data);
+  const out = render(html, data, historyStamp(fs.readFileSync(HISTORY, 'utf8')));
+  const sm = renderSitemap(data);
+  const smOld = fs.existsSync(SITEMAP) ? fs.readFileSync(SITEMAP, 'utf8') : '';
   const md = fs.readFileSync(README, 'utf8');
   const mdOut = renderReadme(md, data);
   const total = data.categories.reduce((n, c) => n + c.rows.length, 0);
@@ -140,11 +169,20 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       console.log(`check-index: FAIL — README.md's tools table differs from what index-rows.json renders (first difference near line ${firstDiff(mdOut, md)}). Edit the data and run: node Tools/board-check/build-index.mjs`);
       bad = true;
     }
+    if (sm !== smOld) {
+      console.log('check-index: FAIL — sitemap.xml is not what index-rows.json renders. Run: node Tools/board-check/build-index.mjs');
+      bad = true;
+    }
+    if (!fs.existsSync(ROBOTS) || !robotsOk(fs.readFileSync(ROBOTS, 'utf8'))) {
+      console.log('check-index: FAIL — robots.txt must allow all and name ' + ORIGIN + '/sitemap.xml');
+      bad = true;
+    }
     if (bad) process.exit(1);
     console.log(`check-index: OK — index.html and README.md's tools table are exactly what index-rows.json renders (${data.categories.length} categories, ${total} rows).`);
   } else {
     if (out !== html) fs.writeFileSync(INDEX, out);
     if (mdOut !== md) fs.writeFileSync(README, mdOut);
+    if (sm !== smOld) fs.writeFileSync(SITEMAP, sm);
     console.log(`build-index: ${out !== html ? 'rewrote' : 'no change to'} index.html, ${mdOut !== md ? 'rewrote' : 'no change to'} README.md's table (${data.categories.length} categories, ${total} rows).`);
   }
 }
