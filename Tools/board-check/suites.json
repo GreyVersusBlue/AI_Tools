@@ -508,6 +508,7 @@
     "Tools/historical-trading-card-maker/test/smoke-pdf-export.mjs",
     "Tools/image-to-pdf/test/smoke-impose.mjs",
     "Tools/image-to-pdf/test/smoke-pdfin.mjs",
+    "Tools/image-to-pdf/test/scan.test.mjs",
     "Tools/stage/test/stage.test.mjs",
     "Tools/stage/test/smoke-stage-rollout.mjs",
     "Tools/number-talks-board/test/smoke-stage.mjs",
