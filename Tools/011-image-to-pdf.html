@@ -123,6 +123,15 @@
   .scan-badge.check { background: var(--color-warn-bg); color: var(--color-warn); }
   #scan-bar { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; margin: 0 0 var(--space-3); }
   #scan-bar label { font-size: 12.5px; display: flex; gap: 6px; align-items: center; }
+  #scan-review { margin: 0 0 var(--space-3); }
+  #scan-review h3 { font-size: 13px; margin: 0 0 var(--space-2); display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+  #scan-review ul { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .scan-tile { position: relative; display: flex; flex-direction: column; gap: 4px; width: 128px; padding: 4px; text-align: left; font: inherit; font-size: 11px; color: inherit; background: var(--color-bg); border: 1px solid var(--color-divider); cursor: pointer; }
+  .scan-tile.check { border-color: var(--color-warn); border-width: 2px; }
+  .scan-tile .scan-tile-pic { position: relative; display: block; width: 100%; background: #888; }
+  .scan-tile img { display: block; width: 100%; height: auto; }
+  .scan-tile svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .scan-tile .scan-tile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #scan-note { font-size: 12px; opacity: 0.65; margin: 0 0 var(--space-3); }
 
   /* Scan dialog (scan-ui.js builds the markup) */
@@ -394,7 +403,8 @@
       <option value="color">Color</option><option value="gray">Grey</option><option value="bw">Black and white</option>
     </select></label>
   </div>
-  <p id="scan-note" hidden>Scan finds the sheet in a photo of a page, pulls it flat and upright, and evens out the light and the shadows. Each row's Scan button opens the photo so you can move the four corners yourself; Scan all does it for the photos not yet scanned and marks the ones it was not sure of &ldquo;Check the corners&rdquo;. A scanned page is saved as an image (black and white as a PNG), so its text is not selectable. A scan is kept only until you leave or reload this page.</p>
+  <div id="scan-review" hidden aria-live="polite"></div>
+  <p id="scan-note" hidden>Scan finds the sheet in a photo of a page, pulls it flat and upright, and evens out the light and the shadows. Each row's Scan button opens the photo so you can move the four corners yourself; Scan all does it for the photos not yet scanned and shows each page in a strip with the corners it found drawn on it, and marks the ones it was not sure of &ldquo;Check the corners&rdquo;; press a picture in the strip to open it. A scanned page is saved as an image (black and white as a PNG), so its text is not selectable. A scan is kept only until you leave or reload this page.</p>
   <ul id="file-list"></ul>
 </div>
 
@@ -455,6 +465,8 @@
   const msg        = document.getElementById('msg');
   const scanBar    = document.getElementById('scan-bar');
   const scanNote   = document.getElementById('scan-note');
+  const scanReview = document.getElementById('scan-review');
+  let reviewIds = [];   // see renderReview()
 
   // Assembling several packets in a row shouldn't require re-picking the same
   // page-size/orientation/quality every time — persist just those three (not
@@ -941,6 +953,7 @@
     const ordered = getOrderedEntries();
     const scannable = ordered.some(e => extOf(e.file.name) !== 'svg');
     scanBar.hidden = scanNote.hidden = !scannable;
+    renderReview();
     if (ordered.length === 0) {
       fileCount.innerHTML = 'Load files above to see the sort order preview.';
       btnGen.disabled = true;
@@ -2068,6 +2081,52 @@
   }
 
   let scanBusy = false, scanAbort = false;
+  // The review strip: the photos Scan all just did, each with the corners it found
+  // drawn over it. It holds ids only; a tile reads the entry, so a hand edit, a
+  // delete or Clear shows at the next renderList().
+  function renderReview() {
+    const tiles = reviewIds.map(id => loadedFiles[indexOfId(id)]).filter(e => e && e.scan && e.scan.pw && e.scan.quad);
+    scanReview.textContent = '';
+    scanReview.hidden = !tiles.length;
+    if (!tiles.length) return;
+    // the unsure first, so the ones that need a look are the first thing seen
+    const unsure = e => e.scan.confidence < window.ScanUI.LOW_CONFIDENCE && !e.scan.manual;
+    tiles.sort((a, b) => unsure(b) - unsure(a));
+    const n = tiles.filter(unsure).length;
+    const h = document.createElement('h3');
+    h.append(n ? `Review: ${n} of ${tiles.length} ${n === 1 ? 'needs' : 'need'} a look` : `Review: ${tiles.length} scanned, all sure`);
+    const close = document.createElement('button');
+    close.type = 'button'; close.className = 'btn btn-secondary'; close.textContent = 'Hide review';
+    close.addEventListener('click', () => { reviewIds = []; renderReview(); });
+    h.append(close);
+    const ul = document.createElement('ul');
+    for (const e of tiles) {
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'scan-tile' + (unsure(e) ? ' check' : '');
+      b.dataset.id = e.id;
+      b.setAttribute('aria-label', `${e.file.name}: ${unsure(e) ? 'check the corners' : 'scanned'}. Open to move the corners.`);
+      const pic = document.createElement('span'); pic.className = 'scan-tile-pic';
+      const img = document.createElement('img'); img.src = e.thumbUrl; img.alt = '';
+      const NS = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(NS, 'svg');
+      svg.setAttribute('viewBox', `0 0 ${e.scan.pw} ${e.scan.ph}`);
+      svg.setAttribute('aria-hidden', 'true');
+      const pts = e.scan.quad.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+      for (const cls of ['scan-poly-back', 'scan-poly-line']) {
+        const pg = document.createElementNS(NS, 'polygon');
+        pg.setAttribute('class', cls); pg.setAttribute('points', pts); svg.append(pg);
+      }
+      pic.append(img, svg);
+      const name = document.createElement('span'); name.className = 'scan-tile-name'; name.textContent = e.file.name;
+      const badge = document.createElement('span'); badge.className = 'scan-badge' + (unsure(e) ? ' check' : '');
+      badge.textContent = unsure(e) ? 'Check the corners' : 'Scanned';
+      b.append(pic, name, badge);
+      b.addEventListener('click', () => openScan(e.id));
+      li.append(b); ul.append(li);
+    }
+    scanReview.append(h, ul);
+  }
   const btnScanAll = document.getElementById('btn-scan-all');
   const btnScanCancel = document.getElementById('btn-scan-cancel');
   const scanModeSel = document.getElementById('scan-mode');
@@ -2080,7 +2139,7 @@
     const todo = getOrderedEntries().filter(e => extOf(e.file.name) !== 'svg' && !e.scan);
     if (!todo.length) { showMsg('Every photo in the queue has been scanned already. Press Scan on a row to change one.', 'warn'); return; }
     try { await loadScanUi(); } catch (err) { showMsg(err.message, 'error'); return; }
-    scanBusy = true; scanAbort = false;
+    scanBusy = true; scanAbort = false; reviewIds = [];
     btnScanAll.disabled = true; btnScanCancel.hidden = false; btnScanCancel.disabled = false; btnGen.disabled = true;
     progressWrap.classList.add('visible');
     let done = 0, flagged = 0, failed = 0;
@@ -2091,6 +2150,7 @@
         const rec = await window.ScanUI.autoScan(e.thumbUrl, { mode: scanMode });
         if (indexOfId(e.id) === -1) continue;
         applyScan(e, rec);
+        reviewIds.push(e.id);
         done++;
         if (rec.confidence < window.ScanUI.LOW_CONFIDENCE) flagged++;
       } catch (err) { failed++; }

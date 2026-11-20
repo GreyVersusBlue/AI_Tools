@@ -199,6 +199,33 @@ const rowBadge = (page, row) => page.evaluate(r => (document.querySelector(`#fil
   eq(byName.keystone, 'Scanned', 'a keystoned photo is Scanned');
   ok(/Scanned 2 photos\..*1 was not sure/.test(await page.textContent('#msg')), `the message counts them (got "${await page.textContent('#msg')}")`);
   ok(/Check the corners/.test(await page.textContent('#msg')), 'and says what to do');
+  // the review strip: the two photos this run did, the unsure one first, each with its quad drawn
+  ok(await page.isVisible('#scan-review'), 'the review strip shows after Scan all');
+  eq(await page.$$eval('#scan-review .scan-tile', t => t.length), 2, 'the strip holds the two photos this run scanned, not the hand-set one');
+  eq(await page.$$eval('#scan-review .scan-tile', t => t.map(x => x.querySelector('.scan-tile-name').textContent.split('_')[0])), ['noPage', 'keystone'], 'the one to check comes first');
+  eq(await page.$$eval('#scan-review .scan-tile', t => t.map(x => x.classList.contains('check'))), [true, false], 'only the unsure tile is marked');
+  ok(/Check the corners/.test(await page.textContent('#scan-review .scan-tile')), 'its badge says so');
+  ok(/1 of 2 needs a look/.test(await page.textContent('#scan-review h3')), 'the heading counts what needs a look');
+  const strip = await page.$$eval('#scan-review .scan-tile', t => t.map(x => {
+    const poly = x.querySelector('.scan-poly-line'), vb = x.querySelector('svg').getAttribute('viewBox').split(' ').map(Number);
+    return { n: poly.getAttribute('points').split(' ').length, vb };
+  }));
+  ok(strip.every(t => t.n === 4 && t.vb[2] > 0 && t.vb[3] > 0), `each tile draws four corners over a viewBox (got ${JSON.stringify(strip)})`);
+  { // the keystone tile's polygon is the quad Detect found, in the photo's own pixels (the viewBox says how many)
+    const t = await page.$eval('#scan-review li:nth-child(2)', li => ({
+      vb: li.querySelector('svg').getAttribute('viewBox').split(' ').map(Number),
+      pts: li.querySelector('.scan-poly-line').getAttribute('points').split(' ').map(c => c.split(',').map(Number)) }));
+    ok(near(t.pts.map(c => [c[0] / t.vb[2], c[1] / t.vb[3]]), photos.keystone.quad, 1600, 1200, 48), `the polygon is the sheet's corners (got ${JSON.stringify(t)})`);
+  }
+  await page.click('#scan-review li:nth-child(1) .scan-tile');
+  await page.waitForSelector('.scan-dialog[open]');
+  ok(true, 'pressing a tile opens the Scan dialog for that photo');
+  await page.click('.scan-controls .btn-primary');
+  await page.waitForFunction(() => !document.querySelector('.scan-dialog[open]'));
+  eq(await page.$eval('#scan-review li:nth-child(1) .scan-badge', b => b.textContent), 'Check the corners', 'Apply with no corner moved leaves the unsure tile flagged');
+  ok(await page.isVisible('#scan-review'), 'and the strip is redrawn, not dropped');
+  await page.click('#scan-review h3 button');
+  ok(await page.isHidden('#scan-review'), 'Hide review closes the strip');
   await page.click('#btn-scan-all');
   await settle(page, 300);
   ok(/scanned already/.test(await page.textContent('#msg')), 'Scan all again has nothing to do and says so');

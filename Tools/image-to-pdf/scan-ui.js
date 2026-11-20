@@ -161,7 +161,7 @@
       return job('detect', photo).then(function (d) {
         return finish(photo, d.quad, mode, opts.maxDim).then(function (processed) {
           return { quad: d.quad, auto: d.quad.map(function (p) { return p.slice(); }), mode: mode,
-            confidence: d.confidence, history: [], manual: false, processed: processed };
+            confidence: d.confidence, history: [], manual: false, processed: processed, pw: photo.width, ph: photo.height };
         });
       });
     });
@@ -407,7 +407,7 @@
         job('process', photo, { quad: quad, mode: ui.modeSel.value, maxDim: STORE_MAX }).then(function (r) {
           return blobOf(r.imageData, ui.modeSel.value).then(function (blob) {
             end({ quad: clone(quad), auto: auto ? clone(auto) : clone(quad), mode: ui.modeSel.value, confidence: confidence,
-              history: history.slice(-HISTORY_MAX), manual: touched, processed: { blob: blob, w: r.w, h: r.h } });
+              history: history.slice(-HISTORY_MAX), manual: touched, processed: { blob: blob, w: r.w, h: r.h }, pw: photo.width, ph: photo.height });
           });
         }).catch(function (e) { say(e.message || 'The page could not be made.'); setBusy(false); });
       }
