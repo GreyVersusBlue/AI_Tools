@@ -419,6 +419,7 @@
     "test:image-to-pdf-impose": "node Tools/image-to-pdf/test/smoke-impose.mjs",
     "test:image-to-pdf-pdfin": "node Tools/image-to-pdf/test/smoke-pdfin.mjs",
     "test:image-to-pdf-scan": "node Tools/image-to-pdf/test/scan.test.mjs",
+    "test:image-to-pdf-scan-ui": "node Tools/image-to-pdf/test/smoke-scan-ui.mjs",
     "test:csv-adopters": "node Tools/export/test/smoke-csv-adopters.mjs",
     "test:sheet-adopters": "node Tools/export/test/smoke-sheet-adopters.mjs",
     "test:sub-note-print": "node Tools/sub-note-feedback-slip-generator/test/smoke-print.mjs",

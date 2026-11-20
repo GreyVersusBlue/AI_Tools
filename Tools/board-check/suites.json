@@ -509,6 +509,7 @@
     "Tools/image-to-pdf/test/smoke-impose.mjs",
     "Tools/image-to-pdf/test/smoke-pdfin.mjs",
     "Tools/image-to-pdf/test/scan.test.mjs",
+    "Tools/image-to-pdf/test/smoke-scan-ui.mjs",
     "Tools/stage/test/stage.test.mjs",
     "Tools/stage/test/smoke-stage-rollout.mjs",
     "Tools/number-talks-board/test/smoke-stage.mjs",
