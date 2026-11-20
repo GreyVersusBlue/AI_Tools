@@ -259,7 +259,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 42 | Path 15 P5 — the phone remote, the one piece of P5 left (Team Draft's teams to 002 and 020 and the theme packs are built, v459-v460); it needs `_shared/remote.js`, which waits on Path 8 P1, so nothing to build until that lands | 007 | ½ | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
 | 44 | Path 16 P5, what is left — only step 6: the 065/073 handoffs, which have no route to use until those tools take a figure (listed in the bullet); step 5, the chart sheet, shipped v538 | 065, 073 | ½ | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
 | 45 | Path 17 P1 — thumbnail-grid reordering, crop/straighten, real-photo validation of the retry presets | 011 | 1 | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
-| 46 | Path 17 P2 — scanner mode: quadrilateral detection, perspective warp, adaptive threshold. **Designed (AI-25, 2026-10-06); the pixel operations are built (AI-38, `scan.js`, no page loads it); left: detector (AI-39), dialog, Worker, queue integration. P1 is not built and the design says what P2 needs from it** | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
+| 46 | Path 17 P2 — scanner mode: quadrilateral detection, perspective warp, adaptive threshold. **Designed (AI-25, 2026-10-06); the engine is built (AI-38 pixel operations, AI-39 detector, `scan.js`, no page loads it); left: dialog, Worker, queue integration. P1 is not built and the design says what P2 needs from it** | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 47 | Path 17 P3 — PDF in. **Built (AI-25, v598): a `.pdf` chosen or dropped on 011 adds each page (up to 100, 1600 px wide) to the queue as a PNG entry; pdf.js loads only then.** Left: crop/extract by page range, a page-thumbnail picker before adding, and 031's "PDF export of the merged docx" (no row) | 011 | ¼ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 48 | Path 17 P4 — imposition. **Built (AI-13, v248, under Path 7 P4): 011 has booklet, 2/4/6/9 pages to a side with cut marks, either flip edge, creep.** Left: print and fold a 16-page booklet once and record it; then, only if asked for, a preset for a one-sided printer (fronts, then backs) and signatures for a thick booklet, both already in `ExportKit` | 011 | ¼ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 49 | Path 17 P5 — OCR, decision first: a vendored Tesseract build against the offline promise | 011 | ½ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
@@ -6564,7 +6564,7 @@ perspective correction, thresholding — all canvas math, no library. PDF in / P
 a complete local document-assembly story. Print-shop presets (booklet imposition,
 N-up with cut marks) are something teachers need that no free local tool does well.
 
-**Status.** P4's controls are built (AI-13, v248, under Path 7 P4); the paper check is what is left of it. P2 is designed, and its pixel half is built (AI-38, 2026-11-19, `Tools/image-to-pdf/scan.js`, no page loads it yet); the detector, dialog and Worker are not: the design is in its bullet. P3's pages-in-as-images increment is built (AI-25, v598). P1 and P5 not started.
+**Status.** P4's controls are built (AI-13, v248, under Path 7 P4); the paper check is what is left of it. P2 is designed, and its pure engine is built (AI-38 pixel operations and AI-39 detector, 2026-11-19, `Tools/image-to-pdf/scan.js`, no page loads it yet); the dialog and Worker are not: the design is in its bullet. P3's pages-in-as-images increment is built (AI-25, v598). P1 and P5 not started.
 
 **Phases.**
 
@@ -6576,7 +6576,7 @@ N-up with cut marks) are something teachers need that no free local tool does we
   on a downscaled canvas), draggable corner handles, perspective warp, adaptive
   threshold / grayscale / color modes, per-page and batch. *Fable for the CV math
   and its failure handling on low-contrast phone photos.*
-  **Designed (AI-25, 2026-10-06). Pixel half built (AI-38, 2026-11-19, no `CACHE_VERSION`: no page loads it): `Tools/image-to-pdf/scan.js` has `toGray`, `gray`, `homography`, `apply`, `rectify`, `flatten`, `threshold` and `orderCorners`, held by `test:image-to-pdf-scan` (design checks 3 to 7) on `make-scan-fixtures.mjs`; `detect`, `refine`, `outputSize`, `process` (AI-39), the dialog and the Worker are not built. The row stays.** What
+  **Designed (AI-25, 2026-10-06). Engine built (AI-38 pixel half and AI-39 detector, 2026-11-19, no `CACHE_VERSION`: no page loads it): `Tools/image-to-pdf/scan.js` has `toGray`, `gray`, `homography`, `apply`, `rectify`, `flatten`, `threshold`, `orderCorners`, `downscale`, `detect`, `refine`, `outputSize`, `clean` and `process`, held by `test:image-to-pdf-scan` (design checks 1 to 7) on `make-scan-fixtures.mjs`; the dialog, the Worker and the queue integration are not built. The row stays.** What
   follows is the whole of P2 as it would be built, written against 011 as it is on `main` at v255 (the enhance pass,
   the portfolios, the target-size ladder and, since AI-13's v248, booklets and pages per sheet on `ExportKit`, which
   is this path's P4). Nothing here ran in a browser; the only thing measured is the arithmetic, in Node, below.
@@ -6783,9 +6783,21 @@ N-up with cut marks) are something teachers need that no free local tool does we
   the one-adopter rule? (7) `bw` pages as PNG, with the size ladder then only shrinking them: acceptable for the
   "under 5 MB for Schoology" case? (8) The output resolution cap for "original" quality (4000 px proposed; a 12 Mpx
   photo can give more). (9) Whether P1 should be built first at all, or P2 take its crop and straighten.
-  **Not verified.** No detector exists (AI-38 built the pixel operations only; see the AI-38 entry in HISTORY.md for what its suite measured, including that `Scan.flatten` is within a mean 1.2 levels, worst 6, of today's `enhanceCanvas`, not byte-identical); the thresholds in the detector are starting values and the error bounds in its tests
-  are targets, not results. The probe measured arithmetic on synthetic data, one thread, one machine; the phone
-  figure is a guess, marked as one. No real photograph was opened; the synthetic fixtures exist (AI-38) but not the detection-specific ones (`noPage`, `oneEdgeOut` and `lowContrast` are defined, never run through a detector). Nothing about
+  **Not verified.** The detector's numbers are tuned to the synthetic fixtures and to nothing else; the AI-39 entry in
+  HISTORY.md says what moved from the design and why. **Measured (AI-39, huginn, one thread, Node 22):** on the 1600 x 1200
+  fixtures `detect` is within 2.3 px of the truth at worst (keystone; the bound is 24 px), `refine` within 0.7 px at worst
+  (shadowBand; the bound is 8 px), and on the 4032 x 3024 `centred`, `keystone`, `rot15` and `noisy` 2.5 px and 1.1 px
+  (bounds 60 and 20); confidence is 0.94 to 0.99 on every fixture with a page, 0.37 on `oneEdgeOut` (its left side on
+  the frame) and 0 on `noPage` (a fallback). **12 Mpx `--bench`, ms:** detect about 1,000 (downscale, blur, Sobel,
+  Hough, 400 seeds fitted, pairing; it varies 500 to 1,500 with the picture), refine 70 to 100, rectify to 1700 x 2200
+  120 to 150, flatten of that page 250 to 350, threshold 160 to 190, `process` colour 180 to 250 and black and white 230 to
+  310 on top of that; a phone will be several times slower, which is the Worker's reason. Held by nothing: the
+  span filter (`minSpan`) is pinned only by `noPage`; the polarity check on `refine` by `darkOnLight`; the 12 Mpx
+  accuracy above is a one-off run of a scratch script, not in the suite. The AI-38 notes still stand (`Scan.flatten` is
+  within a mean 1.2 levels, worst 6, of today's `enhanceCanvas`, not byte-identical). The probe measured arithmetic on
+  synthetic data, one thread, one machine; the phone figure is a guess, marked as one. No real photograph was opened:
+  a ruled or lined sheet, a patterned desk, a hand across an edge and a sheet on a dark desk with its own shadow are
+  all untested, and the design lists them as the cases that fail. Nothing about
   `<dialog>` on iOS Safari, pointer events on a handle under a thumb, or the Worker in the service worker's
   precache has been tried on this site.
 - **P3 — PDF in. First increment built (AI-25, v598).** 011's file input and drop zone take a `.pdf`; each page is

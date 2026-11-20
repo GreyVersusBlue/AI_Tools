@@ -1,4 +1,5 @@
-// scan.test.mjs — Scan (Tools/image-to-pdf/scan.js), Path 17 P2, AI-38: the pixel operations.
+// scan.test.mjs — Scan (Tools/image-to-pdf/scan.js), Path 17 P2, AI-38: the pixel operations, and
+// AI-39: the corner detector.
 //
 //   node Tools/image-to-pdf/test/scan.test.mjs            (npm run test:image-to-pdf-scan)
 //   node Tools/image-to-pdf/test/scan.test.mjs --bench    ms per step on a 12 Mpx frame, no checks
@@ -17,7 +18,15 @@
 //       end alike), the despeckle, gray, and flatten against a recorded table
 //   (6) corners in any order come out TL, TR, BR, BL
 //   (7) --bench
-// (1) and (2), the detector's, are AI-39's, with detect(). Exits 1 on any failure.
+// and the detector's (AI-39):
+//   (1) detect puts every corner within 1.5% of the photo's long edge of the truth, refine within 0.5%,
+//       method 'edges' and confidence over 0.6, on every fixture but noPage and oneEdgeOut (lowContrast and
+//       shadowBand may be under 0.6 and are held to the corners all the same)
+//   (2) noPage is 'fallback' at confidence 0 with the inset frame; oneEdgeOut puts the side that is outside the
+//       photo on the frame's edge, with confidence under 0.6
+//   (4) rectify with the detected quad, not the true one: mean difference under 18 levels
+//   and refine from a quad that is a few pixels off, outputSize, clean, process and downscale.
+// Exits 1 on any failure.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -87,6 +96,10 @@ if (process.argv.includes('--bench')) {
     time(name + ': threshold, window 15, on that page', () => S.threshold(flat, {}));
     const small = time(name + ': rectify to 1275 x 1650 (150 dpi)', () => S.rectify(img, fx.sheetQuad, 1275, 1650));
     time(name + ': threshold on that', () => S.threshold(small, {}));
+    const det = time(name + ': detect (480 px grey)', () => S.detect(img));
+    time(name + ': refine (1024 px grey)', () => S.refine(img, det.quad));
+    time(name + ': process, color, maxDim 1600', () => S.process(img, { quad: det.quad, mode: 'color', maxDim: 1600 }));
+    time(name + ': process, bw, maxDim 1600', () => S.process(img, { quad: det.quad, mode: 'bw', maxDim: 1600 }));
   }
   process.exit(0);
 }
@@ -101,6 +114,8 @@ const clean = new Proxy({}, { get: (_, n) => memo('clean:' + n, () => fixture(n,
 const lit = new Proxy({}, { get: (_, n) => memo('lit:' + n, () => fixture(n)) });
 
 const near = (a, b, tol) => Math.abs(a - b) <= tol;
+// the worst distance between matching corners
+const cornerError = (q, truth) => Math.max(...q.map((p, i) => Math.hypot(p[0] - truth[i][0], p[1] - truth[i][1])));
 
 class Stop extends Error {}
 
@@ -400,6 +415,189 @@ function checks(S, only, firstOnly) {
     try { S.orderCorners([[0, 0], [1, 1], [2, 2]]); } catch (e) { thrown = true; }
     ok(thrown, 'orderCorners: three points throw');
   }
+
+  /* downscale ------------------------------------------------------------- */
+  if (want('downscale')) {
+    // 40 x 20, a ramp in x and a step in y, to a long edge of 10: a factor of 4
+    const w = 40, h = 20, img = { data: new Uint8ClampedArray(w * h * 4), width: w, height: h };
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const v = x * 6 + (y >= 8 ? 10 : 0), o = (y * w + x) * 4;
+      img.data[o] = img.data[o + 1] = img.data[o + 2] = v; img.data[o + 3] = 255;
+    }
+    const d = S.downscale(img, 10);
+    ok(d.scale === 4 && d.w === 10 && d.h === 5, 'downscale: 40 x 20 to a long edge of 10 is a factor of 4, 10 x 5, got ' + d.scale + ', ' + d.w + ' x ' + d.h);
+    ok(d.gray.length === 50, 'downscale: one value a pixel');
+    // box (3, 1) covers x 12..15, y 4..7: mean x is 13.5, so 81
+    ok(Math.abs(d.gray[1 * 10 + 3] - 81) < 1e-4, 'downscale: a box is the mean of its 4 x 4 pixels, got ' + d.gray[13]);
+    ok(Math.abs(d.gray[2 * 10 + 3] - 91) < 1e-4, 'downscale: and the step in y lands in the right box, got ' + d.gray[23]);
+    const keep = Array.from(img.data);
+    ok(img.data.every((v, i) => v === keep[i]), 'downscale: leaves the photo alone');
+    const big = S.downscale(lit.centred.imageData, 480);
+    ok(big.scale === 3 && big.w === 533 && big.h === 400, 'downscale: 1600 x 1200 to 480 is 533 x 400, got ' + big.w + ' x ' + big.h);
+    const tiny = S.downscale({ data: new Uint8ClampedArray(3 * 2 * 4), width: 3, height: 2 }, 480);
+    ok(tiny.scale === 1 && tiny.w === 3 && tiny.h === 2, 'downscale: a picture under the long edge is not shrunk');
+  }
+
+  /* (1) detect and refine ---------------------------------------------------- */
+  if (want('detect')) {
+    for (const n of GEOM) {
+      const fx = lit[n], long = Math.max(fx.imageData.width, fx.imageData.height);
+      const d = S.detect(fx.imageData);
+      ok(d.method === 'edges', n + ': detect finds edges, method ' + d.method);
+      ok(Array.isArray(d.quad) && d.quad.length === 4, n + ': detect gives four corners');
+      if (!(Array.isArray(d.quad) && d.quad.length === 4)) continue;
+      const e = cornerError(d.quad, fx.quad);
+      ok(e <= 0.015 * long, n + ': detect is within 1.5% of the long edge (' + (0.015 * long).toFixed(0) + ' px) of the truth, worst corner ' + e.toFixed(1) + ' px');
+      if (n !== 'lowContrast' && n !== 'shadowBand') ok(d.confidence > 0.6, n + ': confidence over 0.6, got ' + d.confidence.toFixed(2));
+      ok(d.confidence >= 0 && d.confidence <= 1, n + ': confidence is 0 to 1');
+      ok(Array.isArray(d.lines) && d.lines.length === 4, n + ': detect names the four lines it chose');
+      const r = S.refine(fx.imageData, d.quad);
+      const re = cornerError(r, fx.quad);
+      ok(re <= 0.005 * long, n + ': refine is within 0.5% of the long edge (' + (0.005 * long).toFixed(0) + ' px) of the truth, worst corner ' + re.toFixed(2) + ' px');
+    }
+    // the orientation and the scale: every corner is in the photo, and in order
+    const c = S.detect(lit.centred.imageData).quad;
+    ok(c[0][0] < c[1][0] && c[3][0] < c[2][0] && c[0][1] < c[3][1] && c[1][1] < c[2][1], 'detect: corners come out TL, TR, BR, BL');
+    const before = Array.from(lit.centred.imageData.data.slice(0, 4000));
+    S.detect(lit.centred.imageData);
+    ok(Array.from(lit.centred.imageData.data.slice(0, 4000)).join() === before.join(), 'detect: leaves the photo alone');
+  }
+
+  /* (1) refine, from a quad that is a few pixels off -------------------------- */
+  if (want('refine')) {
+    const nudge = [[7, -6], [-6, 7], [6, 6], [-7, -6]];
+    for (const n of GEOM) {
+      const fx = clean[n], long = Math.max(fx.imageData.width, fx.imageData.height);
+      const off = fx.quad.map((p, i) => [p[0] + nudge[i][0], p[1] + nudge[i][1]]);
+      const r = S.refine(fx.imageData, off);
+      const re = cornerError(r, fx.quad);
+      ok(re <= 0.005 * long, n + ': refine from corners 6 to 9 px off lands within 0.5% of the long edge, worst corner ' + re.toFixed(2) + ' px');
+    }
+    let thrown = false;
+    try { S.refine(clean.centred.imageData, [[0, 0], [10, 0], [20, 0], [0, 10]]); } catch (e) { thrown = /do not make a page/.test(e.message); }
+    ok(thrown, 'refine: three collinear corners throw rather than draw');
+    // a side with no edge to fit (it lies on the frame) is left where it was
+    const fo = clean.oneEdgeOut, onFrame = fo.quad.map(p => [Math.max(0, p[0]), p[1]]);
+    const rf = S.refine(fo.imageData, onFrame);
+    ok(Math.abs(rf[0][0]) < 0.5 && Math.abs(rf[3][0]) < 0.5, 'refine: the side on the edge of the frame stays on it, got x ' + rf[0][0].toFixed(2) + ', ' + rf[3][0].toFixed(2));
+    const co = cornerError([rf[1], rf[2]], [fo.quad[1], fo.quad[2]]);
+    ok(co <= 8, 'refine: the two corners that are in the photo are within 8 px of the truth, worst ' + co.toFixed(2));
+  }
+
+  /* (2) what detect does when it is wrong --------------------------------------- */
+  if (want('wrong')) {
+    const np = lit.noPage, d = S.detect(np.imageData), W = np.imageData.width, H = np.imageData.height;
+    ok(d.method === 'fallback', 'noPage: method is fallback, got ' + d.method);
+    ok(d.confidence === 0, 'noPage: confidence is 0, got ' + d.confidence);
+    const frame = [[0.04 * W, 0.04 * H], [0.96 * W, 0.04 * H], [0.96 * W, 0.96 * H], [0.04 * W, 0.96 * H]];
+    ok(cornerError(d.quad, frame) < 1e-6, 'noPage: the quad is the frame inset 4%, got ' + JSON.stringify(d.quad.map(p => p.map(Math.round))));
+    const d2 = S.detect(np.imageData, { inset: 0.1 });
+    ok(Math.abs(d2.quad[0][0] - 0.1 * W) < 1e-6, 'noPage: the inset is an option');
+    // a flat grey frame, and a one-pixel one: never throws
+    const flat = { data: new Uint8ClampedArray(64 * 48 * 4).fill(128), width: 64, height: 48 };
+    ok(S.detect(flat).method === 'fallback', 'detect: a flat grey picture is a fallback');
+    ok(S.detect({ data: new Uint8ClampedArray(4), width: 1, height: 1 }).method === 'fallback', 'detect: a one-pixel picture is a fallback, not a throw');
+
+    const oe = lit.oneEdgeOut, e = S.detect(oe.imageData), long = Math.max(oe.imageData.width, oe.imageData.height);
+    ok(e.method === 'edges', 'oneEdgeOut: still edges, got ' + e.method);
+    ok(e.confidence < 0.6, 'oneEdgeOut: confidence under 0.6, got ' + e.confidence.toFixed(2));
+    ok(e.quad[0][0] <= 0.005 * long && e.quad[3][0] <= 0.005 * long, 'oneEdgeOut: the left side is on the frame\'s edge, got x ' + e.quad[0][0].toFixed(1) + ', ' + e.quad[3][0].toFixed(1));
+    const rest = cornerError([e.quad[1], e.quad[2]], [oe.quad[1], oe.quad[2]]);
+    ok(rest <= 0.015 * long, 'oneEdgeOut: the two corners that are in the photo are within 1.5% of the truth, worst ' + rest.toFixed(1) + ' px');
+    ok(e.lines.filter(l => l.frame).length === 1, 'oneEdgeOut: one of the four lines is the frame\'s');
+  }
+
+  /* (4) rectify with the detected quad ------------------------------------------- */
+  if (want('detected-rectify')) {
+    const sheets = {};
+    for (const n of GEOM) {
+      const fx = clean[n];
+      const sheet = sheets[fx.sheet.paper] || (sheets[fx.sheet.paper] = renderSheet(fx.sheet.paper));
+      const det = S.refine(fx.imageData, S.detect(fx.imageData).quad);
+      // the sheet's own corner order: the detected quad is in the photo's, and a sheet on its side starts a corner round
+      let best = 0, bestD = Infinity;
+      for (let k = 0; k < 4; k++) {
+        const dd = Math.hypot(det[k][0] - fx.sheetQuad[0][0], det[k][1] - fx.sheetQuad[0][1]);
+        if (dd < bestD) { bestD = dd; best = k; }
+      }
+      const q = [0, 1, 2, 3].map(i => det[(best + i) % 4]);
+      const out = S.rectify(fx.imageData, q, SHEET_W, SHEET_H);
+      let sum = 0;
+      for (let i = 0; i < SHEET_W * SHEET_H; i++) sum += Math.abs(out.data[i * 4 + 1] - sheet.gray[i]);
+      const mad = sum / (SHEET_W * SHEET_H) / (fx.sheet.paper / 235);
+      ok(mad < 18, n + ': rectify with the detected quad is within 18 levels of the sheet on average, got ' + mad.toFixed(2));
+    }
+  }
+
+  /* outputSize ------------------------------------------------------------------- */
+  if (want('outputSize')) {
+    const R = (w, h) => [[0, 0], [w, 0], [w, h], [0, h]];
+    const o = (q, m) => JSON.stringify(S.outputSize(q, m === undefined ? undefined : { maxDim: m }));
+    ok(o(R(100, 50)) === '{"w":100,"h":50}', 'outputSize: a rectangle is its own size, got ' + o(R(100, 50)));
+    ok(o(R(100, 50), 60) === '{"w":60,"h":30}', 'outputSize: the long edge is capped at maxDim and the shape kept, got ' + o(R(100, 50), 60));
+    ok(o(R(50, 100), 60) === '{"w":30,"h":60}', 'outputSize: a portrait page is capped on its height, got ' + o(R(50, 100), 60));
+    ok(o(R(100, 50), 500) === '{"w":100,"h":50}', 'outputSize: a page under maxDim is not enlarged');
+    ok(o(R(5000, 2500)) === '{"w":4000,"h":2000}', 'outputSize: no maxDim means the 4000 px cap, got ' + o(R(5000, 2500)));
+    // a keystoned sheet: the longer of the two opposite sides each way (700 near, 420 far; 916.7 either side)
+    const k = clean.keystone.sheetQuad, ks = S.outputSize(k, { maxDim: 4000 });
+    ok(ks.w === 700 && ks.h === 917, 'outputSize: a keystoned sheet takes the longer of its opposite sides, got ' + ks.w + ' x ' + ks.h);
+    const kc = S.outputSize(k, { maxDim: 600 });
+    ok(kc.h === 600 && kc.w === 458, 'outputSize: and caps it, got ' + kc.w + ' x ' + kc.h);
+    ok(S.outputSize([[0, 0], [0.2, 0], [0.2, 0.2], [0, 0.2]]).w === 1, 'outputSize: never under 1 px');
+    let thrown = false;
+    try { S.outputSize([[0, 0], [10, 0], [20, 0], [0, 10]]); } catch (e) { thrown = /do not make a page/.test(e.message); }
+    ok(thrown, 'outputSize: three collinear corners throw');
+  }
+
+  /* clean and process --------------------------------------------------------------- */
+  if (want('process')) {
+    const fx = lit.gradientSheet, q = fx.sheetQuad, img = fx.imageData, keep = Array.from(img.data.slice(0, 4000));
+    const size = S.outputSize(q, { maxDim: 600 });
+    const page = S.rectify(img, q, size.w, size.h);
+    for (const mode of ['color', 'gray', 'bw']) {
+      const p = S.process(img, { quad: q, mode, maxDim: 600 });
+      ok(p.w === size.w && p.h === size.h && p.imageData.width === p.w && p.imageData.height === p.h, 'process ' + mode + ': the page is the size outputSize says, got ' + p.w + ' x ' + p.h);
+      const want2 = S.clean(page, mode);
+      let same = p.imageData.data.length === want2.data.length;
+      for (let i = 0; same && i < want2.data.length; i++) if (p.imageData.data[i] !== want2.data[i]) same = false;
+      ok(same, 'process ' + mode + ': is rectify, then clean, byte for byte');
+    }
+    const g = S.process(img, { quad: q, mode: 'gray', maxDim: 600 }).imageData.data;
+    let eq = true; for (let i = 0; i < g.length; i += 4) if (g[i] !== g[i + 1] || g[i] !== g[i + 2] || g[i + 3] !== 255) { eq = false; break; }
+    ok(eq, 'process gray: three equal channels');
+    const b = S.process(img, { quad: q, mode: 'bw', maxDim: 600 }).imageData.data;
+    let two = true, dark = 0; for (let i = 0; i < b.length; i += 4) { if ((b[i] !== 0 && b[i] !== 255) || b[i] !== b[i + 1] || b[i] !== b[i + 2]) { two = false; break; } if (b[i] === 0) dark++; }
+    ok(two, 'process bw: three equal channels of 0 or 255');
+    ok(dark > 500 && dark < 0.2 * b.length / 4, 'process bw: some of the page is ink and most is paper, ' + dark + ' black px');
+    // flatten is in the colour path: the dim end of the gradient comes out as white as the bright end
+    const c = S.process(img, { quad: q, mode: 'color', maxDim: 600 }), cw = c.w;
+    const lum = (x, y) => { const o = (y * cw + x) * 4; return c.imageData.data[o + 1]; };
+    ok(Math.abs(lum(8, 8) - lum(cw - 9, 8)) <= 12 && lum(8, 8) > 220, 'process color: the light is evened out (corners ' + lum(8, 8) + ' and ' + lum(cw - 9, 8) + ')');
+    ok(Array.from(img.data.slice(0, 4000)).join() === keep.join(), 'process: leaves the photo alone');
+    let thrown = false;
+    try { S.process(img, { quad: q, mode: 'sepia' }); } catch (e) { thrown = /mode/.test(e.message); }
+    ok(thrown, 'process: an unknown mode throws');
+    let thrown2 = false;
+    try { S.process(img, { quad: [[0, 0], [10, 0], [20, 0], [0, 10]], mode: 'bw' }); } catch (e) { thrown2 = /do not make a page/.test(e.message); }
+    ok(thrown2, 'process: three collinear corners throw');
+    // colour stays colour, grey is grey: a photo with a red patch and a blue one on white
+    {
+      const w = 120, h = 160, im = { data: new Uint8ClampedArray(w * h * 4).fill(255), width: w, height: h };
+      const patch = (x0, y0, r, g, b) => { for (let y = y0; y < y0 + 30; y++) for (let x = x0; x < x0 + 30; x++) { const o = (y * w + x) * 4; im.data[o] = r; im.data[o + 1] = g; im.data[o + 2] = b; } };
+      patch(20, 30, 220, 30, 30); patch(70, 90, 30, 30, 220);
+      const full = [[0, 0], [w, 0], [w, h], [0, h]];
+      const col = S.process(im, { quad: full, mode: 'color' }).imageData.data, gr = S.process(im, { quad: full, mode: 'gray' }).imageData.data;
+      const at = (d, x, y) => { const o = (y * w + x) * 4; return [d[o], d[o + 1], d[o + 2]]; };
+      const red = at(col, 35, 45);
+      ok(red[0] - red[1] > 60, 'process color: a red patch stays red, got ' + red);
+      const g = at(gr, 35, 45), g2 = at(gr, 85, 105);
+      ok(g[0] === g[1] && g[1] === g[2] && g2[0] === g2[1] && g2[1] === g2[2], 'process gray: a red patch and a blue one come out grey, got ' + g + ' and ' + g2);
+      ok(g[0] > g2[0] || g[0] < g2[0], 'process gray: and they are not the same grey');
+    }
+    // the defaults: colour, and the 4000 px cap (this photo's page is under it)
+    const d = S.process(img, { quad: q });
+    ok(d.w === S.outputSize(q).w, 'process: with no maxDim the page is its own size, got ' + d.w);
+  }
   return bad;
 }
 
@@ -429,6 +627,31 @@ const MUTANTS = [
   ['threshold: no despeckle', 'threshold', [['if (near) keep[i] = 1;', 'keep[i] = black[i];']]],
   ['threshold: despeckle eats 2-px strokes', 'threshold', [['if (black[yy * w + xx]) { near = true; break; }', 'if (black[yy * w + xx] && (dx === 0 || dy === 0) && dx + dy > 0) { near = true; break; }']]],
   ['orderCorners: starts at the bottom right', 'order', [['if (s < t || (s === t && p[i][1] < p[start][1])) start = i;', 'if (s > t || (s === t && p[i][1] < p[start][1])) start = i;']]],
+  ['downscale: the box is divided by the factor, not its area', 'downscale', [['var out = new Float32Array(w * h), inv = 1 / (f * f * 1000);', 'var out = new Float32Array(w * h), inv = 1 / (f * 1000);']]],
+  ['downscale: the scale is not the integer factor', 'downscale', [['return { gray: out, w: w, h: h, scale: f };', 'return { gray: out, w: w, h: h, scale: f + 1 };']]],
+  ['detect: the corners are left in loop order', 'detect', [['var quad = orderCorners(corners.map(function (p) {', 'var quad = (corners.map(function (p) {']]],
+  ['detect: the downscale factor is forgotten on the way out', 'detect', [['[Math.max(0, Math.min(img.width, p[0] * f)), Math.max(0, Math.min(img.height, p[1] * f))]', '[Math.max(0, Math.min(img.width, p[0] * f * 1.02)), Math.max(0, Math.min(img.height, p[1] * f))]']]],
+  ['detect: the edge threshold is far too high', 'detect', [['magFloor: 0.05 ', 'magFloor: 0.6 '], ['pct: 0.7, ', 'pct: 0.99, ']]],
+  ['detect: any line is a candidate, however little of the frame it crosses', 'wrong', [['minSpan: 0.30, ', 'minSpan: 0.0, ']]],
+  ['detect: the frame cannot stand for a side outside the photo', 'wrong', [['var best = bestQuad(E, cands.concat(frameLines(w, h)), w, h, ref);', 'var best = bestQuad(E, cands, w, h, ref);']]],
+  ['detect: a side on the frame costs no confidence', 'wrong', [['(anyFrame ? 0.5 : 1)', '1']]],
+  ['detect: the fallback calls itself edges', 'wrong', [["confidence: 0, method: 'fallback', lines: []", "confidence: 0, method: 'edges', lines: []"]]],
+  ['detect: the fallback has some confidence', 'wrong', [["confidence: 0, method: 'fallback', lines: []", "confidence: 0.5, method: 'fallback', lines: []"]]],
+  ['detect: the fallback frame is not inset', 'wrong', [['var W = img.width, H = img.height, inset = opts.inset === undefined ? 0.04 : opts.inset;', 'var W = img.width, H = img.height, inset = 0;']]],
+  ['detect: noise lines are accepted with nothing to pair them (no minimum of three real lines)', 'wrong', [['if (real < 3) continue;', 'if (real < 1) continue;'], ['if (cands[i].frame && cands[j].frame) continue;', ''], ['if (cands.length < 3) return null;', '']]],
+  ['refine: does nothing', 'refine', [['for (var pass = 0; pass < 2; pass++) {\n      var lines = [];', 'for (var pass = 0; pass < 0; pass++) {\n      var lines = [];']]],
+  ['refine: takes the strongest step, not the nearest', 'refine', [['var dd = Math.abs(j - half);\n        if (dd < pd) { pd = dd; pick = j; }', 'var dd = -D[j];\n        if (dd < pd) { pd = dd; pick = j; }']]],
+  ['refine: the page is always taken as brighter than its surroundings', 'refine', [['var pol = polSum >= 0 ? 1 : -1;', 'var pol = 1;']]],
+  ['refine: the sub-pixel offset is dropped', 'refine', [['var off = den < 0 ? 0.5 * (y1 - y3) / den : 0;', 'var off = 0;'], ['var sOff = (pick - half + off) * ds;', 'var sOff = Math.round(pick - half + off) * 2;']]],
+  ['outputSize: takes the shorter of the opposite sides', 'outputSize', [['var w = Math.max(dist(quad[0], quad[1]), dist(quad[3], quad[2]));', 'var w = Math.min(dist(quad[0], quad[1]), dist(quad[3], quad[2]));']]],
+  ['outputSize: the cap is on the width only', 'outputSize', [['var k = Math.max(w, h) > maxDim ? maxDim / Math.max(w, h) : 1;', 'var k = w > maxDim ? maxDim / w : 1;']]],
+  ['outputSize: the cap is never applied', 'outputSize', [['var k = Math.max(w, h) > maxDim ? maxDim / Math.max(w, h) : 1;', 'var k = 1;']]],
+  ['process: the page is not flattened', 'process', [["var f = flatten(img, 'worksheet');", 'var f = img;']]],
+  ['process: black and white skips the threshold', 'process', [['return threshold(f, {});', 'return gray(f);']]],
+  ['process: grey is colour', 'process', [['if (mode === \'gray\') return gray(f);', "if (mode === 'gray') return f;"]]],
+  ['process: maxDim is ignored', 'process', [['var size = outputSize(opts.quad, { maxDim: opts.maxDim });', 'var size = outputSize(opts.quad, {});']]],
+  ['process: cleans the photo and then warps it', 'process', [['var page = rectify(img, opts.quad, size.w, size.h);\n    return { imageData: clean(page, opts.mode || \'color\'), w: size.w, h: size.h };', "var page = rectify(clean(img, opts.mode || 'color'), opts.quad, size.w, size.h);\n    return { imageData: page, w: size.w, h: size.h };"]]],
+  ['rectify of the detected quad: the corners are mirrored', 'detected-rectify', [['var quad = orderCorners(corners.map(function (p) {', 'var quad = orderCorners(corners.map(function (p) { p = [img.width - p[0] / f, p[1] / f].map(function (v) { return v * f; });']]],
   ['orderCorners: counter-clockwise', 'order', [['return Math.atan2(a[1] - cy, a[0] - cx) - Math.atan2(b[1] - cy, b[0] - cx);', 'return Math.atan2(b[1] - cy, b[0] - cx) - Math.atan2(a[1] - cy, a[0] - cx);']]],
 ];
 for (const [name, section, edit] of MUTANTS) {

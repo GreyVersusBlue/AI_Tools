@@ -13,8 +13,7 @@
  * [i, i+1) x [j, j+1), so a photo W px wide spans x = 0 to W. A quad is
  * [TL, TR, BR, BL].
  *
- * What is here (the first half of the engine; the detector, outputSize and
- * process are AI-39's):
+ * What is here:
  *   toGray(img)               Uint8Array, Rec. 601 weights, integer
  *   gray(img)                 the same as an image: three equal channels
  *   homography(src, dst)      Float64Array(9), throws on a quad that is no page
@@ -23,6 +22,12 @@
  *   flatten(img, preset)      011's enhanceCanvas() on an image (white balance)
  *   threshold(img, opts)      Sauvola, then a despeckle: pure black and white
  *   orderCorners(points)      four points in any order -> TL, TR, BR, BL
+ *   downscale(img, longEdge)  box-filtered grey, an integer factor, for the detector
+ *   detect(img, opts)         the page's four corners: { quad, confidence, method, lines }
+ *   refine(img, quad, opts)   the corners again, sub-pixel, from lines fitted on a larger grey
+ *   outputSize(quad, opts)    the rectified page's size, capped at maxDim
+ *   clean(img, mode)          'color' | 'gray' | 'bw': flatten, then grey or threshold
+ *   process(img, opts)        rectify, flatten, gray/bw in one call: { imageData, w, h }
  *
  * Order in a finished page is fixed: rectify, flatten, threshold. Rectify
  * first so the window and the illumination map are in page pixels and the
@@ -468,6 +473,627 @@
     return [p[start], p[(start + 1) % 4], p[(start + 2) % 4], p[(start + 3) % 4]];
   }
 
+
+  /* ── downscale ──────────────────────────────────────────────────────────── */
+
+  /**
+   * The picture as luma, shrunk by the integer factor that brings its long edge
+   * nearest `longEdge`, each output pixel the mean of a factor x factor box
+   * (not drawImage, so Node and the page make the same bytes). Pixel (i, j) of
+   * the result covers source [i*scale, (i+1)*scale), so a point in its
+   * coordinates times `scale` is a point in the photo's. Returns
+   * { gray: Float32Array, w, h, scale }.
+   */
+  function downscale(img, longEdge) {
+    check(img);
+    var W = img.width, H = img.height, d = img.data;
+    var f = Math.max(1, Math.round(Math.max(W, H) / (longEdge || 480)));
+    var w = Math.max(1, Math.floor(W / f)), h = Math.max(1, Math.floor(H / f));
+    var out = new Float32Array(w * h), inv = 1 / (f * f * 1000);
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        var s = 0;
+        for (var j = 0; j < f; j++) {
+          var p = ((y * f + j) * W + x * f) * 4;
+          for (var i = 0; i < f; i++, p += 4) s += 299 * d[p] + 587 * d[p + 1] + 114 * d[p + 2];
+        }
+        out[y * w + x] = s * inv;
+      }
+    }
+    return { gray: out, w: w, h: h, scale: f };
+  }
+
+  /* ── lines ──────────────────────────────────────────────────────────────── */
+
+  /* A line is { nx, ny, c }: the points p with nx*px + ny*py = c, (nx, ny) a unit
+   * normal. Angles of lines are the normal's angle folded into [0, PI). */
+  var PI = Math.PI;
+
+  function lineAngle(L) {
+    var a = Math.atan2(L.ny, L.nx);
+    if (a < 0) a += PI;
+    if (a >= PI) a -= PI;
+    return a;
+  }
+
+  /** The smaller angle between two angles of lines, 0 to PI/2. */
+  function angleGap(a, b) {
+    var d = Math.abs(a - b) % PI;
+    return d > PI / 2 ? PI - d : d;
+  }
+
+  function intersect(A, B) {
+    var det = A.nx * B.ny - A.ny * B.nx;
+    if (Math.abs(det) < 1e-9) return null;
+    return [(A.c * B.ny - B.c * A.ny) / det, (A.nx * B.c - B.nx * A.c) / det];
+  }
+
+  /** Weighted total least squares through the points xs[k], ys[k] (k in `idx`,
+   *  or all). Returns a line or null. */
+  function fitLine(xs, ys, ws, idx) {
+    var n = idx ? idx.length : xs.length, k, i, sw = 0, mx = 0, my = 0;
+    for (k = 0; k < n; k++) { i = idx ? idx[k] : k; var w = ws ? ws[i] : 1; sw += w; mx += w * xs[i]; my += w * ys[i]; }
+    if (!(sw > 0)) return null;
+    mx /= sw; my /= sw;
+    var sxx = 0, sxy = 0, syy = 0;
+    for (k = 0; k < n; k++) {
+      i = idx ? idx[k] : k;
+      var wt = ws ? ws[i] : 1, dx = xs[i] - mx, dy = ys[i] - my;
+      sxx += wt * dx * dx; sxy += wt * dx * dy; syy += wt * dy * dy;
+    }
+    var alpha = 0.5 * Math.atan2(2 * sxy, sxx - syy);      // the direction the points spread along
+    var nx = -Math.sin(alpha), ny = Math.cos(alpha);
+    return { nx: nx, ny: ny, c: nx * mx + ny * my };
+  }
+
+  /* ── detect ─────────────────────────────────────────────────────────────── */
+
+  /* The detector's numbers. Starting values from the design, then tuned against
+   * the fixtures (scan.test.mjs); HISTORY.md AI-39 says what moved and why. */
+  var DET = {
+    tolPx: 1.5,          // an edge pixel supports a line within this many px ...
+    tolDeg: 15,          // ... and a gradient direction within this many degrees of its normal
+    voteDeg: 6,          // a pixel votes for lines within this many degrees of its gradient
+    peakFloor: 0.04,     // a Hough peak is a seed when it holds this share of the strongest
+    maxPeaks: 400,        // Hough seeds measured, strongest first ...
+    keep: 200,            // ... and the best this many lines by span go on to be paired
+    minSpan: 0.30,       // a line is a candidate when edge pixels cover this share of the frame's short side
+    minGap: 0.25,        // the two sides of a pair are at least this share of the short side apart
+    parallelDeg: 20,     // the two sides of a pair are parallel to within this
+    squareDeg: 35,       // and the pairs are perpendicular to within this
+    minArea: 0.15, maxArea: 0.98,
+    minAngle: 55, maxAngle: 125,
+    minAspect: 0.45, maxAspect: 2.2,
+    voteCap: 3,          // an edge pixel votes with its magnitude, capped at this many times the threshold
+    pct: 0.7,            // the edge threshold is this percentile of the magnitude
+    magFloor: 0.05       // the edge threshold is the 90th percentile of the magnitude, but not under this share of the strongest
+  };
+
+  /** Blur 3 x 3, Sobel, non-maximum suppression along the gradient, threshold.
+   *  Returns the thin edge pixels: coordinates of their centres, magnitude and
+   *  the angle of the gradient folded into [0, PI), and a dense angle map. */
+  function edges(g, w, h) {
+    var n = w * h, b = new Float32Array(n), x, y, i;
+    for (y = 0; y < h; y++) {
+      var y0 = y > 0 ? y - 1 : 0, y1 = y < h - 1 ? y + 1 : h - 1;
+      for (x = 0; x < w; x++) {
+        var x0 = x > 0 ? x - 1 : 0, x1 = x < w - 1 ? x + 1 : w - 1, s = 0;
+        for (var yy = y0; yy <= y1; yy++) for (var xx = x0; xx <= x1; xx++) s += g[yy * w + xx];
+        b[y * w + x] = s / ((x1 - x0 + 1) * (y1 - y0 + 1));
+      }
+    }
+    var mag = new Float32Array(n), gx = new Float32Array(n), gy = new Float32Array(n), top = 0;
+    for (y = 1; y < h - 1; y++) for (x = 1; x < w - 1; x++) {
+      i = y * w + x;
+      var dx = (b[i - w + 1] + 2 * b[i + 1] + b[i + w + 1]) - (b[i - w - 1] + 2 * b[i - 1] + b[i + w - 1]);
+      var dy = (b[i + w - 1] + 2 * b[i + w] + b[i + w + 1]) - (b[i - w - 1] + 2 * b[i - w] + b[i - w + 1]);
+      gx[i] = dx; gy[i] = dy;
+      var m = Math.sqrt(dx * dx + dy * dy);
+      mag[i] = m; if (m > top) top = m;
+    }
+    var out = { w: w, h: h, xs: [], ys: [], ms: [], as: [], map: new Int16Array(n).fill(-1), byDeg: [], top: top, thr: 0 };
+    for (i = 0; i < 180; i++) out.byDeg.push([]);
+    if (!(top > 0)) return out;
+    var hist = new Uint32Array(1025), cnt = 0;
+    for (y = 1; y < h - 1; y++) for (x = 1; x < w - 1; x++) { hist[Math.min(1024, (mag[y * w + x] / top * 1024) | 0)]++; cnt++; }
+    var seen = 0, p90 = 1024;
+    for (i = 0; i <= 1024; i++) { seen += hist[i]; if (seen >= cnt * DET.pct) { p90 = i; break; } }
+    var thr = Math.max(p90 / 1024 * top, DET.magFloor * top);
+    out.thr = thr;
+    for (y = 1; y < h - 1; y++) for (x = 1; x < w - 1; x++) {
+      i = y * w + x;
+      var mm = mag[i];
+      if (mm < thr) continue;
+      var a = Math.atan2(gy[i], gx[i]);
+      var ox = Math.round(Math.cos(a)), oy = Math.round(Math.sin(a));
+      var m1 = mag[i + oy * w + ox], m2 = mag[i - oy * w - ox];
+      if (!(mm > m1 && mm >= m2)) continue;
+      if (a < 0) a += PI;
+      if (a >= PI) a -= PI;
+      out.xs.push(x + 0.5); out.ys.push(y + 0.5); out.ms.push(mm); out.as.push(a);
+      out.map[i] = Math.round(a * 1800 / PI);               // tenths of a degree
+      out.byDeg[Math.min(179, (a * 180 / PI) | 0)].push(out.xs.length - 1);
+    }
+    return out;
+  }
+
+  /** The Hough accumulator, 1 degree by 1 px about the frame's centre, each
+   *  edge pixel voting with its magnitude for the lines within voteDeg of its
+   *  own gradient direction. Returns the seed lines, strongest first. */
+  function houghSeeds(E) {
+    var w = E.w, h = E.h, cx = w / 2, cy = h / 2;
+    var rmax = Math.ceil(Math.sqrt(w * w + h * h) / 2) + 2, nr = 2 * rmax + 1;
+    var V = DET.voteDeg, nt = 180, acc = new Float32Array(nt * nr), t;
+    var cs = new Float64Array(nt + 2 * V + 1), sn = new Float64Array(nt + 2 * V + 1);
+    for (t = -V; t <= nt + V; t++) { cs[t + V] = Math.cos(t * PI / 180); sn[t + V] = Math.sin(t * PI / 180); }
+    var n = E.xs.length, k;
+    for (k = 0; k < n; k++) {
+      var px = E.xs[k] - cx, py = E.ys[k] - cy, m = Math.min(E.ms[k], DET.voteCap * E.thr);   // a strong edge counts for a few weak ones, not for all of them
+      var t0 = Math.round(E.as[k] * 180 / PI);
+      for (var u = t0 - V; u <= t0 + V; u++) {
+        var r = px * cs[u + V] + py * sn[u + V], tt = u;
+        if (tt < 0) { tt += nt; r = -r; } else if (tt >= nt) { tt -= nt; r = -r; }
+        acc[tt * nr + Math.round(r) + rmax] += m;
+      }
+    }
+    // an edge that falls between two pixel rows puts its pixels on either side of a bin boundary:
+    // sum three neighbouring bins so the line is one peak, not two weak ones
+    var sm = new Float32Array(acc.length), top = 0, i;
+    for (t = 0; t < nt; t++) for (var r1 = 1; r1 < nr - 1; r1++) {
+      var q3 = t * nr + r1;
+      sm[q3] = acc[q3 - 1] + acc[q3] + acc[q3 + 1];
+      if (sm[q3] > top) top = sm[q3];
+    }
+    acc = sm;
+    if (!(top > 0)) return [];
+    var cells = [];
+    for (t = 0; t < nt; t++) for (var r2 = 1; r2 < nr - 1; r2++) {
+      var v = acc[t * nr + r2];
+      if (v < DET.peakFloor * top) continue;
+      if (v < acc[t * nr + r2 - 1] || v <= acc[t * nr + r2 + 1]) continue;
+      cells.push([v, t, r2 - rmax]);
+    }
+    cells.sort(function (a, b) { return b[0] - a[0]; });
+    var seeds = [];
+    for (i = 0; i < cells.length && seeds.length < DET.maxPeaks; i++) {
+      var c = cells[i], dup = false;
+      for (var j = 0; j < seeds.length; j++) {
+        var s = seeds[j], dt = Math.abs(c[1] - s.t);
+        if (dt > 90) dt = 180 - dt;
+        var rr = (Math.abs(c[1] - s.t) > 90) ? -s.r : s.r;     // same line across the 0 / 180 seam
+        if (dt < 6 && Math.abs(c[2] - rr) < 3) { dup = true; break; }
+      }
+      if (dup) continue;
+      seeds.push({ t: c[1], r: c[2], v: c[0] });
+    }
+    return seeds.map(function (s) {
+      var a = s.t * PI / 180, nx = Math.cos(a), ny = Math.sin(a);
+      return { nx: nx, ny: ny, c: s.r + nx * cx + ny * cy, votes: s.v };
+    });
+  }
+
+  /** The line's stretch inside [0, w] x [0, h], as its two end points, or null. */
+  function clipToFrame(L, w, h) {
+    var dx = -L.ny, dy = L.nx;                                    // direction along the line
+    var px = L.nx * L.c, py = L.ny * L.c;                         // the point nearest the origin
+    var lo = -1e9, hi = 1e9;
+    var lim = function (p, d, size) {
+      if (Math.abs(d) < 1e-12) { if (p < 0 || p > size) { lo = 1; hi = 0; } return; }
+      var t1 = (0 - p) / d, t2 = (size - p) / d;
+      if (t1 > t2) { var t = t1; t1 = t2; t2 = t; }
+      if (t1 > lo) lo = t1; if (t2 < hi) hi = t2;
+    };
+    lim(px, dx, w); lim(py, dy, h);
+    if (!(hi > lo)) return null;
+    return [[px + dx * lo, py + dy * lo], [px + dx * hi, py + dy * hi]];
+  }
+
+  /** How much of the segment A-B has an edge pixel beside it, facing the
+   *  line's way: { covered, steps } at one step a pixel. */
+  function coverage(E, L, A, B) {
+    var len = Math.sqrt(Math.pow(B[0] - A[0], 2) + Math.pow(B[1] - A[1], 2));
+    var steps = Math.max(1, Math.floor(len)), covered = 0, w = E.w, h = E.h;
+    var la = lineAngle(L), tol = DET.tolDeg * 10;
+    for (var k = 0; k < steps; k++) {
+      var t = (k + 0.5) / steps, qx = A[0] + (B[0] - A[0]) * t, qy = A[1] + (B[1] - A[1]) * t, hit = false;
+      for (var s = -1; s <= 1 && !hit; s++) {
+        var x = Math.floor(qx + s * L.nx), y = Math.floor(qy + s * L.ny);
+        if (x < 0 || y < 0 || x >= w || y >= h) continue;
+        var a = E.map[y * w + x];
+        if (a < 0) continue;
+        var d = Math.abs(a - la * 1800 / PI) % 1800; if (d > 900) d = 1800 - d;
+        if (d <= tol) hit = true;
+      }
+      if (hit) covered++;
+    }
+    return { covered: covered, steps: steps };
+  }
+
+  /** A seed line pulled onto the edge pixels beside it (twice, the second time
+   *  from the closer ones), then measured. Returns a candidate or null. */
+  function candidate(E, seed, ref) {
+    var L = seed, tolDeg = DET.tolDeg * PI / 180;
+    for (var pass = 0; pass < 3; pass++) {
+      var tol = pass === 0 ? DET.tolPx : 1.0, la = lineAngle(L), idx = [];
+      var deg0 = Math.round(la * 180 / PI), span = Math.ceil(DET.tolDeg) + 1;
+      for (var bd = deg0 - span; bd <= deg0 + span; bd++) {
+        var bucket = E.byDeg[((bd % 180) + 180) % 180];
+        for (var bk = 0; bk < bucket.length; bk++) {
+          var k = bucket[bk];
+          if (Math.abs(L.nx * E.xs[k] + L.ny * E.ys[k] - L.c) > tol) continue;
+          if (angleGap(E.as[k], la) > tolDeg) continue;
+          idx.push(k);
+        }
+      }
+      if (idx.length < 10) return null;
+      var f = fitLine(E.xs, E.ys, E.ms, idx);
+      if (!f) return null;
+      L = f;
+    }
+    var seg = clipToFrame(L, E.w, E.h);
+    if (!seg) return null;
+    var cv = coverage(E, L, seg[0], seg[1]);
+    return {
+      nx: L.nx, ny: L.ny, c: L.c, a: seg[0], b: seg[1], frame: false,
+      covered: cv.covered, frac: cv.covered / cv.steps, span: cv.covered / ref
+    };
+  }
+
+  function frameLines(w, h) {
+    var mk = function (nx, ny, c, a, b) { return { nx: nx, ny: ny, c: c, a: a, b: b, frame: true, covered: 0, frac: 0, span: 0 }; };
+    return [
+      mk(1, 0, 0, [0, 0], [0, h]), mk(1, 0, w, [w, 0], [w, h]),
+      mk(0, 1, 0, [0, 0], [w, 0]), mk(0, 1, h, [0, h], [w, h])
+    ];
+  }
+
+  function dist(p, q) { return Math.sqrt(Math.pow(p[0] - q[0], 2) + Math.pow(p[1] - q[1], 2)); }
+
+  /** Four corners, in loop order, to a verdict: the area as a share of the frame
+   *  or 0 when the quad is not a plausible page. */
+  function plausible(q, w, h) {
+    var i, sign = 0, area = 0, mx = 0.03 * w, my = 0.03 * h;
+    for (i = 0; i < 4; i++) {
+      var a = q[i], b = q[(i + 1) % 4], c = q[(i + 2) % 4];
+      if (a[0] < -mx || a[0] > w + mx || a[1] < -my || a[1] > h + my) return 0;
+      var ux = b[0] - a[0], uy = b[1] - a[1], vx = c[0] - b[0], vy = c[1] - b[1];
+      var cr = ux * vy - uy * vx, lu = Math.sqrt(ux * ux + uy * uy), lv = Math.sqrt(vx * vx + vy * vy);
+      if (!(lu > 0 && lv > 0)) return 0;
+      var s = cr > 0 ? 1 : -1;
+      if (sign && s !== sign) return 0;
+      sign = s;
+      var ang = Math.acos(Math.max(-1, Math.min(1, -(ux * vx + uy * vy) / (lu * lv)))) * 180 / PI;
+      if (ang < DET.minAngle || ang > DET.maxAngle) return 0;
+      area += a[0] * b[1] - b[0] * a[1];
+    }
+    area = Math.abs(area) / 2 / (w * h);
+    if (area < DET.minArea || area > DET.maxArea) return 0;
+    var wd = (dist(q[0], q[1]) + dist(q[3], q[2])) / 2, ht = (dist(q[1], q[2]) + dist(q[0], q[3])) / 2;
+    var asp = wd / ht;
+    if (!(asp >= DET.minAspect && asp <= DET.maxAspect)) return 0;
+    return area;
+  }
+
+  /** For a quad in loop order with its four lines (side i runs corner i to corner i+1): { covered,
+   *  steps } per side along the stretch inside the frame, zero for a side taken from the frame. */
+  function sideFracs(E, corners, sides) {
+    var out = [], w = E.w, h = E.h;
+    for (var i = 0; i < 4; i++) {
+      var L = sides[i];
+      if (L.frame) { out.push({ covered: 0, steps: 1 }); continue; }
+      var A = corners[i], B = corners[(i + 1) % 4];
+      var cv = coverage(E, L, [Math.max(0, Math.min(w, A[0])), Math.max(0, Math.min(h, A[1]))],
+                              [Math.max(0, Math.min(w, B[0])), Math.max(0, Math.min(h, B[1]))]);
+      out.push({ covered: cv.covered, steps: cv.steps });
+    }
+    return out;
+  }
+
+  /** The best plausible quad out of the candidates (and the frame's own four
+   *  sides, which stand in for a side that is outside the photo). */
+  function bestQuad(E, cands, w, h, ref) {
+    var n = cands.length, i, j, pairs = [];
+    var ang = cands.map(lineAngle);
+    for (i = 0; i < n; i++) for (j = i + 1; j < n; j++) {
+      if (cands[i].frame && cands[j].frame) continue;
+      if (angleGap(ang[i], ang[j]) > DET.parallelDeg * PI / 180) continue;
+      var A = cands[i], B = cands[j];
+      var mid = [(B.a[0] + B.b[0]) / 2, (B.a[1] + B.b[1]) / 2];
+      if (Math.abs(A.nx * mid[0] + A.ny * mid[1] - A.c) < DET.minGap * ref) continue;
+      pairs.push([i, j]);
+    }
+    // pairs in 5-degree bins of their direction, so a pair is only set against the pairs roughly square to it
+    var NB = 36, bins = [], bi;
+    for (bi = 0; bi < NB; bi++) bins.push([]);
+    for (i = 0; i < pairs.length; i++) {
+      // the mean direction of two lines, which can straddle 0 / PI: average the doubled angles
+      var a1 = ang[pairs[i][0]], a2 = ang[pairs[i][1]];
+      var pa = 0.5 * Math.atan2(Math.sin(2 * a1) + Math.sin(2 * a2), Math.cos(2 * a1) + Math.cos(2 * a2));
+      pa = ((pa % PI) + PI) % PI;
+      pairs[i].push(pa);
+      bins[Math.min(NB - 1, Math.floor(pa / PI * NB))].push(i);
+    }
+    var best = null, found = [], sqLo = (90 - DET.squareDeg) * PI / 180, sqHi = (90 + DET.squareDeg) * PI / 180;
+    for (var p = 0; p < pairs.length; p++) {
+      var P = pairs[p], lo = P[2] + sqLo, hi = P[2] + sqHi;
+      for (var bb = Math.floor(lo / PI * NB) - 1; bb <= Math.ceil(hi / PI * NB) + 1; bb++) {
+        var list = bins[((bb % NB) + NB) % NB];
+        for (var li = 0; li < list.length; li++) {
+      var q = list[li];
+      if (q <= p) continue;
+      var Q = pairs[q];
+      if (angleGap(ang[P[0]], ang[Q[0]]) < sqLo) continue;
+      var a = cands[P[0]], b = cands[P[1]], c = cands[Q[0]], d = cands[Q[1]];
+      var real = !a.frame + !b.frame + !c.frame + !d.frame;
+      if (real < 3) continue;
+      var k1 = intersect(a, c), k2 = intersect(a, d), k3 = intersect(b, d), k4 = intersect(b, c);
+      if (!k1 || !k2 || !k3 || !k4) continue;
+      var quad = [k1, k2, k3, k4], area = plausible(quad, w, h);
+      if (!area) continue;
+      // a quad with a side taken from the frame only stands when no four-line quad does: the
+      // frame's own sides enclose the most area and would otherwise win every time (real: 3, below)
+      found.push({ quad: quad, sides: [a, d, b, c], area: area, real: real });
+        }
+      }
+    }
+    // The line-level score cannot tell a side of the sheet from a line that merely crosses it, so the
+    // best few are scored again on what lies between their own corners: how many pixels of each side
+    // have an edge beside them. A side taken from the frame has none.
+    // Best first by an upper bound (every pixel of every real side covered), and stop when no
+    // quad left could beat the one in hand: the answer is the exact best, found without scoring all.
+    var m, z2;
+    for (m = 0; m < found.length; m++) {
+      var g = found[m], ub = 0;
+      for (z2 = 0; z2 < 4; z2++) if (!g.sides[z2].frame) ub += dist(g.quad[z2], g.quad[(z2 + 1) % 4]);
+      g.bound = ub * g.area + (g.real === 4 ? 1e9 : 0);
+    }
+    found.sort(function (u, v) { return v.bound - u.bound; });
+    for (m = 0; m < found.length; m++) {
+      var f = found[m];
+      if (best && f.bound <= best.score) break;
+      f.fracs = sideFracs(E, f.quad, f.sides);
+      var sumPx = 0;
+      for (z2 = 0; z2 < 4; z2++) sumPx += f.fracs[z2].covered;
+      f.score = sumPx * f.area + (f.real === 4 ? 1e9 : 0);
+      if (!best || f.score > best.score) best = f;
+    }
+    return best;
+  }
+
+  function detectEdges(img, longEdge) {
+    var d = downscale(img, longEdge), w = d.w, h = d.h, f = d.scale;
+    if (w < 16 || h < 16) return null;
+    var E = edges(d.gray, w, h);
+    if (E.xs.length < 40) return null;
+    var ref = Math.min(w, h), seeds = houghSeeds(E), cands = [], i, j;
+    for (i = 0; i < seeds.length; i++) {
+      // a sheet's edge and the thick line printed just inside it can be two pixels apart here, and
+      // one Hough peak then sits between them: try the seed where it is and a little either side
+      var offs = [0, -2, 2];
+      for (var oi = 0; oi < offs.length; oi++) {
+        var off = offs[oi];
+        var sd = seeds[i], moved = off ? { nx: sd.nx, ny: sd.ny, c: sd.c + off, votes: sd.votes } : sd;
+        var c = candidate(E, moved, ref);
+        if (!c || c.span < DET.minSpan) continue;
+        var ca = lineAngle(c), dup = false;
+        for (j = 0; j < cands.length; j++) {
+          if (angleGap(ca, lineAngle(cands[j])) < 4 * PI / 180 &&
+              Math.abs(c.nx * ((cands[j].a[0] + cands[j].b[0]) / 2) + c.ny * ((cands[j].a[1] + cands[j].b[1]) / 2) - c.c) < 1.2) {
+            if (c.span > cands[j].span) cands[j] = c;
+            dup = true; break;
+          }
+        }
+        if (!dup) cands.push(c);
+      }
+    }
+    if (cands.length < 3) return null;
+    cands.sort(function (u, v) { return v.span - u.span; });
+    if (cands.length > DET.keep) cands.length = DET.keep;
+    var best = bestQuad(E, cands.concat(frameLines(w, h)), w, h, ref);
+    if (!best) return null;
+    // confidence: how much of each side has an edge beside it, a side on the frame counting for nothing, halved if any is
+    var corners = best.quad, sum = 0, anyFrame = false, lines = [];
+    for (i = 0; i < 4; i++) {
+      var L = best.sides[i];
+      if (L.frame) anyFrame = true;
+      sum += best.fracs[i].covered / best.fracs[i].steps;
+      lines.push({ theta: lineAngle(L) * 180 / PI, rho: (L.c - (L.nx * w / 2 + L.ny * h / 2)) * f, support: best.fracs[i].covered * f, frame: !!L.frame });
+    }
+    var confidence = Math.max(0, Math.min(1, sum / 4 * (anyFrame ? 0.5 : 1)));
+    var quad = orderCorners(corners.map(function (p) {
+      return [Math.max(0, Math.min(img.width, p[0] * f)), Math.max(0, Math.min(img.height, p[1] * f))];
+    }));
+    return { quad: quad, confidence: confidence, method: 'edges', lines: lines };
+  }
+
+  /**
+   * The page's four corners in the photo, [TL, TR, BR, BL] in source px, from
+   * the strong straight edges of a `longEdge`-px grey. Never throws on a
+   * picture: a frame with no page in it gives the frame inset by `inset` at
+   * confidence 0 and method 'fallback', so the handles still appear and the
+   * teacher drags them. `confidence` is 0 to 1; the page flags under 0.6.
+   */
+  function detect(img, opts) {
+    check(img);
+    opts = opts || {};
+    var W = img.width, H = img.height, inset = opts.inset === undefined ? 0.04 : opts.inset;
+    var r = null;
+    try { r = detectEdges(img, opts.longEdge || 480); } catch (e) { r = null; }
+    if (r) return r;
+    return {
+      quad: [[inset * W, inset * H], [(1 - inset) * W, inset * H], [(1 - inset) * W, (1 - inset) * H], [inset * W, (1 - inset) * H]],
+      confidence: 0, method: 'fallback', lines: []
+    };
+  }
+
+  /* ── refine ─────────────────────────────────────────────────────────────── */
+
+  function bilinear(g, gw, gh, x, y) {
+    var fx = x - 0.5, fy = y - 0.5, x0 = Math.floor(fx), y0 = Math.floor(fy);
+    if (x0 < 0 || y0 < 0 || x0 + 1 > gw - 1 || y0 + 1 > gh - 1) return NaN;
+    var ax = fx - x0, ay = fy - y0, i = y0 * gw + x0;
+    return (g[i] * (1 - ax) + g[i + 1] * ax) * (1 - ay) + (g[i + gw] * (1 - ax) + g[i + gw + 1] * ax) * ay;
+  }
+
+  /** The profile across a side at position (cx, cy): the mean of five short parallel reads at each
+   *  of `size` offsets of `ds` px about the coarse line, along the unit normal (nx, ny). Fills `I`
+   *  and returns false when a read leaves the picture. */
+  function profile(g, gw, gh, cx, cy, dx, dy, nx, ny, half, ds, I) {
+    var size = 2 * half + 1;
+    for (var j = 0; j < size; j++) {
+      var s = (j - half) * ds, sum = 0;
+      for (var u = -2; u <= 2; u++) {
+        var v = bilinear(g, gw, gh, cx + u * 1.5 * dx + s * nx, cy + u * 1.5 * dy + s * ny);
+        if (v !== v) return false;
+        sum += v;
+      }
+      I[j] = sum / 5;
+    }
+    return true;
+  }
+
+  /** Which way the page is brighter than what is outside it, summed over one side: positive when the
+   *  inside (the way (nx, ny) points) is brighter. Read 1.5 px either side of the coarse line, which
+   *  is closer than any line printed inside the edge. */
+  function sidePolarity(g, gw, gh, P, Q, nx, ny) {
+    var sum = 0;
+    for (var k = 0; k < 40; k++) {
+      var t = 0.1 + 0.8 * (k + 0.5) / 40, cx = P[0] + (Q[0] - P[0]) * t, cy = P[1] + (Q[1] - P[1]) * t;
+      var a = bilinear(g, gw, gh, cx + 1.5 * nx, cy + 1.5 * ny), b = bilinear(g, gw, gh, cx - 1.5 * nx, cy - 1.5 * ny);
+      if (a === a && b === b) sum += a - b;
+    }
+    return sum;
+  }
+
+  /** One side of the quad refitted: along it, each profile across it (a mean of five short parallel
+   *  reads) has its steps found to a fraction of a pixel, and the one taken is the nearest to the coarse
+   *  line of the steps in the page's own direction (`pol`: +1 inside brighter, -1 darker) that are not
+   *  weak beside the strongest, so a thick line printed inside the sheet's edge, a much stronger step
+   *  a few pixels further in, cannot pull the side onto itself. A robust line is then fitted through the steps. Returns a line, or the one
+   *  it was given when too few positions had an edge (a side on the frame, a side the photo cuts
+   *  off). Grey coordinates throughout; (nx, ny) points inward. */
+  function refineSide(g, gw, gh, P, Q, band, nx, ny, pol) {
+    var len = dist(P, Q);
+    var line0 = { nx: nx, ny: ny, c: nx * P[0] + ny * P[1] };
+    var dx = (Q[0] - P[0]) / len, dy = (Q[1] - P[1]) / len;
+    var n = Math.max(24, Math.min(300, Math.round(len / 2)));
+    var xs = [], ys = [], tried = 0, ds = 0.5, half = Math.round((band + 1) / ds), size = 2 * half + 1;
+    var I = new Float64Array(size), D = new Float64Array(size);
+    for (var k = 0; k < n; k++) {
+      var t = 0.1 + 0.8 * (k + 0.5) / n, cx = P[0] + (Q[0] - P[0]) * t, cy = P[1] + (Q[1] - P[1]) * t, j;
+      if (!profile(g, gw, gh, cx, cy, dx, dy, nx, ny, half, ds, I)) continue;
+      tried++;
+      var pick = -1, pd = 1e9, top = 0;
+      for (j = 1; j < size - 1; j++) { D[j] = pol * (I[j + 1] - I[j - 1]); if (D[j] > top) top = D[j]; }
+      var floor = Math.max(REFINE_MIN_STEP, REFINE_REL * top);
+      for (j = 2; j < size - 2; j++) {
+        if (D[j] < floor || D[j] < D[j - 1] || D[j] <= D[j + 1]) continue;
+        var dd = Math.abs(j - half);
+        if (dd < pd) { pd = dd; pick = j; }
+      }
+      if (pick < 0) continue;
+      var y1 = D[pick - 1], y2 = D[pick], y3 = D[pick + 1], den = y1 - 2 * y2 + y3;
+      var off = den < 0 ? 0.5 * (y1 - y3) / den : 0;
+      var sOff = (pick - half + off) * ds;
+      xs.push(cx + sOff * nx); ys.push(cy + sOff * ny);
+    }
+    if (tried < 8 || xs.length < 8 || xs.length < 0.35 * tried) return line0;
+    var idx = xs.map(function (_, i) { return i; }), L = fitLine(xs, ys, null, idx);
+    for (var it = 0; it < 3 && L; it++) {
+      var res = idx.map(function (i) { return Math.abs(L.nx * xs[i] + L.ny * ys[i] - L.c); });
+      var sorted = res.slice().sort(function (a, b) { return a - b; });
+      var cut = Math.max(0.75, 2.5 * sorted[sorted.length >> 1]);
+      var keep = idx.filter(function (_, m) { return res[m] <= cut; });
+      if (keep.length < 8 || keep.length === idx.length) break;
+      idx = keep; L = fitLine(xs, ys, null, idx);
+    }
+    if (!L) return line0;
+    if (L.nx * nx + L.ny * ny < 0) { L.nx = -L.nx; L.ny = -L.ny; L.c = -L.c; }
+    return L;
+  }
+
+  var REFINE_MIN_STEP = 6;     // a step in the grey (levels over one pixel) smaller than this is noise
+  var REFINE_REL = 0.1;        // ... and so is one under this share of the strongest step in its profile
+
+  /**
+   * The four lines fitted again on a `longEdge`-px grey (1024 by default), each
+   * within `band` px of the coarse one, twice (the second band half the first,
+   * round the first answer), and the corners taken from the new intersections.
+   * Sub-pixel; the coarse step alone is only as good as its downscale factor.
+   * A side that has no edge to fit (it lies on the frame) is left where it was.
+   * Throws 'Those corners do not make a page' on a quad that is none.
+   */
+  function refine(img, quad, opts) {
+    check(img);
+    if (!quadOk(quad)) throw new Error(BAD_QUAD);
+    opts = opts || {};
+    var d = downscale(img, opts.longEdge || 1024), f = d.scale, band = opts.band || 12;
+    var q = quad.map(function (p) { return [p[0] / f, p[1] / f]; });
+    // which way is inward on each side, and whether the page is brighter or darker than its surroundings
+    var turn = 0, i;
+    for (i = 0; i < 4; i++) { var u = q[i], v = q[(i + 1) % 4]; turn += u[0] * v[1] - v[0] * u[1]; }
+    var inward = turn > 0 ? 1 : -1, polSum = 0, nrm = [];
+    for (i = 0; i < 4; i++) {
+      var A = q[i], B = q[(i + 1) % 4], ln = dist(A, B);
+      nrm.push([-(B[1] - A[1]) / ln * inward, (B[0] - A[0]) / ln * inward]);
+      polSum += sidePolarity(d.gray, d.w, d.h, A, B, nrm[i][0], nrm[i][1]);
+    }
+    var pol = polSum >= 0 ? 1 : -1;
+    for (var pass = 0; pass < 2; pass++) {
+      var lines = [];
+      for (i = 0; i < 4; i++) lines.push(refineSide(d.gray, d.w, d.h, q[i], q[(i + 1) % 4], pass === 0 ? band : band / 2, nrm[i][0], nrm[i][1], pol));
+      var next = [];
+      for (var c = 0; c < 4; c++) {
+        var p = intersect(lines[(c + 3) % 4], lines[c]);
+        if (!p || dist(p, q[c]) > band * 2) return quad.map(function (v) { return [v[0], v[1]]; });
+        next.push(p);
+      }
+      if (!quadOk(next)) return quad.map(function (v) { return [v[0], v[1]]; });
+      q = next;
+      for (i = 0; i < 4; i++) {
+        var A2 = q[i], B2 = q[(i + 1) % 4], ln2 = dist(A2, B2);
+        nrm[i] = [-(B2[1] - A2[1]) / ln2 * inward, (B2[0] - A2[0]) / ln2 * inward];
+      }
+    }
+    return q.map(function (p) { return [p[0] * f, p[1] * f]; });
+  }
+
+  /* ── outputSize, clean, process ─────────────────────────────────────────── */
+
+  /**
+   * The page's size in px once pulled flat: each way the longer of the two
+   * opposite sides (the near side of a keystoned sheet is the one that was not
+   * foreshortened), then the long edge capped at `maxDim` (4000 when none is
+   * given). Never under 1.
+   */
+  function outputSize(quad, opts) {
+    if (!quadOk(quad)) throw new Error(BAD_QUAD);
+    var maxDim = opts && opts.maxDim > 0 ? opts.maxDim : 4000;
+    var w = Math.max(dist(quad[0], quad[1]), dist(quad[3], quad[2]));
+    var h = Math.max(dist(quad[0], quad[3]), dist(quad[1], quad[2]));
+    var k = Math.max(w, h) > maxDim ? maxDim / Math.max(w, h) : 1;
+    return { w: Math.max(1, Math.round(w * k)), h: Math.max(1, Math.round(h * k)) };
+  }
+
+  /** `mode`: 'color' (flatten, the worksheet preset), 'gray' (flatten, then
+   *  grey in three channels) or 'bw' (flatten, then threshold). */
+  function clean(img, mode) {
+    if (mode !== 'color' && mode !== 'gray' && mode !== 'bw') throw new Error("Scan mode must be 'color', 'gray' or 'bw'");
+    var f = flatten(img, 'worksheet');
+    if (mode === 'color') return f;
+    if (mode === 'gray') return gray(f);
+    return threshold(f, {});
+  }
+
+  /** Rectify, flatten, then grey or threshold: the Worker's one job.
+   *  Returns { imageData, w, h }. */
+  function process(img, opts) {
+    opts = opts || {};
+    var size = outputSize(opts.quad, { maxDim: opts.maxDim });
+    var page = rectify(img, opts.quad, size.w, size.h);
+    return { imageData: clean(page, opts.mode || 'color'), w: size.w, h: size.h };
+  }
+
   root.Scan = {
     toGray: toGray,
     gray: gray,
@@ -477,6 +1103,12 @@
     flatten: flatten,
     threshold: threshold,
     orderCorners: orderCorners,
+    downscale: downscale,
+    detect: detect,
+    refine: refine,
+    outputSize: outputSize,
+    clean: clean,
+    process: process,
     ENHANCE_PRESETS: ENHANCE_PRESETS
   };
 })();
