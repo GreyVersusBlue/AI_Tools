@@ -625,8 +625,40 @@
     brandWarnEl.textContent = warn;
   }
 
+  /* The Aa button is fixed to the bottom-right corner, so on a page that scrolls the last
+     controls could sit under it with no way to scroll them clear (AI-78). A page that scrolls
+     gets one empty block, `.a11y-reserve`, at the end of <body> (a11y.css sizes it, screen
+     only), which is one button's height of room after the content. A page that does not
+     scroll gets none: no new scrollbar. It is a block in the flow, not a pseudo-element of
+     <html>, because a page with `html, body { height: 100% }` lets its content run past
+     the end of <html> and a pseudo-element would sit above that content. */
+  var RESERVE_PX = 72;
+  var reserveEl = null;
+  function syncReserve() {
+    var root = document.documentElement;
+    var total = root.scrollHeight - (reserveEl && reserveEl.parentNode ? RESERVE_PX : 0);
+    var need = total > window.innerHeight + 1;
+    if (need && !(reserveEl && reserveEl.parentNode)) {
+      if (!reserveEl) {
+        reserveEl = document.createElement('div');
+        reserveEl.className = 'a11y-reserve';
+        reserveEl.setAttribute('aria-hidden', 'true');
+      }
+      document.body.insertBefore(reserveEl, wrap);
+    } else if (!need && reserveEl && reserveEl.parentNode) {
+      reserveEl.parentNode.removeChild(reserveEl);
+    }
+  }
+  function watchReserve() {
+    syncReserve();
+    window.addEventListener('resize', syncReserve);
+    window.addEventListener('load', syncReserve);
+    if (window.ResizeObserver) new ResizeObserver(syncReserve).observe(document.body);
+  }
+
   function init() {
     buildWidget();
+    watchReserve();
   }
 
   if (document.readyState === 'loading') {

@@ -160,7 +160,11 @@
     color: var(--ink);
   }
   button:hover { background: var(--card-2); }
-  button.small { padding: 3px 8px; font-size: 0.78rem; }
+  button.small { padding: 3px 8px; font-size: 0.78rem; min-height: 24px; }
+  /* WCAG 2.2 target size (AI-78): every control at least 24 CSS px. */
+  input[type=checkbox] { width: 24px; height: 24px; min-width: 24px; flex-shrink: 0; }
+  details.card > summary, details.limits summary { min-height: 24px; }
+  details.limits a { display: inline-block; min-height: 24px; line-height: 24px; }
   .cal-info { margin: -4px 0 14px; padding: 8px 10px; border-radius: 6px; background: var(--card-2); font-size: 0.82rem; line-height: 1.45; }
   .cal-info .cal-day-line { margin: 2px 0; }
   .cal-info .cal-deadline { font-weight: 600; }
@@ -180,7 +184,7 @@
   button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
 
   .toggle-row { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
-  .toggle-row input[type=checkbox] { width: auto; margin: 0; }
+  .toggle-row input[type=checkbox] { width: 24px; margin: 0; }
   .toggle-row label { margin: 0; font-weight: 600; }
 
   .period-block { border-left: 3px solid var(--line); padding-left: 12px; margin-bottom: 14px; }
