@@ -6826,7 +6826,7 @@ N-up with cut marks) are something teachers need that no free local tool does we
   text over its picture, so the PDF can be searched and copied and renders exactly as before. Works on the one-per-page,
   contact-sheet, booklet and portfolio paths. **Not in `PRECACHE_URLS`**: the service worker's same-origin runtime cache
   keeps the files when the first use fetches them, so OCR then works offline until the next `CACHE_VERSION` bump clears
-  that cache (the file set is re-fetched once after a bump; AI-80 decides whether that should change). The first use
+  that cache (the file set is re-fetched once after a bump; AI-80 kept that: no carry-over, see its HISTORY entry). The first use
   needs a connection, the help text says so, and a download that fails stops the build with a plain sentence and leaves
   the box to untick. English only. `npm run test:image-to-pdf-ocr` (port 8668; 46 checks, three mutants caught).
   **Not verified:** a real scanned worksheet or a phone photo (the fixture is big printed Arial on white; small print,

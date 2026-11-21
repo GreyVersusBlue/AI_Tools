@@ -236,7 +236,10 @@
 
   function offlineStatusText(s) {
     var tools = s.tools || { cached: 0, total: 0 };
-    if (s.done) return 'Offline: all ' + tools.total + ' tools ready';
+    var once = s.openOnce || { cached: 0, total: 0 };
+    var waiting = once.total - once.cached;   // big tools, saved the first time each is opened
+    if (s.done && waiting <= 0) return 'Offline: all ' + tools.total + ' tools ready';
+    if (s.done) return 'Offline: ' + tools.cached + ' of ' + tools.total + ' tools ready — ' + (waiting === 1 ? 'the other one is saved when you first open it' : 'the other ' + waiting + ' are saved when you first open them');
     return 'Offline: ' + tools.cached + ' of ' + tools.total + ' tools ready' +
       (s.inProgress ? ' — caching the rest in the background…' : '');
   }

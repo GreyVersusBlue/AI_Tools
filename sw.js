@@ -33,6 +33,13 @@
 //     same as before; the promise during it is narrower ("the shell and the
 //     ten tools, and every tool you have already opened"), which is why the
 //     readout exists.
+//   - OPEN_ONCE (v603, AI-80) takes the heavy tools and three heavy libraries
+//     out of PRECACHE_URLS altogether: a first visit used to pull 4.0 MB and
+//     then 16.7 MB in the background. Opening such a page online makes the
+//     worker fetch its listed files into the runtime cache (see the map's own
+//     comment below); from then on it works offline. So the promise is "each
+//     tool works offline after you have opened it once", and the readout says
+//     how many tools are still waiting for that first open.
 //   - Any same-origin GET request that lands anyway (a file missed above, or
 //     one added later without updating this list) is cached opportunistically
 //     the first time it succeeds online, so it still works offline next time.
@@ -68,7 +75,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v602';
+const CACHE_VERSION = 'v603';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -260,42 +267,10 @@ const PRECACHE_URLS = [
   "Tools/art-critique-worksheet-generator/acw-rubric.js",
   "Tools/048-art-portfolio-label-maker.html",
   "Tools/art-portfolio-label-maker/apl-photos.js",
-  "Tools/009-backup-restore.html",
-  "Tools/backup-restore/br-pair.js",
-  "Tools/backup-restore/br-rollover.js",
-  "Tools/backup-restore/br-transfer.js",
   "Tools/008-behavior-points-tracker.html",
   "Tools/behavior-points-tracker/seating-layout.js",
   "Tools/behavior-points-tracker/teams.js",
   "Tools/behavior-points-tracker/term.js",
-  "Tools/046-blank-map-generator.html",
-  "Tools/blank-map-generator/bmg-choropleth.js",
-  "Tools/blank-map-generator/bmg-colors.js",
-  "Tools/blank-map-generator/bmg-commons.js",
-  "Tools/blank-map-generator/bmg-dropped.js",
-  "Tools/blank-map-generator/bmg-geo-store.js",
-  "Tools/blank-map-generator/bmg-geography.js",
-  "Tools/blank-map-generator/bmg-hittest.js",
-  "Tools/blank-map-generator/bmg-label-sets.js",
-  "Tools/blank-map-generator/bmg-labels.js",
-  "Tools/blank-map-generator/bmg-latlong.js",
-  "Tools/blank-map-generator/bmg-live.js",
-  "Tools/blank-map-generator/bmg-quiz-memory.js",
-  "Tools/blank-map-generator/bmg-slices.js",
-  "Tools/blank-map-generator/bmg-legend.js",
-  "Tools/blank-map-generator/bmg-lines.js",
-  "Tools/blank-map-generator/bmg-locator.js",
-  "Tools/blank-map-generator/bmg-map-cache.js",
-  "Tools/blank-map-generator/bmg-markers.js",
-  "Tools/blank-map-generator/bmg-regions.js",
-  "Tools/blank-map-generator/bmg-store.js",
-  "Tools/blank-map-generator/bmg-vector.js",
-  "Tools/blank-map-generator/bmg-viewer.js",
-  "Tools/blank-map-generator/art/relief-world.webp",
-  "Tools/blank-map-generator/data/world-land-110m.json",
-  "Tools/blank-map-generator/data/world-countries-110m.json",
-  "Tools/blank-map-generator/data/us-nation-10m.json",
-  "Tools/blank-map-generator/data/us-states-10m.json",
   "Tools/049-book-tasting-menu-generator.html",
   "Tools/book-tasting-menu-generator/btmg-import.js",
   "Tools/020-bracket-tournament-generator.html",
@@ -338,8 +313,6 @@ const PRECACHE_URLS = [
   "Tools/cognates-false-friends-builder/cffb-worksheets.js",
   "Tools/088-braille-reading-trainer.html",
   "Tools/089-progress-report-parser.html",
-  "_shared/vendor/pdfjs/pdf.min.js",
-  "_shared/vendor/pdfjs/pdf.worker.min.js",
   "Tools/braille-trainer/bt-core.js",
   "Tools/010-command-center-dashboard.html",
   "Tools/command-center/cc-remote.js",
@@ -370,10 +343,6 @@ const PRECACHE_URLS = [
   "Tools/exit-ticket-generator/etg-sequence.js",
   "Tools/059-experiment-design-planner.html",
   "Tools/043-field-trip-permission-slip.html",
-  "Tools/final-grade-checker/grade-math.mjs",
-  "Tools/final-grade-checker/scenario-math.mjs",
-  "Tools/final-grade-checker/roster-join.mjs",
-  "Tools/036-final_grade_checker.html",
   "Tools/060-fitness-skill-assessment-tracker.html",
   "Tools/061-fraction-decimal-percent-drill-generator.html",
   "Tools/041-formula-sheet-builder.html",
@@ -396,21 +365,6 @@ const PRECACHE_URLS = [
   "Tools/group-team-generator/gtg-seating.js",
   "Tools/group-team-generator/gtg-teams.js",
   "Tools/001-hall-pass-log.html",
-  "Tools/064-historical-trading-card-maker.html",
-  "Tools/historical-trading-card-maker/htcm-store.js",
-  "Tools/historical-trading-card-maker/htcm-image.js",
-  "Tools/historical-trading-card-maker/htcm-render.js",
-  "Tools/historical-trading-card-maker/htcm-frames.js",
-  "Tools/historical-trading-card-maker/htcm-themes.js",
-  "Tools/historical-trading-card-maker/htcm-theme-packs.js",
-  "Tools/historical-trading-card-maker/htcm-photo.js",
-  "Tools/historical-trading-card-maker/htcm-export.js",
-  "Tools/historical-trading-card-maker/htcm-game.js",
-  "Tools/011-image-to-pdf.html",
-  "Tools/image-to-pdf/scan.js",
-  "Tools/image-to-pdf/scan-ui.js",
-  "Tools/image-to-pdf/scan-worker.js",
-  "Tools/image-to-pdf/ocr.js",
   "Tools/022-lab-group-role-randomizer.html",
   "Tools/065-lab-report-template-builder.html",
   "Tools/013-lab-safety-contract-tracker.html",
@@ -468,20 +422,6 @@ const PRECACHE_URLS = [
   "Tools/packet-builder/sections.js",
   "Tools/pe-warmup-circuit-generator/circuit-run.js",
   "Tools/070-peer-feedback-checklist-generator.html",
-  "Tools/071-picture-prompt-generator.html",
-  "Tools/picture-prompt-generator/art/beach.webp",
-  "Tools/picture-prompt-generator/art/bedroom.webp",
-  "Tools/picture-prompt-generator/art/bus-stop.webp",
-  "Tools/picture-prompt-generator/art/cafe.webp",
-  "Tools/picture-prompt-generator/art/classroom.webp",
-  "Tools/picture-prompt-generator/art/doctor.webp",
-  "Tools/picture-prompt-generator/art/farm.webp",
-  "Tools/picture-prompt-generator/art/kitchen.webp",
-  "Tools/picture-prompt-generator/art/library.webp",
-  "Tools/picture-prompt-generator/art/market.webp",
-  "Tools/picture-prompt-generator/art/park.webp",
-  "Tools/picture-prompt-generator/art/party.webp",
-  "Tools/picture-prompt-generator/ppg-image.js",
   "Tools/072-plot-diagram-builder.html",
   "Tools/028-primary-source-analysis-generator.html",
   "Tools/primary-source-analysis-generator/psa-image.js",
@@ -491,66 +431,12 @@ const PRECACHE_URLS = [
   "Tools/016-qr-code-generator.html",
   "Tools/qr-code-generator/bulk-rows.js",
   "Tools/018-qr-scavenger-hunt-builder.html",
-  "Tools/030-review-game-board.html",
-  "Tools/review-game-board/art/backdrop.webp",
-  "Tools/review-game-board/art/cell.webp",
-  "Tools/review-game-board/art/cell-hover.webp",
-  "Tools/review-game-board/art/header.webp",
-  "Tools/review-game-board/rgb-audio-db.js",
-  "Tools/review-game-board/rgb-bank-editor.js",
-  "Tools/review-game-board/rgb-play.js",
-  "Tools/review-game-board/rgb-sample.js",
-  "Tools/review-game-board/rgb-bank-store.js",
-  "Tools/review-game-board/rgb-image.js",
-  "Tools/review-game-board/rgb-store.js",
   "Tools/014-roleplay-scenario-generator.html",
   "Tools/roleplay-scenario-generator/speaking.js",
   "Tools/003-rubric-builder.html",
   "Tools/rubric-builder/rb-gdv-handoff.js",
   "Tools/rubric-builder/rb-store.js",
   "Tools/rubric-builder/rb-templates.js",
-  "Tools/034-schedule-browser.html",
-  "Tools/035-schedule-visualizer.html",
-  "Tools/schedule-visualizer/sv-access.js",
-  "Tools/schedule-visualizer/sv-settings-editors.js",
-  "Tools/schedule-visualizer/sv-snapshots.js",
-  "Tools/schedule-visualizer/sv-storage.js",
-  "Tools/schedule-visualizer/sv-autosave.js",
-  "Tools/schedule-visualizer/sv-apply.js",
-  "Tools/schedule-visualizer/sv-browser.js",
-  "Tools/schedule-visualizer/sv-check.js",
-  "Tools/schedule-visualizer/sv-checks-view.js",
-  "Tools/schedule-visualizer/sv-congestion.js",
-  "Tools/schedule-visualizer/sv-editor.js",
-  "Tools/schedule-visualizer/sv-graph.js",
-  "Tools/schedule-visualizer/sv-handoff.js",
-  "Tools/schedule-visualizer/sv-model.js",
-  "Tools/schedule-visualizer/sv-onboarding.js",
-  "Tools/schedule-visualizer/sv-playback.js",
-  "Tools/schedule-visualizer/sv-recovery.js",
-  "Tools/schedule-visualizer/sv-recovery-ui.js",
-  "Tools/schedule-visualizer/sv-reports.js",
-  "Tools/schedule-visualizer/sv-routes.js",
-  "Tools/schedule-visualizer/sv-safety.js",
-  "Tools/schedule-visualizer/sv-schedules-tab.js",
-  "Tools/schedule-visualizer/sv-suggest.js",
-  "Tools/schedule-visualizer/sv-viz.js",
-  "Tools/schedule-visualizer/sv-whatif.js",
-  "Tools/schedule-visualizer/sv-trace-image.js",
-  "Tools/schedule-visualizer/sv.css",
-  "Tools/schedule-visualizer/fonts/dm-mono-latin-400-normal.woff2",
-  "Tools/schedule-visualizer/fonts/dm-mono-latin-500-normal.woff2",
-  "Tools/schedule-visualizer/fonts/dm-sans-latin-400-normal.woff2",
-  "Tools/schedule-visualizer/fonts/dm-sans-latin-500-normal.woff2",
-  "Tools/schedule-visualizer/fonts/dm-sans-latin-600-normal.woff2",
-  "Tools/schedule-visualizer/fonts/dm-sans-latin-700-normal.woff2",
-  "Tools/schedule-visualizer/fonts/fonts.css",
-  "Tools/schedule-visualizer/fonts/fraunces-latin-600-normal.woff2",
-  "Tools/schedule-visualizer/fonts/public-sans-latin-400-normal.woff2",
-  "Tools/schedule-visualizer/fonts/public-sans-latin-500-normal.woff2",
-  "Tools/schedule-visualizer/fonts/public-sans-latin-600-normal.woff2",
-  "Tools/schedule-visualizer/fonts/public-sans-latin-700-normal.woff2",
-  "Tools/schedule-visualizer/fonts/published-fonts.js",
   "Tools/school-calendar/scv-ics.js",
   "Tools/school-calendar/scv-pacing.js",
   "Tools/school-calendar/scv-plan.js",
@@ -575,14 +461,6 @@ const PRECACHE_URLS = [
   "Tools/076-sub-note-feedback-slip-generator.html",
   "Tools/077-testing-accommodations-card-generator.html",
   "Tools/testing-accommodations-card-generator/rooms.js",
-  "Tools/015-timeline-builder.html",
-  "Tools/timeline-builder/tlb-example.js",
-  "Tools/timeline-builder/tlb-image.js",
-  "Tools/timeline-builder/tlb-layout.js",
-  "Tools/timeline-builder/tlb-places.js",
-  "Tools/timeline-builder/tlb-store.js",
-  "Tools/timeline-builder/tlb-story.js",
-  "Tools/timeline-builder/tlb-worksheet.js",
   "Tools/078-unit-conversion-chart-builder.html",
   "Tools/079-verb-conjugation-poster-generator.html",
   "Tools/verb-conjugation-poster-generator/irregulars.js",
@@ -597,10 +475,6 @@ const PRECACHE_URLS = [
   "Tools/vocab-flashcard-generator/vfg-pictures.js",
   "Tools/vocab-flashcard-generator/vfg-store.js",
   "Tools/086-wiki-race.html",
-  "Tools/087-class-screen.html",
-  "Tools/class-screen/cs-core.js",
-  "Tools/class-screen/cs-remote.js",
-  "Tools/class-screen/remote.html",
   "Tools/081-word-problem-warmup-generator.html",
   "Tools/word-problem-warmup-generator/wp-twostep.js",
   "Tools/025-writing-prompt-generator.html",
@@ -665,9 +539,7 @@ const PRECACHE_URLS = [
   "_shared/tool-registry.js",
   "_shared/webrtc-pair.js",
   "_shared/remote-channel.js",
-  "_shared/vendor/jspdf/jspdf.umd.min.js",
   "_shared/vendor/jspdf/jspdf.plugin.autotable.min.js",
-  "_shared/vendor/xlsx/xlsx.full.min.js",
   "_shared/vendor/jsqr/jsqr.js",
   "_shared/vendor/qrcode/qrcode.js",
   "_shared/vendor/jszip/jszip.min.js",
@@ -705,6 +577,210 @@ const PRECACHE_URLS = [
   "index.html",
   "manifest.json"
 ];
+
+// OPEN ONCE (v603, AI-80). The tools too heavy to download for everyone, and
+// the three vendored libraries too heavy to carry for pages that use them
+// rarely, are NOT in PRECACHE_URLS. Each key is a page; the list is what that
+// page needs besides itself. The first time the page is opened online, the
+// fetch handler below serves it as usual and then fetches the files of its
+// list into the runtime cache, so from then on it works offline: "each tool
+// works offline after you have opened it once". A key that is also a precached
+// page (011, 036, 089 and the others that load jsPDF, SheetJS or pdf.js) lists
+// only the library; a key that is not precached lists the page too, and lists
+// its own folder. check-precache.mjs holds this block to the tree: no
+// OPEN_ONCE file is in PRECACHE_URLS, none is missing from disk, every library
+// a page names is in its list, and no precached file is over 300,000 bytes.
+// Measured on 2026-11-21: the line is a tool's own files (page plus its own
+// folder) at 200,000 bytes, and a vendored library file at 300,000.
+const OPEN_ONCE = {
+  "Tools/001-hall-pass-log.html": [
+    "_shared/vendor/xlsx/xlsx.full.min.js"
+  ],
+  "Tools/006-class-roster-hub.html": [
+    "_shared/vendor/xlsx/xlsx.full.min.js"
+  ],
+  "Tools/009-backup-restore.html": [
+    "Tools/009-backup-restore.html",
+    "Tools/backup-restore/br-pair.js",
+    "Tools/backup-restore/br-rollover.js",
+    "Tools/backup-restore/br-transfer.js"
+  ],
+  "Tools/011-image-to-pdf.html": [
+    "Tools/011-image-to-pdf.html",
+    "Tools/image-to-pdf/scan.js",
+    "Tools/image-to-pdf/scan-ui.js",
+    "Tools/image-to-pdf/scan-worker.js",
+    "Tools/image-to-pdf/ocr.js",
+    "_shared/vendor/pdfjs/pdf.min.js",
+    "_shared/vendor/pdfjs/pdf.worker.min.js",
+    "_shared/vendor/jspdf/jspdf.umd.min.js"
+  ],
+  "Tools/015-timeline-builder.html": [
+    "Tools/015-timeline-builder.html",
+    "Tools/timeline-builder/tlb-example.js",
+    "Tools/timeline-builder/tlb-image.js",
+    "Tools/timeline-builder/tlb-layout.js",
+    "Tools/timeline-builder/tlb-places.js",
+    "Tools/timeline-builder/tlb-store.js",
+    "Tools/timeline-builder/tlb-story.js",
+    "Tools/timeline-builder/tlb-worksheet.js"
+  ],
+  "Tools/030-review-game-board.html": [
+    "Tools/030-review-game-board.html",
+    "Tools/review-game-board/art/backdrop.webp",
+    "Tools/review-game-board/art/cell.webp",
+    "Tools/review-game-board/art/cell-hover.webp",
+    "Tools/review-game-board/art/header.webp",
+    "Tools/review-game-board/rgb-audio-db.js",
+    "Tools/review-game-board/rgb-bank-editor.js",
+    "Tools/review-game-board/rgb-play.js",
+    "Tools/review-game-board/rgb-sample.js",
+    "Tools/review-game-board/rgb-bank-store.js",
+    "Tools/review-game-board/rgb-image.js",
+    "Tools/review-game-board/rgb-store.js",
+    "_shared/vendor/xlsx/xlsx.full.min.js"
+  ],
+  "Tools/032-School%20Calendar%20Visualizer.html": [
+    "_shared/vendor/xlsx/xlsx.full.min.js"
+  ],
+  "Tools/034-schedule-browser.html": [
+    "Tools/034-schedule-browser.html"
+  ],
+  "Tools/035-schedule-visualizer.html": [
+    "Tools/035-schedule-visualizer.html",
+    "Tools/schedule-visualizer/sv-access.js",
+    "Tools/schedule-visualizer/sv-settings-editors.js",
+    "Tools/schedule-visualizer/sv-snapshots.js",
+    "Tools/schedule-visualizer/sv-storage.js",
+    "Tools/schedule-visualizer/sv-autosave.js",
+    "Tools/schedule-visualizer/sv-apply.js",
+    "Tools/schedule-visualizer/sv-browser.js",
+    "Tools/schedule-visualizer/sv-check.js",
+    "Tools/schedule-visualizer/sv-checks-view.js",
+    "Tools/schedule-visualizer/sv-congestion.js",
+    "Tools/schedule-visualizer/sv-editor.js",
+    "Tools/schedule-visualizer/sv-graph.js",
+    "Tools/schedule-visualizer/sv-handoff.js",
+    "Tools/schedule-visualizer/sv-model.js",
+    "Tools/schedule-visualizer/sv-onboarding.js",
+    "Tools/schedule-visualizer/sv-playback.js",
+    "Tools/schedule-visualizer/sv-recovery.js",
+    "Tools/schedule-visualizer/sv-recovery-ui.js",
+    "Tools/schedule-visualizer/sv-reports.js",
+    "Tools/schedule-visualizer/sv-routes.js",
+    "Tools/schedule-visualizer/sv-safety.js",
+    "Tools/schedule-visualizer/sv-schedules-tab.js",
+    "Tools/schedule-visualizer/sv-suggest.js",
+    "Tools/schedule-visualizer/sv-viz.js",
+    "Tools/schedule-visualizer/sv-whatif.js",
+    "Tools/schedule-visualizer/sv-trace-image.js",
+    "Tools/schedule-visualizer/sv.css",
+    "Tools/schedule-visualizer/fonts/dm-mono-latin-400-normal.woff2",
+    "Tools/schedule-visualizer/fonts/dm-mono-latin-500-normal.woff2",
+    "Tools/schedule-visualizer/fonts/dm-sans-latin-400-normal.woff2",
+    "Tools/schedule-visualizer/fonts/dm-sans-latin-500-normal.woff2",
+    "Tools/schedule-visualizer/fonts/dm-sans-latin-600-normal.woff2",
+    "Tools/schedule-visualizer/fonts/dm-sans-latin-700-normal.woff2",
+    "Tools/schedule-visualizer/fonts/fonts.css",
+    "Tools/schedule-visualizer/fonts/fraunces-latin-600-normal.woff2",
+    "Tools/schedule-visualizer/fonts/public-sans-latin-400-normal.woff2",
+    "Tools/schedule-visualizer/fonts/public-sans-latin-500-normal.woff2",
+    "Tools/schedule-visualizer/fonts/public-sans-latin-600-normal.woff2",
+    "Tools/schedule-visualizer/fonts/public-sans-latin-700-normal.woff2",
+    "Tools/schedule-visualizer/fonts/published-fonts.js",
+    "_shared/vendor/jspdf/jspdf.umd.min.js"
+  ],
+  "Tools/036-final_grade_checker.html": [
+    "Tools/036-final_grade_checker.html",
+    "Tools/final-grade-checker/grade-math.mjs",
+    "Tools/final-grade-checker/scenario-math.mjs",
+    "Tools/final-grade-checker/roster-join.mjs",
+    "_shared/vendor/xlsx/xlsx.full.min.js",
+    "_shared/vendor/jspdf/jspdf.umd.min.js"
+  ],
+  "Tools/038-data-chart-builder.html": [
+    "_shared/vendor/xlsx/xlsx.full.min.js"
+  ],
+  "Tools/046-blank-map-generator.html": [
+    "Tools/046-blank-map-generator.html",
+    "Tools/blank-map-generator/bmg-choropleth.js",
+    "Tools/blank-map-generator/bmg-colors.js",
+    "Tools/blank-map-generator/bmg-commons.js",
+    "Tools/blank-map-generator/bmg-dropped.js",
+    "Tools/blank-map-generator/bmg-geo-store.js",
+    "Tools/blank-map-generator/bmg-geography.js",
+    "Tools/blank-map-generator/bmg-hittest.js",
+    "Tools/blank-map-generator/bmg-label-sets.js",
+    "Tools/blank-map-generator/bmg-labels.js",
+    "Tools/blank-map-generator/bmg-latlong.js",
+    "Tools/blank-map-generator/bmg-live.js",
+    "Tools/blank-map-generator/bmg-quiz-memory.js",
+    "Tools/blank-map-generator/bmg-slices.js",
+    "Tools/blank-map-generator/bmg-legend.js",
+    "Tools/blank-map-generator/bmg-lines.js",
+    "Tools/blank-map-generator/bmg-locator.js",
+    "Tools/blank-map-generator/bmg-map-cache.js",
+    "Tools/blank-map-generator/bmg-markers.js",
+    "Tools/blank-map-generator/bmg-regions.js",
+    "Tools/blank-map-generator/bmg-store.js",
+    "Tools/blank-map-generator/bmg-vector.js",
+    "Tools/blank-map-generator/bmg-viewer.js",
+    "Tools/blank-map-generator/art/relief-world.webp",
+    "Tools/blank-map-generator/data/world-land-110m.json",
+    "Tools/blank-map-generator/data/world-countries-110m.json",
+    "Tools/blank-map-generator/data/us-nation-10m.json",
+    "Tools/blank-map-generator/data/us-states-10m.json",
+    "_shared/vendor/jspdf/jspdf.umd.min.js"
+  ],
+  "Tools/049-book-tasting-menu-generator.html": [
+    "_shared/vendor/xlsx/xlsx.full.min.js"
+  ],
+  "Tools/064-historical-trading-card-maker.html": [
+    "Tools/064-historical-trading-card-maker.html",
+    "Tools/historical-trading-card-maker/htcm-store.js",
+    "Tools/historical-trading-card-maker/htcm-image.js",
+    "Tools/historical-trading-card-maker/htcm-render.js",
+    "Tools/historical-trading-card-maker/htcm-frames.js",
+    "Tools/historical-trading-card-maker/htcm-themes.js",
+    "Tools/historical-trading-card-maker/htcm-theme-packs.js",
+    "Tools/historical-trading-card-maker/htcm-photo.js",
+    "Tools/historical-trading-card-maker/htcm-export.js",
+    "Tools/historical-trading-card-maker/htcm-game.js",
+    "_shared/vendor/jspdf/jspdf.umd.min.js"
+  ],
+  "Tools/071-picture-prompt-generator.html": [
+    "Tools/071-picture-prompt-generator.html",
+    "Tools/picture-prompt-generator/art/beach.webp",
+    "Tools/picture-prompt-generator/art/bedroom.webp",
+    "Tools/picture-prompt-generator/art/bus-stop.webp",
+    "Tools/picture-prompt-generator/art/cafe.webp",
+    "Tools/picture-prompt-generator/art/classroom.webp",
+    "Tools/picture-prompt-generator/art/doctor.webp",
+    "Tools/picture-prompt-generator/art/farm.webp",
+    "Tools/picture-prompt-generator/art/kitchen.webp",
+    "Tools/picture-prompt-generator/art/library.webp",
+    "Tools/picture-prompt-generator/art/market.webp",
+    "Tools/picture-prompt-generator/art/park.webp",
+    "Tools/picture-prompt-generator/art/party.webp",
+    "Tools/picture-prompt-generator/ppg-image.js"
+  ],
+  "Tools/087-class-screen.html": [
+    "Tools/087-class-screen.html",
+    "Tools/class-screen/cs-core.js",
+    "Tools/class-screen/cs-remote.js",
+    "Tools/class-screen/remote.html"
+  ],
+  "Tools/089-progress-report-parser.html": [
+    "_shared/vendor/pdfjs/pdf.min.js",
+    "_shared/vendor/pdfjs/pdf.worker.min.js"
+  ],
+  "Tools/091-student-data-anonymizer.html": [
+    "_shared/vendor/pdfjs/pdf.min.js",
+    "_shared/vendor/pdfjs/pdf.worker.min.js",
+    "_shared/vendor/xlsx/xlsx.full.min.js",
+    "_shared/vendor/jspdf/jspdf.umd.min.js"
+  ]
+};
 
 /* ── install: the shell tier only ─────────────────────────────────────── */
 
@@ -745,11 +821,26 @@ async function precacheStatus() {
     if (hit) files.cached++;
     if (TOOL_PAGE.test(url)) { tools.total++; if (hit) tools.cached++; }
   }
+  // The open-once tools count toward the total and toward `cached` only once
+  // the page and everything on its list are in the runtime cache: opened, and
+  // finished warming. `openOnce` is how many of the total are in that group.
+  const runtime = new Set(
+    (await caches.has(RUNTIME)) ? (await (await caches.open(RUNTIME)).keys()).map((r) => r.url) : []
+  );
+  const precached = new Set(PRECACHE_URLS);
+  const openOnce = { cached: 0, total: 0 };
+  for (const page of Object.keys(OPEN_ONCE)) {
+    if (!TOOL_PAGE.test(page) || precached.has(page)) continue;   // a precached page is counted above
+    openOnce.total++;
+    tools.total++;
+    if (runtime.has(absolute(page)) && OPEN_ONCE[page].every((u) => runtime.has(absolute(u)))) { openOnce.cached++; tools.cached++; }
+  }
   return {
     type: 'PRECACHE_PROGRESS',
     version: CACHE_VERSION,
     files,
     tools,
+    openOnce,
     inProgress: !!restInFlight,
     done: files.cached >= files.total,
   };
@@ -799,6 +890,52 @@ function precacheRest() {
     await broadcast(await precacheStatus());
   });
   return restInFlight;
+}
+
+/* ── open once ────────────────────────────────────────────────────────── */
+
+// A page in OPEN_ONCE was just opened. Fetch whatever its list names that the
+// runtime cache does not hold yet (the page itself is already on its way into
+// it through the fetch handler). Failures are skipped: the next open tries the
+// missing ones again, because the pass starts from what the cache holds.
+const warming = new Map();
+function warmOpenOnce(key) {
+  if (warming.has(key)) return warming.get(key);
+  const job = (async () => {
+    const cache = await caches.open(RUNTIME);
+    const todo = [];
+    for (const url of OPEN_ONCE[key]) {
+      if (url === key) continue;
+      if (!(await caches.match(absolute(url)))) todo.push(url);
+    }
+    const lanes = Array.from({ length: 3 }, async () => {
+      while (todo.length) {
+        const url = todo.shift();
+        try {
+          const response = await fetch(new Request(url, { cache: 'reload' }));
+          if (response && response.ok) await cache.put(absolute(url), response);
+        } catch (err) {
+          console.warn('[sw] open-once miss, skipping:', url, err && err.message);
+        }
+      }
+    });
+    await Promise.all(lanes);
+  })().catch((err) => {
+    console.warn('[sw] open-once pass stopped:', err && err.message);
+  }).then(async () => {
+    warming.delete(key);
+    await broadcast(await precacheStatus());
+  });
+  warming.set(key, job);
+  return job;
+}
+
+/** The OPEN_ONCE key a navigation is for, or null. */
+function openOnceKey(url) {
+  const scope = new URL(self.registration.scope).pathname;
+  if (!url.pathname.startsWith(scope)) return null;
+  const key = decodeURIComponent(url.pathname.slice(scope.length));
+  return Object.prototype.hasOwnProperty.call(OPEN_ONCE, key) ? key : null;
 }
 
 /* ── messages from sw-register.js ─────────────────────────────────────── */
@@ -921,6 +1058,11 @@ self.addEventListener('fetch', (event) => {
 
   // Everything else this SW should touch is same-origin.
   if (url.origin !== self.location.origin) return;
+
+  if (request.mode === 'navigate') {
+    const key = openOnceKey(url);
+    if (key && navigator.onLine !== false) event.waitUntil(warmOpenOnce(key));
+  }
 
   event.respondWith(
     caches.match(request).then((cached) => {

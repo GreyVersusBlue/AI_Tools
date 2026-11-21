@@ -1,7 +1,7 @@
 {
   "name": "AsPerMyLessonPlan.com — Classroom Toolkit",
   "short_name": "Toolkit",
-  "description": "Browser-only classroom utilities — rosters, seating, schedules, grade math, and more. No install, no account, works offline.",
+  "description": "Browser-only classroom utilities — rosters, seating, schedules, grade math, and more. No install, no account, each tool works offline after you have opened it once.",
   "start_url": "./index.html",
   "id": "./index.html",
   "scope": "./",
