@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v601';
+const CACHE_VERSION = 'v602';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -410,6 +410,7 @@ const PRECACHE_URLS = [
   "Tools/image-to-pdf/scan.js",
   "Tools/image-to-pdf/scan-ui.js",
   "Tools/image-to-pdf/scan-worker.js",
+  "Tools/image-to-pdf/ocr.js",
   "Tools/022-lab-group-role-randomizer.html",
   "Tools/065-lab-report-template-builder.html",
   "Tools/013-lab-safety-contract-tracker.html",
