@@ -27,6 +27,12 @@
 //      the old versioned precache is gone.
 //   6. A second PRECACHE_REST while the cache is complete is a no-op that still
 //      answers with status (so a page can always ask).
+//   8. Open once (v603): a page named in OPEN_ONCE and absent from the precache
+//      is not downloaded at install or by the deferred pass; opening it online
+//      fetches its page and its list into the runtime cache, after which it is
+//      served offline, the readout counts it, and a library listed under a
+//      precached page arrives the same way when that page is opened. A bump
+//      drops the old runtime cache with the old precache.
 //   7. The manifest share_target: a multipart POST to .../Tools/006-class-roster-hub.html
 //      is answered by the worker with a 303 to ?shared=roster and the file's
 //      text parked in the aplp-share cache under share/roster, where Class
@@ -60,6 +66,12 @@ const eq = (a, b, label) => ok(a === b, `${label} (got ${JSON.stringify(a)}, wan
 
 const SHELL = ['./page.html', './shell.js'];
 const REST = ['Tools/001-alpha.html', 'Tools/002-beta.html', 'rest.js'];
+// Open-once: gamma is a heavy tool (page + two files of its own, none precached);
+// beta is a precached page that loads one big library, which is open-once too.
+const ONCE = {
+  'Tools/003-gamma.html': ['Tools/003-gamma.html', 'gamma/data.js', 'gamma/big.js'],
+  'Tools/002-beta.html': ['lib/big-lib.js'],
+};
 
 function stageWorker(version) {
   let src = fs.readFileSync(path.join(SITE, 'sw.js'), 'utf8');
@@ -72,6 +84,8 @@ function stageWorker(version) {
   src = src.replace(/const CACHE_VERSION = '[^']+';/, `const CACHE_VERSION = ${JSON.stringify(version)};`);
   swap('SHELL_URLS', SHELL);
   swap('PRECACHE_URLS', [...SHELL, ...REST]);
+  if (!/const OPEN_ONCE = \{[\s\S]*?\n\};/.test(src)) throw new Error('smoke-sw-tiers: could not find OPEN_ONCE in sw.js');
+  src = src.replace(/const OPEN_ONCE = \{[\s\S]*?\n\};/, () => `const OPEN_ONCE = ${JSON.stringify(ONCE, null, 2)};`);
   fs.writeFileSync(path.join(STAGE, 'sw.js'), src);
 }
 
@@ -81,6 +95,12 @@ function stageFiles() {
   fs.writeFileSync(path.join(STAGE, 'shell.js'), 'window.SHELL_LOADED = true;\n');
   fs.writeFileSync(path.join(STAGE, 'rest.js'), 'window.REST_LOADED = true;\n');
   fs.writeFileSync(path.join(STAGE, 'Tools', '001-alpha.html'), '<!doctype html><meta charset="utf-8"><title>alpha</title><h1 id="alpha">alpha</h1>\n');
+  fs.mkdirSync(path.join(STAGE, 'gamma'), { recursive: true });
+  fs.mkdirSync(path.join(STAGE, 'lib'), { recursive: true });
+  fs.writeFileSync(path.join(STAGE, 'Tools', '003-gamma.html'), '<!doctype html><meta charset="utf-8"><title>gamma</title><h1 id="gamma">gamma</h1>\n');
+  fs.writeFileSync(path.join(STAGE, 'gamma', 'data.js'), 'window.GAMMA_DATA = 1;\n');
+  fs.writeFileSync(path.join(STAGE, 'gamma', 'big.js'), 'window.GAMMA_BIG = 1;\n');
+  fs.writeFileSync(path.join(STAGE, 'lib', 'big-lib.js'), 'window.BIG_LIB = 1;\n');
   fs.writeFileSync(path.join(STAGE, 'Tools', '002-beta.html'), '<!doctype html><meta charset="utf-8"><title>beta</title><h1 id="beta">beta</h1>\n');
   // A stand-in for Class Roster Hub, so the share_target redirect has a page to land on.
   fs.writeFileSync(path.join(STAGE, 'Tools', '006-class-roster-hub.html'), '<!doctype html><meta charset="utf-8"><title>hub</title><h1 id="hub">hub</h1>\n');
@@ -157,18 +177,20 @@ try {
 
   /* 2, 3 — the rest trickles in, and the page hears about it */
   const first = await lastProgress(page, p => p.type === 'PRECACHE_PROGRESS');
-  ok(first && first.tools && first.tools.total === 2,
-    `the first status counts the two staged tool pages (got ${JSON.stringify(first && first.tools)})`);
+  ok(first && first.tools && first.tools.total === 3,
+    `the first status counts the two precached tool pages and the open-once one (got ${JSON.stringify(first && first.tools)})`);
   const done = await lastProgress(page, p => p.done === true, 25000);
   eq(!!(done && done.done), true, 'the deferred pass finishes and reports done:true without a reload');
   eq(done && done.files.cached, 5, 'all five staged files are counted as cached');
-  eq(done && done.tools.cached, 2, 'both tool pages are counted');
+  eq(done && done.tools.cached, 2, 'both precached tool pages are counted, and the unopened open-once one is not');
+  eq(JSON.stringify(done && done.openOnce), '{"cached":0,"total":1}', 'the open-once tool is reported as one tool not yet opened');
   const afterRest = await cachedSet(page, 't1');
   eq(afterRest.join(','), 'Tools/001-alpha.html,Tools/002-beta.html,page.html,rest.js,shell.js',
-    'and the precache really holds every listed file');
+    'and the precache really holds every listed file, and none of the open-once files');
   const readout = await page.evaluate(() => ({ text: document.getElementById('readout').textContent, hidden: document.getElementById('readout').hidden }));
   eq(readout.hidden, false, 'the readout is shown once there is something to show');
-  eq(readout.text, 'Offline: all 2 tools ready', 'and it reads "all N tools ready" when the pass is complete');
+  eq(readout.text, 'Offline: 2 of 3 tools ready — the other one is saved when you first open it',
+    'and, with the pass complete, it says the open-once tool is saved on its first open (not "all ready")');
   const sawPartial = await page.evaluate(() => window.PROGRESS.some(p => !p.done));
   eq(sawPartial, true, 'a not-yet-done status was reported first (the readout was never a lie)');
 
@@ -182,6 +204,59 @@ try {
   });
   eq(/id="beta"/.test(beta), true, 'offline, a page from the deferred tier is served from the precache');
   await page.context().setOffline(false);
+
+  /* 8 — open once: nothing of gamma is cached until it is opened */
+  const runtimeSet = () => page.evaluate(async () => {
+    const out = [];
+    for (const n of await caches.keys()) {
+      if (!n.startsWith('aplp-runtime-')) continue;
+      for (const r of await (await caches.open(n)).keys()) out.push(new URL(r.url).pathname.split('/.sw-tiers-staging/')[1]);
+    }
+    return out.sort();
+  });
+  eq((await runtimeSet()).join(','), '', 'before gamma or beta is opened, the runtime cache is empty');
+  await page.goto(`${STAGE_URL}/Tools/003-gamma.html`, { waitUntil: 'load' });
+  await page.waitForFunction(async () => {
+    const names = (await caches.keys()).filter(n => n.startsWith('aplp-runtime-'));
+    let count = 0;
+    for (const n of names) count += (await (await caches.open(n)).keys()).length;
+    return count >= 3;
+  }, null, { timeout: 15000 }).catch(() => {});
+  eq((await runtimeSet()).join(','), 'Tools/003-gamma.html,gamma/big.js,gamma/data.js',
+    'opening gamma online puts its page and both files of its list into the runtime cache');
+  eq((await cachedSet(page, 't1')).some(u => /gamma/.test(u)), false, 'and the precache still holds nothing of gamma');
+  await page.context().setOffline(true);
+  const gammaOffline = await page.evaluate(async () => {
+    const out = [];
+    for (const u of ['./003-gamma.html', '../gamma/data.js', '../gamma/big.js']) {
+      try { const r = await fetch(u); out.push(r.ok); } catch (e) { out.push('ERR'); }
+    }
+    return out;
+  });
+  eq(gammaOffline.join(','), 'true,true,true', 'offline, an opened open-once tool works: its page and its files come from the cache');
+  const neverOpened = await page.evaluate(async () => {
+    try { const r = await fetch('../lib/big-lib.js'); return r.ok; } catch (e) { return 'ERR'; }
+  });
+  eq(neverOpened, 'ERR', 'while a library listed under a page that was not opened is not there: it is not precached');
+  await page.context().setOffline(false);
+  /* beta is a precached page: opening it warms its library */
+  await page.goto(`${STAGE_URL}/Tools/002-beta.html`, { waitUntil: 'load' });
+  await page.waitForFunction(async () => {
+    const names = (await caches.keys()).filter(n => n.startsWith('aplp-runtime-'));
+    for (const n of names) if (await (await caches.open(n)).match('../lib/big-lib.js')) return true;
+    return false;
+  }, null, { timeout: 15000 }).catch(() => {});
+  await page.context().setOffline(true);
+  const libOffline = await page.evaluate(async () => {
+    try { const r = await fetch('../lib/big-lib.js'); return r.ok; } catch (e) { return 'ERR'; }
+  });
+  eq(libOffline, true, 'opening a precached page that loads a heavy library caches the library: it loads offline afterwards');
+  await page.context().setOffline(false);
+  await page.goto(PAGE, { waitUntil: 'load' });
+  await waitForController(page);
+  const doneOpened = await lastProgress(page, p => p.done === true && p.openOnce && p.openOnce.cached === 1, 25000);
+  eq(JSON.stringify(doneOpened && doneOpened.openOnce), '{"cached":1,"total":1}', 'the status then counts the opened tool');
+  eq(await page.evaluate(() => document.getElementById('readout').textContent), 'Offline: all 3 tools ready', 'and the readout reads "all 3 tools ready"');
 
   /* 5 — a bump keeps the Wikimedia cache and drops the old precache */
   await page.evaluate(async () => {
@@ -202,6 +277,12 @@ try {
   const names = await cacheNames(page);
   eq(names.includes('aplp-precache-t2'), true, 'the new precache exists after the update');
   eq(names.includes('aplp-precache-t1'), false, 'the old versioned precache was evicted on activate');
+  eq(names.includes('aplp-runtime-t1'), false, 'and so was the old runtime cache, the open-once files with it: a bump re-opens a heavy tool once');
+  const carried = await page.evaluate(async () => {
+    if (!(await caches.has('aplp-runtime-t2'))) return [];
+    return (await (await caches.open('aplp-runtime-t2')).keys()).map(r => new URL(r.url).pathname).filter(u => /gamma|big-lib/.test(u));
+  });
+  eq(carried.join(','), '', 'nothing of gamma or the library is carried into the new runtime cache until a heavy tool is opened again');
   eq(names.includes('aplp-wiki'), true, 'the Wikimedia cache survived the bump');
   const mapStillThere = await page.evaluate(async () => {
     const c = await caches.open('aplp-wiki');

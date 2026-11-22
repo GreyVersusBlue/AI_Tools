@@ -2,8 +2,10 @@
 
 This is the East Middle Staff Toolkit (aspermylessonplan.com): a static PWA
 (served from Devon's own server behind Cloudflare) of small, self-contained classroom tools. No build step, no server,
-no accounts — every tool runs entirely in the browser and must keep working
-offline once the site has been visited. These conventions exist to stop
+no accounts — every tool runs entirely in the browser, and each tool must work
+offline after you have opened it once (the ten front-of-room tools and the
+light ones are ready sooner; the heavy ones are saved the first time each is
+opened). These conventions exist to stop
 copy-paste drift across the 86 tools; follow them for every new tool and
 every edit. The deduplication work that established them is summarised in
 `HISTORY.md`.
@@ -16,7 +18,8 @@ every edit. The deduplication work that established them is summarised in
   beyond inline script (modules, fonts, tests, data files).
 - `_shared/` — code shared across tools (theme, a11y, QR, state links,
   WebRTC pairing). Extend this; never invent a parallel shared location.
-- `sw.js` — the hand-maintained service worker that precaches the whole site.
+- `sw.js` — the hand-maintained service worker: it precaches the shell and the
+  light tools, and saves each heavy tool (`OPEN_ONCE`) the first time it is opened.
 - `index.html` + `README.md` — the landing page and tools table; both must be
   updated when a tool is added. **index.html's tool rows and README.md's tools
   table are both generated** (AI-30, AI-44): add the tool to
@@ -78,6 +81,25 @@ every edit. The deduplication work that established them is summarised in
   must stay a subset of `PRECACHE_URLS` — `check:precache` fails otherwise.
   The Wikimedia map cache (`aplp-wiki`) has no version on purpose and survives
   a bump; the precache and same-origin runtime cache do not, on purpose.
+- **Heavy tools are open-once, not precached** (AI-80, v603; Devon, 2026-11-21:
+  "Only cache when visited"). A first visit used to pull 4.0 MB and then
+  16.7 MB more in the background. Now `OPEN_ONCE` in `sw.js` maps a page to the
+  files fetched into the runtime cache the first time that page is opened
+  online, and those files are in **no** `PRECACHE_URLS` entry. What is in it:
+  every tool whose own files (page plus the folders only it names) reach
+  200,000 bytes (009, 011, 015, 030, 034, 035, 036, 046, 064, 071, 087), and
+  the vendored libraries over 300,000 bytes (pdf.js, SheetJS, jsPDF), listed
+  under every page that names them (that page may stay precached). The
+  promise is therefore "each tool works offline after you have opened it
+  once". A file a feature loads only on use (011's OCR, `_shared/vendor/tesseract/`)
+  is runtime-cached by that use and is not in the map. A new file goes in
+  `PRECACHE_URLS` unless it belongs to one of those tools, then in that tool's
+  `OPEN_ONCE` list. `check:precache` holds the split: **HEAVY** (no precached
+  file over 300,000 bytes, and no tool at 200,000 outside `OPEN_ONCE`), **ONCE**
+  (a file is in one list or the other, all exist), **ONCEDEP** (a page that
+  names a heavy library lists it). A `CACHE_VERSION` bump clears the runtime
+  cache, so a bump makes each heavy tool fetch its files once more on its next
+  open (no state is carried over; nothing stored by a tool is touched).
 - `manifest.json` names shortcuts, screenshots and a `share_target` (Path 1
   P4). Every tool page links it (`<link rel="manifest" href="../manifest.json">`
   after the viewport meta) — keep that on a new tool. The share target is a

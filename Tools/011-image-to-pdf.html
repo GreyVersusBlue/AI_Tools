@@ -221,7 +221,7 @@
     <span class="icon">📂</span>
     <div class="label">Drop files here or click to browse</div>
     <div class="sublabel">Accepts .png, .jpg/.jpeg, .webp, .svg, and .pdf · No file size limit</div>
-    <div class="sublabel" id="pdf-help">A PDF is turned into one picture per page (up to 100 pages, drawn about 1600 px wide), so each page can be reordered, rotated, removed or merged with other files. Its text becomes part of the picture and can no longer be selected or searched.</div>
+    <div class="sublabel" id="pdf-help">A PDF is turned into one picture per page (up to 100 pages, drawn about 1600 px wide), so each page can be reordered, rotated, removed or merged with other files. Its text becomes part of the picture and can no longer be selected or searched, unless you tick &ldquo;Make the PDF searchable&rdquo; below.</div>
   </div>
 </div>
 
@@ -293,6 +293,11 @@
     <div class="control-group">
       <label for="target-size">Target output size (MB, optional)</label>
       <input class="input" type="number" id="target-size" min="0.5" step="0.5" placeholder="off">
+    </div>
+
+    <div class="control-group" style="flex-basis:100%;">
+      <label><input type="checkbox" id="opt-ocr"> Make the PDF searchable (OCR)</label>
+      <p id="ocr-help" class="sublabel" style="margin:6px 0 0;">Reads the printed words on each page and hides them under the picture, so the PDF can be searched and its text copied. The pictures stay exactly as they are. English only; handwriting is not read, and a few words will be misread. It takes a few seconds a page. <strong>The first time you use it, it downloads the reading files (about 7 MB), so it needs an internet connection that once.</strong> After that it works offline on this device, until the toolkit next updates. The pictures never leave your computer.</p>
     </div>
 
     <div class="control-group" style="flex-basis:100%;">
@@ -496,6 +501,7 @@
   const qualitySel   = document.getElementById('quality');
   const gridDensitySel = document.getElementById('grid-density');
   const targetSizeInput = document.getElementById('target-size');
+  const optOcr = document.getElementById('opt-ocr');
 
   (function loadSettingsPrefs() {
     let raw;
@@ -1464,6 +1470,14 @@
 
         const wMm = pxToMm(pxW), hMm = pxToMm(pxH);
 
+        // OCR: the page's words, read once; a failure leaves this page without a text layer.
+        let ocrList = null;
+        if (opts.ocr && !isSVG) {
+          setProgress(Math.round(i / ordered.length * 100), `${progressPrefix}Reading the text on ${i + 1} / ${ordered.length}: ${file.name}`);
+          try { ocrList = await ocrWords(ordered[i], embedDataURL, rotation); }
+          catch (err) { console.error(err); opts.ocrFailed.push(file.name); }
+        }
+
         if (gridDensity > 1) {
           // Contact sheet: pack successfully-processed images density-per-page,
           // in cell order (row-major), starting a new page every `gridDensity`th one.
@@ -1485,6 +1499,7 @@
 
           draw(d => {
             d.addImage(embedDataURL, embedFormat, offX * K, offY * K, dW * K, dH * K, undefined, 'FAST');
+            if (ocrList) window.OcrKit.layer(d, ocrList, { x: offX, y: offY, w: dW, h: dH }, K);
             // Faint cell border so the sheet reads as a grid at a glance.
             d.setDrawColor(200);
             d.setLineWidth(0.2 * K);
@@ -1516,6 +1531,7 @@
 
           draw(d => {
             d.addImage(embedDataURL, embedFormat, offX * K, offY * K, dW * K, dH * K, undefined, 'FAST');
+            if (ocrList) window.OcrKit.layer(d, ocrList, { x: offX, y: offY, w: dW, h: dH }, K);
 
             if (capBand) {
               d.setFont('helvetica', 'normal');
@@ -1589,6 +1605,10 @@
   }
 
   async function generatePDF() {
+    try { await generatePDFInner(); }
+    finally { if (window.OcrKit) window.OcrKit.release(); }
+  }
+  async function generatePDFInner() {
     clearMsg();
     const ordered     = getOrderedEntries();
     const pageMode    = document.getElementById('page-size').value;
@@ -1615,9 +1635,11 @@
     progressWrap.classList.add('visible');
     setProgress(0, `Preparing 0 / ${ordered.length}…`);
 
+    if (!(await prepareOcr())) { btnGen.disabled = false; btnClear.disabled = false; return; }
+    const ocrFailed = [];
     const opts = { pageMode, orient, gridDensity, headerText, pageNumEnabled,
                    wantTitlePage, titleText, subtitleText, hasTitlePage, anyCaptions,
-                   impose: resolveImpose(pageMode, orient) };
+                   impose: resolveImpose(pageMode, orient), ocr: optOcr.checked, ocrFailed };
 
     const progressPrefix = (a, total, qualityMode) => total > 1
       ? `Attempt ${a + 1}/${total} (${QUALITY_LABELS[qualityMode]} quality): `
@@ -1666,8 +1688,13 @@
       }
     }
 
+    if (optOcr.checked) {
+      text += ocrFailed.length
+        ? `\nSearchable text could not be added to ${ocrFailed.length}: ${[...new Set(ocrFailed)].join('; ')}`
+        : ' — searchable (OCR).';
+    }
     if (skipped.length > 0) text += `\nSkipped ${skipped.length}: ${skipped.join('; ')}`;
-    showMsg(text, (skipped.length > 0 || hadTargetShortfall) ? 'warn' : 'info');
+    showMsg(text, (skipped.length > 0 || hadTargetShortfall || ocrFailed.length > 0) ? 'warn' : 'info');
 
     btnGen.disabled = false;
     btnClear.disabled = false;
@@ -1675,6 +1702,10 @@
 
   // ── Generate student portfolios (one PDF per student, zipped) ──────────────
   async function generatePortfolioZip() {
+    try { await generatePortfolioZipInner(); }
+    finally { if (window.OcrKit) window.OcrKit.release(); }
+  }
+  async function generatePortfolioZipInner() {
     clearMsg();
     const ordered = getOrderedEntries();
     const groups = groupEntriesByStudent(ordered);
@@ -1708,6 +1739,8 @@
     btnClear.disabled = true;
     progressWrap.classList.add('visible');
     setProgress(0, `Preparing ${groups.length} student PDF${groups.length === 1 ? '' : 's'}…`);
+    if (!(await prepareOcr())) { btnGen.disabled = false; btnClear.disabled = false; return; }
+    const ocrFailed = [];
 
     const impose = resolveImpose(pageMode, orient);
     const zip = new JSZip();
@@ -1724,7 +1757,8 @@
       const hasTitlePage = wantTitlePage && (titleText || subtitleText);
       const anyCaptions  = group.entries.some(e => e.caption && e.caption.trim());
       const opts = { pageMode, orient, gridDensity, headerText, pageNumEnabled,
-                     wantTitlePage, titleText, subtitleText, hasTitlePage, anyCaptions, impose };
+                     wantTitlePage, titleText, subtitleText, hasTitlePage, anyCaptions, impose,
+                     ocr: optOcr.checked, ocrFailed };
 
       const progressPrefix = (a, total, qualityMode) => {
         const studentPart = `Student ${g + 1}/${groups.length} (${group.name}): `;
@@ -1752,6 +1786,8 @@
 
       setProgress(Math.round(((g + 1) / groups.length) * 100), `Finished ${group.name} (${g + 1}/${groups.length})`);
     }
+
+    if (ocrFailed.length) allSkipped.push(`Searchable text could not be added to: ${[...new Set(ocrFailed)].join('; ')}`);
 
     // Exposed for the smoke test (and devtools) — not read by the UI itself.
     window.__imgToPdfLastPortfolioRun = {
@@ -2087,6 +2123,41 @@
         .catch(() => { scanUiLoading = null; throw new Error("The scanner didn't load. Reload the page and try again."); });
     }
     return scanUiLoading;
+  }
+
+  // OCR: ocr.js loads only when "Make the PDF searchable" is ticked and Generate is pressed;
+  // it then fetches the vendored Tesseract files (not precached) and the service worker keeps them.
+  let ocrLoading = null;
+  function loadOcr() {
+    if (window.OcrKit) return Promise.resolve();
+    if (!ocrLoading) {
+      ocrLoading = loadScriptOnce('image-to-pdf/ocr.js')
+        .catch(() => { ocrLoading = null; throw new Error("The OCR reader didn't load. Reload the page and try again."); });
+    }
+    return ocrLoading;
+  }
+  // True when OCR is off, or loaded and ready; false after saying plainly why not.
+  async function prepareOcr() {
+    if (!optOcr.checked) return true;
+    try {
+      await loadOcr();
+      setProgress(0, 'Loading the OCR engine…');
+      await window.OcrKit.ready(label => setProgress(0, label));
+      return true;
+    } catch (err) {
+      showMsg(err.message, 'error');
+      setProgress(0, 'Failed.');
+      if (window.OcrKit) window.OcrKit.release();
+      return false;
+    }
+  }
+  // The words of one page, as fractions of it, kept on the entry so the quality ladder's second
+  // and third attempts do not read it again. The key is what changes the picture: rotation and the scan.
+  async function ocrWords(entry, dataURL, rotation) {
+    if (entry.ocr && entry.ocr.rot === rotation && entry.ocr.scan === entry.scan) return entry.ocr.words;
+    const read = await window.OcrKit.recognize(dataURL);
+    entry.ocr = { rot: rotation, scan: entry.scan, words: read.words };
+    return read.words;
   }
 
   function applyScan(entry, rec) {

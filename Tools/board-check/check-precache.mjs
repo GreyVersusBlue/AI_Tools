@@ -56,6 +56,26 @@
 //                  1.23 MB of a 3.86 MB install. Anchors are ignored: linking to a
 //                  page does not make it shell.
 //
+// Four more checks hold the OPEN ONCE split (AI-80, v603): the heavy tools and
+// the three heavy vendored libraries are not precached, they are fetched into
+// the runtime cache the first time the page that needs them is opened, from the
+// OPEN_ONCE map in sw.js ("each tool works offline after you have opened it
+// once"). A first visit used to pull 4.0 MB and then 16.7 MB in the background.
+//
+//   8. HEAVY     — no file in PRECACHE_URLS is over 300,000 bytes, and none is
+//                  a tool whose own files (its page plus the folders only it
+//                  names) reach 200,000 bytes. Put a heavy file back and this
+//                  fails: that is the guard against the first-visit weight
+//                  creeping back. A file over the line goes in OPEN_ONCE. (A heavy
+//                  tool's own page put back is caught by 9, which finds it in both.)
+//   9. ONCE      — every OPEN_ONCE file exists, none is also in PRECACHE_URLS,
+//                  and every key is a page.
+//  10. ONCEDEP   — a live page that names a vendored library over 300,000 bytes
+//                  has that library in its own OPEN_ONCE list, and a library in
+//                  a list is one its page really names (no stale entry).
+//  (and MISSING above accepts a file a page needs if it is in PRECACHE_URLS or
+//   in that page's own OPEN_ONCE list, and nothing else.)
+//
 // A seventh check is opt-in, because it needs git history and a base to compare
 // against, and a guess at either is how a guard learns to cry wolf:
 //
@@ -117,6 +137,24 @@ if (!block) {
 }
 const listed = [...block[1].matchAll(/"([^"]+)"/g)].map(m => m[1]);
 const listedSet = new Set(listed.map(u => decodeURIComponent(u)));
+
+/* The OPEN_ONCE map: page -> files fetched into the runtime cache on first open. */
+const HEAVY_FILE_BYTES = 300000;   // a precached file may not be bigger (jsQR, 257 KB, is eager in a shell tool and stays)
+const HEAVY_TOOL_BYTES = 200000;   // nor may a tool's own files, page plus the folders only it names
+const HEAVY_LIB_BYTES = 300000;    // a vendored library file this big is open-once
+const onceBlock = /const OPEN_ONCE = (\{[\s\S]*?\n\});/.exec(swSrc);
+if (!onceBlock) {
+  console.error('check-precache: could not find the OPEN_ONCE map in sw.js (added in v603).');
+  process.exit(1);
+}
+let onceRaw;
+try { onceRaw = JSON.parse(onceBlock[1]); } catch (e) {
+  console.error('check-precache: the OPEN_ONCE map in sw.js is not plain JSON (' + e.message + ').');
+  process.exit(1);
+}
+const once = new Map(Object.entries(onceRaw).map(([k, v]) => [decodeURIComponent(k), v.map(decodeURIComponent)]));
+const onceFiles = new Set([...once.values()].flat());
+const sizeOf = p => { try { return fs.statSync(path.join(SITE, p)).size; } catch { return 0; } };
 
 /* ── 5. SHELL ───────────────────────────────────────────────────────────── */
 const shellBlock = /const SHELL_URLS = \[([\s\S]*?)\n\];/.exec(swSrc);
@@ -233,12 +271,12 @@ for (const page of livePages()) {
     );
     if (!resolved || resolved.startsWith('..')) continue;
     if (!fs.existsSync(path.join(SITE, resolved))) continue;   // a real 404 is a different bug
-    if (listedSet.has(resolved) || ONLINE_ONLY.some(x => resolved.startsWith(x))) continue;
+    if (listedSet.has(resolved) || once.has(resolved) || (once.get(page) || []).includes(resolved) || ONLINE_ONLY.some(x => resolved.startsWith(x))) continue;
     if (!missing.has(resolved)) missing.set(resolved, new Set());
     missing.get(resolved).add(page);
   }
   for (const [file, { via }] of moduleGraphOf(page, html)) {
-    if (file.startsWith('..') || !fs.existsSync(path.join(SITE, file)) || listedSet.has(file)) continue;
+    if (file.startsWith('..') || !fs.existsSync(path.join(SITE, file)) || listedSet.has(file) || (once.get(page) || []).includes(file)) continue;
     if (!missing.has(file)) missing.set(file, new Set());
     missing.get(file).add(via === page ? page : `${page} (imported by ${via})`);
   }
@@ -315,6 +353,80 @@ if (fs.existsSync(manifestPath)) {
   }
 }
 
+/* ── 8. HEAVY, 9. ONCE, 10. ONCEDEP (the open-once split) ──────────────── */
+{
+  for (const u of listed) {
+    const p = decodeURIComponent(u);
+    const n = sizeOf(p);
+    if (n > HEAVY_FILE_BYTES) {
+      problems.push(`HEAVY       ${u}\n            ${n} bytes in PRECACHE_URLS, over ${HEAVY_FILE_BYTES}; a heavy file is fetched the first time its page is opened — move it to OPEN_ONCE in sw.js`);
+    }
+  }
+  const livePageList = livePages();
+  // Folders only one tool names: every page that has "<dir>/" inside a quoted path counts as a user (a comment that mentions the folder does not).
+  const toolDirs = fs.existsSync(path.join(SITE, 'Tools'))
+    ? fs.readdirSync(path.join(SITE, 'Tools'), { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name) : [];
+  const dirBytes = dir => {
+    let total = 0;
+    const walk = d => { for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      const f = path.join(d, e.name);
+      if (e.isDirectory()) { if (e.name !== 'test' && e.name !== 'tests') walk(f); } else total += fs.statSync(f).size;
+    } };
+    walk(path.join(SITE, 'Tools', dir));
+    return total;
+  };
+  const pageText = new Map(livePageList.filter(pg => fs.existsSync(path.join(SITE, pg))).map(pg => [pg, fs.readFileSync(path.join(SITE, pg), 'utf8')]));
+  // Every directory name that sits inside a quoted path of a page: "./dir/x.js", '../_shared/vendor/y.js'.
+  const quotedDirs = t => {
+    const out = new Set();
+    for (const m of t.matchAll(/(['"`])([^'"`\n]{1,240}?)\1/g)) {
+      const parts = m[2].split('/');
+      for (let k = 0; k < parts.length - 1; k++) out.add(parts[k]);
+    }
+    return out;
+  };
+  const dirsOfPage = new Map([...pageText].map(([pg, t]) => [pg, quotedDirs(t)]));
+  const usersOf = dir => [...dirsOfPage].filter(([, d]) => d.has(dir)).map(([pg]) => pg);
+  const shellSetEarly = new Set(shell.map(u => decodeURIComponent(u)));
+  for (const pg of livePageList) {
+    if (!/^Tools\/\d{3}-/.test(pg) || !fs.existsSync(path.join(SITE, pg)) || shellSetEarly.has(pg)) continue;
+    let own = sizeOf(pg);
+    for (const dir of toolDirs) { const users = usersOf(dir); if (users.length === 1 && users[0] === pg) own += dirBytes(dir); }
+    if (own >= HEAVY_TOOL_BYTES && !(once.get(pg) || []).includes(pg)) {
+      problems.push(`HEAVY       ${pg}\n            its own files are ${own} bytes (the line is ${HEAVY_TOOL_BYTES}); list the page and its folder under its own key in OPEN_ONCE, not in PRECACHE_URLS`);
+    }
+  }
+  for (const [key, files] of once) {
+    if (!/\.html$/.test(key)) problems.push(`ONCE        ${key}\n            an OPEN_ONCE key must be a page`);
+    if (!fs.existsSync(path.join(SITE, key))) problems.push(`ONCE        ${key}\n            OPEN_ONCE key is not on disk`);
+    for (const f of files) {
+      if (!fs.existsSync(path.join(SITE, f))) problems.push(`ONCE        ${f}\n            in OPEN_ONCE["${key}"] but not on disk`);
+      if (listedSet.has(f)) problems.push(`ONCE        ${f}\n            in both PRECACHE_URLS and OPEN_ONCE["${key}"]: a file is one or the other`);
+    }
+    if (new Set(files).size !== files.length) problems.push(`ONCE        ${key}\n            lists a file twice`);
+  }
+  // Libraries: every vendored file over the line, against every page that names it.
+  const libs = [];
+  const walkVendor = d => { for (const e of fs.readdirSync(path.join(SITE, d), { withFileTypes: true })) {
+    const rel = d + '/' + e.name;
+    if (e.isDirectory()) walkVendor(rel); else if (/\.m?js$/.test(e.name) && sizeOf(rel) >= HEAVY_LIB_BYTES) libs.push(rel);
+  } };
+  if (fs.existsSync(path.join(SITE, '_shared/vendor'))) walkVendor('_shared/vendor');
+  for (const lib of libs) {
+    for (const [pg, t] of pageText) {
+      if (t.includes(lib) && !(once.get(pg) || []).includes(lib)) {
+        problems.push(`ONCEDEP     ${lib}\n            named by ${pg}, which does not list it in OPEN_ONCE: offline, that page would not find it until another page had been opened`);
+      }
+    }
+    for (const [key, files] of once) {
+      const base = lib.split('/').slice(-2).join('/');
+      if (files.includes(lib) && !(pageText.get(key) || '').includes(lib) && !(pageText.get(key) || '').includes(base)) {
+        problems.push(`ONCEDEP     ${lib}\n            in OPEN_ONCE["${key}"] but that page never names it`);
+      }
+    }
+  }
+}
+
 /* ── 7. BUMP (opt-in: --base <ref>) ────────────────────────────────────── */
 
 let bumpNote = '';
@@ -385,5 +497,5 @@ if (problems.length) {
   process.exit(1);
 }
 
-console.log(`check-precache: OK — ${listed.length} entries (${shell.length} in the install tier), all present; every file a live page or manifest.json references is listed.${bumpNote}`);
+console.log(`check-precache: OK — ${listed.length} entries (${shell.length} in the install tier, ${listed.reduce((a, u) => a + sizeOf(decodeURIComponent(u)), 0)} bytes), ${onceFiles.size} open-once files under ${once.size} pages, all present; every file a live page or manifest.json references is listed.${bumpNote}`);
 if (!BASE_REF) console.log('check-precache: (CACHE_VERSION bump not checked — pass --base <ref>, e.g. --base origin/main, to compare against a merge-base.)');

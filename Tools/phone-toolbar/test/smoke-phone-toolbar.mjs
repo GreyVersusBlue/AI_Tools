@@ -30,7 +30,7 @@ const PAGES = [
   {
     name: '011', file: '011-image-to-pdf.html', block: '.controls', toggle: '#sortMoreBtn', bar: '.controls',
     folded: '#sortMore',
-    keys: ['grid-density', 'quality', 'target-size', 'enhance', 'filename'],
+    keys: ['grid-density', 'quality', 'target-size', 'enhance', 'opt-ocr', 'filename'],
     // set a value in a folded control, fold, unfold, read it back
     state: {
       set: async page => { await page.fill('#filename', 'keepme.pdf'); await page.selectOption('#quality', 'high'); },
