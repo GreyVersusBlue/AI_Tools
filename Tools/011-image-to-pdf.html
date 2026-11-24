@@ -148,6 +148,26 @@
   #file-list.grid li.drop-before { box-shadow: -4px 0 0 var(--color-accent); }
   #scan-note { font-size: 12px; opacity: 0.65; margin: 0 0 var(--space-3); }
 
+  /* PDF page picker (AI-81): a native <dialog>, built when a multi-page PDF is chosen */
+  .pp-dialog { width: min(760px, 96vw); max-height: 96vh; overflow: auto; padding: var(--space-4); background: var(--color-bg); color: inherit; border: 1px solid var(--color-divider); }
+  .pp-dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
+  .pp-dialog h2 { font-size: 16px; margin: 0 0 var(--space-2); overflow-wrap: anywhere; }
+  .pp-dialog .pp-help { font-size: 12.5px; opacity: 0.8; margin: 0 0 var(--space-3); }
+  .pp-bar { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin-bottom: var(--space-3); }
+  .pp-bar label { font-size: 13px; }
+  .pp-bar input[type=text] { width: 10em; max-width: 100%; }
+  .pp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--space-2); margin: 0 0 var(--space-3); padding: 0; list-style: none; }
+  .pp-grid label { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px; border: 1px solid var(--color-divider); font-size: 12px; cursor: pointer; }
+  .pp-grid label:has(input:checked) { border-color: var(--color-accent); box-shadow: inset 0 0 0 1px var(--color-accent); }
+  .pp-grid label:has(input:focus-visible) { outline: 3px solid var(--color-accent); outline-offset: 1px; }
+  .pp-grid canvas { max-width: 100%; height: auto; background: #fff; }
+  .pp-status { font-size: 13px; margin: 0 0 var(--space-3); }
+  .pp-status.pp-bad { color: var(--color-danger, #b00020); }
+  .pp-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: flex-end; }
+  @media (max-width: 600px) {
+    .pp-dialog { width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; margin: 0; padding: var(--space-3); }
+  }
+
   /* Scan dialog (scan-ui.js builds the markup) */
   .scan-dialog { width: min(960px, 96vw); max-height: 96vh; overflow: auto; padding: var(--space-4); background: var(--color-bg); color: inherit; border: 1px solid var(--color-divider); }
   .scan-dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
@@ -221,7 +241,7 @@
     <span class="icon">📂</span>
     <div class="label">Drop files here or click to browse</div>
     <div class="sublabel">Accepts .png, .jpg/.jpeg, .webp, .svg, and .pdf · No file size limit</div>
-    <div class="sublabel" id="pdf-help">A PDF is turned into one picture per page (up to 100 pages, drawn about 1600 px wide), so each page can be reordered, rotated, removed or merged with other files. Its text becomes part of the picture and can no longer be selected or searched, unless you tick &ldquo;Make the PDF searchable&rdquo; below.</div>
+    <div class="sublabel" id="pdf-help">A PDF is turned into one picture per page (up to 100 pages, drawn about 1600 px wide), so each page can be reordered, rotated, removed or merged with other files. A PDF with more than one page asks which pages to add first. Its text becomes part of the picture and can no longer be selected or searched, unless you tick &ldquo;Make the PDF searchable&rdquo; below.</div>
   </div>
 </div>
 
@@ -738,11 +758,23 @@
         : 'this PDF couldn\u2019t be read (it may be damaged or not a real PDF).');
     }
     const total = doc.numPages;
-    const take = Math.min(total, PDF_MAX_PAGES);
+    let pages;
+    if (total > 1) {
+      pages = await pickPdfPages(doc, file.name, total);
+      if (!pages) {
+        doc.destroy();
+        notes.push(`${file.name} — no pages were added.`);
+        return 0;
+      }
+    } else {
+      pages = [1];
+    }
+    const take = pages.length;
     let count = 0;
     try {
-      for (let n = 1; n <= take; n++) {
-        showMsg(`Reading ${file.name}: page ${n} of ${take}…`, 'warn');
+      for (let i = 0; i < take; i++) {
+        const n = pages[i];
+        showMsg(`Reading ${file.name}: page ${n} (${i + 1} of ${take})…`, 'warn');
         const page = await doc.getPage(n);
         const base = page.getViewport({ scale: 1 });
         const vp = page.getViewport({ scale: PDF_RENDER_WIDTH / base.width });
@@ -766,8 +798,121 @@
     } finally {
       doc.destroy();
     }
-    if (total > take) notes.push(`${file.name} has ${total} pages; only the first ${PDF_MAX_PAGES} were added.`);
     return count;
+  }
+
+  // "1-3, 7" -> { pages: [1,2,3,7] } or { error }. Pages past the end are an
+  // error, not a clamp: a teacher who typed 12 for a 10-page PDF wants to hear it.
+  function parsePageRange(text, total) {
+    const parts = String(text).replace(/\s*[-–]\s*/g, '-').split(/[,;\s]+/).filter(Boolean);
+    if (!parts.length) return { error: 'Type pages like 1-3, 7.' };
+    const set = new Set();
+    for (const part of parts) {
+      const m = /^(\d+)(?:-(\d+))?$/.exec(part);
+      if (!m) return { error: `“${part}” isn’t a page or a range. Use numbers like 1-3, 7.` };
+      const a = +m[1], b = m[2] === undefined ? a : +m[2];
+      if (a < 1 || b < 1 || a > total || b > total) return { error: `This PDF has ${total} pages; ${Math.max(a, b)} is out of range.` };
+      if (a > b) return { error: `${part} runs backwards. Write it as ${b}-${a}.` };
+      for (let n = a; n <= b; n++) set.add(n);
+    }
+    return { pages: [...set].sort((x, y) => x - y) };
+  }
+
+  // The inverse, for the field: [1,2,3,7] -> "1-3, 7".
+  function formatPageRange(pages) {
+    const out = [];
+    for (let i = 0; i < pages.length; i++) {
+      let j = i;
+      while (j + 1 < pages.length && pages[j + 1] === pages[j] + 1) j++;
+      out.push(j > i ? `${pages[i]}-${pages[j]}` : String(pages[i]));
+      i = j;
+    }
+    return out.join(', ');
+  }
+
+  // A native <dialog> (focus trap, Escape and the backdrop come with it): a
+  // thumbnail per page, each a real checkbox in a label, plus a range field.
+  // Resolves to the ticked page numbers, or null if cancelled.
+  function pickPdfPages(doc, name, total) {
+    return new Promise(resolve => {
+      const dlg = document.createElement('dialog');
+      dlg.className = 'pp-dialog';
+      dlg.setAttribute('aria-labelledby', 'pp-title');
+      dlg.innerHTML = `
+        <h2 id="pp-title"></h2>
+        <p class="pp-help" id="pp-help">Tick the pages to add, or type them in the Pages box. Up to ${PDF_MAX_PAGES} pages at a time.</p>
+        <div class="pp-bar">
+          <label>Pages <input type="text" class="input" id="pp-range" autocomplete="off" aria-describedby="pp-help pp-status" placeholder="1-3, 7"></label>
+          <button type="button" class="btn" id="pp-all">Select all</button>
+          <button type="button" class="btn" id="pp-none">Select none</button>
+        </div>
+        <p class="pp-status" id="pp-status" role="status" aria-live="polite"></p>
+        <ul class="pp-grid" id="pp-grid" aria-label="Pages"></ul>
+        <div class="pp-actions">
+          <button type="button" class="btn" id="pp-cancel">Cancel</button>
+          <button type="button" class="btn btn-primary" id="pp-add">Add pages</button>
+        </div>`;
+      dlg.querySelector('#pp-title').textContent = `Choose pages from ${name} (${total} pages)`;
+      const grid = dlg.querySelector('#pp-grid'), range = dlg.querySelector('#pp-range');
+      const status = dlg.querySelector('#pp-status'), addBtn = dlg.querySelector('#pp-add');
+      const boxes = [];
+      for (let n = 1; n <= total; n++) {
+        const li = document.createElement('li');
+        const lab = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.value = n; cb.checked = n <= PDF_MAX_PAGES;
+        const cv = document.createElement('canvas');
+        cv.setAttribute('aria-hidden', 'true'); cv.width = 96; cv.height = 124;
+        const tx = document.createElement('span');
+        tx.textContent = `Page ${n}`;
+        lab.append(cb, cv, tx); li.appendChild(lab); grid.appendChild(li); boxes.push(cb);
+      }
+      const ticked = () => boxes.filter(b => b.checked).map(b => +b.value);
+      function refresh(fromRange) {
+        const t = ticked();
+        if (!fromRange) range.value = formatPageRange(t);
+        const over = t.length > PDF_MAX_PAGES;
+        status.classList.toggle('pp-bad', over);
+        status.textContent = over ? `${t.length} pages ticked; only ${PDF_MAX_PAGES} can be added at a time. Untick ${t.length - PDF_MAX_PAGES}.`
+          : `${t.length} of ${total} pages ticked.`;
+        addBtn.disabled = t.length === 0 || over;
+      }
+      let closed = false;
+      const done = value => { if (closed) return; closed = true; dlg.close(); dlg.remove(); resolve(value); };
+      grid.addEventListener('change', () => refresh(false));
+      range.addEventListener('input', () => {
+        const r = parsePageRange(range.value, total);
+        if (r.error) { status.classList.add('pp-bad'); status.textContent = r.error; addBtn.disabled = true; return; }
+        const set = new Set(r.pages);
+        boxes.forEach(b => { b.checked = set.has(+b.value); });
+        refresh(true);
+      });
+      dlg.querySelector('#pp-all').addEventListener('click', () => { boxes.forEach(b => { b.checked = true; }); refresh(false); });
+      dlg.querySelector('#pp-none').addEventListener('click', () => { boxes.forEach(b => { b.checked = false; }); refresh(false); });
+      addBtn.addEventListener('click', () => done(ticked()));
+      dlg.querySelector('#pp-cancel').addEventListener('click', () => done(null));
+      dlg.addEventListener('cancel', e => { e.preventDefault(); done(null); });
+      document.body.appendChild(dlg);
+      clearMsg();
+      dlg.showModal();
+      refresh(false);
+      addBtn.focus();
+      // Thumbnails draw one after another, so a 100-page PDF doesn't stall the dialog.
+      (async () => {
+        for (let n = 1; n <= total && !closed; n++) {
+          try {
+            const page = await doc.getPage(n);
+            const base = page.getViewport({ scale: 1 });
+            const cv = boxes[n - 1].parentNode.querySelector('canvas');
+            const vp = page.getViewport({ scale: 96 / base.width });
+            cv.width = Math.max(1, Math.round(vp.width)); cv.height = Math.max(1, Math.round(vp.height));
+            const ctx = cv.getContext('2d');
+            ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+            await page.render({ canvasContext: ctx, viewport: vp }).promise;
+          } catch (e) { /* a thumbnail that fails to draw stays blank; the page can still be ticked */ }
+        }
+      })();
+    });
   }
 
   // ── Numeric sort: extract leading number from filename ─────────────────────
