@@ -1105,8 +1105,8 @@
   function loadSeating() { return SeatingRead.read(); }
 
   /* Which chart to show is remembered per period, not globally: a teacher who
-     picks "Honors GT" while standing in 3rd period means "3rd period is
-     Honors GT", and expects 4th to come up as something else. `-` is the
+     picks "Chart A" while standing in 3rd period means "3rd period is
+     Chart A", and expects 4th to come up as something else. `-` is the
      bucket for outside any period, so a prep-period glance still remembers
      what it was last looking at. */
   function seatingChoices() {

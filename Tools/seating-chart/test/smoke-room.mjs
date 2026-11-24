@@ -49,27 +49,27 @@ eq(await page.locator('#deskLayer .room-mark').count(), 1, 'the door is drawn on
 eq(await page.locator('#deskLayer .room-mark').textContent(), 'Hall door', 'with its label');
 
 // a second period joins the room: same desks, no seats
-await page.fill('#newSectionName', 'Period 2');
+await page.fill('#newSectionName', 'Period 4');
 await page.click('button[onclick="addSection()"]');
 await settle(page, 300);
 ok(await page.locator('#roomIn').isHidden(), 'a new period starts outside any room');
 const rid = await page.evaluate(() => [...document.querySelectorAll('#roomSelect option')].find(o => o.textContent === 'Room 12').value);
 await page.selectOption('#roomSelect', rid);
 await settle(page, 300);
-eq(await deskCount(), n0, 'Period 2 has the same desks');
+eq(await deskCount(), n0, 'Period 4 has the same desks');
 eq(await page.locator('#deskLayer .room-mark').count(), 1, 'and the same door');
 ok(/Shared by 2 periods/.test(await page.locator('#roomPeriods').textContent()), 'the room says two periods share it');
 
-// add a desk in Period 2: Period 1 gets it too
+// add a desk in Period 4: Period 1 gets it too
 await page.click('button[onclick="addDesk()"]');
 await settle(page, 300);
-eq(await deskCount(), n0 + 1, 'Period 2 has a new desk');
+eq(await deskCount(), n0 + 1, 'Period 4 has a new desk');
 st = await saved();
-const sizes = c => ['Honors GT', 'Period 2'].map(nm => c.sections.find(s => s.name === nm).desks.length);
+const sizes = c => ['Period 1', 'Period 4'].map(nm => c.sections.find(s => s.name === nm).desks.length);
 eq(sizes(st), [n0 + 1, n0 + 1], 'both periods saved with the new desk (section.desks mirrors the room)');
 eq(st.rooms[0].desks.length, n0 + 1, 'the room holds it');
 const by = nm => st.sections.find(s => s.name === nm);
-eq(by('Honors GT').desks.map(d => d.id), by('Period 2').desks.map(d => d.id), 'the same desk ids in both periods');
+eq(by('Period 1').desks.map(d => d.id), by('Period 4').desks.map(d => d.id), 'the same desk ids in both periods');
 
 // undo takes it back everywhere
 await page.evaluate(() => window.undo());
@@ -83,7 +83,7 @@ await settle(page, 300);
 eq(await deskCount(), n0, 'leaving the room keeps the desks');
 eq(await page.locator('#deskLayer .room-mark').count(), 0, 'and the door is not drawn outside it');
 st = await saved();
-ok(!('room' in st.sections.find(s => s.name === 'Period 2')) && st.rooms.length === 1, 'the period no longer names the room; the room is kept');
+ok(!('room' in st.sections.find(s => s.name === 'Period 4')) && st.rooms.length === 1, 'the period no longer names the room; the room is kept');
 
 const errs = page.__errs.filter(e => !/favicon/.test(e));
 eq(errs.length, 0, 'no page/console errors: ' + JSON.stringify(errs));

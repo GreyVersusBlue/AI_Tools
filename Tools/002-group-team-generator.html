@@ -1288,7 +1288,7 @@
       /* The strategy the teacher picked wins over "not last time's partner": the repair no longer
          undoes a balanced, mixed or readiness grouping to avoid a repeat (Path 13 P2, v348). */
       /* A keep-together set (a chain of pairs too) is dealt as one block, so the repair is not what holds it
-         together (v349, Devon's P13-8: a block once switched on). With no pair set the old deal is kept. */
+         together (v349: a block once switched on). With no pair set the old deal is kept. */
       search: { restarts: RESTARTS, attempts: seat && seat.found ? SEAT_ATTEMPTS : undefined, keepStrategy: KEEP_STRATEGIES.indexOf(els.strategySelect.value) !== -1, together: keepTogether.length ? 'units' : 'pairs' }
     });
     var lockedCount = res.stats.lockedCount, usedLocks = lockedCount > 0, lockedIdxSet = {};
@@ -1815,7 +1815,7 @@
   });
 
 
-  // ── Project teams (AI-31, rank 111; Devon's answers 4.1 to 4.6 of 2026-10-07) ───
+  // ── Project teams (AI-31, rank 111; items 4.1 to 4.6) ───
   /* Named teams of the same students, kept in this class's own gtg:data:<class> as state.projectTeams (see
      gtg-teams.js for the shape and for what "once per day" is read to mean). A team put on screen is a locked group
      of lastGroups with its name in lastGroups.labels, so Reshuffle, tents, sheets and Copy treat it as they treat any

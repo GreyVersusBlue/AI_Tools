@@ -1,4 +1,4 @@
-// grade-math.test.mjs — hand-worked cases for the Carroll County final grade.
+// grade-math.test.mjs — hand-worked cases for the district's final grade.
 //
 //   node Tools/final-grade-checker/grade-math.test.mjs
 //

@@ -1,4 +1,4 @@
-// grade-math.mjs — the Carroll County final-grade calculation, on its own so a
+// grade-math.mjs — the district's final-grade calculation, on its own so a
 // Node test can import it. Nothing in here touches the DOM.
 //
 // The county rule, in four parts:
