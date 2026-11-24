@@ -36,7 +36,7 @@ for (const c of data.categories) {
   ok((inBlock.match(/<a class="row ink"/g) || []).length === c.rows.length, 'rows in the page block: ' + c.key);
 }
 ok(new RegExp(total + ' records · local only').test(html), 'the records count is the row count');
-ok(new RegExp('<dd>' + total + ' files ').test(html), 'the files count is the row count');
+ok(new RegExp('<dd>' + total + ' tools ').test(html), 'the tools count is the row count');
 const live = html.slice(html.indexOf('<div class="rows" id="rows">'));
 ok((live.match(/<a class="row ink"/g) || []).length === total, 'every row on the page is in the data');
 

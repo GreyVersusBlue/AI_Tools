@@ -428,7 +428,7 @@ body.br-published { background:var(--br-page); color:var(--br-ink); }
 
 /* ── Department hues, which are data and not theme ────────────────────────
    brDColor() reads its five (or however many) hues out of PUBLISHED_DATA,
-   where they were chosen against a white card. All five of East Middle's
+   where they were chosen against a white card. All five of the school's
    fail as text on a dark one — measured 2.39:1 (Social Studies) to 3.56:1
    (Math) — and they are written into a style attribute from script, where
    no token override can reach them. So each element that inks itself with a
@@ -572,7 +572,7 @@ function brSyncDeptFromSettings() {
 const brDColor = d => (BR_DEPT[d]||BR_DEPT_FALLBACK).c || '#64748b';
 /* The department hues are DATA: brDColor() reads them out of the published
    file, where they were picked against a white card. On a dark card all five
-   of East Middle's fail as text — 2.39:1 (Social Studies) to 3.56:1 (Math) —
+   of the school's fail as text — 2.39:1 (Social Studies) to 3.56:1 (Math) —
    and they are written into a `style` attribute, which beats every stylesheet
    rule, so no CSS token can correct them. This returns the ink sibling of a
    hue: the same hue and saturation, lightened in 1% steps until it clears
@@ -1625,7 +1625,7 @@ function brGeoFloorSVG(fg, opts) {
      readable. It is handed over as a custom property rather than as
      min-width, and .geoplan only applies it below 900px — see the media
      query in BR_CSS. Wide screens keep shrink-to-fit, because seeing a whole
-     floor at once is the thing the desktop map is for and East Middle's is
+     floor at once is the thing the desktop map is for and the school's is
      wider than the panel. Narrow screens scroll instead of squinting. */
   const vbW = W + 16;
   return `<svg class="geoplan" viewBox="-8 -${px+6} ${vbW} ${H+px+18}" `

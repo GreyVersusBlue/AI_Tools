@@ -404,7 +404,7 @@ for (const theme of ['light', 'dark']) {
       eq(await page.evaluate(() => window.__printCalls), 1, `${what}: it called print() once`);
       ok(await page.evaluate(() => document.body.classList.contains('print-inventory')), `${what}: the button's class is on <body> while it prints`);
       await page.emulateMedia({ media: 'print' });
-      const m = await onPaper(page, '#print-area-inventory, #print-area-inventory h1, #print-area-inventory table, #print-area-inventory tbody tr');
+      const m = await onPaper(page, '#print-area-inventory, #print-area-inventory h2, #print-area-inventory table, #print-area-inventory tbody tr');
       eq(m.showing, 'print-area-inventory', `${what}: the inventory is the only sheet on the paper`);
       eq(m.outside, '', `${what}: nothing outside #printArea is on the paper`);
       const [area, h1, table, ...rows] = m.boxes;
@@ -413,7 +413,7 @@ for (const theme of ['light', 'dark']) {
       near(table[2], area[2] - 20, `${what}: and it is as wide as its table and 10 px each side`);
       const t = await page.evaluate(() => {
         const a = document.getElementById('print-area-inventory');
-        return { h1: a.querySelector('h1').textContent, p: a.querySelector('p').textContent, ink: getComputedStyle(a).color + ' ' + getComputedStyle(a.querySelector('p')).color,
+        return { h1: a.querySelector('h2').textContent, p: a.querySelector('p').textContent, ink: getComputedStyle(a).color + ' ' + getComputedStyle(a.querySelector('p')).color,
           head: [...a.querySelectorAll('th')].map(x => x.textContent).join('|'), cells: [...a.querySelectorAll('tbody tr')].map(r => [...r.children].map(c => c.textContent).join('|')) };
       });
       eq(t.h1, 'Equipment Inventory', `${what}: headed as it was`);
