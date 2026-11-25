@@ -203,3 +203,31 @@ html.a11y-dyslexic button {
 @media print {
   .a11y-widget { display: none !important; }
 }
+
+/* Minimum hit area on phones (AI-83, ML-73, WCAG 2.5.8): every control is at
+   least 24 x 24 CSS px at 640 px and under. One rule here instead of a fix per
+   tool; it only raises a size that is too small, never lowers one. Inline links
+   inside running text are exempt in the standard and untouched here (min-height
+   does not apply to an inline box). A checkbox or radio is drawn by the browser
+   at 13 px, so it is sized outright. */
+@media screen and (max-width: 640px) {
+  button,
+  summary,
+  select,
+  [role="button"],
+  [role="tab"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] { min-height: 24px; min-width: 24px; }
+  input[type="checkbox"],
+  input[type="radio"] { width: 24px; height: 24px; min-width: 24px; min-height: 24px; flex: none; }
+  input:not([type="hidden"]),
+  textarea { min-height: 24px; min-width: 24px; }
+  /* a link that is a control of its own (a list entry, a card's action, a
+     button-styled link), as opposed to a link inside a sentence */
+  a.back-link,
+  a.setup,
+  li > a:first-child,
+  .card-title > a { display: inline-block; min-height: 24px; box-sizing: border-box; }
+  a.secondary { min-height: 24px; }
+}

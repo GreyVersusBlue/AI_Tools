@@ -2775,9 +2775,33 @@
         transition-duration: 0.001ms !important; scroll-behavior: auto !important;
       }
     }
-      #app-header .back-link{color:inherit;opacity:.75;text-decoration:none;font-size:12px;white-space:nowrap;margin-right:10px;display:inline-block;min-height:24px;line-height:24px;}
+      #app-header .back-link{color:var(--navy-100);opacity:1;text-decoration:none;font-size:12px;white-space:nowrap;margin-right:10px;display:inline-block;min-height:24px;line-height:24px;}
     
     #app-header .back-link:hover{opacity:1;}
+
+    /* AI-83: the title is an h1 now; it keeps the look the span had */
+    #header-school-name { margin: 0; }
+    /* the embedded browser's masthead is an h2 here (one h1 per page); a published file keeps its own h1 and BR_CSS */
+    #app-browser .mast h2 { font-family: 'Fraunces', serif; font-weight: 600; margin: 0; font-size: 27px; line-height: 1.05; }
+
+    /* AI-83 (ML-80): phones. The header stacks inside the viewport instead of
+       running to 720 px, and a notice says the editor is for a wide screen. */
+    #narrow-notice { display: none; }
+    @media (max-width: 640px) {
+      #app-header { height: auto; flex-wrap: wrap; padding: var(--sp-3) var(--sp-4); gap: var(--sp-2) var(--sp-3); }
+      #app-header .back-link { flex: 0 0 100%; margin-right: 0; }
+      .header-logo { flex-shrink: 1; min-width: 0; }
+      .header-title-group { min-width: 0; }
+      #header-school-name { max-width: 100%; }
+      .header-spacer { display: none; }
+      .header-meta { flex: 1 1 100%; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); }
+      #narrow-notice {
+        display: block; flex-shrink: 0; margin: 0; padding: var(--sp-2) var(--sp-4);
+        font-size: 13px; line-height: 1.4; color: var(--slate-700, #334155);
+        background: var(--navy-50); border-bottom: 1px solid var(--navy-200);
+      }
+    }
+    @media print { #narrow-notice { display: none !important; } }
 
     /* ── Print: the visualizer on paper ──
        The app is a 100vh column of scroll boxes, which prints as one screenful

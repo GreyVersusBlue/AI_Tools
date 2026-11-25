@@ -256,8 +256,20 @@
     margin-bottom:.7rem;
   }
   h1 .accent{color:var(--accent);}
-  .lede{color:var(--dim);max-width:54ch;font-size:1rem;margin-bottom:1.9rem;}
+  .lede{color:var(--dim);max-width:54ch;font-size:1rem;margin-bottom:1.5rem;}
   .lede strong{color:var(--ink);font-weight:700;}
+  /* AI-83: popular tools, so a first screen at 1280x800 shows tools and not only the hero */
+  .quick{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .45rem;margin:-.9rem 0 1.4rem;max-width:54ch;}
+  .quick .qlabel{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-right:.25rem;}
+  .quick a{
+    font-family:var(--mono);font-size:.78rem;letter-spacing:.03em;
+    color:var(--ink);background:var(--paper);text-decoration:none;
+    border:1px solid var(--line-strong);border-radius:3px;
+    padding:.38rem .65rem;min-height:2rem;display:inline-flex;align-items:center;
+    transition:color .15s var(--ease),border-color .15s var(--ease);
+  }
+  .quick a:hover{color:var(--accent);border-color:var(--accent);}
+  .quick a:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
   .hero-link{margin:-1.1rem 0 1.9rem;font-size:.95rem;color:var(--dim);}
   .hero-link a{color:var(--accent);font-weight:700;text-underline-offset:.2em;}
   .hero-link .note{display:block;font-size:.85rem;margin-top:.15rem;}
@@ -620,6 +632,8 @@
   .cmdk-item[aria-selected="true"] .name{color:var(--accent);}
   .cmdk-empty{padding:1.4rem 1rem;text-align:center;color:var(--dim);font-size:.88rem;}
   @media (max-width:640px){
+    /* AI-83: the fixed Aa button (46px, right 16px) sits over the filter's right end; leave its column free */
+    .controls{padding-right:58px;}
     .cmdk-hint span{font-size:.66rem;}
     .cmdk-overlay{padding-top:6vh;}
   }
@@ -689,6 +703,16 @@
           <strong>Free classroom tools for teachers, built to run in your browser.</strong>
           No accounts, nothing uploaded, and each tool works offline after you have opened it once.
         </p>
+        <nav class="quick ink" style="--d:220ms" aria-label="Popular tools">
+          <span class="qlabel" aria-hidden="true">Popular</span>
+          <a href="Tools/004-Classroom%20Timer.html">Timer</a>
+          <a href="Tools/007-Name%20Picker.html">Name Picker</a>
+          <a href="Tools/005-Seating%20Chart%20Generator.html">Seating Chart</a>
+          <a href="Tools/002-group-team-generator.html">Groups</a>
+          <a href="Tools/044-Sub%20Plan%20Builder.html">Sub Plan</a>
+          <a href="Tools/001-hall-pass-log.html">Hall Pass</a>
+          <a href="Tools/003-rubric-builder.html">Rubric</a>
+        </nav>
         <p class="lede ink" style="--d:240ms">
           Single-file web apps for rosters, seating, schedules, and grade math.
           <strong>Nothing to install.</strong> Open a tool and use it.

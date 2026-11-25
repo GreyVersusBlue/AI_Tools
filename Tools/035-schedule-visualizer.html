@@ -142,7 +142,7 @@
         </svg>
       </div>
       <div class="header-title-group">
-        <span id="header-school-name">Student Travel Visualizer</span>
+        <h1 id="header-school-name">Student Travel Visualizer</h1>
         <!-- The version used to live in the filename. It lives here now, so the
              board href and any bookmark survive a version bump. Set from
              TOOL_VERSION at startup. -->
@@ -170,6 +170,9 @@
       </button>
     </div>
   </header>
+
+  <!-- AI-83: shown by sv.css at 640 px and under only -->
+  <p id="narrow-notice" role="note"><strong>Best on a laptop or tablet.</strong> This is a wide-screen editor. On a phone you can read and look around, but editing is cramped.</p>
 
   <!-- ═══ TAB BAR ═══ -->
   <nav id="tab-bar" role="tablist" aria-label="Main sections">
@@ -4554,7 +4557,7 @@ window.wiComputeDiff    = wiComputeDiff;
     <header class="mast">
       <div class="seal" id="br-mast-initial">S</div>
       <div>
-        <h1 id="br-mast-school">Schedule Browser</h1>
+        <h2 id="br-mast-school">Schedule Browser</h2>
         <p class="sub">Synced from the School Layout Visualizer</p>
       </div>
       <button class="br-back-btn" onclick="toggleApp()" aria-label="Back to the School Layout Visualizer" title="Back to the School Layout Visualizer">
