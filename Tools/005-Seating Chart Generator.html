@@ -328,7 +328,7 @@
   body.live .desk-ctrls, body.live .selnote{display:none !important;}
   body.live .desk .seat{cursor:pointer;}
   .desk.absent .seat{opacity:.4; text-decoration:line-through;}
-  /* What a tap marks in live mode (Devon's P5-route, 2026-11-03): Absent unless the
+  /* What a tap marks in live mode (P5-route, 2026-11-03): Absent unless the
      teacher switches; the switch rides into the stage with the exit button. */
   .live-bar{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; padding:6px 10px;
     background:var(--card,#fff); border:1px solid var(--line,#ccc); font-size:.9rem;}
@@ -425,11 +425,11 @@
        underneath. Folded, the whole bar (with its status line) is ~70px. */
     .toolbar{padding:8px 12px; gap:6px;}
     .toolbar .tb-primary{
-      display:flex; flex-wrap:nowrap; align-items:center; gap:6px; flex:0 0 100%; order:-1;
-      min-width:0; overflow-x:auto; overscroll-behavior-x:contain; scrollbar-width:thin;
-      padding-bottom:2px;
+      display:flex; flex-wrap:wrap; align-items:center; gap:6px; flex:0 0 100%; order:-1;
+      min-width:0; padding-bottom:2px;
     }
-    .toolbar .tb-primary > *{flex:none;}
+    .toolbar .tb-primary .grp{display:contents;}
+    .toolbar .tb-primary .sep{display:none;}
     .toolbar .tb-primary .btn{white-space:nowrap;}
     .toolbar .tb-toggle{
       display:inline-block; position:sticky; right:0; margin-left:auto;
@@ -2142,7 +2142,7 @@ function refocusSeat(deskId){
   const again = [...document.querySelectorAll('.desk')].find(e => e.dataset.id === deskId);
   if (again) { const b = again.querySelector('.seat'); if (b) b.focus(); }
 }
-/* What a tap marks (Devon's P5-route answer, 2026-11-03, beside his P5-menu "a tap
+/* What a tap marks (P5-route, 2026-11-03, beside the P5-menu "a tap
    marks absent only"): a switch beside the chart, never a menu on the tap, back to
    Absent every time live mode starts. A point or a pass is written straight into
    008's or 001's storage on this device (seating-chart/seating-handoff.mjs, which

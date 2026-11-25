@@ -160,7 +160,7 @@ async function buildChart(page) {
   });
   eq(printBox.head, 'block', 'the print header appears in print media');
   eq(printBox.sidebar, 'none', 'the sidebar does not print');
-  ok(/Honors GT/.test(printBox.title), 'the printed title is the section name');
+  ok(/Period 1/.test(printBox.title), 'the printed title is the section name');
   ok(/28 seated of 28/.test(printBox.meta), 'the printed header counts the seats');
   ok(/desks/.test(printBox.meta), 'the printed header counts the desks');
   ok(printBox.wrapW <= 979, `the trimmed chart fits the printable width (${printBox.wrapW} <= 979)`);
@@ -277,7 +277,7 @@ async function buildChart(page) {
     document.querySelector('button[onclick="makeGrid()"]').click();
     document.querySelector('button[onclick="autoAssign()"]').click();
     const secondDesks = document.querySelectorAll('.desk').length;
-    tabs()[0].click();                                   // back to Honors GT
+    tabs()[0].click();                                   // back to Period 1
     return {
       firstDesks, firstNames, emptyOnArrival, secondDesks,
       backDesks: document.querySelectorAll('.desk').length,

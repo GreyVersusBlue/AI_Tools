@@ -531,6 +531,7 @@
     "Tools/seating-chart/test/room-zone.test.mjs",
     "Tools/seating-chart/test/smoke-room-edit.mjs",
     "Tools/a11y-sweep/test/smoke-a11y-sweep.mjs",
+    "Tools/a11y-sweep/test/smoke-tap-targets.mjs",
     "Tools/board-check/test/select-suites.test.mjs",
     "Tools/board-check/test/shard-suites.test.mjs",
     "Tools/schedule-visualizer/test/size.test.mjs",

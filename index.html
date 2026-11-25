@@ -9,6 +9,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="AsPerMyLessonPlan.com">
 <meta property="og:url" content="https://www.aspermylessonplan.com/">
+<link rel="canonical" href="https://www.aspermylessonplan.com/">
 <meta property="og:title" content="AsPerMyLessonPlan.com — classroom tools">
 <meta property="og:description" content="Schedule browsers, grade checkers, seating charts, and more — built for the classroom.">
 <meta property="og:image" content="https://www.aspermylessonplan.com/assets/og/toolbook.png">
@@ -41,7 +42,7 @@
     --paper:#F6F7F9; --panel:#FFFFFF; --panel-alt:#E4EAF0;
     --line:#C3CDD6; --line-strong:#8FA0AE;
     /* ink */
-    --ink:#16222E; --dim:#4A5A68; --faint:#596A78;
+    --ink:#16222E; --dim:#4A5A68; --faint:#536471;
     /* accents */
     --accent:#27649F; --accent-soft:rgba(39,100,159,.09);
     --good:#227547; --good-soft:rgba(34,117,71,.1);
@@ -255,8 +256,20 @@
     margin-bottom:.7rem;
   }
   h1 .accent{color:var(--accent);}
-  .lede{color:var(--dim);max-width:54ch;font-size:1rem;margin-bottom:1.9rem;}
+  .lede{color:var(--dim);max-width:54ch;font-size:1rem;margin-bottom:1.5rem;}
   .lede strong{color:var(--ink);font-weight:700;}
+  /* AI-83: popular tools, so a first screen at 1280x800 shows tools and not only the hero */
+  .quick{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .45rem;margin:-.9rem 0 1.4rem;max-width:54ch;}
+  .quick .qlabel{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-right:.25rem;}
+  .quick a{
+    font-family:var(--mono);font-size:.78rem;letter-spacing:.03em;
+    color:var(--ink);background:var(--paper);text-decoration:none;
+    border:1px solid var(--line-strong);border-radius:3px;
+    padding:.38rem .65rem;min-height:2rem;display:inline-flex;align-items:center;
+    transition:color .15s var(--ease),border-color .15s var(--ease);
+  }
+  .quick a:hover{color:var(--accent);border-color:var(--accent);}
+  .quick a:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
   .hero-link{margin:-1.1rem 0 1.9rem;font-size:.95rem;color:var(--dim);}
   .hero-link a{color:var(--accent);font-weight:700;text-underline-offset:.2em;}
   .hero-link .note{display:block;font-size:.85rem;margin-top:.15rem;}
@@ -619,6 +632,8 @@
   .cmdk-item[aria-selected="true"] .name{color:var(--accent);}
   .cmdk-empty{padding:1.4rem 1rem;text-align:center;color:var(--dim);font-size:.88rem;}
   @media (max-width:640px){
+    /* AI-83: the fixed Aa button (46px, right 16px) sits over the filter's right end; leave its column free */
+    .controls{padding-right:58px;}
     .cmdk-hint span{font-size:.66rem;}
     .cmdk-overlay{padding-top:6vh;}
   }
@@ -688,9 +703,19 @@
           <strong>Free classroom tools for teachers, built to run in your browser.</strong>
           No accounts, nothing uploaded, and each tool works offline after you have opened it once.
         </p>
+        <nav class="quick ink" style="--d:220ms" aria-label="Popular tools">
+          <span class="qlabel" aria-hidden="true">Popular</span>
+          <a href="Tools/004-Classroom%20Timer.html">Timer</a>
+          <a href="Tools/007-Name%20Picker.html">Name Picker</a>
+          <a href="Tools/005-Seating%20Chart%20Generator.html">Seating Chart</a>
+          <a href="Tools/002-group-team-generator.html">Groups</a>
+          <a href="Tools/044-Sub%20Plan%20Builder.html">Sub Plan</a>
+          <a href="Tools/001-hall-pass-log.html">Hall Pass</a>
+          <a href="Tools/003-rubric-builder.html">Rubric</a>
+        </nav>
         <p class="lede ink" style="--d:240ms">
           Single-file web apps for rosters, seating, schedules, and grade math.
-          <strong>No install</strong> &mdash; open the file and use it.
+          <strong>Nothing to install.</strong> Open a tool and use it.
         </p>
         <p class="hero-link ink" style="--d:290ms">
           <a href="conference-signup/index.html?demo">Try the parent conference sign-up &rarr;</a>
@@ -700,10 +725,10 @@
           <span class="stamp" aria-hidden="true"><b>Reviewed</b>as per my lesson plan</span>
           <dl class="memo ink" style="--d:100ms">
             <dt>To</dt><dd>All staff</dd>
-            <dt>From</dt><dd>D. Moore</dd>
-            <dt>Date</dt><dd id="memo-date">2026-11-23</dd>
+            <dt>From</dt><dd>The toolkit</dd>
+            <dt>Date</dt><dd id="memo-date">2026-11-24</dd>
             <dt>CC</dt><dd>Whoever asked for the link again</dd>
-            <dt>Attach</dt><dd>91 files <span class="note">(browser-only, nothing to install)</span></dd>
+            <dt>Includes</dt><dd>91 tools <span class="note">(browser-only, nothing to install)</span></dd>
           </dl>
         </div>
       </div>
@@ -973,11 +998,11 @@
     <a class="row ink" style="--d:620ms" href="Tools/034-schedule-browser.html"
        data-tool="schedule-browser" data-tags="schedule teacher room period blocks a/b day lookup coverage substitute"
        data-filter-tags="schedule reference">
-      <span class="per"><span class="lbl">Per</span><b>3</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Schedule Browser to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span class="per"><span class="lbl">Per</span><b>3</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Schedule Browser (sample school) to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <svg class="tool-icon" aria-hidden="true"><use href="assets/art/icons/tools.svg#t034"/></svg>
-        <span class="name">Schedule Browser</span>
-        <span class="pitch">Look up any teacher, room, or period in seconds.</span>
+        <span class="name">Schedule Browser (sample school)</span>
+        <span class="pitch">Look up any teacher, room, or period in one school's sample schedule.</span>
         <span class="comment" aria-hidden="true">Knows where everyone is. Even you.</span>
       </span>
       <span class="tags"><span data-tag="schedule">schedule</span><span data-tag="reference">reference</span></span>
@@ -2420,11 +2445,11 @@
       <span class="k">C2</span> Unofficial. Not affiliated with any school, district, or SIS vendor.<br>
       <span class="k">C3</span> A pleasure to have in your bookmarks bar.<br id="c4-br" hidden>
       <span class="k" id="c4-k" hidden>C4</span><span id="c4-txt" hidden> Filed under &ldquo;creative liberty.&rdquo;</span><br>
-      <span class="k">C5</span> Curious what&rsquo;s next? See the <a href="ideas-backlog.html">ideas backlog</a>. Reminder: coming soon means not right now.
+      <span class="k">C5</span> Curious what&rsquo;s next? Coming soon means not right now.
     </div>
     <div class="meta">
       <span>Questions, bugs, contributions &mdash; email <span class="handle">@dsmoore</span>. Please advise.</span>
-      <span class="rhs">Built by D. Moore + Claude · rev <span id="rev">2026-11-23</span></span>
+      <span class="rhs">Built with Claude · rev <span id="rev">2026-11-24</span></span>
     </div>
   </footer>
 
@@ -3077,6 +3102,13 @@
       cmdkClose();
     }
   });
+  /* The chip says Ctrl K everywhere except Apple devices, where Cmd K is the shortcut. */
+  (function () {
+    var plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+    if (/mac|iphone|ipad|ipod/i.test(plat)) return;
+    var chip = document.querySelector('#cmdkOpenBtn span');
+    if (chip) chip.textContent = 'Ctrl K';
+  })();
 
   /* ---------- keyboard: "/" to filter, Esc to clear ---------- */
   document.addEventListener('keydown', function (e) {

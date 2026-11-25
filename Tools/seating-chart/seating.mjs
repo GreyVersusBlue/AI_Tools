@@ -91,12 +91,12 @@ export function newLayout(name, desks, assign, rng = Math.random) {
  * to be a factory rather than a literal: every section and desk carries a
  * generated id, so a shared literal would hand two resets the same ids.
  *
- * Three sections because that is the actual job — Honors GT, Honors and Academic
- * are three different rooms of students, and a tool that models one chart gets
+ * Three sections because that is the actual job — three class periods are
+ * three different rooms of students, and a tool that models one chart gets
  * used for one class and then abandoned.
  */
 export function freshState(rng = Math.random) {
-  const sections = ['Honors GT', 'Honors', 'Academic'].map(n => newSection(n, rng));
+  const sections = ['Period 1', 'Period 2', 'Period 3'].map(n => newSection(n, rng));
   return {
     sections, active: sections[0].id, theme: 'light', zoom: 'fit', lastFirst: false,
     numbered: false,        // show a seat number on every desk, on screen and on paper

@@ -1,7 +1,7 @@
 /* levels.js — the three differentiation levels, named once (AI-30, rank 67).
    Publishes window.Levels. Classic script, pure: no DOM, no storage.
 
-   Devon teaches Academic, Honors and Honors GT sections of the same course, and four pages print a
+   Three levels of the same course (Academic, Honors and Honors GT), and four pages print a
    packet at a level: 028, 054, 056 and 083. Each kept its own list, with its own key for Honors GT
    ('gt' on 054, 056 and 083; 'honorsgt' on 028, which is what its saved data and share links
    carry), so a level key stored on a page is NOT changed by this file; a page maps its own key

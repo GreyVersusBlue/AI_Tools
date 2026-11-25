@@ -387,7 +387,7 @@
       title: 'Schedule Browser',
       file: 'Tools/034-schedule-browser.html',
       category: 'scheduling-subs',
-      backupLabel: 'East Middle Schedule Browser',
+      backupLabel: 'Schedule Browser (sample school)',
       keys: [
         { k: 'br_home_teacher' },
         { k: 'br_personal_notes_v1' },

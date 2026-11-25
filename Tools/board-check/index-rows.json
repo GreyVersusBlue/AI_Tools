@@ -255,8 +255,8 @@
      "tags": "schedule teacher room period blocks a/b day lookup coverage substitute",
      "filterTags": "schedule reference",
      "per": "3",
-     "name": "Schedule Browser",
-     "pitch": "Look up any teacher, room, or period in seconds.",
+     "name": "Schedule Browser (sample school)",
+     "pitch": "Look up any teacher, room, or period in one school's sample schedule.",
      "comment": "Knows where everyone is. Even you.",
      "chips": [
       "schedule",
@@ -266,8 +266,8 @@
      "gradeTitle": "Comment: always knows where everyone is supposed to be.",
      "scribble": "M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4",
      "icon": "t034",
-     "readme": "This year's actual A/B schedule, searchable by teacher, room, or period. Published from the School Layout Visualizer, below.",
-     "readmeName": "East Middle Schedule Browser"
+     "readme": "A sample A/B schedule from one school, July 2026, searchable by teacher, room, or period. Published from the School Layout Visualizer, below.",
+     "readmeName": "Schedule Browser (sample school)"
     },
     {
      "d": "690ms",

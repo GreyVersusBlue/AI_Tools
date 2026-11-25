@@ -622,7 +622,7 @@
 
   /* The inventory sheet, as wide as its table and centred. */
   #print-area-inventory { width: fit-content; max-width: calc(100% - 2rem); margin: 2rem auto 0; padding: 10px; color: #111; }
-  #print-area-inventory h1 { font-size: 1.3rem; margin: 0 0 0.3rem; }
+  #print-area-inventory h2 { font-size: 1.3rem; margin: 0 0 0.3rem; }
   #print-area-inventory p { font-size: 0.85rem; color: #444; margin: 0; }
   .back-link { display: inline-block; color: var(--text-dim); text-decoration: none; font-size: .85rem; padding: .3rem .5rem .3rem 0; }
   .back-link:hover { color: var(--accent); }
@@ -669,7 +669,7 @@
         <div id="template-fields"></div>
         <div class="control-group">
           <label for="qr-text">Link or text to encode</label>
-          <textarea id="qr-text" placeholder="https://carrollk12.schoology.com/..." spellcheck="false"></textarea>
+          <textarea id="qr-text" placeholder="https://yourschool.schoology.com/..." spellcheck="false"></textarea>
           <div id="char-count">0 characters</div>
         </div>
       </div>
@@ -2981,7 +2981,7 @@
       return el;
     }
     area.textContent = '';
-    add(area, 'h1', 'Equipment Inventory');
+    add(area, 'h2', 'Equipment Inventory');
     add(area, 'p', 'Printed ' + new Date().toLocaleString() + ' — ' + codes.length + ' item' + (codes.length === 1 ? '' : 's'));
     var table = add(area, 'table');
     table.className = 'inv-print-table';

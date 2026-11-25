@@ -109,7 +109,7 @@ console.log('seating chart — pure logic\n');
     sections: [
       'not a section',
       {
-        name: '  Honors GT  ',
+        name: '  Period 1  ',
         students: [
           { id: 'a', name: 'Ada Lovelace', photo: 'data:image/jpeg;base64,AAAA' },
           { id: 'b', name: '   ' },                       // no name: dropped
@@ -140,7 +140,7 @@ console.log('seating chart — pure logic\n');
   const s = repairState(raw, rngFrom(3));
 
   eq(s.sections.length, 1, 'repair drops a non-object section');
-  eq(s.sections[0].name, 'Honors GT', 'repair trims the section name');
+  eq(s.sections[0].name, 'Period 1', 'repair trims the section name');
   eq(s.sections[0].students.length, 5, 'repair drops a nameless student');
   ok(s.sections[0].students.every(st => st.id && typeof st.note === 'string' && typeof st.flag === 'boolean' && typeof st.photo === 'string'),
     'repair fills id, note, flag and photo on every student');
@@ -399,7 +399,7 @@ console.log('seating chart — pure logic\n');
   eq(report.photoCount, 1, 'storageReport counts only students who actually have a photo');
   ok(report.photoBytes > 2000, 'storageReport isolates photo bytes so they can be called out separately');
   eq(report.bySection.length, 3, 'storageReport breaks the total down by section');
-  eq(report.bySection[0].name, 'Honors GT', 'the per-section breakdown is named');
+  eq(report.bySection[0].name, 'Period 1', 'the per-section breakdown is named');
   ok(report.pct > 0 && report.pct < 1, 'a small chart reports well under 100% of quota');
 
   // Path 4 P4: a photo in the media store costs this key its reference only.

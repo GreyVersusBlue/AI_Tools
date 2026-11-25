@@ -11,7 +11,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 <!-- tools-table:start (generated from Tools/board-check/index-rows.json; edit the data, then run npm run build:index) -->
 | Tool | File | What it does |
 |---|---|---|
-| East Middle Schedule Browser | `Tools/034-schedule-browser.html` | This year's actual A/B schedule, searchable by teacher, room, or period. Published from the School Layout Visualizer, below. |
+| Schedule Browser (sample school) | `Tools/034-schedule-browser.html` | A sample A/B schedule from one school, July 2026, searchable by teacher, room, or period. Published from the School Layout Visualizer, below. |
 | School Layout Visualizer | `Tools/035-schedule-visualizer.html` | Build a hyperlinked map of teachers, rooms, and clusters — and publish a schedule browser like the one above from it. |
 | Final Grade Checker | `Tools/036-final_grade_checker.html` | Enter grades by hand or paste a TAC export, and check the math automatically. |
 | Image → PDF Assembler | `Tools/011-image-to-pdf.html` | Combine photos into one clean PDF. |

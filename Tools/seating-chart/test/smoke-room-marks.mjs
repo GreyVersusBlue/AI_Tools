@@ -114,13 +114,13 @@ ok(await page.locator('#deskLayer .room-mark').count() === 2, 'the live print dr
 await endPrint();
 
 // a second period in the room, and one outside it
-await page.fill('#newSectionName', 'Period 2');
+await page.fill('#newSectionName', 'Period 4');
 await page.click('button[onclick="addSection()"]');
 await settle(page, 300);
 const rid = await page.evaluate(() => [...document.querySelectorAll('#roomSelect option')].find(o => o.textContent === 'Room 12').value);
 await page.selectOption('#roomSelect', rid);
 await settle(page, 300);
-await page.fill('#newSectionName', 'Period 3');
+await page.fill('#newSectionName', 'Period 5');
 await page.click('button[onclick="addSection()"]');
 await settle(page, 300);
 await page.click('button[onclick="makeGrid()"]');
@@ -134,12 +134,12 @@ const perPage = () => page.evaluate(() => [...document.querySelectorAll('#printA
 await runPrint('printAllSections');
 let pages = await perPage();
 const byName = n => pages.find(p => p.title === n);
-eq(['Honors GT', 'Period 2', 'Period 3'].map(n => byName(n).marks.length), [2, 2, 0], 'Print all: the two periods in the room carry its marks, the one outside none');
-eq(byName('Honors GT').marks.slice().sort(), ['Hall door', 'bench'], 'with their labels');
+eq(['Period 1', 'Period 4', 'Period 5'].map(n => byName(n).marks.length), [2, 2, 0], 'Print all: the two periods in the room carry its marks, the one outside none');
+eq(byName('Period 1').marks.slice().sort(), ['Hall door', 'bench'], 'with their labels');
 await endPrint();
 await runPrint('printSubExportAll');
 pages = (await perPage()).filter(p => !p.contents);
-eq(['Honors GT', 'Period 2', 'Period 3'].map(n => byName(n).marks.length), [2, 2, 0], 'the whole-day sub packet carries them too');
+eq(['Period 1', 'Period 4', 'Period 5'].map(n => byName(n).marks.length), [2, 2, 0], 'the whole-day sub packet carries them too');
 await endPrint();
 ok(await page.locator('#printAllWrap').evaluate(w => w.children.length === 0), 'and the print wrap is emptied afterwards');
 

@@ -349,7 +349,7 @@
         <input type="text" id="tripName" placeholder="e.g. Fall Science Museum Trip">
 
         <label for="schoolTeacher">School / teacher line (prints at the top)</label>
-        <input type="text" id="schoolTeacher" placeholder="e.g. Carroll Middle School — Ms. Moore, 7th Grade Science">
+        <input type="text" id="schoolTeacher" placeholder="e.g. Your School — Ms. Rivera, 7th Grade Science">
 
         <label for="destination">Destination</label>
         <input type="text" id="destination" placeholder="e.g. Fernbank Science Center, 156 Heaton Park Dr">
@@ -385,7 +385,7 @@
         <textarea id="whatToBring" placeholder="e.g. Sack lunch, water bottle, closed-toe shoes, weather-appropriate jacket."></textarea>
 
         <label for="chaperoneName">Chaperone / trip contact name</label>
-        <input type="text" id="chaperoneName" placeholder="e.g. Ms. Moore">
+        <input type="text" id="chaperoneName" placeholder="e.g. Ms. Rivera">
         <label for="chaperonePhone">Chaperone / trip contact phone</label>
         <input type="text" id="chaperonePhone" placeholder="e.g. (555) 555-0123">
 
@@ -1576,7 +1576,6 @@
      holds a student's health or a parent's number. ---------- */
   function paragraph(text) { return text ? '<p>' + escapeHtml(text) + '</p>' : ''; }
 
-  /* The letter's wording was read and kept by Devon on 2026-11-03. */
   function letterPrintHtml() {
     var when = tripDateLine();
     var go = 'Our class is going on a field trip' + (state.name ? ': ' + escapeHtml(state.name) : '') +

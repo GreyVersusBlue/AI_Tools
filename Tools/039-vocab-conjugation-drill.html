@@ -1075,8 +1075,7 @@
    * comparison. */
   function answerMatch(typed, correct, entry) {
     if (HAS_ENGINE) {
-      /* The engine's check: ñ and ç are letters, not accents; ü typed as u is accepted (Devon,
-         2026-10-21) and the ü form is shown beside it; a missing pronoun or elision is close. */
+      /* The engine's check: ñ and ç are letters, not accents; ü typed as u is accepted (2026-10-21) and the ü form is shown beside it; a missing pronoun or elision is close. */
       var r = Conjugate.match(typed, correct, { lang: (entry && entry.lang) || '' });
       return r.verdict === 'correct' && r.reason ? r.reason : r.verdict === 'close' ? 'close:' + r.reason : r.verdict;
     }

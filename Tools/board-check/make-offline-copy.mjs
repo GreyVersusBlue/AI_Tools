@@ -435,11 +435,9 @@ function walkHtmlFiles(dir) {
   return out;
 }
 
-// index.html links to something this trimmed copy excludes: 3 "ideas backlog"
-// mentions pointing at ideas-backlog.html (the old "Inbox edition" link was
-// removed from the page in AI-75). Left alone they would be dead links on the one
-// page every recipient is guaranteed to open — worse than not having them
-// at all.
+// index.html no longer links ideas-backlog.html (AI-82); if a link comes back,
+// this trimmed copy excludes the page, so the link is turned into plain text
+// rather than left dead on the one page every recipient is guaranteed to open.
 function sanitizeEntryPoint(html) {
   // Normalized to LF for the same reason as bmg-vector.js above: the
   // multi-line template literals below are LF-only once parsed (per the JS
@@ -447,11 +445,6 @@ function sanitizeEntryPoint(html) {
   // on disk may still be CRLF (e.g. on a Windows checkout).
   html = html.replace(/\r\n/g, '\n');
   const ideasLink = `<a href="ideas-backlog.html">ideas backlog</a>`;
-  const ideasCount = html.split(ideasLink).length - 1;
-  if (ideasCount < 1) {
-    fail('index.html: expected at least 1 "ideas backlog" link, found 0 — the source has ' +
-      'drifted, update the sanitizeEntryPoint() patch in make-offline-copy.mjs to match it.');
-  }
   html = html.split(ideasLink).join('ideas backlog'); // de-link, keep the label as plain text
 
   return inlineIconSprite(html);

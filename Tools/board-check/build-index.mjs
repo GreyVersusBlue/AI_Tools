@@ -3,7 +3,7 @@
 // index-rows.json (AI-30, rank 70; the README half AI-44).
 //
 //   node Tools/board-check/build-index.mjs            rewrite index.html's category blocks and the two
-//                                                     page-wide counts ("N records", "N files"), and the
+//                                                     page-wide counts ("N records", "N tools"), and the
 //                                                     README table between its two marker comments
 //   node Tools/board-check/build-index.mjs --check    exit 1 if either file is not what the data renders
 //                                                     (npm run check:index; runs in CI)
@@ -95,7 +95,7 @@ export function render(html, data, stamp) {
   const end = lastCat + '    </details>\n'.length;
   const total = data.categories.reduce((n, c) => n + c.rows.length, 0);
   let out = html.slice(0, first) + data.categories.map(renderCategory).join('\n') + html.slice(end);
-  out = out.replace(/\d+ records( · local only)/, total + ' records$1').replace(/<dd>\d+ files /, '<dd>' + total + ' files ');
+  out = out.replace(/\d+ records( · local only)/, total + ' records$1').replace(/<dd>\d+ tools /, '<dd>' + total + ' tools ');
   if (stamp) {
     out = out.replace(/(<dd id="memo-date">)[^<]*/, '$1' + stamp).replace(/(<span id="rev">)[^<]*/, '$1' + stamp);
   }
