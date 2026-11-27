@@ -164,6 +164,17 @@
     return { forms: pc.forms.map(function (x) { return rec.k2 === 'umlaut' ? umlaut(x) : x; }), kinds: rec.k2 === 'umlaut' ? ['irregular'] : pc.kinds, from: pc.from };
   }
 
+  // A reflexive imperative puts the pronoun after the verb, and after the subject where there is one: Setz dich!, Setzen wir
+  // uns!, Setzt euch!, Setzen Sie sich! (Duden, Die Grammatik, Imperativ; any first-year text). A separable verb keeps its
+  // prefix last (Zieh dich an!, Ziehen Sie sich an!); a dative reflexive takes mir/dir/uns/euch/sich (Stell dir vor!).
+  function attach(form, slot, ctx) {
+    var rp = ctx.dative ? ctx.p.reflexivePronounsDative : ctx.p.reflexivePronouns;
+    var words = form.split(' '), at = (slot === 3 || slot === 5) ? 2 : 1;
+    if (words.length < at) return '';
+    words.splice(at, 0, rp[slot]);
+    return words.join(' ');
+  }
+
   window.Conjugate.register({
     id: 'de', name: 'German', reviewed: false,
     persons: ['ich', 'du', 'er / sie / es', 'wir', 'ihr', 'sie / Sie'],
@@ -171,6 +182,7 @@
     // sich waschen: the accusative pronoun after the finite verb (ich wasche mich). Reflexive verbs take
     // haben in the Perfekt.
     reflexive: { prefixes: ['sich '], dativePrefixes: ['sich (dat.) ', 'sich (dat) ', 'sich(dat) ', 'sich (d) '] },
+    attach: attach,
     reflexivePronouns: ['mich', 'dich', 'sich', 'uns', 'euch', 'sich'], reflexivePlacement: 'after', reflexiveAux: 'haben',
     // sich etwas vorstellen / kaufen / merken: the pronoun is dative (ich kaufe mir ...). These verbs are listed because
     // their reflexive use is always dative; any other verb is marked `sich (dat.) ...` or `dative: true`
@@ -225,7 +237,7 @@
         compound: { auxiliary: 'werden', forms: ['werde', 'wirst', 'wird', 'werden', 'werdet', 'werden'], part: 'participle' } },
       { id: 'passive-preterite', name: 'Vorgangspassiv (Präteritum)', mood: 'indicative', kind: 'compound', noReflexive: true,
         compound: { auxiliary: 'werden', forms: ['wurde', 'wurdest', 'wurde', 'wurden', 'wurdet', 'wurden'], part: 'participle' } },
-      { id: 'imperative', name: 'Imperativ', mood: 'imperative', kind: 'simple', boot: [1], none: [0, 2], noReflexive: true,
+      { id: 'imperative', name: 'Imperativ', mood: 'imperative', kind: 'simple', boot: [1], none: [0, 2], attach: true,
         append: [null, null, null, ' wir', null, ' Sie'],
         endings: { en: ['', '', '', 'en', 't', 'en'], eln: ['', '', '', 'n', 't', 'n'], ern: ['', '', '', 'n', 't', 'n'], n: ['', '', '', 'en', 't', 'en'] } }
     ],

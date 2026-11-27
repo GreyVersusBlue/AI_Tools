@@ -360,7 +360,18 @@ function suite(win) {
   cells('de', 'aufmachen', 'imperative', ' | mach auf |  | machen wir auf | macht auf | machen Sie auf');
   eq(C.conjugate('de', 'können', 'imperative').notes.map((n) => n.kind), Array(6).fill('defective'), 'de a modal has no imperative');
   eq(C.conjugate('de', 'sein', 'passive').forms, Array(6).fill(''), 'de sein has no passive');
-  eq(C.conjugate('de', 'sich waschen', 'imperative').complete, false, 'de a reflexive imperative is refused, not guessed');
+  // the reflexive imperative (AI-88): the pronoun after the verb, and after wir / Sie
+  cells('de', 'sich setzen', 'imperative', ' | setz dich |  | setzen wir uns | setzt euch | setzen Sie sich');
+  cells('de', 'sich waschen', 'imperative', ' | wasch dich |  | waschen wir uns | wascht euch | waschen Sie sich');
+  cells('de', 'sich freuen', 'imperative', ' | freu dich |  | freuen wir uns | freut euch | freuen Sie sich');
+  cells('de', 'sich anziehen', 'imperative', ' | zieh dich an |  | ziehen wir uns an | zieht euch an | ziehen Sie sich an');
+  cells('de', 'sich sammeln', 'imperative', ' | sammle dich |  | sammeln wir uns | sammelt euch | sammeln Sie sich');
+  cells('de', 'sich (dat.) vorstellen', 'imperative', ' | stell dir vor |  | stellen wir uns vor | stellt euch vor | stellen Sie sich vor');
+  cells('de', 'sich merken', 'imperative', ' | merk dir |  | merken wir uns | merkt euch | merken Sie sich');
+  eq(C.conjugate('de', 'sich setzen', 'imperative').reviewed, false, 'de a reflexive imperative is unreviewed');
+  eq(C.conjugate('de', 'sich waschen', 'imperative').complete, true, 'de a reflexive imperative is built');
+  eq(forms('de', 'sich setzen', 'present')[0], 'setze mich', 'de the reflexive present is untouched');
+  eq(C.conjugate('de', 'sich waschen', 'passive').complete, false, 'de a reflexive passive is still refused, not guessed');
   // the gaps of increment 3: verbs that only look prefixed, a longer separable prefix, Latin compounds by prefix
   eq(forms('de', 'bellen', 'perfect')[2], 'hat gebellt', 'de bellen is bell-en, not be-llen');
   eq(forms('de', 'ernten', 'perfect')[0], 'habe geerntet', 'de ernten takes ge- and the e');
@@ -416,7 +427,7 @@ function suite(win) {
   cells('fr', 'manger', 'command', ' | mange |  | mangeons | mangez | ');
   eq(forms('fr', 'se lever', 'command'), ['', 'lève-toi', '', 'levons-nous', 'levez-vous', ''], 'fr a reflexive impératif takes -toi, -nous, -vous');
   // Latin: the subjunctive, the passive, the deponents
-  eq(extras('la'), ['perfect-passive', 'pluperfect-passive', 'future-perfect-passive', 'imperative', 'present-subjunctive', 'imperfect-subjunctive', 'present-passive', 'imperfect-passive', 'future-passive'], 'la extra tenses');
+  eq(extras('la'), ['perfect-passive', 'pluperfect-passive', 'future-perfect-passive', 'imperative', 'future-imperative', 'present-subjunctive', 'imperfect-subjunctive', 'present-passive', 'imperfect-passive', 'future-passive'], 'la extra tenses');
   eq(six('la'), ['present', 'imperfect', 'future', 'perfect', 'pluperfect', 'future-perfect'], 'la the six do not move');
   cells('la', 'amare', 'present-subjunctive', 'amem | amēs | amet | amēmus | amētis | ament');
   cells('la', 'monere', 'present-subjunctive', 'moneam | moneās | moneat | moneāmus | moneātis | moneant');
@@ -1054,6 +1065,26 @@ function suite(win) {
   cmd('la', 'vereri', 'imperative', imp('verēre', 'verēminī'));
   cmd('la', 'mori', 'imperative', imp('morere', 'moriminī'));
   eq(forms('la', 'posse', 'imperative').filter(Boolean), [], 'la posse has no imperative');
+  // the future imperative (AI-88): tū, is/ea/id, vōs, eī; none for ego and nōs
+  const fim = (a, b, c) => sx('', a, a, '', b, c);
+  cmd('la', 'amare', 'future-imperative', fim('amātō', 'amātōte', 'amantō'));
+  cmd('la', 'monere', 'future-imperative', fim('monētō', 'monētōte', 'monentō'));
+  cmd('la', 'regere', 'future-imperative', fim('regitō', 'regitōte', 'reguntō'));
+  cmd('la', 'capere', 'future-imperative', fim('capitō', 'capitōte', 'capiuntō'));
+  cmd('la', 'audire', 'future-imperative', fim('audītō', 'audītōte', 'audiuntō'));
+  cmd('la', 'esse', 'future-imperative', fim('estō', 'estōte', 'suntō'));
+  cmd('la', 'ferre', 'future-imperative', fim('fertō', 'fertōte', 'feruntō'));
+  cmd('la', 'ire', 'future-imperative', fim('ītō', 'ītōte', 'euntō'));
+  cmd('la', 'dare', 'future-imperative', fim('datō', 'datōte', 'dantō'));
+  cmd('la', 'scire', 'future-imperative', fim('scītō', 'scītōte', 'sciuntō'));
+  cmd('la', 'dicere', 'future-imperative', fim('dīcitō', 'dīcitōte', 'dīcuntō'));
+  cmd('la', 'facere', 'future-imperative', fim('facitō', 'facitōte', 'faciuntō'));
+  cmd('la', 'adducere', 'future-imperative', fim('addūcitō', 'addūcitōte', 'addūcuntō'));
+  eq(forms('la', 'loqui', 'future-imperative'), ['', 'loquitor', 'loquitor', '', '', 'loquuntor'], 'la a deponent future imperative is -tor / -ntor, none for vōs');
+  eq(forms('la', 'hortari', 'future-imperative'), ['', 'hortātor', 'hortātor', '', '', 'hortantor'], 'la hortari future imperative');
+  eq(forms('la', 'posse', 'future-imperative').filter(Boolean), [], 'la posse has no future imperative');
+  eq(forms('la', 'velle', 'future-imperative').filter(Boolean), [], 'la velle has no future imperative');
+  eq(C.conjugate('la', 'amare', 'future-imperative').reviewed, false, 'la the future imperative is unreviewed');
 
   // every language still offers the six it always did (a page's default list does not move)
   eq(C.languages().find((l) => l.id === 'la').tenses.map((t) => t.id), ['present', 'imperfect', 'future', 'perfect', 'pluperfect', 'future-perfect'], 'la: the six unchanged');
@@ -1281,6 +1312,20 @@ const BROKEN = [
   ['la a deponent has a perfect passive', '_shared/conjugate-la.js', "'future-passive'].concat(PERFPASS);\n  function dep", "'future-passive'];\n  function dep"],
   ['la dūc is dūce', '_shared/conjugate-la.js', "R.ducere.forms = { imperative: { 1: 'dūc' } };", ""],
   ['la a deponent imperative is active', '_shared/conjugate-la.js', "deponentEndings: {", "deponentEndingsX: {"],
+  ['la future imperative of the first conjugation', '_shared/conjugate-la.js', "a: ['', 'ātō', 'ātō', '', 'ātōte', 'antō']", "a: ['', 'ātō', 'ātō', '', 'ātōte', 'ātō']"],
+  ['la future imperative third person plural of the third conjugation', '_shared/conjugate-la.js', "c: ['', 'itō', 'itō', '', 'itōte', 'untō']", "c: ['', 'itō', 'itō', '', 'itōte', 'antō']"],
+  ['la future imperative of the -io verbs', '_shared/conjugate-la.js', "io: ['', 'itō', 'itō', '', 'itōte', 'iuntō']", "io: ['', 'itō', 'itō', '', 'itōte', 'untō']"],
+  ['la future imperative of esse', '_shared/conjugate-la.js', "{ 1: 'estō', 2: 'estō', 4: 'estōte', 5: 'suntō' }", "{ 1: 'estō', 2: 'estō', 4: 'estōte', 5: 'sintō' }"],
+  ['la future imperative of ire', '_shared/conjugate-la.js', "5: 'euntō'", "5: 'iuntō'"],
+  ['la future imperative of dare', '_shared/conjugate-la.js', "{ 1: 'datō', 2: 'datō', 4: 'datōte', 5: 'dantō' }", "{ 1: 'dātō', 2: 'dātō', 4: 'dātōte', 5: 'dantō' }"],
+  ['la a deponent future imperative has no vōs', '_shared/conjugate-la.js', "deponentNone: [0, 3, 4],", "deponentNone: [0, 3],"],
+  ['la a deponent future imperative is passive', '_shared/conjugate-la.js', "a: ['', 'ātor', 'ātor', '', '', 'antor']", "a: ['', 'ātō', 'ātō', '', '', 'antō']"],
+  ['la posse gets a future imperative', '_shared/conjugate-la.js', "PERFPASS, ['imperative', 'future-imperative']) }, forms: { 'present-subjunctive': pr('possim", "PERFPASS, ['imperative']) }, forms: { 'present-subjunctive': pr('possim"],
+  ['la future imperative of ego is empty', '_shared/conjugate-la.js', "kind: 'simple', none: [0, 3],\n        deponentNone", "kind: 'simple', none: [3],\n        deponentNone"],
+  ['engine: a deponent gap is ignored', '_shared/conjugate.js', "(rec.deponent && tdef.deponentNone) || tdef.none", "tdef.none"],
+  ['German reflexive imperative loses its pronoun', '_shared/conjugate-de.js', "mood: 'imperative', kind: 'simple', boot: [1], none: [0, 2], attach: true,", "mood: 'imperative', kind: 'simple', boot: [1], none: [0, 2], noReflexive: true,"],
+  ['German reflexive imperative wir puts the pronoun before wir', '_shared/conjugate-de.js', "(slot === 3 || slot === 5) ? 2 : 1", "1"],
+  ['German reflexive imperative ignores the dative', '_shared/conjugate-de.js', "var rp = ctx.dative ? ctx.p.reflexivePronounsDative : ctx.p.reflexivePronouns;", "var rp = ctx.p.reflexivePronouns;"],
   ['la the imperative plural of the third conjugation is -ete', '_shared/conjugate-la.js', "c: ['', 'e', '', '', 'ite', ''],\n          io:", "c: ['', 'e', '', '', 'ete', ''],\n          io:"]
 ];
 

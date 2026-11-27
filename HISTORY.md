@@ -9,6 +9,15 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-88 (selector line code): a Latin future imperative and a German reflexive imperative (rank 56, Path 19 P3, 2026-11-27, `CACHE_VERSION` v610, no decision numbers)
+
+- **Latin.** A new extra tense `future-imperative` in `_shared/conjugate-la.js`: -tō for tū and is/ea/id, -tōte for vōs, -ntō for eī, nothing for ego and nōs (amātō, amātōte, amantō; monētō, monentō; regitō, reguntō; capitō, capiuntō; audītō, audiuntō). Typed irregulars: estō / suntō, fertō / feruntō, ītō / euntō, datō (short a, against the present dā). dīc, dūc and fac keep the full stem (dīcitō, dūcitō, facitō; only the present imperative drops -e), and compounds follow. posse and velle have none. A deponent's is -tor / -ntor (loquitor, loquuntor, hortātor, hortantor) with no vōs form, which needed one engine line: a tense may carry `deponentNone`, the slots a deponent lacks, beside `none`.
+- **German.** The imperative no longer refuses a reflexive verb: it has `attach` and the pack's `attach()` puts the pronoun after the verb, and after wir / Sie where the form has one (setz dich, setzen wir uns, setzt euch, setzen Sie sich; zieh dich an; a dative reflexive takes dir / uns / euch / sich: stell dir vor, merk dir). The passive is still refused for a reflexive verb, and a test now says so.
+- **Not changed, as asked.** kennte / nennte / rennte, the `dé` / `sé` commands with a pronoun and the Italian short tu forms stay as built (Devon, 2026-11-03). Rank 56 is deleted, since nothing in it is left to build. No table is called reviewed; both new tenses are on the check sheet (`print-corpus.mjs`) for the teacher.
+- **Tests.** `conjugate.test.mjs` has every form above and 14 new broken copies (183 caught in all, none passing); 039's and 079's suites pass unchanged. **Not verified:** the forms are from the author's knowledge of the grammars (Allen & Greenough, Duden), not a teacher's reading; macrons least of all. 079's starters and call-out tables do not use these two tenses, so nothing on 079's page changed; 039's menu offers the Latin one through `extraTenses`.
+
+---
+
 ## AI-87 (selector line code): 032's cycle letters beyond A and B (rank 138, 2026-11-27, `CACHE_VERSION` v609, no decision numbers)
 
 - **The field.** `abCycle.labels`, one optional array inside the existing `scv_calendar_v1` record (no new key, no `__v` bump): 2 to 8 distinct strings of 1 to 3 characters. No field, or one that is not a usable list, is A and B, so every record saved before this reads exactly as it did. 032 writes the field only when the letters are not A, B, so an ordinary calendar's stored bytes are unchanged (the golden hashes in `smoke-weeks.mjs` still pass). `anchorLetter` must be one of the labels, else it takes the first.
