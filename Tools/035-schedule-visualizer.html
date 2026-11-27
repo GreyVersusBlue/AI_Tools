@@ -123,6 +123,9 @@
     import * as SVOnboarding from './schedule-visualizer/sv-onboarding.js';
     window.SVOnboarding = SVOnboarding;
     Object.assign(window, SVOnboarding);
+    import * as SVPresentation from './schedule-visualizer/sv-presentation.js';
+    window.SVPresentation = SVPresentation;
+    Object.assign(window, SVPresentation);
     window.dispatchEvent(new Event('sv-recovery-ready'));
   </script>
   <link rel="stylesheet" href="schedule-visualizer/sv.css">
@@ -4488,38 +4491,9 @@ const PresentationMode = {
   },
 };
 
-function initPresentationMode() {
-  document.getElementById('viz-present-btn')?.addEventListener('click', () => PresentationMode.enter());
-  document.getElementById('pres-exit')?.addEventListener('click', () => PresentationMode.exit());
-  document.getElementById('pres-cycle-play')?.addEventListener('click', () => {
-    PresentationMode._cycleTimer ? PresentationMode._stopCycle() : PresentationMode._startCycle();
-  });
-  // Changing the interval while cycling restarts the timer at the new pace.
-  document.getElementById('pres-cycle-interval')?.addEventListener('change', () => {
-    if (PresentationMode._cycleTimer) PresentationMode._startCycle();
-  });
-
-  // Keep the mirrored legend fresh — renderVizLegend rewrites #viz-legend-list,
-  // so observe it rather than threading a hook through the renderer.
-  const legendSrc = document.getElementById('viz-legend-list');
-  if (legendSrc && window.MutationObserver) {
-    new MutationObserver(() => PresentationMode.syncLegend())
-      .observe(legendSrc, { childList: true, subtree: true });
-  }
-
-  // Keyboard: P toggles (Visualize tab, not in a field); Esc exits.
-  document.addEventListener('keydown', (e) => {
-    if (AppState.ui.activeTab !== 'visualize') return;
-    if (e.key === 'Escape') { if (PresentationMode.active) PresentationMode.exit(); return; }
-    const t = e.target;
-    const tag = (t && t.tagName || '').toLowerCase();
-    if (tag === 'input' || tag === 'textarea' || tag === 'select' || (t && t.isContentEditable)) return;
-    if ((e.key === 'p' || e.key === 'P') && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      e.preventDefault();
-      PresentationMode.toggle();
-    }
-  });
-}
+/* initPresentationMode() — the wiring for the Present and Exit buttons, the cycle controls,
+   the legend observer and the P / Escape keys — is schedule-visualizer/sv-presentation.js
+   (rank 140, tenth increment); PresentationMode itself stays above. */
 
 /* ==============================================
    ROOM SEARCH and the WHAT-IF SCHEDULE LAB — moved to
