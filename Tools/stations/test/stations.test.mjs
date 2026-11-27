@@ -527,6 +527,28 @@ function suite(src) {
     ok(!JSON.stringify(S.fromShare(link, { kind: 'hunt' })).includes('_by'), 'B: no scratch field is left on an arrival');
   }
 
+  // Path 18 P4 leftover: a room's station has an optional name for the teacher's debrief, and it never reaches a student
+  {
+    const NAME = 'The Library Zzq';
+    const r = jc(F.R2()); r.stations[1].label = NAME;
+    const set = S.read(r);
+    eq(set.stations.map(x => x.label), ['', NAME, ''].concat(set.stations.slice(3).map(() => '')), 'N: a room station reads its name');
+    eq(S.read(F.R2()).stations.map(x => x.label).filter(Boolean), [], 'N: a room saved before names has none (the older file reads as it did)');
+    const back = jc(S.write(set));
+    eq(back.stations[1].label, NAME, 'N: a name survives read and write');
+    ok(!('label' in back.stations[0]), 'N: a station with no name writes no field (an older page reads the file as before)');
+    { const w1 = jc(S.write(S.read(F.R2()))); eq(jc(S.write(S.read(w1))), w1, 'N: an older room saves the same the second time'); ok(!JSON.stringify(w1).includes('"label"'), 'N: and gains no label field'); }
+    // never a student's
+    const seen = [JSON.stringify(S.playPayload(set, { station: null })), JSON.stringify(S.playPayload(set, { station: 1 })), JSON.stringify(S.playPayload(set, { station: 0, start: true }))];
+    seen.push(decodeURIComponent(escape(Buffer.from(new URL(S.playUrl(set, null, { imageSrc: (x) => x }), BASE).searchParams.get('r'), 'base64').toString('binary'))));
+    seen.push(decodeURIComponent(escape(Buffer.from(new URL(S.playUrl(set, 1, { imageSrc: (x) => x }), BASE).searchParams.get('r'), 'base64').toString('binary'))));
+    ok(seen.every(t => !t.includes(NAME) && !/"label"/.test(t)), 'N: the name is in no student link, whole room or single station');
+    // the debrief carries it, and falls back to the number
+    const dbr = S.debrief(S.read(Object.assign(jc(r), { stations: jc(r).stations.map(x => ({ ...x, id: x.id })) })), { raceStartAt: 0, teams: [{ name: 'T', marks: {}, attempts: {}, hintsUsed: {}, penaltyMs: 0 }] });
+    eq(dbr[0].unreached.map(u => u.label).slice(0, 2), ['Station 1', NAME], 'N: the debrief names a station by it, and by its number when it has none');
+    eq(S.read(jc(S.write(S.read(jc(S.write(set, 'hunt'))), 'room'))).stations[1].label, NAME, 'N: a name goes through the hunt shape and back');
+  }
+
   return { passed, fails };
 }
 
@@ -537,6 +559,8 @@ real.fails.forEach(f => console.log('  FAIL ' + f));
 
 // break-on-purpose: each broken copy must make the suite fail
 const MUTANTS = [
+  ['a room station drops its name on save', "if (st.label) out.label = st.label;", "if (false) out.label = st.label;"],
+  ['a room station does not read its name', "id: id, label: str(st.label), prompt: str(st.clue), encode: 'player'", "id: id, label: '', prompt: str(st.clue), encode: 'player'"],
   ['cipherShift null collapses to 0', "a.cipher = { plain: str(st.cipherPlain), shift: st.cipherShift === undefined ? null : st.cipherShift };", "a.cipher = { plain: str(st.cipherPlain), shift: st.cipherShift === undefined ? 0 : st.cipherShift };"],
   ['a duplicate id is kept', "var id = isObj(st) && validId(st.id) && seen[st.id] === 1 ? st.id : null;", "var id = isObj(st) && validId(st.id) ? st.id : null;"],
   ['the ids string is dropped from the payload', "out.ids = valid.map(function (s) { return s.id; }).join('');", "out.ids = '';"],

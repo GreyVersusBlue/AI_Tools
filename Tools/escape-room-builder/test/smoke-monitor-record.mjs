@@ -67,6 +67,30 @@ await add(7);
 await page.evaluate(() => window.__monitor.save());
 eq((await stored()).data.teams.length, 1, 'a new device that has moved nobody does not overwrite it');
 
+console.log('record — the roster and leaderboard come back after a reload');
+{
+  const T = 1700000000000, room = { name: 'Library', roomId: 'lib', stations: ['aaaa', 'bbbb', 'cccc'].map(id => ({ id, clue: 'c', answers: 'a', next: null, hint: '', hintCost: 0, image: '', type: 'text' })) };
+  const rec = { v: 1, at: Date.now(), raceStartAt: T, teams: [
+    { name: 'Owls', code: '', marks: { aaaa: { at: T + 60000 } }, attempts: {}, hintsUsed: {}, penaltyMs: 0 },
+    { name: 'Hawks', code: '', marks: { aaaa: { at: T + 50000 }, bbbb: { at: T + 100000 }, cccc: { at: T + 245000 } }, attempts: {}, hintsUsed: {}, penaltyMs: 0 }] };
+  await page.evaluate(([k, rec, rk, room]) => { localStorage.setItem(k, JSON.stringify({ v: 1, data: rec })); localStorage.setItem(rk, JSON.stringify({ v: 1, data: { current: 'Library', sets: { Library: room } } })); }, [KEY, rec, 'escape-room-builder:rooms', room]);
+  await page.reload({ waitUntil: 'load' }); await settle(page, 300);
+  eq(await page.$$eval('#rosterBody input.team-name', is => is.map(i => i.value)), ['Owls', 'Hawks'], 'the roster has the kept teams');
+  ok(/Station 2 of 3/.test(await page.locator('#rosterBody tr').first().textContent()), 'a team part-way shows where it is: ' + (await page.locator('#rosterBody tr').first().textContent()).trim());
+  ok((await page.locator('#rosterBody tr').first().textContent()).includes('Disconnected'), 'and is disconnected until it pairs again');
+  const board = await page.$$eval('#boardBody tr', trs => trs.map(t => [...t.children].map(c => c.textContent.trim())));
+  eq(board.map(r => [r[1].replace(/\s+/g, ' '), r[2], r[4]]), [['Hawks (disconnected)', '\uD83C\uDFC1 Finished', '4:05'], ['Owls (disconnected)', '1 of 3', '\u2014']],
+    'the leaderboard is ranked from the record, with the finished team\'s time from the kept clock');
+  eq(await page.evaluate(() => document.getElementById('clockBtn').textContent), 'Reset the clock', 'the clock is the one the record kept');
+  await page.evaluate(k => localStorage.setItem(k, JSON.stringify({ v: 1, data: { v: 1, at: Date.now() - 3 * 3600000, raceStartAt: null, teams: [{ name: 'Old', code: '', marks: { aaaa: { at: 1 } }, attempts: {}, hintsUsed: {}, penaltyMs: 0 }] } })), KEY);
+  await page.reload({ waitUntil: 'load' }); await settle(page, 300);
+  eq(await page.locator('#rosterBody tr').count(), 0, 'a record older than two hours is last class\'s: no rows');
+  await page.evaluate(k => localStorage.removeItem(k), 'escape-room-builder:rooms');
+  await page.evaluate(([k, rec]) => localStorage.setItem(k, JSON.stringify({ v: 1, data: rec })), [KEY, rec]);
+  await page.reload({ waitUntil: 'load' }); await settle(page, 300);
+  ok(/2 passed|1 passed/.test(await page.locator('#boardBody').textContent()), 'with no saved room to count the stations, a row says how many it passed');
+}
+
 console.log('record — clear');
 page.once('dialog', d => d.dismiss());
 await page.locator('#clearRecordBtn').click();

@@ -272,7 +272,7 @@
     els.boardTable.style.display = rows.length ? '' : 'none';
     els.boardEmpty.style.display = rows.length ? 'none' : '';
     els.boardBody.innerHTML = rows.map(function (r, i) {
-      var progress = r.total > 0 ? (r.finished ? '\uD83C\uDFC1 Finished' : r.passed + ' of ' + r.total) : '\u2014';
+      var progress = r.total > 0 ? (r.finished ? '\uD83C\uDFC1 Finished' : r.passed + ' of ' + r.total) : (r.passed ? r.passed + ' passed' : '\u2014');
       var time = r.finished ? (r.elapsedMs == null ? (clockStart == null ? 'Start the clock' : '\u2014') : window.ErBoard.formatElapsed(r.elapsedMs)) : '\u2014';
       return '<tr><td>' + (i + 1) + '</td><td>' + escapeText(r.name) + (r.connected ? '' : ' <span class="status-disconnected">(disconnected)</span>') + '</td><td>' + progress +
         '</td><td>' + (r.score == null ? '\u2014' : r.score) + '</td><td>' + time + '</td></tr>';
@@ -319,7 +319,7 @@
       var statusHtml = !d.connected
         ? '<span class="status-disconnected">Disconnected</span>'
         : (d.done ? '<span class="status-done">🏁 Finished!</span>' : 'In progress');
-      var progressText = d.total > 0 ? escapeText('Station ' + (d.done ? d.total : d.station + 1) + ' of ' + d.total) : '—';
+      var progressText = d.total > 0 ? escapeText('Station ' + (d.done ? d.total : d.station + 1) + ' of ' + d.total) : (d.restored && window.ErBoard.passed(d) ? window.ErBoard.passed(d) + ' passed' : '—');
       var scoreText = (typeof d.score === 'number') ? escapeText(d.score) : '—';
       return '<tr><td><input type="text" class="team-name" data-device="' + d.id + '" value="' + escapeAttr(d.name || '') + '" placeholder="Team ' + d.id + '" aria-label="Name for the team on device ' + d.id + '"></td><td>' + progressText +
         '<div class="bar-wrap"><div class="bar-fill" style="width:' + pct + '%;"></div></div></td>' +
@@ -438,6 +438,15 @@
     els.pairingStatus.textContent = 'Code copied.';
   });
 
+  // A reload mid-game (Path 18 P3 leftover): the roster and the leaderboard come back from the carried record, one
+  // disconnected row a team, so what the page shows is what it kept. The clock comes back too, when the record
+  // holds a Start, so a finished team's time reads as before. A team that pairs again takes its row over.
+  if (base && base.teams.length) {
+    var savedRoom = savedRooms()[window.ErBoard.roomFor(savedRooms(), base)];
+    devices = window.ErBoard.restoreDevices(base, savedRoom && Array.isArray(savedRoom.stations) ? savedRoom.stations.length : 0);
+    nextDeviceId = devices.length + 1;
+    if (base.raceStartAt !== null) clockStart = base.raceStartAt;
+  }
   renderRoster();
   renderClock();
   renderRecord();

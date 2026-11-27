@@ -135,11 +135,15 @@ await page.fill('#rosterBody input.team-name[data-device="1"]', 'Owls');
 await page.fill('#rosterBody input.team-name[data-device="2"]', 'Foxes');
 eq((await stored()).teams.map(t => t.name), ['Owls', 'Foxes'], 'two teams are kept');
 await open();   // the teacher's tab reloads mid-game
+eq(await rows('#rosterBody'), 2, 'the roster is back after the reload, one row a kept team');
+eq(await rows('#boardBody'), 2, 'and so is the leaderboard');
+eq(await page.$$eval('#rosterBody input.team-name', is => is.map(i => i.value)), ['Owls', 'Foxes'], 'under their names');
+ok(/Disconnected/.test(await page.textContent('#rosterBody')), 'each one disconnected until it pairs again');
 const p3 = await pair();
 await send(p3, { station: 0, id: 'aaaa', total: 3 });
 await send(p3, { station: 1, id: 'bbbb', total: 3 });
 let rec = await stored();
-eq(rec.teams.map(t => t.name), ['Owls', 'Foxes', 'Team 1'], 'the first save after the reload keeps the teams from before it');
+eq(rec.teams.map(t => t.name), ['Owls', 'Foxes', 'Team 3'], 'the first save after the reload keeps the teams from before it');
 eq(Object.keys(rec.teams[0].marks), ['aaaa'], 'with their solves');
 ok(/3 teams, 3 stations passed/.test(await page.textContent('#recordLine')), 'and the page counts them: ' + await page.textContent('#recordLine'));
 
@@ -147,20 +151,21 @@ console.log('M7 — a kept team paired again after the reload');
 await page.click('#addDeviceBtn');
 await page.waitForFunction(() => document.getElementById('offerText').value === 'stand-in offer');
 ok(await page.locator('#rejoinRow').isVisible(), 'the pairing box asks who is connecting');
-eq(await choices(), [['', 'A new team'], ['d:1', 'Team 1 (still connected)'], ['k:0', 'Owls (kept before this page was opened)'], ['k:1', 'Foxes (kept before this page was opened)']],
-  'a new team by default, then the teams on the page and the kept ones');
+eq(await choices(), [['', 'A new team'], ['d:1', 'Owls (disconnected)'], ['d:2', 'Foxes (disconnected)'], ['d:3', 'Team 3 (still connected)']],
+  'a new team by default, then the teams on the page, the restored ones among them');
 eq(await page.inputValue('#rejoinSelect'), '', 'and "A new team" is picked');
 await page.click('#cancelPairingBtn');
-const p4 = await pair('k:0');
-ok(/Owls/.test(await page.inputValue('#rosterBody input.team-name[data-device="2"]')), 'its roster row has the kept name');
+const p4 = await pair('d:1');
+ok(/Owls/.test(await page.inputValue('#rosterBody input.team-name[data-device="1"]')), 'its roster row has the kept name');
+eq(await rows('#rosterBody'), 3, 'and it took the restored row over: no row was added');
 await send(p4, { station: 1, id: 'bbbb', total: 3 });
 await send(p4, { station: 2, id: 'cccc', total: 3 });
 rec = await stored();
-eq(rec.teams.map(t => t.name), ['Owls', 'Foxes', 'Team 1'], 'it adds no team to the record');
+eq(rec.teams.map(t => t.name), ['Owls', 'Foxes', 'Team 3'], 'it adds no team to the record');
 eq(Object.keys(rec.teams[0].marks), ['aaaa', 'bbbb'], 'its new solve is on its kept sheet');
 await page.click('#addDeviceBtn');
 await page.waitForFunction(() => document.getElementById('offerText').value === 'stand-in offer');
-ok(!(await choices()).some(c => c[0] === 'k:0'), 'a kept team that has been taken is not offered again');
+ok((await choices()).some(c => c[0] === 'd:1' && /still connected/.test(c[1])), 'a restored team that has paired again is shown as connected');
 await page.click('#cancelPairingBtn');
 
 console.log('M7 — an old record is last class\'s');

@@ -136,7 +136,7 @@
   var ROOM_SET_KEYS = ['name', 'roomId', 'id', 'storyIntro', 'cardsPerPage', 'ecLevel', 'showNumber', 'randomizeStart',
     'countdownEnabled', 'countdownMinutes', 'packetCardsPerPage', 'stations', 'kind', 'flow', 'required', 'run', 'x'];
   var HUNT_SET_KEYS = ['name', 'id', 'cardsPerPage', 'ecLevel', 'showNumber', 'stations', 'run', 'kind', 'flow', 'required', 'x'];
-  var ROOM_ST_KEYS = ['id', 'clue', 'answers', 'hint', 'next', 'image', 'type', 'hintCost', 'awardLetter', 'cipherPlain',
+  var ROOM_ST_KEYS = ['id', 'label', 'clue', 'answers', 'hint', 'next', 'image', 'type', 'hintCost', 'awardLetter', 'cipherPlain',
     'cipherShift', 'maxAttempts', 'numericTolerance', 'codeWord', 'branches', 'bankId', 'encode', 'x'];
   var HUNT_ST_KEYS = ['id', 'label', 'content', 'note', 'qType', 'choices', 'correctChoice', 'numericAnswer', 'tolerance',
     'hint', 'hintPenalty', 'codeWord', 'branches', 'bankId', 'image', 'encode', 'x'];
@@ -198,7 +198,7 @@
     a.cipher = { plain: str(st.cipherPlain), shift: st.cipherShift === undefined ? null : st.cipherShift };
     a.maxAttempts = st.maxAttempts === undefined ? 0 : st.maxAttempts;
     var out = {
-      id: id, label: '', prompt: str(st.clue), encode: 'player', note: '', codeWord: str(st.codeWord),
+      id: id, label: str(st.label), prompt: str(st.clue), encode: 'player', note: '', codeWord: str(st.codeWord),
       image: str(st.image), letter: str(st.awardLetter), answer: a,
       hint: { text: str(st.hint), minutes: 0, points: st.hintCost === undefined ? 0 : st.hintCost },
       next: null
@@ -245,7 +245,7 @@
     Object.keys(full).forEach(function (k) { out[k] = full[k]; });
     out.id = keep.id; out.prompt = keep.prompt;
     if (kind === 'hunt') { out.label = keep.label; out.note = keep.note; out.codeWord = keep.codeWord; }
-    else { out.codeWord = keep.codeWord || out.codeWord; }
+    else { out.codeWord = keep.codeWord || out.codeWord; out.label = keep.label; }
     out.hint.text = keep.hintText;
   }
 
@@ -341,6 +341,7 @@
     out.maxAttempts = a.maxAttempts || 0;
     out.numericTolerance = a.tolerance === undefined ? null : a.tolerance;
     if (st.codeWord) out.codeWord = st.codeWord;
+    if (st.label) out.label = st.label;     // the teacher's name for it (Path 18 P4): never in playPayload, so never on lock.html
     writeP3(out, st, ids, 'room');
     if (st.extra) Object.keys(st.extra).forEach(function (k) { out[k] = clone(st.extra[k]); });
     return out;
