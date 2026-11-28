@@ -10,7 +10,7 @@
    bare JSON written by Tools/school-calendar/scv-store.js and by nothing else:
      { __v: 2, meta: { start, end, yearLabel }, dayTypes: [{ id, label,
        noSchool?, ... }], days: { 'YYYY-MM-DD': { types: [id], label, ... } },
-       abCycle?: { enabled, anchorDate, anchorLetter }, pacing, units?, bell? }
+       abCycle?: { enabled, anchorDate, anchorLetter, labels? }, pacing, units?, bell? }
    A day type is a tag; a day may carry several, or none (an ordinary day).
 
    THE BELL SCHEDULES are one optional field of that blob, `bell`. There is no
@@ -160,27 +160,42 @@
      scv-weeks.js: set both false. */
   var LETTERS_BEFORE_ANCHOR = true;
 
-  /** { 'YYYY-MM-DD': 'A'|'B' } for every school day from the earlier of meta.start and the
-      anchor to the later of meta.end and the anchor; {} when the cycle is off. The anchor
-      date takes the anchor letter (a non-school anchor gives it to the next school day), and
-      the days after it alternate from there (Devon, 2026-10-07; the off-by-one before v573
-      is ANCHOR_QUIRK in HISTORY). */
+  /** The cycle's letters: abCycle.labels when it is a usable list (2 to 8 distinct strings of
+      1 to 3 characters), else ['A', 'B']; the twin of cycleLabels() in scv-weeks.js. */
+  function cycleLabels(ac) {
+    var raw = ac && ac.labels;
+    if (!Array.isArray(raw) || raw.length < 2 || raw.length > 8) return ['A', 'B'];
+    var out = [];
+    for (var i = 0; i < raw.length; i++) {
+      var t = typeof raw[i] === 'string' ? raw[i].trim() : '';
+      if (!t || t.length > 3 || out.indexOf(t) >= 0) return ['A', 'B'];
+      out.push(t);
+    }
+    return out;
+  }
+
+  /** { 'YYYY-MM-DD': label } ('A' or 'B' unless the calendar names its own letters) for every
+      school day from the earlier of meta.start and the anchor to the later of meta.end and the
+      anchor; {} when the cycle is off. The anchor date takes the anchor letter (a non-school
+      anchor gives it to the next school day), and the days after it step round the labels from
+      there (Devon, 2026-10-07; the off-by-one before v573 is ANCHOR_QUIRK in HISTORY). */
   function abLetters(cal) {
     var map = {};
     var ac = cal && cal.abCycle;
     if (!isCalendar(cal) || !ac || !ac.enabled || !isIso(ac.anchorDate)) return map;
     var anchor = ac.anchorDate;
-    var anchorLetter = ac.anchorLetter === 'B' ? 'B' : 'A';
-    var other = anchorLetter === 'A' ? 'B' : 'A';
+    var labels = cycleLabels(ac);
+    var L = labels.length;
+    var at = labels.indexOf(ac.anchorLetter);
     var lo = anchor < cal.meta.start ? anchor : cal.meta.start;
     var hi = anchor > cal.meta.end ? anchor : cal.meta.end;
     if (lo > hi) return map;
-    var letter = countSchoolDaysFromUntil(cal, lo, anchor) % 2 === 0 ? anchorLetter : other;
+    var idx = (((at < 0 ? 0 : at) - countSchoolDaysFromUntil(cal, lo, anchor)) % L + L) % L;
     for (var ms = isoToMs(lo), end = isoToMs(hi); ms <= end; ms += DAY_MS) {
       var iso = msToIso(ms);
       if (isSchoolDay(cal, iso)) {
-        if (LETTERS_BEFORE_ANCHOR || iso >= anchor) map[iso] = letter;
-        letter = letter === 'A' ? 'B' : 'A';
+        if (LETTERS_BEFORE_ANCHOR || iso >= anchor) map[iso] = labels[idx];
+        idx = (idx + 1) % L;
       }
     }
     return map;
@@ -647,6 +662,7 @@
     isCalendar: isCalendar,
     isSchoolDay: isSchoolDay,
     abLetters: abLetters,
+    cycleLabels: cycleLabels,
     emptyBell: emptyBell,
     cleanBell: cleanBell,
     dayOf: dayOf,

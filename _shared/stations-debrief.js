@@ -47,6 +47,7 @@
     var fmt = opts.formatElapsed || defaultElapsed, fmtPen = opts.formatPenaltyMinutes || defaultPenalty;
     var title = opts.title || 'Hunt debrief', prompts = opts.prompts || REFLECT_PROMPTS;
     var noMiss = (opts.without || []).indexOf('misses') >= 0, noHint = (opts.without || []).indexOf('hints') >= 0;
+    function stName(n, label) { return 'Station ' + (n + 1) + (label && label !== 'Station ' + (n + 1) ? ' \u2014 ' + label : ''); }
     function clock(ms) { return ms === null || ms === undefined ? '—' : fmt(ms); }
     var items = [];
     teams.forEach(function (d, i) { items.push({ d: d, i: i, page: 'path' }); items.push({ d: d, i: i, page: 'reflect' }); });
@@ -69,12 +70,12 @@
       if (!noHint) sum += ' · ' + d.hints + ' hint' + (d.hints === 1 ? '' : 's') + (d.penaltyMs ? ' (+' + fmtPen(d.penaltyMs) + ' min penalty)' : '');
       card.appendChild(pEl('div', 'p-debrief-sum', sum));
       var cols = [['#', function (p) { return p.order; }],
-        ['Station', function (p) { return 'Station ' + (p.n + 1) + (p.label !== 'Station ' + (p.n + 1) ? ' — ' + p.label : ''); }],
+        ['Station', function (p) { return stName(p.n, p.label); }],
         ['Reached at', function (p) { return clock(p.sinceStartMs); }],
         ['Time on leg', function (p) { return clock(p.legMs); }]];
       if (!noMiss) cols.push(['Wrong tries', function (p) { return p.misses; }]);
       if (!noHint) cols.push(['Hint', function (p) { return p.hint ? 'Used (−' + p.hint.penaltyMin + ' min)' : '—'; }]);
-      cols.push(['Sent on to', function (p) { return p.sentTo ? (p.sentTo.end ? 'The end' : 'Station ' + (p.sentTo.n + 1)) : '—'; }]);
+      cols.push(['Sent on to', function (p) { return p.sentTo ? (p.sentTo.end ? 'The end' : stName(p.sentTo.n, p.sentTo.label)) : '—'; }]);
       var table = pEl('table', 'p-debrief');
       var head = table.appendChild(document.createElement('thead')).appendChild(document.createElement('tr'));
       cols.forEach(function (c) { head.appendChild(pEl('th', '', c[0])); });
@@ -90,7 +91,7 @@
       card.appendChild(table);
       if (d.unreached.length) {
         card.appendChild(pEl('div', 'p-debrief-open', 'Still open: ' + d.unreached.map(function (u) {
-          return 'Station ' + (u.n + 1) + (!noMiss && u.misses ? ' (' + u.misses + ' wrong ' + (u.misses === 1 ? 'try' : 'tries') + ')' : '');
+          return stName(u.n, u.label) + (!noMiss && u.misses ? ' (' + u.misses + ' wrong ' + (u.misses === 1 ? 'try' : 'tries') + ')' : '');
         }).join(', ') + '.'));
       }
       if (noMiss || noHint) {

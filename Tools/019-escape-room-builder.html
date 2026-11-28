@@ -706,6 +706,8 @@
             '<button type="button" class="icon-btn danger" data-remove title="Remove station">&#10005;</button>' +
           '</div>' +
         '</div>' +
+        '<div class="field-row"><label>Station name (optional, for your debrief sheet; students never see it)</label>' +
+          '<input type="text" class="f-label" maxlength="60" aria-label="Name for station ' + (i + 1) + '" placeholder="e.g. The library" value="' + escapeHtml(s.label || '').replace(/"/g, '&quot;') + '"></div>' +
         '<div class="row2">' +
           '<div class="field-row"><label>Puzzle type</label>' +
             '<select class="f-type" aria-label="Puzzle type for station ' + (i + 1) + '">' +
@@ -772,6 +774,7 @@
     if (!cardEl) return;
     var i = parseInt(cardEl.dataset.idx, 10);
     if (e.target.classList.contains('f-clue')) state.stations[i].clue = e.target.value;
+    else if (e.target.classList.contains('f-label')) { if (e.target.value) state.stations[i].label = e.target.value; else delete state.stations[i].label; }
     else if (e.target.classList.contains('f-answers')) state.stations[i].answers = e.target.value;
     else if (e.target.classList.contains('f-hint')) state.stations[i].hint = e.target.value;
     else if (e.target.classList.contains('f-hint-cost')) state.stations[i].hintCost = Math.max(0, parseInt(e.target.value, 10) || 0);

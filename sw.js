@@ -75,7 +75,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v606';
+const CACHE_VERSION = 'v610';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -664,6 +664,7 @@ const OPEN_ONCE = {
     "Tools/schedule-visualizer/sv-model.js",
     "Tools/schedule-visualizer/sv-onboarding.js",
     "Tools/schedule-visualizer/sv-playback.js",
+    "Tools/schedule-visualizer/sv-presentation.js",
     "Tools/schedule-visualizer/sv-recovery.js",
     "Tools/schedule-visualizer/sv-recovery-ui.js",
     "Tools/schedule-visualizer/sv-reports.js",

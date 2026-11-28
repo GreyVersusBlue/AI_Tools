@@ -473,7 +473,7 @@ const MUTANTS = [
   ['letter does not slide over a closure', "      if (isSchoolDay(cal, iso)) {\n        if (LETTERS_BEFORE_ANCHOR", "      if (isWeekday(iso)) {\n        if (LETTERS_BEFORE_ANCHOR"],
   ['ANCHOR_QUIRK back (count strictly between)', "for (var ms = isoToMs(a), end = isoToMs(b); ms < end; ms += DAY_MS) {\n      if (isSchoolDay", "for (var ms = isoToMs(a) + DAY_MS, end = isoToMs(b); ms < end; ms += DAY_MS) {\n      if (isSchoolDay"],
   ['no letter before the anchor', "if (LETTERS_BEFORE_ANCHOR || iso >= anchor)", "if (iso >= anchor)"],
-  ['anchor parity flipped', "% 2 === 0 ? anchorLetter : other;", "% 2 === 1 ? anchorLetter : other;"],
+  ['anchor parity flipped', "(at < 0 ? 0 : at) - countSchoolDaysFromUntil", "(at < 0 ? 0 : at) - 1 - countSchoolDaysFromUntil"],
   ['half day counted as half', "      out.days++;\n      if (typesOn(cal, iso).some(isHalfType)) out.half++;",
     "      out.days += typesOn(cal, iso).some(isHalfType) ? 0.5 : 1;\n      if (typesOn(cal, iso).some(isHalfType)) out.half++;"],
   ['boundary day starts the next period', "        start = msToIso(ms + DAY_MS); days = 0; half = 0;", "        start = iso; days = 0; half = 0;"],

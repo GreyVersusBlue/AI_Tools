@@ -13,7 +13,10 @@
   'use strict';
 
   /** How far a device has got: stations passed, all of them once it is done. */
-  function passed(d) { return d.total > 0 ? (d.done ? d.total : Math.min(d.station, d.total)) : 0; }
+  function passed(d) {
+    if (!(d.total > 0)) return d.restored && d.marks ? Object.keys(d.marks).length : 0;   // a restored team of a room nobody could name
+    return d.done ? d.total : Math.min(d.station, d.total);
+  }
 
   /** A count a device sent (its station, the room's total): a whole number from 0 up, or NaN for anything else,
       a missing or null one included (lock.html always sends both). Only a number or a string of digits is read, so
@@ -105,6 +108,23 @@
     return { v: 1, at: typeof at === 'number' ? at : null, raceStartAt: typeof clockStart === 'number' ? clockStart : null, teams: teams };
   }
 
+  /** The roster a reloaded monitor starts with (Path 18 P3 leftover): one disconnected row for each team in the
+      carried record, so the roster and the leaderboard are there again before anyone pairs. Everything comes from
+      what the record already holds, the stations each team passed and when: a team's place is the number it has
+      passed, it is finished when it has passed all `total` (the stations of the saved room the record belongs to,
+      or 0 when none holds it), and its time is its last solve. Score is not kept, so it is blank, and a row says
+      `restored` so a new pairing can take it over (`kept` is its place in the record, as for a paired one). */
+  function restoreDevices(record, total) {
+    total = typeof total === 'number' && total > 0 ? Math.floor(total) : 0;
+    return (record && Array.isArray(record.teams) ? record.teams : []).map(function (t, i) {
+      var marks = {}, ats = [];
+      Object.keys(t.marks || {}).forEach(function (id) { marks[id] = { at: t.marks[id].at }; ats.push(t.marks[id].at); });
+      var n = ats.length, done = total > 0 && n >= total, last = n ? Math.max.apply(null, ats) : null;
+      return { id: i + 1, name: t.name || '', station: n, stationId: null, total: total, done: done, connected: false, score: null,
+        marks: marks, kept: i, restored: true, firstAt: n ? Math.min.apply(null, ats) : null, lastAt: last, doneAt: done ? last : null };
+    });
+  }
+
   /** How long a kept record is carried into a newly opened monitor (review M7): a reload mid-game is minutes,
       a block period is 90; a record older than this is last class's, and a new solve starts a new one, as
       before. */
@@ -166,6 +186,6 @@
   }
 
   global.ErBoard = { passed: passed, applyMessage: applyMessage, leaderboard: leaderboard, formatElapsed: formatElapsed, nameOf: nameOf,
-    toRecord: toRecord, cleanRecord: cleanRecord, roomFor: roomFor,
+    toRecord: toRecord, restoreDevices: restoreDevices, cleanRecord: cleanRecord, roomFor: roomFor,
     readMessage: readMessage, carries: carries, CARRY_MS: CARRY_MS, rejoinChoices: rejoinChoices };
 })(typeof window !== 'undefined' ? window : this);

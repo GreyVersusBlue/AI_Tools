@@ -572,6 +572,7 @@
     <h2>A/B Day Cycle</h2>
     <div class="ab-row">
       <label class="enable"><input type="checkbox" id="abEnable"> Track A/B days on this calendar</label>
+      <div class="field"><label for="abLabels">Day letters (2 to 8, e.g. A, B, C, D)</label><input type="text" id="abLabels" value="A, B" size="14" maxlength="40"></div>
       <div class="field"><label for="abAnchorDate">A known date</label><input type="date" id="abAnchorDate"></div>
       <div class="field"><label for="abAnchorLetter">…is a</label>
         <select id="abAnchorLetter"><option value="A">A day</option><option value="B">B day</option></select>
@@ -581,7 +582,8 @@
     <div class="ab-hint">
       The cycle alternates on every school day (weekdays not tagged "No school" in a Day Type above) and skips
       weekends and no-school days entirely, so it stays correct across breaks. Pick a date you know for certain —
-      today, or the first day of school. Once applied, every day on the calendar below shows its A/B letter.
+      today, or the first day of school. Once applied, every day on the calendar below shows its letter.
+      A school with more than two (A, B, C, D, or 1 to 6) types them in <em>Day letters</em>; courses and bell schedules set per letter still know only A and B.
     </div>
   </div>
 
@@ -713,7 +715,7 @@ import {
   parseLessonList, placeLessons, isTeachableDay, rebindAdjustments,
   parsePacingRows, emptyPacing, unitInstructionalStats,
 } from './school-calendar/scv-pacing.js';
-import { abLetters, yearBadge, mondayOf, weekDates, weekRange, isoToMs, MAX_WEEKS } from './school-calendar/scv-weeks.js';
+import { abLetters, cycleLabels, parseLabels, yearBadge, mondayOf, weekDates, weekRange, isoToMs, MAX_WEEKS } from './school-calendar/scv-weeks.js';
 import {
   absorbLegacy, readPlan, newCourse, syncUnits, placeCourse, placePlan, stamp, stored,
   diffPlacement, describeDiff, shortDate, PLACER_ALGO,
@@ -960,7 +962,7 @@ function renderMonths() {
       const label = entry && entry.label ? `<span class="lbl">${escapeHtml(entry.label)}</span>` : "";
       const lesson = entry && entry.lesson ? `<span class="lesson">${escapeHtml(entry.lesson)}</span>` : "";
       const abLetter = abMap[dateISO];
-      const abBadge = abLetter ? `<span class="ab-badge" title="${abLetter} day">${abLetter}</span>` : "";
+      const abBadge = abLetter ? `<span class="ab-badge" title="${escapeAttr(escapeHtml(abLetter))} day">${escapeAttr(escapeHtml(abLetter))}</span>` : "";
       // Paced lesson (computed placement) renders distinct from the free-text
       // lesson note above: green + bold vs italic accent, "your note" vs
       // "where the sequence currently lands".
@@ -1054,7 +1056,7 @@ function renderYearGrid() {
           }).join("")}</div>`
         : "";
       const badgeHtml = badge
-        ? `<span class="yab${badge.kind === "off" ? " yab-off" : ""}" role="img" aria-label="${badge.spoken}" title="${badge.spoken}">${badge.text}</span>`
+        ? `<span class="yab${badge.kind === "off" ? " yab-off" : ""}" role="img" aria-label="${escapeAttr(escapeHtml(badge.spoken))}" title="${escapeAttr(escapeHtml(badge.spoken))}">${escapeHtml(badge.text)}</span>`
         : "";
       cell.innerHTML = `${d}${badgeHtml}${dots}`;
       grid.appendChild(cell);
@@ -1063,7 +1065,7 @@ function renderYearGrid() {
   if (Object.keys(abMap).length) {
     const key = document.createElement("p");
     key.className = "year-key";
-    key.textContent = "A and B: the school day\u2019s letter. \u2013 : a weekday with no school.";
+    key.textContent = cycleLabels(cal.abCycle).join(", ") + ": the school day\u2019s letter. \u2013 : a weekday with no school.";
     wrap.appendChild(key);
   }
 }
@@ -1163,7 +1165,16 @@ function syncAbControls() {
   const ac = cal.abCycle || { enabled: false, anchorDate: "", anchorLetter: "A" };
   document.getElementById("abEnable").checked = !!ac.enabled;
   document.getElementById("abAnchorDate").value = ac.anchorDate || "";
-  document.getElementById("abAnchorLetter").value = ac.anchorLetter === "B" ? "B" : "A";
+  const labels = cycleLabels(ac);
+  document.getElementById("abLabels").value = labels.join(", ");
+  fillAnchorLetters(labels, ac.anchorLetter);
+}
+
+/** The "…is a" choices follow the letters typed above; an unknown current letter falls to the first. */
+function fillAnchorLetters(labels, current) {
+  const sel = document.getElementById("abAnchorLetter");
+  sel.replaceChildren(...labels.map(l => { const o = document.createElement("option"); o.value = l; o.textContent = l + " day"; return o; }));
+  sel.value = labels.includes(current) ? current : labels[0];
 }
 
 /** Weekdays (Mon-Fri) in [startISO, endISO], and how many of those are
@@ -1571,15 +1582,24 @@ document.getElementById("btnApplyMeta").addEventListener("click", () => {
 });
 
 /* --- A/B day cycle --- */
+document.getElementById("abLabels").addEventListener("input", () => {
+  const labels = parseLabels(document.getElementById("abLabels").value);
+  if (labels) fillAnchorLetters(labels, document.getElementById("abAnchorLetter").value);
+});
 document.getElementById("btnApplyAb").addEventListener("click", () => {
   const anchorDate = document.getElementById("abAnchorDate").value;
   const enable = document.getElementById("abEnable").checked;
-  if (enable && !anchorDate) { alert("Pick a known A-day or B-day date first."); return; }
+  const labels = parseLabels(document.getElementById("abLabels").value);
+  if (!labels) { alert("Day letters: give 2 to 8 different letters or numbers, up to 3 characters each, separated by commas or spaces."); return; }
+  if (enable && !anchorDate) { alert("Pick a known date and its letter first."); return; }
+  const picked = document.getElementById("abAnchorLetter").value;
   cal.abCycle = {
     enabled: enable,
     anchorDate,
-    anchorLetter: document.getElementById("abAnchorLetter").value === "B" ? "B" : "A"
+    anchorLetter: labels.includes(picked) ? picked : labels[0]
   };
+  // only a cycle that is not A, B carries the field, so an ordinary calendar's record is unchanged
+  if (labels.join("|") !== "A|B") cal.abCycle.labels = labels;
   save("Changing the A/B cycle"); render();
 });
 

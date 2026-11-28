@@ -155,6 +155,22 @@ function suite(src, stationsSrc) {
   eq(B.toRecord([fresh], null, 1, null).teams.length, 1, 'R: no base, only the devices');
   eq([B.carries(baseRec, 1000 + 60000), B.carries(baseRec, 1000 + B.CARRY_MS + 1), B.carries(baseRec, 999), B.carries(null, 1)], [true, false, false, false],
     'R: a record is carried for two hours after it was kept, not from the future, and nothing is carried from nothing');
+  // P3 leftover: the roster a reloaded monitor starts with comes from the carried record alone
+  const rd = B.restoreDevices({ v: 1, at: 1, raceStartAt: 500, teams: [
+    { name: 'Owls', code: '', marks: { aaaa: { at: 700 }, bbbb: { at: 900 } }, attempts: {}, hintsUsed: {}, penaltyMs: 0 },
+    { name: '', code: '', marks: { aaaa: { at: 800 } }, attempts: {}, hintsUsed: {}, penaltyMs: 0 },
+    { name: 'Hawks', code: '', marks: { aaaa: { at: 600 }, bbbb: { at: 650 }, cccc: { at: 1100 } }, attempts: {}, hintsUsed: {}, penaltyMs: 0 }] }, 3);
+  eq(rd.map(d => [d.id, d.name, d.station, d.total, d.done, d.connected, d.kept, d.doneAt, d.lastAt]),
+    [[1, 'Owls', 2, 3, false, false, 0, null, 900], [2, '', 1, 3, false, false, 1, null, 800], [3, 'Hawks', 3, 3, true, false, 2, 1100, 1100]],
+    'P: one disconnected row a kept team, its place the stations it passed, finished when it passed all of them');
+  eq(B.leaderboard(rd, 500).map(r => [r.name, r.passed, r.finished, r.elapsedMs, r.connected]),
+    [['Hawks', 3, true, 600, false], ['Owls', 2, false, null, false], ['Team 2', 1, false, null, false]], 'P: the leaderboard is ranked and timed from the record');
+  eq(B.leaderboard(B.restoreDevices({ teams: [{ name: 'Owls', marks: { aaaa: { at: 700 } } }] }, 0), null).map(r => [r.passed, r.total, r.finished]), [[1, 0, false]],
+    'P: with no saved room to count the stations, a team still shows what it passed and is never called finished');
+  eq(B.restoreDevices({ teams: [{ name: 'Owls', marks: { aaaa: { at: 700 } } }] }, 0).map(d => [d.done, d.doneAt]), [[false, null]], 'P: and its row is not marked done');
+  eq([B.restoreDevices(null, 3), B.restoreDevices({ teams: [] }, 3)], [[], []], 'P: nothing kept, no rows');
+  eq(B.toRecord(rd, 500, 9, { v: 1, at: 1, raceStartAt: 500, teams: rd.map(d => ({ name: d.name, marks: d.marks })) }).teams.map(t => [t.name, Object.keys(t.marks).length]),
+    [['Owls', 2], ['', 1], ['Hawks', 3]], 'P: saving with only restored rows changes nothing in the record');
   const ch = B.rejoinChoices([dev(1, { name: 'Owls' }), dev(2, { connected: false }), dev(3, { kept: 1 })], baseRec);
   eq(ch.map(c => c.value), ['d:2', 'd:1', 'd:3', 'k:0'], 'J: the disconnected team first, then the rest, then the kept teams no device has taken');
   eq(ch.map(c => c.label), ['Team 2 (disconnected)', 'Owls (still connected)', 'Team 3 (still connected)', 'Owls (kept before this page was opened)'], 'J: labels');
@@ -191,6 +207,8 @@ const MUTANTS = [
   ['a team paired as a kept one is a second sheet', "mine.forEach(function (d) { if (!used[d.id])", "mine.forEach(function (d) { if (true)"],
   ['a record is carried for ever', "now - record.at < CARRY_MS", "true"],
   ['a kept team is offered twice', "if (devices.some(function (d) { return d.kept === i; })) return;", ""],
+  ['a restored team is finished with no room to count', "var n = ats.length, done = total > 0 && n >= total,", "var n = ats.length, done = n >= total,"],
+  ['a restored row is not kept as a team', "marks: marks, kept: i, restored: true,", "marks: marks, kept: -1, restored: true,"],
   ['the score ranks', "done: p, count: p,", "done: p + (typeof d.score === 'number' ? d.score : 0), count: p,"]
 ];
 let mutantFail = 0;

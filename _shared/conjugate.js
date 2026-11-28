@@ -517,7 +517,8 @@
     }
     if (!ctx['class']) return fail();
     // a slot the tense has no form for (a command has no first person singular)
-    if (tdef.none && tdef.none.indexOf(slot) >= 0) return { forms: [], kinds: ['defective'], from: '', defective: true };
+    var noSlots = (rec.deponent && tdef.deponentNone) || tdef.none;
+    if (noSlots && noSlots.indexOf(slot) >= 0) return { forms: [], kinds: ['defective'], from: '', defective: true };
     // a deponent verb (Latin loquor) wears the passive endings of the tenses that have a passive twin
     if (rec.deponent && tdef.deponentAs) tdef = tenseDef(ctx.p, tdef.deponentAs);
     if (tdef.kind === 'infinitive') return { forms: [ctx.base], kinds: [], from: '' };

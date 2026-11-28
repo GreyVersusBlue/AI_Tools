@@ -64,13 +64,13 @@ eq(c[0].rows.map(r => r[2]), ['2:00', '5:00', '8:20'], 'time since the clock sta
 eq(c[0].rows.map(r => r[3]), ['2:00', '3:00', '3:20'], 'time on each leg');
 eq(c[0].rows.map(r => r[4]), ['2', '0', '0'], 'wrong tries before each stop');
 eq(c[0].rows.map(r => r[5]), ['—', 'Used (−2 min)', '—'], 'the hint is shown at the station it was taken');
-eq(c[0].rows.map(r => r[6]), ['Station 1', '—', '—'], 'a branch shows where the team was sent');
+eq(c[0].rows.map(r => r[6]), ['Station 1 \u2014 Gate', '—', '—'], 'a branch shows where the team was sent, by its name beside its number (AI-86)');
 ok(/3 of 3 stations reached/.test(c[0].sum) && /finish time 8:20/.test(c[0].sum) && /2 wrong tries/.test(c[0].sum) && /1 hint/.test(c[0].sum) && /\+2 min penalty/.test(c[0].sum), 'the summary line: ' + c[0].sum);
 eq(c[0].open, '', 'nothing is still open for a team that finished');
 
 console.log('018 — a team part-way, and a team that has done nothing');
 eq(c[2].rows.map(r => r[1]), ['Station 3 — Bridge'], 'Blues reached one station');
-ok(/Still open: Station 1 \(1 wrong try\), Station 2\./.test(c[2].open), 'the stations still open, with their wrong tries: ' + c[2].open);
+ok(/Still open: Station 1 \u2014 Gate \(1 wrong try\), Station 2 \u2014 Fork\./.test(c[2].open), 'the stations still open, with their wrong tries: ' + c[2].open);
 eq(c[4].rows, [['No stations reached yet.']], 'a team with no marks has an empty table');
 ok(/0 of 3 stations reached/.test(c[4].sum) && /finish time —/.test(c[4].sum), 'and a dash for a finish time');
 

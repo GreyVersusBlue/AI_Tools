@@ -70,25 +70,52 @@ function countEligibleFromUntil(cal, aISO, bISO) {
   return n;
 }
 
-/** date -> "A" | "B" for every school day in the range; {} when the cycle is off. */
+/** The cycle's letters: `abCycle.labels` when it is a usable list (2 to 8 distinct strings of
+    1 to 3 characters, trimmed), else ["A", "B"]. A record with no field is exactly the old
+    two-letter cycle. */
+export const DEFAULT_LABELS = ["A", "B"];
+export const MAX_LABELS = 8;
+export function cycleLabels(ac) {
+  const raw = ac && ac.labels;
+  if (!Array.isArray(raw) || raw.length < 2 || raw.length > MAX_LABELS) return DEFAULT_LABELS.slice();
+  const out = [];
+  for (const v of raw) {
+    const t = typeof v === "string" ? v.trim() : "";
+    if (!t || t.length > 3 || out.includes(t)) return DEFAULT_LABELS.slice();
+    out.push(t);
+  }
+  return out;
+}
+
+/** Parse what a teacher typed ("A, B, C" or "1 2 3 4") into labels, or null when unusable. */
+export function parseLabels(text) {
+  const parts = String(text || "").split(/[\s,;]+/).filter(Boolean);
+  const out = cycleLabels({ labels: parts });
+  return out.length === parts.length && out.every((v, i) => v === parts[i]) ? out : null;
+}
+
+/** date -> the day's label ("A" | "B" by default) for every school day in the range; {} when
+    the cycle is off. The letter steps one place round `cycleLabels()` on each school day. */
 export function abLetters(cal) {
   const map = {};
   const ac = cal && cal.abCycle;
   if (!ac || !ac.enabled || !ac.anchorDate) return map;
+  const labels = cycleLabels(ac);
+  const L = labels.length;
   const anchorISO = ac.anchorDate;
-  const anchorLetter = ac.anchorLetter === "B" ? "B" : "A";
-  const other = anchorLetter === "A" ? "B" : "A";
+  const at = labels.indexOf(ac.anchorLetter);
+  const anchorIdx = at < 0 ? 0 : at;
   const lo = anchorISO < cal.meta.start ? anchorISO : cal.meta.start;
   const hi = anchorISO > cal.meta.end ? anchorISO : cal.meta.end;
   if (lo > hi) return map;
 
   // every school day from lo up to the anchor steps the letter once; lo is never after it
-  let letter = countEligibleFromUntil(cal, lo, anchorISO) % 2 === 0 ? anchorLetter : other;
+  let idx = (((anchorIdx - countEligibleFromUntil(cal, lo, anchorISO)) % L) + L) % L;
   for (let ms = isoToMs(lo), end = isoToMs(hi); ms <= end; ms += DAY_MS) {
     const dateISO = msToIso(ms);
     if (eligible(cal, dateISO)) {
-      if (LETTERS_BEFORE_ANCHOR || dateISO >= anchorISO) map[dateISO] = letter;
-      letter = letter === "A" ? "B" : "A";
+      if (LETTERS_BEFORE_ANCHOR || dateISO >= anchorISO) map[dateISO] = labels[idx];
+      idx = (idx + 1) % L;
     }
   }
   return map;
